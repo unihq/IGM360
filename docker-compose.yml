@@ -1,0 +1,90 @@
+# IGM360 trên VPS: 03 dịch vụ.
+#   igm360     phần mềm (chỉ nghe trong mạng nội bộ của Docker, không mở cổng ra ngoài)
+#   gateway    cổng HTTPS: giữ cổng 80, 443; tự xin và gia hạn chứng chỉ
+#   watchtower kéo image mới khi bấm Cập nhật ngay (chỉ dịch vụ này có quyền Docker)
+# Giá trị riêng của máy (tên miền, tài khoản quản trị, mã cập nhật) nằm trong tệp .env cạnh tệp này.
+# Đăng nhập gói Claude 01 lần:  docker compose run --rm igm360 claude auth login --claudeai
+name: igm360
+
+x-ghinhatky: &ghinhatky
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+configs:
+  caddyfile:
+    content: |
+      {$$DOMAIN_NAME} {
+        encode zstd gzip
+        header -Server
+        reverse_proxy igm360:8360
+      }
+
+services:
+  igm360:
+    image: ghcr.io/unihq/igm360:latest
+    container_name: igm360
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"   # chỉ container này được watchtower cập nhật
+    pull_policy: always
+    init: true
+    environment:
+      IGM360_ADMIN_USER: ${IGM360_ADMIN_USER:-}
+      IGM360_ADMIN_PASSWORD: ${IGM360_ADMIN_PASSWORD:-}
+      WATCHTOWER_TOKEN: ${WATCHTOWER_TOKEN:?Thiếu WATCHTOWER_TOKEN trong tệp .env}
+    expose:
+      - "8360"
+    volumes:
+      - igm360-dulieu:/dulieu
+      - igm360-claude:/home/igm/.claude
+      - igm360-codex:/home/igm/.codex
+    logging: *ghinhatky
+
+  gateway:
+    image: caddy:2-alpine
+    container_name: igm360-gateway
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    depends_on:
+      - igm360
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:?Thiếu DOMAIN_NAME trong tệp .env}
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *ghinhatky
+
+  watchtower:
+    image: ghcr.io/nicholas-fedor/watchtower:1
+    container_name: igm360-watchtower
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    # Không có mục ports: cổng nhận lệnh cập nhật (8080) chỉ nghe trong mạng nội bộ Docker, không mở ra ngoài.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_HTTP_API_ENDPOINTS: update
+      WATCHTOWER_HTTP_API_TOKEN: ${WATCHTOWER_TOKEN:?Thiếu WATCHTOWER_TOKEN trong tệp .env}
+      WATCHTOWER_HTTP_API_PERIODIC_POLLS: "false"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_LABEL_ENABLE: "true"
+    # 02 lớp giới hạn: chỉ container tên igm360 VÀ có nhãn cho phép.
+    command: igm360
+    logging: *ghinhatky
+
+volumes:
+  igm360-dulieu:
+  igm360-claude:
+  igm360-codex:
+  caddy-data:
+  caddy-config:

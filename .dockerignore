@@ -1,0 +1,8 @@
+.git
+.github
+kiemthu
+tailieu
+**/__pycache__
+**/*.pyc
+.env
+.env.*
