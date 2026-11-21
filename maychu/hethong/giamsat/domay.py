@@ -18,6 +18,7 @@ MUIGIO_VN = timezone(timedelta(hours=7))
 MB = 1024 * 1024
 CGROUP = Path("/sys/fs/cgroup")
 TEN_TIENTRINH_AI = ("claude", "codex")
+NGUONG_SWAP_MB = 100  # dùng tệp hoán đổi quá mức này thì ghi 01 cảnh báo (kế hoạch GĐ 1 Phần 5, QĐ87)
 
 
 def _doc_so(tep: Path):
@@ -150,6 +151,7 @@ def ghi_n02(thumuc=None) -> dict:
         "id": maso.tao(), "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
         "tyle_ocung": int(round(s["ocung_dung_tyle"] * 100)), "ram_dung": s["may_ram_dung_mb"],
         "so_viec_dangchay": so_viec, "so_viec_ai_dangchay": so_viec_ai, "thoigian_cho_ghi_ms": cho_ms,
+        "swap_dung": s["may_hoandoi_dung_mb"],
     }
     nk = ketnoi.mo("Nhatky", thumuc)
     try:
@@ -159,7 +161,27 @@ def ghi_n02(thumuc=None) -> dict:
         nk.execute("COMMIT")
     finally:
         nk.close()
+    if dong["swap_dung"] > NGUONG_SWAP_MB:
+        _canhbao_swap(dong, thumuc)
     return dong
+
+
+def _canhbao_swap(dong: dict, thumuc=None) -> None:
+    """Ghi 01 cảnh báo D03 loại sự kiện; còn cảnh báo cùng loại đang mở thì không ghi thêm (không báo lặp)."""
+    from maychu.dulieu import ketnoi, maso
+    khoa = "swap_vuot_nguong"
+    cn = ketnoi.mo("Dulieu_Chinh", thumuc)
+    try:
+        cn.execute("BEGIN IMMEDIATE")
+        con_mo = cn.execute("SELECT 1 FROM canhbao WHERE khoa_chongtrung = ? AND trangthai IN ('moi', 'dabao', 'dagiao_task')",
+                            (khoa,)).fetchone()
+        if not con_mo:
+            cn.execute("INSERT INTO canhbao (id, loai, nguong, giatri, chieu, bang_nguon, dong_nguon_id, khoa_chongtrung, trangthai, tao_luc)"
+                       " VALUES (?, 'sukien', ?, ?, 'tren', 'theodoi_maychu', ?, ?, 'moi', ?)",
+                       (maso.tao(), NGUONG_SWAP_MB, dong["swap_dung"], dong["id"], khoa, dong["luc"]))
+        cn.execute("COMMIT")
+    finally:
+        cn.close()
 
 
 def main(thamso=None) -> int:

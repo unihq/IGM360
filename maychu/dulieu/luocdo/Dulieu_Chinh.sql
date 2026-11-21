@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS sku (
 -- A08 Barcode: 01 dòng = 01 barcode gắn 01 SKU trong 01 khoảng hiệu lực
 CREATE TABLE IF NOT EXISTS barcode (
   id TEXT PRIMARY KEY NOT NULL,
-  hieuluc_tu TEXT,
+  hieuluc_tu TEXT NOT NULL,
   hieuluc_den TEXT,
   nguoi_khai TEXT,
   tao_luc TEXT,
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS barcode (
 -- A09 Combo thành phần: 01 dòng = 01 SKU thành phần trong 01 combo × hiệu lực
 CREATE TABLE IF NOT EXISTS combo_thanhphan (
   id TEXT PRIMARY KEY NOT NULL,
-  hieuluc_tu TEXT,
+  hieuluc_tu TEXT NOT NULL,
   hieuluc_den TEXT,
   nguoi_khai TEXT,
   tao_luc TEXT,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS combo_thanhphan (
 -- A10 Ghép mã ngoài: 01 dòng = 01 mã ngoài của 01 nguồn
 CREATE TABLE IF NOT EXISTS ghep_mangoai (
   id TEXT PRIMARY KEY NOT NULL,
-  hieuluc_tu TEXT,
+  hieuluc_tu TEXT NOT NULL,
   hieuluc_den TEXT,
   nguoi_khai TEXT,
   tao_luc TEXT,
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS taikhoan (
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
   phienban INTEGER,
-  trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('dung', 'ngung')),
+  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
   nguoi_khai TEXT,
   tao_luc TEXT,
   loai TEXT CHECK (loai IS NULL OR loai IN ('banhang', 'quangcao', 'nganhang')),

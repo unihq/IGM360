@@ -68,5 +68,6 @@ CREATE TABLE IF NOT EXISTS theodoi_maychu (
   ram_dung INTEGER,
   so_viec_dangchay INTEGER,
   so_viec_ai_dangchay INTEGER,
-  thoigian_cho_ghi_ms INTEGER
+  thoigian_cho_ghi_ms INTEGER,
+  swap_dung INTEGER
 );
