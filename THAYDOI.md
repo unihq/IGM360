@@ -2,6 +2,11 @@
 
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 
+## 0.4.0
+- Bản sao lưu hằng ngày được mã hoá, chờ đẩy lên Google Drive khi anh kết nối Drive.
+- Két khoá cất được khoá kết nối, báo trước khi khoá sắp hết hạn.
+- Có sẵn phần kết nối Google Drive (màn kết nối có ở bản sau).
+
 ## 0.3.0
 - Có màn Đăng nhập, bật đăng nhập 02 lớp.
 - Có menu, ngăn Thông số, ngăn Tài khoản và 02 lớp, ngăn Cập nhật ở Cài đặt.
