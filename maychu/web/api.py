@@ -369,7 +369,8 @@ def _goi(goi: str, taikhoan: int):
 
 @router.get("/mohinh")
 def xem_mohinh(p: dict = Depends(can_dang_nhap)):
-    return {"nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
+    goi = dangnhap_goi.tinh_hinh_goi()
+    return {"goi": goi, "nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
             "tuan": congai.tom_tat_tuan()}
 
 

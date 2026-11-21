@@ -272,3 +272,21 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
             d["goi"], d["taikhoan"] = m.group(1), int(m.group(2))
             d.update(trang_thai(d["goi"], d["taikhoan"]))
     return dong
+
+
+def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
+    """Thẻ gói ở màn 13: tài khoản 01 luôn có; tài khoản 02 khi đã có thư mục. Tài khoản đã đăng nhập mà chưa có
+    dòng G06 (ví dụ phiên Claude đăng nhập lúc cài máy, bước 2.04) thì tự ghi nguồn để Cổng AI dùng được."""
+    ra = {}
+    for goi in GOI:
+        ds = []
+        for tk in range(1, SO_TAIKHOAN_TOIDA + 1):
+            tm = thu_muc(goi, tk)
+            if tk > 1 and not (tm and tm.exists()):
+                continue
+            tt = trang_thai(goi, tk)
+            if tt["da_noi"]:
+                ghi_nguon(goi, tk, thumuc)
+            ds.append({"taikhoan": tk, "ma": ma_nguon(goi, tk), "dang_dangnhap": (goi, tk) in _PHIEN, **tt})
+        ra[goi] = ds
+    return ra
