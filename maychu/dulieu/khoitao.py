@@ -17,12 +17,17 @@ from maychu.dulieu import ketnoi
 PHIENBAN_LUOCDO = 2
 THUMUC_LUOCDO = Path(__file__).resolve().parent / "luocdo"
 
-# Bảng phải dựng lại khi nâng lên từng bản (QĐ87 điểm A2, A3).
+# Bảng phải dựng lại khi nâng lên từng bản.
 NANGCAP = {
+    # Bản 2 (QĐ87, QĐ89): H01 `vai`, A08-A10 `hieuluc_tu` bắt buộc; `trangthai` của mọi bảng cột chung danh mục
+    # bắt buộc, mặc định `dung`; N02 thêm `swap_dung`; F05 thêm `thietbi`. Danh sách sinh bằng máy khi so 02 bản lược đồ.
     2: {
-        "Bot": ["kenh"],                       # H01 `vai` bắt buộc có giá trị
-        "Dulieu_Chinh": ["taikhoan", "barcode", "combo_thanhphan", "ghep_mangoai"],  # trạng thái, hiệu lực bắt buộc
-        "Nhatky": ["theodoi_maychu"],          # N02 thêm `swap_dung`
+        'Dulieu_Chinh': ['congty', 'kenh', 'shop', 'lydo_shopchet', 'kho', 'sku', 'barcode', 'combo_thanhphan', 'ghep_mangoai', 'taikhoan', 'nhacungcap', 'nhanvien', 'khoanchi', 'khuvuc', 'loai_module', 'hoso_phaply', 'chiso', 'quytac_kiemdu'],
+        'Ketnoi': ['ketnoi', 'webhook', 'theodoi_trang'],
+        'Viecnen': ['congsu', 'nguon_ai', 'team', 'kynang', 'quytrinh'],
+        'Bot': ['kenh', 'chude_nhom', 'lich_baocao', 'chatbot'],
+        'Nhatky': ['theodoi_maychu'],
+        'Baomat': ['nguoidung', 'phien_truycap'],
     },
 }
 

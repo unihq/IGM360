@@ -53,7 +53,7 @@ class KiemMayChu(unittest.TestCase):
         self.assertEqual(noidung["phienban"], khoidong.PHIENBAN)
 
     def test_khong_co_trang_tudong(self):
-        for duong in ("/", "/docs", "/redoc", "/openapi.json"):
+        for duong in ("/docs", "/redoc", "/openapi.json"):  # "/" là màn hình từ ngày 04 (QĐ88)
             with self.subTest(duong=duong):
                 with self.assertRaises(urllib.error.HTTPError) as loi:
                     self._lay(duong)

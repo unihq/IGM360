@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS nguoidung (
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
   phienban INTEGER,
-  trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('dung', 'ngung')),
+  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
   nguoi_khai TEXT,
   tao_luc TEXT,
   vaitro TEXT CHECK (vaitro IS NULL OR vaitro IN ('chu', 'nhanvien')),
@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS phien_truycap (
   tao_luc TEXT,
   het_han TEXT,
   lan_dung_cuoi TEXT,
+  thietbi TEXT,
   thuhoi_luc TEXT
 );
 
