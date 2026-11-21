@@ -13,7 +13,7 @@ from maychu.dulieu import ketnoi
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
-from maychu.hethong.mohinh import dangnhap_goi
+from maychu.hethong.mohinh import congai, dangnhap_goi, trochuyen
 from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
 from maychu.ketnoi import drive
@@ -369,7 +369,8 @@ def _goi(goi: str, taikhoan: int):
 
 @router.get("/mohinh")
 def xem_mohinh(p: dict = Depends(can_dang_nhap)):
-    return {"nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong")}
+    return {"nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
+            "tuan": congai.tom_tat_tuan()}
 
 
 @router.post("/mohinh/goi/{goi}/batdau")
@@ -407,3 +408,40 @@ def goi_huy(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi(goi, body.taikhoan)
     dangnhap_goi.huy(goi, body.taikhoan)
     return {"ok": True}
+
+
+@router.post("/mohinh/{nguon_id}/goithu")
+def goi_thu(nguon_id: str, p: dict = Depends(can_dang_nhap)):
+    kq = congai.goi("Trả lời đúng 01 câu ngắn bằng tiếng Việt: IGM360 gọi thử nguồn AI.", chi_nguon_id=nguon_id)
+    if "loi" in kq:
+        raise HTTPException(400, "; ".join(b["lydo"] for b in kq["bo_qua"]) or kq["loi"])
+    return {"chu": kq["chu"], "nguon": kq["nguon"]}
+
+
+# ---- F35 Trò chuyện (ngày 06) ----
+class TinMoi(BaseModel):
+    hoithoai_id: str | None = None
+    noidung: str
+
+
+@router.get("/trochuyen")
+def ds_trochuyen(p: dict = Depends(can_dang_nhap)):
+    return {"hoithoai": trochuyen.danh_sach(p["nguoidung_id"])}
+
+
+@router.get("/trochuyen/{ma}")
+def xem_trochuyen(ma: str, p: dict = Depends(can_dang_nhap)):
+    kq = trochuyen.xem(ma, p["nguoidung_id"])
+    if kq is None:
+        raise HTTPException(404, "Không có cuộc trò chuyện này")
+    return kq
+
+
+@router.post("/trochuyen")
+def gui_tin(body: TinMoi, p: dict = Depends(can_dang_nhap)):
+    try:
+        return trochuyen.gui(body.hoithoai_id, p["nguoidung_id"], body.noidung)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except PermissionError as e:
+        raise HTTPException(404, str(e))
