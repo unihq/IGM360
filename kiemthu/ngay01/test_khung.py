@@ -1,6 +1,8 @@
 """Bài kiểm khung máy chủ tối thiểu: chỉ dùng thư viện chuẩn của Python và thư viện đã khai."""
 import json
+import os
 import socket
+import tempfile
 import threading
 import time
 import unittest
@@ -22,6 +24,9 @@ def _cong_trong() -> int:
 class KiemMayChu(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.tam = tempfile.TemporaryDirectory()
+        os.environ["IGM360_THUMUC_DULIEU"] = cls.tam.name
+        os.environ["IGM360_LICH"] = "tat"
         cls.cong = _cong_trong()
         cls.maychu = uvicorn.Server(uvicorn.Config(khoidong.app, host="127.0.0.1", port=cls.cong, log_level="warning"))
         cls.luong = threading.Thread(target=cls.maychu.run, daemon=True)
@@ -35,6 +40,7 @@ class KiemMayChu(unittest.TestCase):
     def tearDownClass(cls):
         cls.maychu.should_exit = True
         cls.luong.join(timeout=5)
+        cls.tam.cleanup()
 
     def _lay(self, duong):
         return urllib.request.urlopen(f"http://127.0.0.1:{self.cong}{duong}", timeout=5)

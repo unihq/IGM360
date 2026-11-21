@@ -126,6 +126,42 @@ def in_chu(s: dict) -> str:
     return "\n".join(dong)
 
 
+def ghi_n02(thumuc=None) -> dict:
+    """Đo 01 lần và ghi 01 dòng N02 (lịch chạy mỗi giờ). Tỷ lệ lưu dạng % × 100, RAM lưu MB."""
+    from maychu.dulieu import ketnoi, maso
+    import time
+    s = do_may(str(thumuc) if thumuc else None)
+    viec = ketnoi.mo("Viecnen", thumuc)
+    try:
+        so_viec = viec.execute("SELECT count(*) FROM viecnen WHERE trangthai = 'dangchay'").fetchone()[0]
+        so_viec_ai = viec.execute(
+            "SELECT count(*) FROM viecnen WHERE trangthai = 'dangchay' AND goi_ai = 1").fetchone()[0]
+    finally:
+        viec.close()
+    chinh = ketnoi.mo("Dulieu_Chinh", thumuc)
+    try:
+        bd = time.perf_counter()
+        chinh.execute("BEGIN IMMEDIATE")
+        cho_ms = int((time.perf_counter() - bd) * 1000)
+        chinh.execute("ROLLBACK")
+    finally:
+        chinh.close()
+    dong = {
+        "id": maso.tao(), "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
+        "tyle_ocung": int(round(s["ocung_dung_tyle"] * 100)), "ram_dung": s["may_ram_dung_mb"],
+        "so_viec_dangchay": so_viec, "so_viec_ai_dangchay": so_viec_ai, "thoigian_cho_ghi_ms": cho_ms,
+    }
+    nk = ketnoi.mo("Nhatky", thumuc)
+    try:
+        nk.execute("BEGIN IMMEDIATE")
+        nk.execute(f"INSERT INTO theodoi_maychu ({', '.join(dong)}) VALUES ({', '.join('?' * len(dong))})",
+                   list(dong.values()))
+        nk.execute("COMMIT")
+    finally:
+        nk.close()
+    return dong
+
+
 def main(thamso=None) -> int:
     thamso = sys.argv[1:] if thamso is None else thamso
     s = do_may()
