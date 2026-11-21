@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS kenh (
   nguoi_khai TEXT,
   tao_luc TEXT,
   loai TEXT,
+  vai TEXT CHECK (vai IS NULL OR vai IN ('anh_nhan_baocao', 'bot_giaoviec')),
   co_nutbam INTEGER,
   co_nhom INTEGER,
   cuaso_gui_gio INTEGER,

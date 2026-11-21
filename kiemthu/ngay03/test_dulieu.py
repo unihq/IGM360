@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 03: 07 file dữ liệu, 104 bảng, cài đặt file, sao lưu, đo máy."""
+"""Bài kiểm ngày 03: 07 file dữ liệu, 104 bảng, cài đặt file, cột chung, sao lưu, đo máy."""
 import json
 import os
 import sqlite3
@@ -80,6 +80,29 @@ class KiemTaoFile(unittest.TestCase):
                 cn.close()
             self.assertTrue(cot <= co, (bang, cot - co))
 
+
+    def test_cot_chung_nhom_a_va_vai_kenh(self):
+        khoitao.tao_het(self.thumuc)
+        danhmuc = {"id", "ma", "ten", "hieuluc_tu", "hieuluc_den", "phienban", "trangthai", "nguoi_khai", "tao_luc"}
+        ghep = {"id", "hieuluc_tu", "hieuluc_den", "nguoi_khai", "tao_luc"}
+        mong = {("Dulieu_Chinh", "taikhoan"): danhmuc, ("Dulieu_Chinh", "barcode"): ghep,
+                ("Dulieu_Chinh", "combo_thanhphan"): ghep, ("Dulieu_Chinh", "ghep_mangoai"): ghep,
+                ("Bot", "kenh"): {"vai"}}
+        for (ten, bang), cot in mong.items():
+            cn = ketnoi.mo(ten, self.thumuc)
+            try:
+                co = {r[1] for r in cn.execute(f"PRAGMA table_info({bang})")}
+            finally:
+                cn.close()
+            self.assertTrue(cot <= co, (bang, cot - co))
+        cn = ketnoi.mo("Bot", self.thumuc)
+        try:
+            for vai in ("anh_nhan_baocao", "bot_giaoviec"):
+                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, ?)", (maso.tao(), vai))
+            with self.assertRaises(sqlite3.IntegrityError):
+                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, ?)", (maso.tao(), "cahai"))
+        finally:
+            cn.close()
 
 class KiemSaoLuuDoMay(unittest.TestCase):
     def setUp(self):
