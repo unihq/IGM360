@@ -117,6 +117,30 @@ def so_viec_ai_dangchay(thumuc=None) -> int:
         cn.close()
 
 
+_CHO = {"tu": 0.0, "nguoi": None}
+CHO_TOIDA_GIAY = 30 * 60
+
+
+def yeu_cau(nguoi_id: str, che_do: str, thumuc=None) -> dict:
+    """che_do 'ngay': gửi lệnh luôn. 'cho': không có việc AI đang chạy thì gửi luôn; có thì chờ việc xong,
+    tối đa 30 phút (lịch chạy nền gọi xu_ly_cho mỗi phút). Việc mới không nhận khi đang chờ: dang_cho()."""
+    if che_do == "cho" and so_viec_ai_dangchay(thumuc):
+        _CHO.update(tu=time.time(), nguoi=nguoi_id)
+        return {"ok": True, "cho": True}
+    return cap_nhat_ngay(nguoi_id, thumuc)
+
+
+def dang_cho() -> bool:
+    return bool(_CHO["tu"])
+
+
+def xu_ly_cho(thumuc=None) -> None:
+    if _CHO["tu"] and (not so_viec_ai_dangchay(thumuc) or time.time() - _CHO["tu"] > CHO_TOIDA_GIAY):
+        nguoi = _CHO["nguoi"]
+        _CHO.update(tu=0.0, nguoi=None)
+        cap_nhat_ngay(nguoi, thumuc)
+
+
 def cap_nhat_ngay(nguoi_id: str, thumuc=None) -> dict:
     ma = os.environ.get("WATCHTOWER_TOKEN", "")
     if not ma:

@@ -30,7 +30,10 @@ services:
       com.centurylinklabs.watchtower.enable: "true"   # chỉ container này được watchtower cập nhật
     pull_policy: always
     init: true
+    networks:
+      - noibo
     environment:
+      FORWARDED_ALLOW_IPS: "172.30.36.10"   # chỉ tin địa chỉ IP do cổng HTTPS (gateway) chuyển tới
       IGM360_ADMIN_USER: ${IGM360_ADMIN_USER:-}
       IGM360_ADMIN_PASSWORD: ${IGM360_ADMIN_PASSWORD:-}
       WATCHTOWER_TOKEN: ${WATCHTOWER_TOKEN:?Thiếu WATCHTOWER_TOKEN trong tệp .env}
@@ -50,6 +53,9 @@ services:
       com.centurylinklabs.watchtower.enable: "false"
     depends_on:
       - igm360
+    networks:
+      noibo:
+        ipv4_address: 172.30.36.10
     ports:
       - "80:80"
       - "443:443"
@@ -70,6 +76,8 @@ services:
     labels:
       com.centurylinklabs.watchtower.enable: "false"
     # Không có mục ports: cổng nhận lệnh cập nhật (8080) chỉ nghe trong mạng nội bộ Docker, không mở ra ngoài.
+    networks:
+      - noibo
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -81,6 +89,13 @@ services:
     # 02 lớp giới hạn: chỉ container tên igm360 VÀ có nhãn cho phép.
     command: igm360
     logging: *ghinhatky
+
+networks:
+  noibo:
+    # Mạng nội bộ có dải cố định để cổng HTTPS có địa chỉ cố định (phần mềm chỉ tin địa chỉ này).
+    ipam:
+      config:
+        - subnet: 172.30.36.0/24
 
 volumes:
   igm360-dulieu:

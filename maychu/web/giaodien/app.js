@@ -1,9 +1,10 @@
-// IGM360 giao diện ngày 04: màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (bản vẽ đợt 1 đã duyệt, QĐ88).
+// IGM360 giao diện ngày 04: màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (bản vẽ đợt 1 đã duyệt, QĐ88;
+// cập nhật theo QĐ89, QĐ90: chặn đoán mật khẩu, phiên 30 ngày, đăng xuất mọi máy khác).
 // Cách bật tắt khối theo trạng thái (data-s) giữ như bản vẽ; số liệu lấy từ máy chủ.
 'use strict';
 const S = {g: '01', dn: 'matkhau', k: 'binhthuong', trang: '03', tab: 'thongso', cn: 'moinhat', xem: 'dt', thu: 0};
 const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
-const D = {thongso: null, maTam: '', maTamDoiMay: '', xnCb: null, suaK: '', capnhat: null};
+const D = {thongso: null, maTam: '', maTamDoiMay: '', xnCb: null, suaK: '', capnhat: null, hetLuc: null, khoaDen: 0};
 if (window.innerWidth < 700) { S.xem = 'mb'; document.body.classList.add('dien-thoai'); }
 
 // ---- Định dạng: số 1-9 đứng trước danh từ đếm ghi 02 chữ số; ngày dd/mm/yyyy; nghìn ngăn bằng dấu chấm
@@ -28,7 +29,7 @@ async function api(duong, than) {
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && S.g !== '01') { S.g = '01'; S.dn = 'hethan'; ve(); }
   if (!r.ok) { const ct = d.detail; const e = new Error(typeof ct === 'string' ? ct : (ct && ct.loi) || 'Có lỗi');
-    e.o = ct && ct.o; e.status = r.status; throw e; }
+    e.o = ct && ct.o; e.status = r.status; e.ct = ct; throw e; }
   return d;
 }
 
@@ -45,6 +46,7 @@ function ve() {
   $$('[data-trang]').forEach(e => e.classList.toggle('on', e.dataset.trang === S.trang));
   $$('.tab').forEach(e => e.classList.toggle('on', e.dataset.tab === S.tab));
   $('#tieude-tren').innerHTML = (ICO[S.trang] || '') + '<b class="t16 nw">' + (TEN[S.trang] || '') + '</b>';
+  $('[data-dangnhap]').disabled = S.dn === 'khoa' || S.dn === 'khoatk';
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
 function dongHop() { $$('.lop').forEach(e => e.hidden = true); }
@@ -56,16 +58,29 @@ const ma6 = goc => $$('.o6', goc).map(i => i.value).join('');
 const xoa6 = goc => $$('.o6', goc).forEach(i => i.value = '');
 
 // ---- Màn 01
-function hienLoiDn(t) { $('#dn-loi').textContent = t; S.dn = 'sai'; ve(); }
+function hienLoiDn(t, con) { $('#dn-loi').textContent = t; $('#dn-con').textContent = con == null ? '' : hai(con);
+  $('#dn-con-cau').hidden = con == null; S.dn = 'sai'; ve(); }
+const gioPhut = sec => { const d = new Date(sec * 1000 + 7 * 3600e3).toISOString(); return d.slice(11, 16) + (d.slice(0, 10) === homNay() ? '' : ' ngày ' + ngay(d)); };
+function hienKhoa(k) {
+  S.dn = k.loai === 'taikhoan' ? 'khoatk' : 'khoa'; D.khoaDen = k.den;
+  $('#k-thoigian').textContent = k.phut < 60 ? hai(k.phut) + ' phút' : hai(k.phut / 60) + ' giờ';
+  $$('.k-luc').forEach(e => e.textContent = gioPhut(k.den)); ve();
+}
+function loiDangNhap(e, oMa) {
+  if (e.status === 429) { hienKhoa(e.ct); return; }
+  const con = e.ct && e.ct.con_lai;
+  if (oMa) { bao(e.message + (con != null ? ' Còn ' + hai(con) + ' lần thử.' : '')); return; }
+  hienLoiDn(e.message, con);
+}
 async function dangNhap() {
   const ten = $('#dn-ten').value.trim(), mk = $('#mk').value;
-  if (!ten || !mk) { hienLoiDn('Anh nhập tên đăng nhập và mật khẩu.'); return; }
+  if (!ten || !mk) { hienLoiDn('Anh nhập tên đăng nhập và mật khẩu.', null); return; }
   try {
     const kq = await api('/dangnhap', {ten, matkhau: mk});
     D.maTam = kq.ma_tam; $('#mk').value = '';
     if (kq.buoc === 'bat2lop') { $('#qr-2lop').innerHTML = kq.qr_svg; S.dn = 'batdau2lop'; } else S.dn = 'ma2lop';
     ve(); const o = $('[data-s="dn:' + S.dn + '"] .o6'); if (o) o.focus();
-  } catch (e) { if (e.status) hienLoiDn(e.message + '.'); }
+  } catch (e) { if (e.status) loiDangNhap(e, false); }
 }
 async function xacNhanMa(nut) {
   const goc = nut.closest('[data-s]'), ma = ma6(goc);
@@ -74,7 +89,8 @@ async function xacNhanMa(nut) {
     await api('/dangnhap/ma2lop', {ma_tam: D.maTam, ma});
     if (nut.dataset.xacnhan === 'bat') bao('Đã bật đăng nhập 02 lớp.');
     xoa6(goc); $('#qr-2lop').innerHTML = ''; await vaoPhanMem();
-  } catch (e) { xoa6(goc); bao(e.message + '.'); if (/hết hạn/.test(e.message)) { S.dn = 'hethan'; ve(); } }
+  } catch (e) { xoa6(goc); if (e.status === 429) { hienKhoa(e.ct); return; }
+    if (/hết hạn/.test(e.message)) { S.dn = 'hethan'; ve(); bao(e.message); return; } loiDangNhap(e, true); }
 }
 
 // ---- Màn 02
@@ -82,7 +98,7 @@ async function vaoPhanMem() {
   const toi = await api('/toi');
   const chu = (toi.ten || toi.ten_dangnhap || '').trim();
   $('#tk-chu').textContent = chu.slice(0, 1).toUpperCase(); $('#tk-ten').textContent = chu;
-  S.g = '02'; S.dn = 'matkhau'; ve(); demSo();
+  D.hetLuc = toi.het_luc; S.g = '02'; S.dn = 'matkhau'; ve(); demSo();
   if (S.trang === '09') napTab();
 }
 async function demSo() {
@@ -111,17 +127,19 @@ function veThongSo() {
   $('#ds-thongso').innerHTML = Object.entries(nhom).map(([ten, ds]) => '<div class="the nhom-ts"><div class="tieu">'
     + (ICON[NHOM_ICO[ten]] || '') + '<span class="b7">' + esc(ten) + '</span><span class="phu t12 ml">' + hai(ds.length) + ' thông số</span></div>'
     + ds.map(t => { const gt = hienGt(t);
-      return '<div class="ts' + (gt ? '' : ' chua') + '"><div class="ts-ten">' + esc(t.nhan) + '</div><div class="ts-gt">'
+      return '<div class="ts' + (gt ? '' : ' chua') + '"><div class="ts-ten">' + esc(t.nhan)
+        + (gt || !t.khi_trong ? '' : '<div class="t12 xem-chu">' + esc(t.khi_trong) + '</div>') + '</div><div class="ts-gt">'
         + (gt ? '<span class="b7 so">' + esc(gt) + '</span><span class="t12 phu">Từ ' + ngay(t.hieuluc_tu) + ' · ' + (t.nguoi_dat === 'hethong' ? 'Mặc định' : 'Chủ') + '</span>'
-             : '<span class="ttag xem" title="' + esc(t.khi_trong) + '">Chưa đặt</span><span class="t12 phu">\u00a0</span>')
-        + '</div><button class="btn-chu" data-sua="' + t.ten + '">' + ICON.pencil + 'Sửa</button></div>'; }).join('') + '</div>').join('');
+             : '<span class="ttag xem">' + (t.ten === 'nhip_lay_dulieu' ? 'Chưa đặt loại nào' : 'Chưa đặt') + '</span>' + (t.ten === 'nhip_lay_dulieu' ? '' : '<span class="t12 phu">\u00a0</span>'))
+        + '</div>' + (t.ten === 'nhip_lay_dulieu' ? '<button class="btn-chu" data-trang="11">' + ICON.sangtrang + 'Đặt ở Nguồn dữ liệu</button>'
+          : t.khong_sua ? '<span class="t12 phu nw khoa-ts">' + ICON.khoats + esc(t.khong_sua) + '</span>'
+          : '<button class="btn-chu" data-sua="' + t.ten + '">' + ICON.pencil + 'Sửa</button>') + '</div>'; }).join('') + '</div>').join('');
 }
 async function napThongSo() { D.thongso = await api('/thongso'); veThongSo(); }
 async function moSua(ten) {
-  if (ten === 'nhip_lay_dulieu') { bao('Nhịp lấy đặt theo từng loại dữ liệu ở màn Nguồn dữ liệu (có từ ngày 05).'); return; }
   const t = D.thongso.thongso.find(x => x.ten === ten); D.suaK = ten;
   $('#h-sua [data-tieu]').textContent = 'Sửa · ' + t.nhan;
-  $('#sua-cu').textContent = hienGt(t) || ('Chưa đặt' + (t.khi_trong ? ' · ' + t.khi_trong.replace(/^Chưa đặt: /, '') : ''));
+  $('#sua-cu').textContent = hienGt(t) || 'Chưa đặt';
   const chon = t.luachon.length > 0;
   $('#sua-o').hidden = chon; $('#sua-chon').hidden = !chon;
   if (chon) $('#sua-chon').innerHTML = t.luachon.map(l => '<option value="' + esc(l.giatri) + '"' + (l.giatri === t.giatri ? ' selected' : '') + '>' + esc(l.chu) + '</option>').join('');
@@ -152,19 +170,21 @@ async function napTaiKhoan() {
   const d = await api('/taikhoan'), chu = (d.ten || d.ten_dangnhap || '').trim();
   $('#tk-ten-lon').textContent = chu; $('#tk-chu-lon').textContent = chu.slice(0, 1).toUpperCase();
   $('#phien-dem').textContent = hai(d.phien.length) + ' phiên · thu hồi là máy đó phải đăng nhập lại';
+  $('#mk-luc').textContent = ngay(d.lan_doi_matkhau); $('[data-dxkhac]').hidden = d.phien.length < 2;
   const cot = 'grid-template-columns:2.2fr 1.4fr 1fr 110px';
   $$('#ds-phien .hang:not(.tieu-de)').forEach(e => e.remove());
   $('#ds-phien').insertAdjacentHTML('beforeend', d.phien.map(p => { const nay = p.id === d.phien_id;
     return '<div class="hang" style="' + cot + '"><div class="rong-mb dong">' + (/iPhone|Android|iPad/.test(p.thietbi || '') ? ICON.smartphone : ICON.laptop)
       + '<div><div class="b6">' + esc(p.thietbi || 'Không rõ thiết bị') + '</div><div class="t12 phu">' + (p.loai === 'ma_truycap' ? 'Mã truy cập' : 'Phiên web') + '</div></div></div>'
       + '<div data-l="Lần dùng cuối" class="so">' + (nay ? 'Đang dùng' : esc(luc(p.lan_dung_cuoi))) + '</div>'
-      + '<div data-l="Hết hạn" class="so">' + (p.het_han ? ngay(p.het_han) : 'Chưa đặt') + '</div>'
+      + '<div data-l="Hết hạn" class="so">' + ngay(p.het_luc) + '</div>'
       + '<div class="rong-mb phai">' + (nay ? '<span class="ttag dat">Phiên này</span>' : '<button class="btn btn-phu nho" data-thuhoi="' + esc(p.id) + '">Thu hồi</button>') + '</div></div>'; }).join(''));
 }
 async function doiMatKhau() {
   const [cu, moi, lai] = $$('#h-matkhau input').map(i => i.value);
-  try { await api('/matkhau', {cu, moi, nhap_lai: lai}); $$('#h-matkhau input').forEach(i => i.value = ''); dongHop();
-    bao('Đã đổi mật khẩu. Các máy khác phải đăng nhập lại.'); napTaiKhoan(); }
+  try { const kq = await api('/matkhau', {cu, moi, nhap_lai: lai}); $$('#h-matkhau input').forEach(i => i.value = ''); dongHop();
+    $('#bao-doimk-chu').textContent = 'Đã đổi mật khẩu. Đã đăng xuất ' + hai(kq.thu_hoi) + ' phiên trên các máy khác.';
+    $('#bao-doimk').hidden = false; napTaiKhoan(); }
   catch (e) { bao(e.message + '.'); }
 }
 async function doiMay() {
@@ -186,30 +206,36 @@ function datLaiDoiMay() { D.maTamDoiMay = ''; const hop = $('#h-2lop'); xoa6(hop
 
 // ---- Màn 09 ngăn Cập nhật
 function veCapNhat(d) {
-  D.capnhat = d; S.cn = d.co_ban_moi ? 'coban' : 'moinhat';
-  $('#ban-hien').textContent = d.ban_dang; $('#cn-dang').textContent = d.ban_dang;
-  $('#cn-moi').textContent = d.ban_moi || ''; $('#cn-moi2').textContent = d.ban_moi || '';
+  D.capnhat = d;
+  if (S.cn !== 'hong') S.cn = d.co_ban_moi ? 'coban' : 'moinhat';
+  $('#ban-hien').textContent = d.ban_dang; $$('.cn-dang').forEach(e => e.textContent = d.ban_dang);
+  $$('.cn-moi').forEach(e => e.textContent = d.ban_moi || '');
   $('#cn-luc').textContent = d.luc_kiem ? luc(d.luc_kiem) : 'chưa kiểm';
-  $('#cn-thaydoi').innerHTML = d.thaydoi.map(m => m.dong.map(x => '· ' + esc(x)).join('<br>')).join('<br>');
+  $('#cn-thaydoi').innerHTML = d.thaydoi.flatMap(m => m.dong).slice(0, 5).map(x => '<div class="dong t13">' + ICON.dongmoi + '<span>' + esc(x) + '</span></div>').join('');
   const cot = 'grid-template-columns:120px 1fr 160px';
   $('#ls-capnhat').innerHTML = d.lichsu.map(x => '<div class="hang" style="' + cot + '"><b class="so">' + esc(x.ban)
     + '</b><span data-l="Nội dung">' + (x.ban === d.ban_dang ? 'Bản đang dùng' : 'Bản đã dùng') + '</span><span data-l="Ngày cài" class="so">' + ngay(x.luc) + '</span></div>').join('');
   $('.tab[data-tab="capnhat"] .cham-xanh').hidden = !d.co_ban_moi;
   if (d.loi) bao(d.loi + '.'); ve();
 }
-async function capNhatNgay() {
-  const d = D.capnhat, viec = d.so_viec_ai;
-  xacnhan('Cập nhật lên bản ' + d.ban_moi + '?', (viec ? 'Đang có <b>' + hai(viec) + ' việc AI</b> chạy, việc dở sẽ tự chạy lại sau khi bật lại. ' : '')
-    + 'Phần mềm tạm ngừng một lúc trong khi cập nhật. Trang tự tải lại khi xong.', 'Cập nhật ngay', async () => {
-    try { await api('/capnhat', {}); } catch (e) { if (e.status) { bao(e.message + '.'); return; } }
-    S.cn = 'dangcn'; ve(); const cu = d.ban_dang, het = Date.now() + 5 * 60e3;
-    const cho = async () => {
-      try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
-        if (k.phienban && k.phienban !== cu) { location.reload(); return; } } catch (e) { /* đang khởi động lại */ }
-      if (Date.now() < het) setTimeout(cho, 5000); else { S.cn = 'coban'; ve(); bao('Cập nhật chưa xong, vẫn chạy bản ' + cu + '.'); }
-    };
-    setTimeout(cho, 5000);
-  });
+function moCapNhat() {
+  const viec = D.capnhat.so_viec_ai;
+  $('#cn-viec').innerHTML = viec ? 'Đang có <b>' + hai(viec) + '</b> việc AI chạy.' : 'Không có việc AI nào đang chạy.';
+  mo('h-capnhat');
+}
+async function capNhat(cheDo) {
+  dongHop(); const cu = D.capnhat.ban_dang;
+  try { const kq = await api('/capnhat', {che_do: cheDo});
+    if (kq.cho) { bao('Đã hẹn: chờ việc AI đang chạy xong (tối đa 30 phút) rồi tự cập nhật.'); return; } }
+  catch (e) { if (e.status) { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: ' + e.message + '.'; ve(); } return; }
+  S.cn = 'dangcn'; ve(); const het = Date.now() + 5 * 60e3;
+  const cho = async () => {
+    try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
+      if (k.phienban && k.phienban !== cu) { location.reload(); return; } } catch (e) { /* đang khởi động lại */ }
+    if (Date.now() < het) setTimeout(cho, 5000);
+    else { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: sau 05 phút máy chủ vẫn chạy bản cũ. Phần mềm vẫn chạy bình thường bằng bản cũ.'; ve(); }
+  };
+  setTimeout(cho, 5000);
 }
 
 async function napTab() {
@@ -247,7 +273,14 @@ document.addEventListener('click', async ev => {
   else if (d.thuhoi) xacnhan('Thu hồi phiên này?', 'Máy đó phải đăng nhập lại mới dùng tiếp được.', 'Thu hồi', async () => {
     try { await api('/phien/' + encodeURIComponent(d.thuhoi) + '/thuhoi', {}); bao('Đã thu hồi phiên.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
   else if ('kiemtra' in d) { try { const k = await api('/capnhat/kiemtra', {}); veCapNhat(k); if (!k.loi) bao(k.co_ban_moi ? 'Có bản mới ' + k.ban_moi + '.' : 'Đã kiểm tra: chưa có bản mới.'); } catch (e) { /* */ } }
-  else if ('capnhat' in d) capNhatNgay();
+  else if ('capnhat' in d) moCapNhat();
+  else if ('cnngay' in d) { await capNhat('ngay'); }
+  else if ('cncho' in d) { await capNhat('cho'); }
+  else if ('gd' in d) { const g = t.nextElementSibling; g.hidden = !g.hidden; }
+  else if ('giu' in d) { try { const k = await api('/phien/giahan', {}); D.hetLuc = k.het_luc; S.k = 'binhthuong';
+      bao(Date.parse(k.het_luc) - Date.now() > 5 * 60e3 ? 'Đã gia hạn phiên đăng nhập.' : 'Đã đủ 30 ngày từ lần đăng nhập, anh đăng nhập lại để dùng tiếp.'); } catch (e) { /* */ } }
+  else if ('dxkhac' in d) xacnhan('Đăng xuất mọi máy khác?', 'Các máy khác phải đăng nhập lại. Máy này vẫn giữ đăng nhập.', 'Đăng xuất', async () => {
+    try { const k = await api('/phien/thuhoi_khac', {}); bao('Đã đăng xuất ' + hai(k.so) + ' phiên trên các máy khác.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
   else if ('luumk' in d) { await doiMatKhau(); return; }
   else if ('luu2lop' in d) { await doiMay(); return; }
   if (t.id === 'xn-nut') { $('#h-xacnhan').hidden = true; const cb = D.xnCb; D.xnCb = null; if (cb) await cb(); }
@@ -264,6 +297,11 @@ document.addEventListener('keydown', ev => { const e = ev.target;
     else { const n = $('[data-s="dn:' + S.dn + '"] [data-xacnhan]'); if (n) xacNhanMa(n); } }
   if (ev.key === 'Escape') { dongHop(); dongTha(); ve(); } });
 setInterval(() => { if (S.g !== '01') demSo(); }, 60000);
+setInterval(() => {   // phiên 30 ngày (QĐ90): báo trước 05 phút; khoá đăng nhập hết thì bật lại nút
+  if (S.g !== '01' && D.hetLuc) { const con = Date.parse(D.hetLuc) - Date.now();
+    if (con <= 0) { S.g = '01'; S.dn = 'hethan'; S.k = 'binhthuong'; ve(); } else if (con <= 5 * 60e3 && S.k === 'binhthuong') { S.k = 'saphethan'; ve(); } }
+  if ((S.dn === 'khoa' || S.dn === 'khoatk') && D.khoaDen && Date.now() / 1000 >= D.khoaDen) { S.dn = 'matkhau'; D.khoaDen = 0; ve(); }
+}, 20000);
 
 ve();
 api('/toi').then(vaoPhanMem).catch(() => { S.g = '01'; ve(); });

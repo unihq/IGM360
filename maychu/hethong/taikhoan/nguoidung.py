@@ -1,6 +1,7 @@
 """Người dùng (F01): tài khoản quản trị tạo sẵn, đăng nhập 02 bước, bật và đổi máy nhận mã 02 lớp.
 
-Chặn đoán mật khẩu nhiều lần: CHỜ ANH DUYỆT số lần, thời gian khoá (nhật ký mục 5.57 D); chưa dựng.
+Chặn đoán mật khẩu theo QĐ90 (chan.py): đang khoá thì không kiểm mật khẩu; sai mật khẩu hay mã 02 lớp đều đếm.
+Mã 02 lớp bắt buộc, không có cách tắt trên web (chỉ lệnh đặt lại trên VPS).
 """
 import json
 import os
@@ -12,7 +13,7 @@ from pathlib import Path
 from maychu.dulieu import ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
-from maychu.hethong.taikhoan import matkhau, phien, totp
+from maychu.hethong.taikhoan import chan, matkhau, phien, totp
 
 HAN_MA_TAM_GIAY = 300          # mã tạm giữa bước mật khẩu và bước mã 02 lớp
 _MA_TAM: dict[str, dict] = {}  # mã tạm -> {nguoidung_id, khoa_moi, het}
@@ -58,15 +59,28 @@ def _doc_ma_tam(ma: str | None) -> dict | None:
     return v if v and v["het"] >= time.time() else None
 
 
-def buoc_matkhau(ten: str, mk: str, thumuc: Path | None = None) -> dict:
-    """Bước 1. Sai thì {'loi': ...}; đúng thì {'buoc': 'ma2lop' | 'bat2lop', 'ma_tam': ..., (qr, khoa khi bật)}."""
+def _bao_khoa(k: dict) -> dict:
+    return {"loi": "khoa", "khoa": k}
+
+
+def _sai(ip: str, chu: str, thumuc) -> dict:
+    kq = chan.ghi_sai(ip, thumuc)
+    return _bao_khoa(kq) if "den" in kq else {"loi": chu, "con_lai": kq["con_lai"]}
+
+
+def buoc_matkhau(ten: str, mk: str, ip: str = "khong_ro", thumuc: Path | None = None) -> dict:
+    """Bước 1. Đang khoá: {'loi': 'khoa', 'khoa': {...}}; sai: {'loi': ..., 'con_lai': n};
+    đúng: {'buoc': 'ma2lop' | 'bat2lop', 'ma_tam': ..., (qr, khoa khi bật)}."""
+    k = chan.dang_khoa(ip, thumuc)
+    if k:
+        return _bao_khoa(k)
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         u = _lay(cn, ten=ten)
     finally:
         cn.close()
     if not u or not matkhau.kiem(mk, u["matkhau_bam"]):
-        return {"loi": "Tên đăng nhập hoặc mật khẩu chưa đúng"}
+        return _sai(ip, "Tên đăng nhập hoặc mật khẩu chưa đúng.", thumuc)
     if u["totp_khoa_id"]:
         return {"buoc": "ma2lop", "ma_tam": _ma_tam(u["id"])}
     khoa = totp.sinh_khoa()
@@ -99,8 +113,11 @@ def _cat_khoa_2lop(nguoidung_id: str, khoa: str, thumuc: Path | None) -> None:
         cn.close()
 
 
-def buoc_ma2lop(ma_tam: str, ma: str, thietbi: str, thumuc: Path | None = None) -> dict:
+def buoc_ma2lop(ma_tam: str, ma: str, thietbi: str, ip: str = "khong_ro", thumuc: Path | None = None) -> dict:
     """Bước 2 (đã bật 02 lớp) hoặc bước bật 02 lớp lần đầu. Đúng thì trả về mã phiên."""
+    k = chan.dang_khoa(ip, thumuc)
+    if k:
+        return _bao_khoa(k)
     t = _doc_ma_tam(ma_tam)
     if not t:
         return {"loi": "Phiên đăng nhập đã hết hạn, anh đăng nhập lại"}
@@ -114,10 +131,11 @@ def buoc_ma2lop(ma_tam: str, ma: str, thietbi: str, thumuc: Path | None = None) 
             cn.close()
         khoa = kho.doc(khoa_id, thumuc)
     if not _kiem_ma(t["nguoidung_id"], khoa, ma):
-        return {"loi": "Mã 02 lớp chưa đúng"}
+        return _sai(ip, "Mã 02 lớp chưa đúng.", thumuc)
     if t["khoa_moi"]:
         _cat_khoa_2lop(t["nguoidung_id"], khoa, thumuc)
     _MA_TAM.pop(ma_tam, None)
+    chan.thanh_cong(ip, thumuc)
     return {"ma_phien": phien.tao(t["nguoidung_id"], thietbi, thumuc)}
 
 
@@ -167,13 +185,30 @@ def doi_matkhau(nguoidung_id: str, cu: str, moi: str, nhap_lai: str, phien_id: s
         cn.execute("UPDATE nguoidung SET matkhau_bam = ? WHERE id = ?", (matkhau.bam(moi), nguoidung_id))
     finally:
         cn.close()
+    ghi_doi_matkhau(nguoidung_id, "web", thumuc)
     return {"ok": True, "thu_hoi": phien.thu_hoi(nguoidung_id, tru_id=phien_id, thumuc=thumuc)}
+
+
+def ghi_doi_matkhau(nguoidung_id: str, cach: str, thumuc: Path | None = None) -> None:
+    """Ghi lần đổi mật khẩu vào F04 (để màn Tài khoản hiện "Đổi lần cuối"); không ghi mật khẩu."""
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        cn.execute("INSERT INTO nhatky_thaotac (id, luc, nguoi_loai, nguoi_id, congcu, lenhcon, thamso_tomtat, ketqua)"
+                   " VALUES (?, ?, 'anh', ?, 'taikhoan', 'doi_matkhau', ?, 'dat')", (maso.tao(), _bay_gio(), nguoidung_id, cach))
+    finally:
+        cn.close()
 
 
 def thong_tin(nguoidung_id: str, thumuc: Path | None = None) -> dict:
     cn = ketnoi.mo("Baomat", thumuc)
     try:
-        d = cn.execute("SELECT ma, ten, vaitro, totp_khoa_id FROM nguoidung WHERE id = ?", (nguoidung_id,)).fetchone()
+        d = cn.execute("SELECT ma, ten, vaitro, totp_khoa_id, tao_luc FROM nguoidung WHERE id = ?", (nguoidung_id,)).fetchone()
     finally:
         cn.close()
-    return {"ten_dangnhap": d[0], "ten": d[1], "vaitro": d[2], "da_bat_2lop": bool(d[3])}
+    nk = ketnoi.mo("Nhatky", thumuc)
+    try:
+        doi = nk.execute("SELECT max(luc) FROM nhatky_thaotac WHERE congcu = 'taikhoan' AND lenhcon = 'doi_matkhau'"
+                         " AND nguoi_id = ?", (nguoidung_id,)).fetchone()[0]
+    finally:
+        nk.close()
+    return {"ten_dangnhap": d[0], "ten": d[1], "vaitro": d[2], "da_bat_2lop": bool(d[3]), "lan_doi_matkhau": doi or d[4]}

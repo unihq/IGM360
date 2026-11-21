@@ -5,7 +5,7 @@ import hmac
 import secrets
 
 N, R, P = 2 ** 15, 8, 1
-DO_DAI_TOITHIEU = 12   # đề xuất CTO, CHỜ ANH DUYỆT (nhật ký mục 5.57 D); chỉ áp khi đổi hoặc đặt lại mật khẩu
+# QĐ90: không quy định độ dài mật khẩu, chỉ chặn ô trống
 
 
 def _b64(b: bytes) -> str:
@@ -34,6 +34,6 @@ def loi_matkhau_moi(moi: str, nhap_lai: str) -> str | None:
     """Trả về câu lỗi (lời thường) hoặc None khi mật khẩu mới dùng được."""
     if moi != nhap_lai:
         return "Hai lần nhập mật khẩu mới không khớp"
-    if len(moi) < DO_DAI_TOITHIEU:
-        return f"Mật khẩu mới cần ít nhất {DO_DAI_TOITHIEU} ký tự"
+    if not moi:
+        return "Mật khẩu mới không được để trống"
     return None

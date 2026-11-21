@@ -88,7 +88,10 @@ class KiemMayChu(unittest.TestCase):
     def test_thong_so(self):
         self.dang_nhap_lan_dau()
         d = self.c.get("/api/thongso").json()
-        self.assertEqual((d["tong"], d["da_dat"]), (15, 9))
+        self.assertEqual((d["tong"], d["da_dat"]), (14, 9))
+        self.assertNotIn("gio_baocao_sang", [t["ten"] for t in d["thongso"]])
+        self.assertEqual(self.c.post("/api/thongso/phuongphap_giaxuat", json={"giatri": "binhquan_giaquyen", "hieuluc_tu": "2099-01-01"},
+                                     headers=self.h).status_code, 400)
         r = self.c.post("/api/thongso/nguong_ocung", json={"giatri": "80", "hieuluc_tu": "2099-01-01"}, headers=self.h)
         self.assertEqual(r.status_code, 200, r.text)
         r = self.c.post("/api/thongso/nguong_ocung", json={"giatri": "85", "hieuluc_tu": "2099-01-01"}, headers=self.h)
@@ -113,15 +116,53 @@ class KiemMayChu(unittest.TestCase):
         r = may2.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h).json()
         may2.post("/api/dangnhap/ma2lop", json={"ma_tam": r["ma_tam"], "ma": totp.ma_cua_buoc(khoa, totp.buoc() + 1)}, headers=self.h)
         self.assertEqual(may2.get("/api/toi").status_code, 200)
-        r = self.c.post("/api/matkhau", json={"cu": MK, "moi": "ngan", "nhap_lai": "ngan"}, headers=self.h)
+        r = self.c.post("/api/matkhau", json={"cu": MK, "moi": "", "nhap_lai": ""}, headers=self.h)
         self.assertEqual(r.status_code, 400)
-        r = self.c.post("/api/matkhau", json={"cu": MK, "moi": "mat-khau-moi-du-dai", "nhap_lai": "mat-khau-moi-du-dai"}, headers=self.h)
+        r = self.c.post("/api/matkhau", json={"cu": MK, "moi": "ab", "nhap_lai": "ab"}, headers=self.h)   # QĐ90: không quy định độ dài
         self.assertEqual(r.json()["thu_hoi"], 1)
         self.assertEqual(may2.get("/api/toi").status_code, 401)
         ds = self.c.get("/api/taikhoan").json()
         self.assertEqual(self.c.post(f"/api/phien/{ds['phien_id']}/thuhoi", headers=self.h).status_code, 400)
         self.c.post("/api/dangxuat", headers=self.h)
         self.assertEqual(self.c.get("/api/toi").status_code, 401)
+
+    def test_khoa_dang_nhap_qua_duong_goi(self):
+        for i in range(4):
+            r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": "sai"}, headers=self.h)
+            self.assertEqual((r.status_code, r.json()["detail"]["con_lai"]), (400, 4 - i))
+        r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": "sai"}, headers=self.h)
+        self.assertEqual((r.status_code, r.json()["detail"]["phut"]), (429, 15))
+        r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h)   # đúng mật khẩu vẫn bị chặn
+        self.assertEqual(r.status_code, 429)
+        dap = iter(["mat-khau-moi", "mat-khau-moi"])
+        datlai.chay([], hoi=lambda _: next(dap), thumuc=self.thumuc)       # lệnh VPS mở khoá ngay
+        r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": "mat-khau-moi"}, headers=self.h)
+        self.assertEqual(r.status_code, 200)
+
+    def test_ma_2lop_sai_cung_dem(self):
+        khoa = self.dang_nhap_lan_dau()
+        self.c.post("/api/dangxuat", headers=self.h)
+        for _ in range(4):
+            r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h).json()
+            self.c.post("/api/dangnhap/ma2lop", json={"ma_tam": r["ma_tam"], "ma": "000000"}, headers=self.h)
+        r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h).json()
+        r = self.c.post("/api/dangnhap/ma2lop", json={"ma_tam": r["ma_tam"], "ma": "000000"}, headers=self.h)
+        self.assertEqual(r.status_code, 429)
+
+    def test_dang_xuat_moi_may_khac_va_cookie_30_ngay(self):
+        r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h).json()
+        khoa = r["khoa"]
+        r2 = self.c.post("/api/dangnhap/ma2lop", json={"ma_tam": r["ma_tam"], "ma": totp.ma_cua_buoc(khoa, totp.buoc())}, headers=self.h)
+        self.assertIn("Max-Age=2592000", r2.headers["set-cookie"])
+        from fastapi.testclient import TestClient
+        from maychu import khoidong
+        may2 = TestClient(khoidong.app)
+        r = may2.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h).json()
+        may2.post("/api/dangnhap/ma2lop", json={"ma_tam": r["ma_tam"], "ma": totp.ma_cua_buoc(khoa, totp.buoc() + 1)}, headers=self.h)
+        self.assertEqual(self.c.post("/api/phien/thuhoi_khac", headers=self.h).json()["so"], 1)
+        self.assertEqual(may2.get("/api/toi").status_code, 401)
+        self.assertEqual(self.c.get("/api/toi").status_code, 200)
+        self.assertIn("het_luc", self.c.post("/api/phien/giahan", headers=self.h).json())
 
     def test_lenh_dat_lai_mat_khau(self):
         self.dang_nhap_lan_dau()
@@ -130,7 +171,7 @@ class KiemMayChu(unittest.TestCase):
         self.assertEqual(self.c.get("/api/toi").status_code, 401)
         r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": "mat-khau-dat-lai-01"}, headers=self.h).json()
         self.assertEqual(r["buoc"], "bat2lop")
-        sai = iter(["ngan", "ngan"])
+        sai = iter(["", ""])
         self.assertEqual(datlai.chay([], hoi=lambda _: next(sai), thumuc=self.thumuc), 1)
 
     def test_khoa_chu_va_ket_khoa(self):

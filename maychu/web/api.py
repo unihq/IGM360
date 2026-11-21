@@ -1,7 +1,7 @@
 """Đường gọi cho màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (ngày 04 GĐ 1, bản vẽ đợt 1 QĐ88).
 
 Bảo vệ: mã phiên ở cookie HttpOnly, SameSite=Strict, Secure; mọi lệnh ghi phải có header X-IGM360
-(trang web khác không gửi được header này). Chặn đoán mật khẩu và thời hạn phiên CHỜ ANH DUYỆT.
+(trang web khác không gửi được header này). Chặn đoán mật khẩu theo địa chỉ IP thật, phiên 30 ngày (QĐ90).
 """
 import os
 
@@ -31,8 +31,19 @@ def can_dang_nhap(request: Request) -> dict:
 
 
 def _dat_cookie(res: Response, ma: str) -> None:
-    res.set_cookie(COOKIE, ma, httponly=True, samesite="strict", path="/",
+    res.set_cookie(COOKIE, ma, httponly=True, samesite="strict", path="/", max_age=phien.NGAY_TOIDA * 86400,
                    secure=os.environ.get("IGM360_COOKIE_SECURE", "1") != "0")
+
+
+def _ip(request: Request) -> str:
+    """Địa chỉ thật: uvicorn chỉ tin X-Forwarded-For từ cổng HTTPS (biến FORWARDED_ALLOW_IPS)."""
+    return request.client.host if request.client else "khong_ro"
+
+
+def _loi_dangnhap(kq: dict):
+    if kq["loi"] == "khoa":
+        raise HTTPException(429, {"loi": "khoa", **kq["khoa"]})
+    raise HTTPException(400, {"loi": kq["loi"], "con_lai": kq.get("con_lai")})
 
 
 class DangNhap(BaseModel):
@@ -61,21 +72,25 @@ class MaCu(BaseModel):
     ma: str
 
 
+class CheDoCapNhat(BaseModel):
+    che_do: str = "cho"
+
+
 @router.post("/dangnhap")
 def dang_nhap(body: DangNhap, request: Request):
     _an_toan(request)
-    kq = nguoidung.buoc_matkhau(body.ten.strip(), body.matkhau)
+    kq = nguoidung.buoc_matkhau(body.ten.strip(), body.matkhau, _ip(request))
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
+        _loi_dangnhap(kq)
     return kq
 
 
 @router.post("/dangnhap/ma2lop")
 def dang_nhap_ma(body: Ma2Lop, request: Request, response: Response):
     _an_toan(request)
-    kq = nguoidung.buoc_ma2lop(body.ma_tam, body.ma, phien.thietbi_tu(request.headers.get("user-agent")))
+    kq = nguoidung.buoc_ma2lop(body.ma_tam, body.ma, phien.thietbi_tu(request.headers.get("user-agent")), _ip(request))
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
+        _loi_dangnhap(kq)
     _dat_cookie(response, kq["ma_phien"])
     return {"ok": True}
 
@@ -89,7 +104,18 @@ def dang_xuat(response: Response, p: dict = Depends(can_dang_nhap)):
 
 @router.get("/toi")
 def toi(p: dict = Depends(can_dang_nhap)):
-    return {**nguoidung.thong_tin(p["nguoidung_id"]), "phien_id": p["phien_id"]}
+    return {**nguoidung.thong_tin(p["nguoidung_id"]), "phien_id": p["phien_id"], "het_luc": p["het_luc"]}
+
+
+@router.post("/phien/giahan")
+def gia_han(p: dict = Depends(can_dang_nhap)):
+    """Nút "Ở lại": mỗi lần gọi đã tính là có thao tác; hạn tối đa 30 ngày không đổi."""
+    return {"het_luc": p["het_luc"]}
+
+
+@router.post("/phien/thuhoi_khac")
+def thu_hoi_khac(p: dict = Depends(can_dang_nhap)):
+    return {"so": phien.thu_hoi(p["nguoidung_id"], tru_id=p["phien_id"])}
 
 
 @router.get("/demso")
@@ -177,8 +203,8 @@ def kiem_lai(p: dict = Depends(can_dang_nhap)):
 
 
 @router.post("/capnhat")
-def cap_nhat(p: dict = Depends(can_dang_nhap)):
-    kq = capnhat.cap_nhat_ngay(p["nguoidung_id"])
+def cap_nhat(body: CheDoCapNhat, p: dict = Depends(can_dang_nhap)):
+    kq = capnhat.yeu_cau(p["nguoidung_id"], body.che_do)
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return kq

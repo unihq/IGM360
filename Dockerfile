@@ -64,4 +64,7 @@ EXPOSE 8360
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8360/suckhoe',timeout=4).status==200 else 1)" || exit 1
 
-CMD ["python", "-m", "uvicorn", "maychu.khoidong:app", "--host", "0.0.0.0", "--port", "8360", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# Chỉ tin địa chỉ IP thật do cổng HTTPS chuyển tới: địa chỉ cổng đặt ở biến FORWARDED_ALLOW_IPS (tệp compose).
+# Mặc định chỉ tin chính máy, không tin nguồn nào khác.
+ENV FORWARDED_ALLOW_IPS=127.0.0.1
+CMD ["python", "-m", "uvicorn", "maychu.khoidong:app", "--host", "0.0.0.0", "--port", "8360", "--proxy-headers"]

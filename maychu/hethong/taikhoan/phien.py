@@ -1,19 +1,29 @@
 """Phiên đăng nhập web (F05). Chỉ lưu mã băm của mã phiên, không lưu mã gốc.
 
-Thời hạn phiên (hết sau bao lâu không thao tác, tối đa bao nhiêu ngày) và cách báo trước 05 phút
-CHỜ ANH DUYỆT (nhật ký mục 5.57 D): `het_han` để trống tới khi có quyết định.
+Thời hạn (QĐ90): phiên hết sau 30 ngày không thao tác; dùng liên tục cũng phải đăng nhập lại sau 30 ngày
+(`het_han` = lúc tạo + 30 ngày). Giao diện báo trước 05 phút, nút "Ở lại" gia hạn phần không thao tác.
 """
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from maychu.dulieu import ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 
+NGAY_KHONG_THAOTAC = 30
+NGAY_TOIDA = 30
+
+
 def _bay_gio() -> str:
     return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+
+
+def het_luc(lan_dung_cuoi: str, het_han: str) -> str:
+    """Lúc phiên hết: sớm hơn giữa (lần dùng cuối + 30 ngày) và hạn tối đa."""
+    nghi = datetime.fromisoformat(lan_dung_cuoi) + timedelta(days=NGAY_KHONG_THAOTAC)
+    return min(nghi, datetime.fromisoformat(het_han)).isoformat(timespec="seconds")
 
 
 def _bam(ma: str) -> str:
@@ -35,9 +45,11 @@ def tao(nguoidung_id: str, thietbi: str, thumuc: Path | None = None) -> str:
     ma = secrets.token_urlsafe(32)
     cn = ketnoi.mo("Baomat", thumuc)
     try:
-        cn.execute("INSERT INTO phien_truycap (id, nguoidung_id, loai, mabam, tao_luc, lan_dung_cuoi, thietbi)"
-                   " VALUES (?, ?, 'phien_web', ?, ?, ?, ?)",
-                   (maso.tao(), nguoidung_id, _bam(ma), _bay_gio(), _bay_gio(), thietbi))
+        bay = datetime.now(MUIGIO_VN)
+        cn.execute("INSERT INTO phien_truycap (id, nguoidung_id, loai, mabam, tao_luc, het_han, lan_dung_cuoi, thietbi)"
+                   " VALUES (?, ?, 'phien_web', ?, ?, ?, ?, ?)",
+                   (maso.tao(), nguoidung_id, _bam(ma), bay.isoformat(timespec="seconds"),
+                    (bay + timedelta(days=NGAY_TOIDA)).isoformat(timespec="seconds"), bay.isoformat(timespec="seconds"), thietbi))
     finally:
         cn.close()
     return ma
@@ -50,16 +62,18 @@ def tim(ma: str | None, thumuc: Path | None = None) -> dict | None:
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         d = cn.execute(
-            "SELECT p.id, p.nguoidung_id, u.ma, u.ten, u.vaitro, u.module_xem FROM phien_truycap p"
+            "SELECT p.id, p.nguoidung_id, u.ma, u.ten, u.vaitro, u.module_xem, p.lan_dung_cuoi, p.het_han FROM phien_truycap p"
             " JOIN nguoidung u ON u.id = p.nguoidung_id"
             " WHERE p.mabam = ? AND p.loai = 'phien_web' AND p.thuhoi_luc IS NULL AND u.trangthai = 'dung'",
             (_bam(ma),)).fetchone()
-        if not d:
+        if not d or not d[7] or het_luc(d[6], d[7]) <= _bay_gio():
             return None
-        cn.execute("UPDATE phien_truycap SET lan_dung_cuoi = ? WHERE id = ?", (_bay_gio(), d[0]))
+        bay = _bay_gio()
+        cn.execute("UPDATE phien_truycap SET lan_dung_cuoi = ? WHERE id = ?", (bay, d[0]))
     finally:
         cn.close()
-    return {"phien_id": d[0], "nguoidung_id": d[1], "ten_dangnhap": d[2], "ten": d[3], "vaitro": d[4], "module_xem": d[5]}
+    return {"phien_id": d[0], "nguoidung_id": d[1], "ten_dangnhap": d[2], "ten": d[3], "vaitro": d[4], "module_xem": d[5],
+            "het_luc": het_luc(bay, d[7])}
 
 
 def danh_sach(nguoidung_id: str, thumuc: Path | None = None) -> list[dict]:
@@ -70,7 +84,10 @@ def danh_sach(nguoidung_id: str, thumuc: Path | None = None) -> list[dict]:
                           (nguoidung_id,)).fetchall()
     finally:
         cn.close()
-    return [dict(zip(("id", "loai", "thietbi", "tao_luc", "lan_dung_cuoi", "het_han"), d)) for d in dong]
+    ra = [dict(zip(("id", "loai", "thietbi", "tao_luc", "lan_dung_cuoi", "het_han"), d)) for d in dong]
+    for p in ra:
+        p["het_luc"] = het_luc(p["lan_dung_cuoi"], p["het_han"]) if p["het_han"] and p["lan_dung_cuoi"] else None
+    return [p for p in ra if p["het_luc"] and p["het_luc"] > _bay_gio()]
 
 
 def thu_hoi(nguoidung_id: str, phien_id: str | None = None, tru_id: str | None = None,

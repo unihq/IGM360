@@ -2,7 +2,7 @@
 
     docker compose exec igm360 python -m maychu.hethong.taikhoan.datlai [--tat-2lop]
 
-Hỏi mật khẩu mới 02 lần (không hiện chữ), thu hồi mọi phiên cũ. --tat-2lop: tắt 02 lớp, lần đăng nhập
+Hỏi mật khẩu mới 02 lần (không hiện chữ), thu hồi mọi phiên cũ, xoá bộ đếm chặn đoán mật khẩu (mở khoá ngay). --tat-2lop: tắt 02 lớp, lần đăng nhập
 sau phần mềm bắt bật lại. Chưa có tài khoản nào thì hỏi thêm tên đăng nhập và tạo tài khoản chủ.
 """
 import getpass
@@ -13,7 +13,7 @@ from datetime import datetime
 from maychu.dulieu import ketnoi, khoitao, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
-from maychu.hethong.taikhoan import matkhau, phien
+from maychu.hethong.taikhoan import chan, matkhau, nguoidung, phien
 
 
 def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
@@ -50,7 +50,9 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
     finally:
         cn.close()
     so = phien.thu_hoi(u[0], thumuc=thumuc)
-    print(f"ĐÃ ĐẶT LẠI MẬT KHẨU. Đã thu hồi {so:02d} phiên đăng nhập cũ."
+    chan.xoa_het(thumuc)
+    nguoidung.ghi_doi_matkhau(u[0], "lenh_vps", thumuc)
+    print(f"ĐÃ ĐẶT LẠI MẬT KHẨU. Đã thu hồi {so:02d} phiên đăng nhập cũ. Đã mở khoá đăng nhập."
           + (" Đã tắt 02 lớp, lần đăng nhập sau sẽ bật lại." if "--tat-2lop" in thamso else ""))
     return 0
 
