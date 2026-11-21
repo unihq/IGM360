@@ -13,6 +13,7 @@ from maychu.dulieu import ketnoi
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
+from maychu.hethong.mohinh import dangnhap_goi
 from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
 from maychu.ketnoi import drive
@@ -346,4 +347,63 @@ def day_ngay(p: dict = Depends(can_dang_nhap)):
 def ngung_drive(p: dict = Depends(can_dang_nhap)):
     drive.ngung()
     ghi_f04("ketnoi", "drive_ngung", "ngừng Google Drive", nguoi_id=p["nguoidung_id"])
+    return {"ok": True}
+
+
+# ---- Màn 13 Model (ngày 06): đăng nhập gói trên giao diện ----
+class TaiKhoanGoi(BaseModel):
+    taikhoan: int = 1
+
+
+class MaGoi(BaseModel):
+    taikhoan: int = 1
+    ma: str
+
+
+def _goi(goi: str, taikhoan: int):
+    try:
+        dangnhap_goi._kiem(goi, taikhoan)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/mohinh")
+def xem_mohinh(p: dict = Depends(can_dang_nhap)):
+    return {"nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong")}
+
+
+@router.post("/mohinh/goi/{goi}/batdau")
+def goi_bat_dau(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
+    _goi(goi, body.taikhoan)
+    kq = dangnhap_goi.bat_dau(goi, body.taikhoan)
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return kq
+
+
+@router.post("/mohinh/goi/claude/ma")
+def goi_dan_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
+    _goi("claude", body.taikhoan)
+    kq = dangnhap_goi.dan_ma("claude", body.taikhoan, body.ma)
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    ghi_f04("mohinh", "dangnhap_goi", f"gói Claude tài khoản {body.taikhoan:02d}", nguoi_id=p["nguoidung_id"])
+    return kq
+
+
+@router.post("/mohinh/goi/chatgpt/hoi")
+def goi_hoi(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
+    _goi("chatgpt", body.taikhoan)
+    kq = dangnhap_goi.hoi("chatgpt", body.taikhoan)
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    if kq.get("xong"):
+        ghi_f04("mohinh", "dangnhap_goi", f"gói ChatGPT tài khoản {body.taikhoan:02d}", nguoi_id=p["nguoidung_id"])
+    return kq
+
+
+@router.post("/mohinh/goi/{goi}/huy")
+def goi_huy(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
+    _goi(goi, body.taikhoan)
+    dangnhap_goi.huy(goi, body.taikhoan)
     return {"ok": True}
