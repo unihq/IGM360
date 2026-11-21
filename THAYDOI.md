@@ -2,6 +2,12 @@
 
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 
+## 0.5.0
+- Đăng nhập gói Claude, gói ChatGPT ngay trên phần mềm, thêm được tài khoản thứ 02.
+- Phần mềm gọi được AI qua gói Claude, gói ChatGPT, khoá API; ghi lại mỗi lần dùng AI và mức đã dùng của gói.
+- Có sẵn phần trò chuyện với trợ lý AI (màn hình có ở bản sau).
+- Ngưỡng tiền để AI tự áp dụng chuyển sang giai đoạn 2; giai đoạn 1 mọi đề xuất chờ anh bấm.
+
 ## 0.4.0
 - Bản sao lưu hằng ngày được mã hoá, chờ đẩy lên Google Drive khi anh kết nối Drive.
 - Két khoá cất được khoá kết nối, báo trước khi khoá sắp hết hạn.
