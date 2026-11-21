@@ -1,0 +1,12 @@
+{
+  "ma": "google_drive",
+  "ten": "Google Drive",
+  "linhvuc": "luutru",
+  "cach_noi": "ketnoi_chinhthuc",
+  "logo": "googledrive.svg",
+  "quyen_xin": ["https://www.googleapis.com/auth/drive.file"],
+  "nghia_quyen": "Chỉ thấy và sửa file do IGM360 tạo ra; không đọc được file khác trên Drive của anh",
+  "muc_quyen": "ghiantoan",
+  "dung_cho": ["saoluu"],
+  "giai_doan": 1
+}

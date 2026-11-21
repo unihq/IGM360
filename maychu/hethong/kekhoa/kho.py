@@ -1,5 +1,9 @@
-"""Cất, đọc, xoá khoá ở F03 `kekhoa`. Chỉ lưu bản mã và 04 ký tự cuối; không ghi khoá ra nhật ký."""
-from datetime import datetime
+"""Cất, đọc, đổi, xoá khoá ở F03 `kekhoa`. Chỉ lưu bản mã và 04 ký tự cuối; không ghi khoá ra nhật ký.
+
+Màn 09 ngăn Két khoá (ngày 05) chỉ đọc danh sách không có bản mã. Khoá không có hạn: `han` để trống, màn hiện
+"Không có hạn". Khoá sắp hết hạn: còn ít ngày hơn hoặc bằng thông số `songay_baotruoc_khoa_hethan` (mặc định 05).
+"""
+from datetime import date, datetime
 from pathlib import Path
 
 from maychu.dulieu import ketnoi, maso
@@ -49,3 +53,58 @@ def xoa(ma: str, thumuc: Path | None = None, cn=None) -> None:
         c.execute(sql, (ma,))
     finally:
         c.close()
+
+
+# Khoá do phần mềm tự sinh, dùng nội bộ: không hiện ở ngăn Két khoá, không sửa trên web.
+NOIBO = {"totp_2lop"}
+TEN_DICHVU = {"google_oauth_ungdung": "Google Drive · mã ứng dụng", "google_drive_lammoi": "Google Drive · quyền đẩy file"}
+
+
+def tinh_trang(han: str | None, songay_baotruoc: int, hom_nay: date | None = None) -> tuple[str, int | None]:
+    """('khong_han' | 'dung' | 'saphet' | 'hethan', số ngày còn lại)."""
+    if not han:
+        return "khong_han", None
+    con = (date.fromisoformat(han[:10]) - (hom_nay or datetime.now(MUIGIO_VN).date())).days
+    if con < 0:
+        return "hethan", con
+    return ("saphet" if con <= songay_baotruoc else "dung"), con
+
+
+def danh_sach(thumuc: Path | None = None, songay_baotruoc: int = 5, hom_nay: date | None = None) -> list[dict]:
+    c = ketnoi.mo("Baomat", thumuc)
+    try:
+        dong = c.execute("SELECT id, dichvu, ketnoi_id, kytu_cuoi, han, lan_dung_cuoi, nguoi_nhap FROM kekhoa"
+                         " WHERE trangthai = 'dung' ORDER BY dichvu, id").fetchall()
+    finally:
+        c.close()
+    ds = []
+    for ma, dv, kn, cuoi, han, dung, nguoi in dong:
+        if dv in NOIBO:
+            continue
+        tt, con = tinh_trang(han, songay_baotruoc, hom_nay)
+        ds.append({"id": ma, "dichvu": dv, "ten": TEN_DICHVU.get(dv, dv), "ketnoi_id": kn, "kytu_cuoi": cuoi,
+                   "han": han, "lan_dung_cuoi": dung, "nguoi_nhap": nguoi, "tinhtrang": tt, "con_ngay": con})
+    return ds
+
+
+def doi(ma: str, giatri: str, thumuc: Path | None = None, *, han=None, cn=None) -> None:
+    """Thay giá trị 01 khoá (giữ id để nguồn đang dùng khoá không phải nối lại)."""
+    sql = "UPDATE kekhoa SET banma = ?, kytu_cuoi = ?, han = ? WHERE id = ? AND trangthai = 'dung'"
+    gt = (khoachu.ma_hoa(giatri.encode(), thumuc), giatri[-4:], han, ma)
+    c = cn or ketnoi.mo("Baomat", thumuc)
+    try:
+        if c.execute(sql, gt).rowcount != 1:
+            raise KeyError(ma)
+    finally:
+        if cn is None:
+            c.close()
+
+
+def tim(dichvu: str, thumuc: Path | None = None) -> str | None:
+    c = ketnoi.mo("Baomat", thumuc)
+    try:
+        d = c.execute("SELECT id FROM kekhoa WHERE dichvu = ? AND trangthai = 'dung' ORDER BY rowid DESC LIMIT 1",
+                      (dichvu,)).fetchone()
+    finally:
+        c.close()
+    return d[0] if d else None

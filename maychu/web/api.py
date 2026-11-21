@@ -1,4 +1,4 @@
-"""Đường gọi cho màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (ngày 04 GĐ 1, bản vẽ đợt 1 QĐ88).
+"""Đường gọi cho màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (ngày 04), két khoá và màn 11 Nguồn dữ liệu (ngày 05).
 
 Bảo vệ: mã phiên ở cookie HttpOnly, SameSite=Strict, Secure; mọi lệnh ghi phải có header X-IGM360
 (trang web khác không gửi được header này). Chặn đoán mật khẩu theo địa chỉ IP thật, phiên 30 ngày (QĐ90).
@@ -6,12 +6,16 @@ Bảo vệ: mã phiên ở cookie HttpOnly, SameSite=Strict, Secure; mọi lện
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from maychu.dulieu import ketnoi
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
+from maychu.hethong.kekhoa import kho
+from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
+from maychu.ketnoi import drive
 
 COOKIE = "igm360_phien"
 router = APIRouter(prefix="/api")
@@ -208,3 +212,138 @@ def cap_nhat(body: CheDoCapNhat, p: dict = Depends(can_dang_nhap)):
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return kq
+
+
+# ---- Két khoá (màn 09, ngày 05) ----
+class KhoaMoi(BaseModel):
+    dichvu: str
+    giatri: str
+    han: str | None = None
+
+
+class DoiKhoa(BaseModel):
+    giatri: str
+    han: str | None = None
+
+
+def _songay() -> int:
+    try:
+        return int(thongso.doc_mot("songay_baotruoc_khoa_hethan", "5"))
+    except ValueError:
+        return 5
+
+
+def _kiem_han(han: str | None) -> str | None:
+    if not han:
+        return None
+    from datetime import date
+    try:
+        return date.fromisoformat(han[:10]).isoformat()
+    except ValueError:
+        raise HTTPException(400, "Hạn khoá phải là ngày (năm-tháng-ngày)")
+
+
+@router.get("/kekhoa")
+def xem_kekhoa(p: dict = Depends(can_dang_nhap)):
+    n = _songay()
+    ds = kho.danh_sach(songay_baotruoc=n)
+    dem = {k: sum(1 for x in ds if x["tinhtrang"] == k) for k in ("dung", "khong_han", "saphet", "hethan")}
+    return {"ds": ds, "dem": dem, "tong": len(ds), "songay_baotruoc": n}
+
+
+@router.post("/kekhoa")
+def them_khoa(body: KhoaMoi, p: dict = Depends(can_dang_nhap)):
+    if not body.giatri.strip() or not body.dichvu.strip() or body.dichvu in kho.NOIBO:
+        raise HTTPException(400, "Thiếu tên dịch vụ hoặc giá trị khoá")
+    ma = kho.cat(body.dichvu.strip(), body.giatri.strip(), han=_kiem_han(body.han), nguoi_nhap=p["ten_dangnhap"])
+    ghi_f04("kekhoa", "them", f"dịch vụ {body.dichvu.strip()}", nguoi_id=p["nguoidung_id"])
+    return {"id": ma}
+
+
+@router.post("/kekhoa/{ma}/doi")
+def doi_khoa(ma: str, body: DoiKhoa, p: dict = Depends(can_dang_nhap)):
+    if not body.giatri.strip() or ma not in {x["id"] for x in kho.danh_sach()}:
+        raise HTTPException(400, "Không đổi được khoá này")
+    kho.doi(ma, body.giatri.strip(), han=_kiem_han(body.han))
+    ghi_f04("kekhoa", "doi", f"khoá {ma}", nguoi_id=p["nguoidung_id"])
+    return {"id": ma}
+
+
+@router.post("/kekhoa/{ma}/xoa")
+def xoa_khoa(ma: str, p: dict = Depends(can_dang_nhap)):
+    """Xoá hẳn (không lấy lại được); nguồn dùng khoá này ngừng lấy số."""
+    if ma not in {x["id"] for x in kho.danh_sach()}:
+        raise HTTPException(400, "Không xoá được khoá này")
+    kho.xoa(ma)
+    cn = ketnoi.mo("Ketnoi")
+    try:
+        so = cn.execute("UPDATE ketnoi SET trangthai_phien = 'mat_khoa', loi_cuoi = 'Khoá đã bị xoá ở Két khoá'"
+                        " WHERE khoa_id = ?", (ma,)).rowcount
+    finally:
+        cn.close()
+    ghi_f04("kekhoa", "xoa", f"khoá {ma}; {so:02d} nguồn ngừng lấy số", nguoi_id=p["nguoidung_id"])
+    return {"id": ma, "so_nguon_ngung": so}
+
+
+# ---- Nguồn dữ liệu (màn 11, ngày 05): GĐ 1 chỉ có Google Drive ----
+class UngDungGoogle(BaseModel):
+    client_id: str
+    client_secret: str
+
+
+def _duong_ve(request: Request) -> str:
+    return str(request.base_url).rstrip("/") + "/api/ketnoi/drive/vetrang"
+
+
+@router.get("/nguon")
+def xem_nguon(request: Request, p: dict = Depends(can_dang_nhap)):
+    return {"drive": drive.tinh_hinh(), "duong_ve": _duong_ve(request)}
+
+
+@router.post("/ketnoi/drive/ungdung")
+def luu_ung_dung(body: UngDungGoogle, p: dict = Depends(can_dang_nhap)):
+    try:
+        drive.luu_ungdung(body.client_id, body.client_secret)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    ghi_f04("ketnoi", "drive_ungdung", "lưu mã ứng dụng Google", nguoi_id=p["nguoidung_id"])
+    return {"ok": True}
+
+
+@router.post("/ketnoi/drive/batdau")
+def bat_dau_drive(request: Request, p: dict = Depends(can_dang_nhap)):
+    try:
+        return {"url": drive.bat_dau(_duong_ve(request), p["nguoidung_id"])}
+    except LookupError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/ketnoi/drive/vetrang", response_class=HTMLResponse)
+def ve_trang_drive(code: str = "", state: str = "", error: str = ""):
+    """Google chuyển về đây (không mang cookie vì SameSite=Strict); kiểm bằng mã chống giả dùng 01 lần."""
+    if error:
+        kq, ok = "Anh chưa cấp quyền cho IGM360 trên Google.", False
+    else:
+        try:
+            drive.ve_trang(code, state)
+            kq, ok = "Đã kết nối Google Drive.", True
+            ghi_f04("ketnoi", "drive_noi", "kết nối Google Drive (quyền drive.file)")
+        except (PermissionError, RuntimeError, LookupError) as e:
+            kq, ok = str(e), False
+    import html
+    dich = "/#nguon" if ok else "/#nguon-loi"   # trang mới mở từ trang này (cùng trang web) thì trình duyệt gửi cookie
+    return HTMLResponse(f'<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="1;url={dich}">'
+                        f'<title>IGM360</title><p>{html.escape(kq)}</p><p><a href="{dich}">Về IGM360</a></p>',
+                        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
+
+@router.post("/ketnoi/drive/daythu")
+def day_ngay(p: dict = Depends(can_dang_nhap)):
+    return drive.day_hang_cho()
+
+
+@router.post("/ketnoi/drive/ngung")
+def ngung_drive(p: dict = Depends(can_dang_nhap)):
+    drive.ngung()
+    ghi_f04("ketnoi", "drive_ngung", "ngừng Google Drive", nguoi_id=p["nguoidung_id"])
+    return {"ok": True}

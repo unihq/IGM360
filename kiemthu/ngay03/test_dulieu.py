@@ -122,7 +122,8 @@ class KiemSaoLuuDoMay(unittest.TestCase):
         for d in kq["file"]:
             self.assertEqual(d["kiemtra"], "ok")
             buoc = json.loads(d["ketqua_tungbuoc_json"])
-            self.assertEqual(buoc["4_mahoa"], "cho_khoa_saoluu")
+            self.assertEqual(buoc["4_mahoa"], "dat")  # từ ngày 05 (trước đó: cho_khoa_saoluu)
+            self.assertEqual(buoc["5_day_drive"], "cho_day")
             self.assertEqual(stat.S_IMODE(os.stat(d["noi_luu"]).st_mode), 0o600)
         self.assertFalse(list(saoluu.thumuc_saoluu(self.thumuc).rglob("*.tam")))
         cn = ketnoi.mo("Nhatky", self.thumuc)
@@ -132,8 +133,14 @@ class KiemSaoLuuDoMay(unittest.TestCase):
             cn.close()
 
     def test_giu_03_ngay(self):
+        # Từ ngày 05: bản đã đẩy Drive xong mới được dọn (bản chưa đẩy giữ lại, xem kiemthu/ngay05)
         for ngay in range(18, 23):
             saoluu.chay(self.thumuc, datetime(2026, 11, ngay, 3, tzinfo=saoluu.MUIGIO_VN))
+            h = ketnoi.mo("Hotho", self.thumuc)
+            try:
+                h.execute("UPDATE cho_day_drive SET trangthai = 'xong'")
+            finally:
+                h.close()
         con = sorted(p.name for p in saoluu.thumuc_saoluu(self.thumuc).iterdir())
         self.assertEqual(con, ["2026-11-20", "2026-11-21", "2026-11-22"])
 

@@ -4,9 +4,11 @@ Không bao giờ chép thẳng file đang chạy. Mỗi file 05 bước:
   (1) chụp bằng lệnh sao lưu trực tuyến của SQLite ra file tạm;
   (2) PRAGMA integrity_check trên bản chụp, khác "ok" thì dừng cả lượt;
   (3) đổi tên file tạm thành tên chính thức trong 01 lần;
-  (4) mã hoá: CHỜ két khoá (F03) có khoá sao lưu;
-  (5) đẩy lên Drive: CHỜ kết nối Drive.
-Bước 4, 5 ghi trạng thái chờ trong N01 cho tới khi 02 phần đó có.
+  (4) mã hoá bản chụp ra tệp `.mahoa` (Fernet), khoá sao lưu suy ra từ khoá chủ (HKDF-SHA256), nên chỉ cần
+      01 bản khoá chủ anh đã chép về máy là giải mã được bản trên Drive, kể cả khi mất cả VPS;
+  (5) xếp tệp `.mahoa` vào hàng chờ đẩy Drive (M01); việc đẩy chạy theo lịch khi đã kết nối Drive
+      (maychu/ketnoi/drive.py), đẩy xong mới xoá tệp `.mahoa` trên máy.
+Bản chụp chưa mã hoá giữ trên máy 03 ngày để khôi phục nhanh (thư mục quyền 700, tệp quyền 600).
 """
 import hashlib
 import json
@@ -17,6 +19,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from maychu.dulieu import ketnoi, maso
+
+DUOI_MAHOA = ".mahoa"
 
 MUIGIO_VN = timezone(timedelta(hours=7))
 GIU_SO_NGAY = 3  # giữ bản trên máy của 03 ngày gần nhất; bản lâu dài nằm ở Drive
@@ -40,10 +44,56 @@ def da_co_hom_nay(thumuc: Path | None = None, bay_gio: datetime | None = None) -
     return all((noi / f"{t}.sqlite3").exists() for t in ketnoi.CAC_FILE)
 
 
-def _don_ban_cu(goc: Path) -> None:
+def _khoa_saoluu(thumuc: Path | None = None):
+    """Khoá sao lưu = HKDF-SHA256 của khoá chủ (không cất riêng, không nằm trong bản sao lưu)."""
+    import base64
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+    from maychu.hethong.kekhoa import khoachu
+    goc = base64.urlsafe_b64decode(khoachu.lay(thumuc))
+    return Fernet(base64.urlsafe_b64encode(HKDF(hashes.SHA256(), 32, None, b"igm360-saoluu-v1").derive(goc)))
+
+
+def ma_hoa_tep(nguon: Path, thumuc: Path | None = None) -> Path:
+    dich = nguon.with_name(nguon.name + DUOI_MAHOA)
+    tam = dich.with_name(dich.name + ".tam")
+    fd = os.open(tam, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(_khoa_saoluu(thumuc).encrypt(nguon.read_bytes()))
+    os.replace(tam, dich)
+    return dich
+
+
+def giai_ma_tep(tep_mahoa: Path, tep_khoachu: Path, dich: Path) -> Path:
+    """Khôi phục bản tải từ Drive bằng tệp khoá chủ anh giữ (chạy được ở máy bất kỳ có thư viện cryptography)."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        Path(d, ".khoa_chu").write_bytes(Path(tep_khoachu).read_bytes())
+        du_lieu = _khoa_saoluu(Path(d)).decrypt(Path(tep_mahoa).read_bytes())
+    Path(dich).write_bytes(du_lieu)
+    return Path(dich)
+
+
+def _tep_dang_cho(thumuc: Path) -> set[str]:
+    cn = ketnoi.mo("Hotho", thumuc)
+    try:
+        return {r[0] for r in cn.execute("SELECT duongdan_tam FROM cho_day_drive WHERE trangthai IN ('cho', 'dangday', 'loi')")}
+    finally:
+        cn.close()
+
+
+def _don_ban_cu(goc: Path, thumuc: Path) -> None:
     ngay = sorted(p for p in goc.iterdir() if p.is_dir() and len(p.name) == 10)
+    cho = _tep_dang_cho(thumuc)
     for p in ngay[:-GIU_SO_NGAY]:
-        shutil.rmtree(p, ignore_errors=True)
+        con = [x for x in p.iterdir() if str(x) in cho]
+        if not con:
+            shutil.rmtree(p, ignore_errors=True)
+            continue
+        for x in p.iterdir():  # còn tệp chưa đẩy Drive: giữ tệp đó, xoá phần còn lại
+            if x not in con:
+                x.unlink(missing_ok=True)
 
 
 def chay(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict:
@@ -82,8 +132,9 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict:
             buoc["2_kiemtra"] = "dat"
             os.replace(tam, chinh)
             buoc["3_doiten"] = "dat"
-            buoc["4_mahoa"] = "cho_khoa_saoluu"
-            buoc["5_day_drive"] = "cho_ket_noi_drive"
+            ma_hoa_tep(chinh, thumuc)
+            buoc["4_mahoa"] = "dat"
+            buoc["5_day_drive"] = "cho_day"
             ketqua = "xong_tren_may"
         except Exception as loi:  # ghi lại rồi dừng cả lượt
             tam.unlink(missing_ok=True)
@@ -100,8 +151,9 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict:
         if ketqua == "loi":
             break
     _ghi_n01(thumuc, dong_n01)
+    _xep_cho_drive(thumuc, dong_n01, noi, luc)
     if ketqua_chung != "loi":
-        _don_ban_cu(goc)
+        _don_ban_cu(goc, thumuc)
     return {"ketqua": ketqua_chung, "file": dong_n01}
 
 
@@ -113,6 +165,23 @@ def _ghi_n01(thumuc: Path, dong: list) -> None:
         for d in dong:
             cn.execute(f"INSERT INTO saoluu ({', '.join(cot)}) VALUES ({', '.join('?' * len(cot))})",
                        [d[c] for c in cot])
+        cn.execute("COMMIT")
+    finally:
+        cn.close()
+
+
+def _xep_cho_drive(thumuc: Path, dong_n01: list, noi: Path, luc: datetime) -> None:
+    """Bước 5: mỗi tệp đã mã hoá 01 dòng M01 trạng thái 'cho'."""
+    cn = ketnoi.mo("Hotho", thumuc)
+    try:
+        cn.execute("BEGIN IMMEDIATE")
+        for d in dong_n01:
+            tep = noi / f"{d['file_dulieu']}.sqlite3{DUOI_MAHOA}"
+            if d["ketqua"] == "loi" or not tep.exists():
+                continue
+            cn.execute("INSERT INTO cho_day_drive (id, loai, saoluu_id, duongdan_tam, dungluong_byte, trangthai, so_lan_thu, tao_luc)"
+                       " VALUES (?, 'saoluu', ?, ?, ?, 'cho', 0, ?)",
+                       (maso.tao(), d["id"], str(tep), tep.stat().st_size, luc.isoformat(timespec="seconds")))
         cn.execute("COMMIT")
     finally:
         cn.close()

@@ -73,6 +73,16 @@ def _dong_dang_dung(cn, ten: str, ngay: str):
                       (ten, ngay, ngay)).fetchone()
 
 
+def doc_mot(ten: str, macdinh: str | None = None, thumuc: Path | None = None) -> str | None:
+    """Giá trị đang áp dụng hôm nay của 01 thông số (trống thì trả `macdinh`)."""
+    cn = ketnoi.mo("Dulieu_Chinh", thumuc)
+    try:
+        d = _dong_dang_dung(cn, ten, _hom_nay())
+    finally:
+        cn.close()
+    return d[1] if d and d[1] not in (None, "") else macdinh
+
+
 def doc_het(thumuc: Path | None = None) -> dict:
     ngay = _hom_nay()
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)

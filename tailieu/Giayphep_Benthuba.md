@@ -12,3 +12,20 @@ Danh sách nguồn mà IGM360 được phép lấy đoạn mã hoặc dữ liệ
 | CMU Pronouncing Dictionary (Carnegie Mellon University) | Theo bản mã gốc đang kèm | Kiểu BSD | Giữ thông báo gốc | F50 lớp 1 (từ điển phát âm) | Chưa lấy |
 | Phông UNI Sans (phát triển từ Be Vietnam Pro) | Theo bản vẽ giao diện đợt 1 đã duyệt | SIL Open Font License 1.1 (toàn văn: `tailieu/Giayphep_Phongchu_OFL.txt`) | Copyright 2021 The Be Vietnam Pro Project Authors (https://github.com/bettergui/BeVietnamPro) | Chữ của giao diện, nhúng trong `maychu/web/giaodien/index.html` | Đã dùng từ ngày 04 |
 | Bộ icon Lucide | Theo bản vẽ giao diện đợt 1 đã duyệt | ISC (toàn văn: `tailieu/Giayphep_Icon_Lucide.txt`) | Copyright (c) 2026 Lucide Icons and Contributors | Icon của giao diện, nhúng trong `maychu/web/giaodien/` | Đã dùng từ ngày 04 |
+| Simple Icons (logo hãng, QĐ92) | 16.38.0 (commit 32e0300, 19/11/2026) | Dự án phát hành theo CC0 1.0 Universal (toàn văn: `tailieu/Giayphep_Logo_SimpleIcons_CC0.txt`). Dữ liệu Simple Icons không ghi giấy phép riêng cho 09 logo dưới; lời miễn trừ của dự án ghi CC0 không có nghĩa mọi logo đều CC0 | Không có dòng bản quyền (CC0). Nhãn hiệu thuộc chủ sở hữu, chỉ dùng để chỉ dịch vụ kết nối | 09 logo hãng trong `maychu/web/giaodien/logo/` | Đã chép ngày 05 |
+
+## Logo hãng (QĐ92)
+
+Nhãn hiệu thuộc chủ sở hữu, chỉ dùng để chỉ dịch vụ kết nối; IGM360 không có quan hệ đối tác, không được các hãng bảo trợ. Tệp SVG chép nguyên từ `icons/` của Simple Icons, không sửa; màu hãng đặt bằng CSS lúc dùng. Hãng không có trong Simple Icons (ChatGPT/OpenAI, Pancake, Composio, Vietcombank, logo riêng TikTok Shop) lấy từ trang nhận diện chính thức của hãng khi có tệp; trước đó giữ ô chữ tên hãng.
+
+| Tệp | Hãng | Màu hãng | Nguồn Simple Icons ghi | Hướng dẫn nhận diện | Mã băm sha256 (12 ký tự đầu) |
+|---|---|---|---|---|---|
+| `logo/tiktok.svg` | TikTok | #000000 | https://tiktok.com | Simple Icons không ghi | 6f54ac8d325f |
+| `logo/shopee.svg` | Shopee | #EE4D2D | https://shopee.com | Simple Icons không ghi | b51a59e14639 |
+| `logo/gmail.svg` | Gmail | #EA4335 | https://fonts.gstatic.com/s/i/productlogos/gmail_2020q4/v8/192px.svg | Simple Icons không ghi | a537f5d85d9a |
+| `logo/googlesheets.svg` | Google Sheets | #34A853 | https://sheets.google.com | Simple Icons không ghi | 5f28308c62e3 |
+| `logo/googledrive.svg` | Google Drive | #4285F4 | https://developers.google.com/drive/web/branding | Simple Icons không ghi | 7e678aba9e46 |
+| `logo/claude.svg` | Claude | #D97757 | https://claude.ai | Simple Icons không ghi | 2d6fda79eb18 |
+| `logo/telegram.svg` | Telegram | #26A5E4 | https://telegram.org/tour/screenshots | Simple Icons không ghi | 147fd8f8923e |
+| `logo/zalo.svg` | Zalo | #0068FF | https://zalo.me | Simple Icons không ghi | 633300dd5d7b |
+| `logo/whatsapp.svg` | WhatsApp | #25D366 | https://about.meta.com/brand/resources/whatsapp/whatsapp-brand | https://about.meta.com/brand/resources/whatsapp/whatsapp-brand | 8fb209a53a61 |
