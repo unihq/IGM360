@@ -21,9 +21,13 @@ const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
 // Không tách cụm từ khi xuống dòng (chữ do máy chủ gửi): nối các cụm thường gặp bằng dấu cách không ngắt
 const CUM = ['giai đoạn', 'giá trị', 'ứng dụng', 'gấp đôi', 'tài khoản', 'mật khẩu', 'phần mềm', 'sao lưu', 'trò chuyện',
   'đăng nhập', 'cập nhật', 'khoá API', 'Google Drive', 'tỷ giá', 'hạn mức', 'nguồn AI', 'việc AI', 'thông số', 'mỗi ngày',
-  'bản mới', 'máy chủ', 'Cửa chờ', 'Két khoá', 'đề xuất', 'chờ anh', 'tự áp dụng'];
-const cum = s => { let r = esc(s).replace(/(\d+) (phút|giờ|ngày|lần|việc|tháng|tuần)/g, '$1&nbsp;$2');
-  CUM.forEach(c => { r = r.split(c).join(c.replace(/ /g, '&nbsp;')); }); return r; };
+  'bản mới', 'máy chủ', 'Cửa chờ', 'Két khoá', 'đề xuất', 'chờ anh', 'tự áp dụng', 'thao tác', 'hằng ngày', 'quy đổi',
+  'tham khảo', 'ưu tiên', 'gì mới', 'Cài đặt', 'Thông số', 'dự phòng', 'cài máy'];
+// Số luôn đi liền chữ đứng sau (04 dòng, 1.240 dòng); "tài khoản 01", "ưu tiên 2", "bản 0.5.0", "02 lớp" không tách.
+const cum = s => { let r = esc(s).replace(/(?<![\p{L}\d])(\d+(?:[.,]\d+)*) (?=\p{L})/gu, '$1&nbsp;');
+  CUM.forEach(c => { r = r.split(c).join(c.replace(/ /g, '&nbsp;')); });
+  return r.replace(/(khoản|tiên|[Bb]ản|lớp) (\d)/g, '$1&nbsp;$2').replace(/ (›|·) /g, '&nbsp;$1 '); };
+const cau = s => /[.!?…]$/.test(String(s).trim()) ? s : s + '.';   // câu báo lỗi luôn có dấu chấm cuối (N12)
 
 // ---- Gọi máy chủ
 async function api(duong, than) {
@@ -229,7 +233,7 @@ function veCapNhat(d) {
   $('#cn-luc').textContent = d.luc_kiem ? luc(d.luc_kiem) : 'chưa kiểm';
   const moi = d.thaydoi.find(m => m.ban === d.ban_moi) || d.thaydoi[0] || {dong: []};
   $('#cn-thaydoi').innerHTML = moi.dong.slice(0, 5).map(x => '<div class="dong t13">' + ICON.check + '<span>' + cum(x) + '</span></div>').join('');
-  const tomTat = ban => { const m = d.thaydoi.find(x => x.ban === ban); return m && m.dong.length ? m.dong[0] : (ban === d.ban_dang ? 'Bản đang dùng' : 'Bản đã dùng'); };
+  const tomTat = ban => (d.tomtat || {})[ban] || (ban === d.ban_dang ? 'Bản đang dùng' : 'Bản đã dùng');   // dòng "Tóm tắt:" ở THAYDOI.md (N07)
   const cot = 'grid-template-columns:120px 1fr 160px';
   $('#ls-capnhat').innerHTML = d.lichsu.map(x => '<div class="hang" style="' + cot + '"><b class="so">' + esc(x.ban)
     + '</b><span data-l="Nội dung">' + cum(tomTat(x.ban)) + '</span><span data-l="Ngày cài" class="so">' + ngay(x.luc) + '</span></div>').join('');
@@ -260,19 +264,26 @@ async function capNhat(cheDo) {
 const GOI_TEN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT · qua Codex'};
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
-  : '<span class="logo-cho" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px;border-radius:10px"><span>ChatGPT</span></span>';
+  : '<span class="logo-cho" data-hang="ChatGPT" title="Logo ChatGPT: chờ file chính thức" style="width:40px;height:40px;border-radius:10px"><span>LOGO</span></span>';
 const usd = v => Number(v || 0).toFixed(2).replace('.', ',') + '&nbsp;USD';
+// Tiền đủ 02 cột (QĐ50, QĐ122): USD kèm đồng Việt tham khảo; chưa có tỷ giá (trước ngày 18) thì ghi rõ.
+const vnd = (v, tg) => tg ? '≈&nbsp;' + soVN(Math.round(Number(v || 0) * tg / 1000) * 1000) + '&nbsp;đ tham&nbsp;khảo' : 'chưa có tỷ&nbsp;giá';
+// N09: dòng dưới "Tài khoản 1": lúc đăng nhập gói (F04); chưa có dòng nào là đăng nhập lúc cài máy.
+const dnLuc = x => !x.dangnhap_luc ? 'Đăng nhập lúc cài&nbsp;máy'
+  : Date.now() - Date.parse(x.dangnhap_luc) < 10 * 60e3 ? 'Vừa đăng nhập' : 'Đăng nhập lúc ' + esc(luc(x.dangnhap_luc));
 const pct = v => v == null ? null : Math.max(0, Math.min(100, Number(v)));
 function thanhHm(ten, v) { const p = pct(v); return '<div class="hm"><span class="t12 phu nw">' + ten + '</span><div class="td" style="height:8px"><div class="tdf" style="width:'
   + (p ?? 0) + '%;background:' + (p >= 90 ? '#E22E28' : '#1456F0') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : hai(Math.round(p)) + '%') + '</b></div>'; }
-function theGoi(g, ds, nguon) {
-  const dn = D.dn[g] || {}, uu = nguon.filter(n => n.goi === g).map(n => n.uutien).sort((a, b) => a - b)[0];
+function theGoi(g, ds, nguon, uu) {
+  const dn = D.dn[g] || {};
   const coTk = ds.some(x => x.da_noi);
   let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + GOI_TEN[g] + '</div><div class="t12 phu">Trả cố định theo tháng'
-    + (uu ? ' · <span class="nw">ưu tiên ' + uu + '</span>' : '') + '</div></div></div>';
+    + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>';
   ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
-    h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>Tài khoản ' + x.taikhoan + '</b><div class="t12 phu">'
-      + (x.da_noi ? (x.goi_dang_dung ? 'Gói ' + esc(x.goi_dang_dung) : 'Đã đăng nhập') : x.khong_ro ? 'Chưa kiểm được trạng thái' : 'Chưa đăng nhập') + '</div></div>'
+    const chuaCo = g === 'chatgpt' && !coTk && !x.khong_ro && ds.length === 1;   // N10: bản vẽ "Chưa có tài khoản"
+    h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>'
+      + (chuaCo ? 'Chưa có tài khoản' : 'Tài khoản ' + x.taikhoan) + '</b><div class="t12 phu">'
+      + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : chuaCo ? 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng' : 'Chưa đăng nhập') + '</div></div>'
       + (x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>' : '<span class="nhan n-xem"><i></i>Chưa đăng nhập</span>') + '</div>';
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio) + thanhHm('Tuần này', n.tyle_tuan)
       + '<div class="t12 phu">' + (n.do_luc ? 'Đo lúc ' + esc(luc(n.do_luc)) + (n.datlai_5gio_luc ? ' · đặt lại 05 giờ lúc ' + esc(gio(n.datlai_5gio_luc)) : '') : 'Chưa đo: số hiện sau lần gọi AI đầu tiên') + '</div></div>'; });
@@ -281,10 +292,10 @@ function theGoi(g, ds, nguon) {
       + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài khoản Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
       + '<div class="dong lk"><span class="t12 phu f1 cat">' + esc(dn.url.replace(/^https?:\/\//, '')) + '</span><a class="btn btn-phu nho" href="' + esc(dn.url) + '" target="_blank" rel="noopener noreferrer">' + ICON['external-link'] + 'Mở trang</a></div>';
     if (g === 'claude') h += '<div class="buoc-dn"><span class="so-b">2</span><span class="f1">Trang sẽ hiện 01 mã. Chép mã, dán vào ô dưới.</span></div>'
-      + '<div class="dong"><div class="o-nhap f1' + (dn.loi ? ' loi' : '') + '">' + ICON['rectangle-ellipsis'] + '<input id="ma-claude" placeholder="Dán mã ở đây" autocomplete="off"></div><button class="btn btn-chinh" data-mc-xacnhan>Xác nhận</button></div>'
-      + (dn.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(dn.loi) + '</span></div>' : '');
+      + '<div class="dong"><div class="o-nhap f1' + (dn.loi ? ' loi' : '') + '">' + ICON.hash + '<input id="ma-claude" placeholder="Dán mã ở đây" autocomplete="off"></div><button class="btn btn-chinh" data-mc-xacnhan>Xác nhận</button></div>'
+      + (dn.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(cau(dn.loi)) + '</span></div>' : '');
     else h += '<div class="buoc-dn"><span class="so-b">2</span><span class="f1">Gõ mã thiết bị này vào trang:</span></div><div class="ma-tb"><b>' + esc(dn.ma) + '</b><button class="btn-chu" data-chep="' + esc(dn.ma) + '">' + ICON.copy + 'Chép</button></div>'
-      + '<div class="dong t13 phu">' + ICON.loader + 'Đang chờ anh xác nhận trên web. Xong là thẻ tự chuyển, không cần dán mã.</div>' + (dn.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(dn.loi) + '</span></div>' : '');
+      + '<div class="dong t13 phu">' + ICON.loader + 'Đang chờ anh xác nhận trên web. Xong là thẻ tự chuyển, không cần dán mã.</div>' + (dn.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(cau(dn.loi)) + '</span></div>' : '');
     h += '<button class="btn-chu" data-dn-huy="' + g + '">Huỷ đăng nhập</button></div>';
   }
   const tk2 = ds.length < 2 && coTk ? 2 : null, chua = ds.find(x => !x.da_noi);
@@ -297,19 +308,22 @@ function theGoi(g, ds, nguon) {
 function veMoHinh() {
   const d = D.md; $('#md-songsong').textContent = hai(Number(d.so_viec_ai_songsong || 3));
   const khoa = d.nguon.filter(n => n.loai === 'khoa_api');
-  $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon) + theGoi('chatgpt', d.goi.chatgpt, d.nguon)
+  // Gói chưa có dòng G06 (chưa đăng nhập): hiện ưu tiên sẽ nhận khi đăng nhập (sau nguồn cuối, theo thứ tự Claude, ChatGPT)
+  let cuoi = Math.max(0, ...d.nguon.map(n => n.uutien || 0)); const uu = {};
+  ['claude', 'chatgpt'].forEach(g => { uu[g] = d.nguon.filter(n => n.goi === g).map(n => n.uutien).sort((a, b) => a - b)[0] || ++cuoi; });
+  $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
     + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API AI</div><div class="t12 phu">Trả tiền thật theo lượt</div></div></div>'
-    + (khoa.length ? khoa.map(n => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(n.ten) + '</b><div class="t12 phu">Cất ở Két khoá · ưu tiên ' + n.uutien + '</div></div>'
+    + (khoa.length ? khoa.map(n => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(n.ten) + '</b><div class="t12 phu">Cất ở Két&nbsp;khoá · ưu&nbsp;tiên&nbsp;' + n.uutien + '</div></div>'
         + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt trần tiền</span>') + '</div>').join('')
       : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở Két khoá (có ở bản sau).</div>')
-    + '<div class="kv"><span>Tiền thật 07 ngày</span><span class="trai-so"><b class="so">' + usd(d.tuan.tien_that_usd) + '</b></span></div>'
-    + (d.tuan.quydoi_thamkhao_usd != null ? '<div class="kv"><span>Gói: quy đổi tham khảo 07 ngày</span><span class="trai-so"><span class="so-tk">' + usd(d.tuan.quydoi_thamkhao_usd) + ', trả cố định, không chi thêm</span></span></div>' : '')
+    + '<div class="kv"><span>Tiền thật tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
+      + '</b><span class="so-tk">' + vnd(d.thang.tien_that_usd, d.ty_gia_usd) + '</span></span></div>'
     + '</div>';
   const VIEC = ['Trò chuyện AI', 'Trích văn bản (đường D)', 'Đề xuất ở Cửa chờ', 'Viết báo cáo sáng'], dau = d.nguon.find(n => n.trangthai === 'dung');
   const cot = 'grid-template-columns:1.4fr 1fr 1fr';
   $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span></div>'
     + VIEC.map(v => '<div class="hang" style="' + cot + '"><b class="rong-mb">' + v + '</b><span data-l="Mô hình">Mặc định của nguồn</span><span data-l="Nguồn">'
-      + (dau ? esc(dau.ten) : 'Chưa có nguồn') + '</span></div>').join('');
+      + (dau ? cum(dau.ten) : 'Chưa có nguồn') + '</span></div>').join('');
 }
 async function napMoHinh() { try { D.md = await api('/mohinh'); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
 async function batDauDn(g, tk) {
@@ -344,8 +358,8 @@ function veDsHt() {
 function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Model</button></div>';
-  return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + esc(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
-    + '<div class="tn-meta">' + esc(x.nguon || 'Trợ lý AI') + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
+  return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
+    + '<div class="tn-meta">' + cum(x.nguon || 'Trợ lý AI') + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
   const c = $('.tc-than'); if (c) c.scrollTop = c.scrollHeight; }
