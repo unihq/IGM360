@@ -54,6 +54,18 @@ class KiemLuocDo(NenMoi):
                 cn.close()
         self.assertEqual(tong, 29)
 
+    def test_trigger_chan_sua_nguoi_a15(self):
+        """Y20a (QĐ155): lưới an toàn trong lược đồ, câu ghi thẳng không qua lớp ghi cũng không đổi được người của A15."""
+        n1 = songuoi.tao("Nhân viên 01", "nhanvien", "hethong", self.thumuc)["id"]
+        n2 = songuoi.tao("Nhân viên 02", "nhanvien", "hethong", self.thumuc)["id"]
+        self.cn.execute("INSERT INTO nhanvien (id, ma, nguoi_id, hieuluc_tu) VALUES ('nv1', 'NV01', ?, '2026-03-01')", (n1,))
+        with self.assertRaises(sqlite3.IntegrityError) as loi:
+            self.cn.execute("UPDATE nhanvien SET nguoi_id = ? WHERE id = 'nv1'", (n2,))
+        self.assertIn("không đổi nguoi_id", str(loi.exception))
+        self.cn.execute("UPDATE nhanvien SET nguoi_id = ?, phongban = 'kho' WHERE id = 'nv1'", (n1,))   # cùng người: không chặn
+        self.assertEqual(self.cn.execute("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'kb\\_\\_%' ESCAPE '\\'").fetchall(),
+                         [("kb__nhanvien__nguoi_id",)])
+
     def test_a15_bo_khong_trung_nguoi_f01_giu(self):
         sql_nv = self.cn.execute("SELECT sql FROM sqlite_master WHERE name = 'nhanvien'").fetchone()[0]
         self.assertIn("nguoi_id TEXT NOT NULL REFERENCES nguoi(id)", sql_nv)
@@ -261,6 +273,7 @@ class KiemNangBan2(CoThuMuc):
         self.assertEqual(self.lay("Dulieu_Chinh", "SELECT ma FROM shop WHERE id = ?", (s,)), [("SHOP01",)])
         with self.assertRaises(sqlite3.IntegrityError):   # bảng dựng lại có lại trigger chặn sửa mã
             self.ghi("Dulieu_Chinh", "UPDATE shop SET ma = 'SHOP09' WHERE id = ?", (s,))
+        self.assertEqual(self.lay("Dulieu_Chinh", "SELECT count(*) FROM sqlite_master WHERE name = 'kb__nhanvien__nguoi_id'")[0][0], 1)
         self.assertEqual(self.lay("Dulieu_Chinh", "SELECT count(*) FROM sqlite_master WHERE type = 'trigger'"
                                                   " AND name LIKE 'ma\\_\\_%' ESCAPE '\\'")[0][0], 30)
 

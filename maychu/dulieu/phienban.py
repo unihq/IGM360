@@ -5,7 +5,8 @@
 - Cùng 01 mã không chồng lấn khoảng hiệu lực [hieuluc_tu, hieuluc_den) (trống `hieuluc_den` = đang hiệu lực).
   A15 `nhanvien` thêm khoá bền của người là `nguoi_id` (A18): cùng 01 người không chồng lấn.
 - Chặn 02 lớp: lớp ghi trong mã (hàm dưới); lưới an toàn trong lược đồ (`ma` NOT NULL, trigger chặn mã trống và
-  chặn sửa `ma`, tạo ở `tao_trigger`). Không chồng lấn không làm được bằng ràng buộc nên chỉ ở lớp ghi.
+  chặn sửa `ma`; trigger chặn sửa khoá bền thêm, ví dụ A15 `nguoi_id` (Y20a, QĐ155); tạo ở `tao_trigger`).
+  Không chồng lấn không làm được bằng ràng buộc nên chỉ ở lớp ghi.
 - Mọi lần thêm dòng vào 29 bảng đi qua `them` hoặc `phienban_moi` (bài kiểm quét mã chặn câu ghi thẳng).
 """
 import contextlib
@@ -179,12 +180,16 @@ def tim_id(cn: sqlite3.Connection, bang: str, giatri: str, ngay=None, cot: str =
 
 def tao_trigger(cn: sqlite3.Connection) -> int:
     """Lưới an toàn trong lược đồ cho mọi bảng có phiên bản của file (chạy lại không sao): chặn thêm dòng mã trống
-    (NOT NULL không chặn chuỗi rỗng) và chặn sửa `ma`. Trả số trigger mã đang có."""
+    (NOT NULL không chặn chuỗi rỗng), chặn sửa `ma`, chặn sửa khoá bền thêm ở KHOA_THEM (trigger `kb__`).
+    Trả số trigger mã (`ma__`) đang có."""
     for bang in cac_bang(cn):
         cn.execute(f"CREATE TRIGGER IF NOT EXISTS ma__{bang}__trong BEFORE INSERT ON {bang} WHEN trim(NEW.ma) = ''"
                    f" BEGIN SELECT RAISE(ABORT, '{bang}.ma: mã không được trống (QĐ142)'); END")
         cn.execute(f"CREATE TRIGGER IF NOT EXISTS ma__{bang}__khoa BEFORE UPDATE OF ma ON {bang} WHEN NEW.ma IS NOT OLD.ma"
                    f" BEGIN SELECT RAISE(ABORT, '{bang}.ma: không sửa mã (QĐ142); đóng mã cũ, mở mã mới qua mục Chờ duyệt'); END")
+        for k in KHOA_THEM.get(bang, ()):
+            cn.execute(f"CREATE TRIGGER IF NOT EXISTS kb__{bang}__{k} BEFORE UPDATE OF {k} ON {bang} WHEN NEW.{k} IS NOT OLD.{k}"
+                       f" BEGIN SELECT RAISE(ABORT, '{bang}.{k}: không đổi {k} của 01 mã (QĐ143, QĐ155)'); END")
     return cn.execute("SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'ma\\_\\_%' ESCAPE '\\'").fetchone()[0]
 
 
