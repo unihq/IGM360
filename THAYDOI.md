@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.6.0
+Tóm tắt: Giao diện mới, tiền AI ra đồng Việt
+- Màn Đăng nhập, menu, Cài đặt, Model và Trò chuyện AI dựng lại đúng bản vẽ đã duyệt.
+- Thẻ Khoá API tính tiền theo tháng, kèm số tiền quy ra đồng Việt để tham khảo; chưa có tỷ giá thì ghi rõ "chưa có tỷ giá".
+- Bảng lịch sử cập nhật có dòng tóm tắt ngắn cho mỗi bản; chữ không bị ngắt giữa cụm từ khi xuống dòng.
+- Mỗi lần sửa mã đều được kiểm tự động trên máy chủ Linux trước khi đóng bản; các thư viện phần mềm dùng đã ghim đúng bản đã kiểm.
+
 ## 0.5.0
 Tóm tắt: Đăng nhập gói AI, gọi AI qua 03 nguồn
 - Đăng nhập gói Claude, gói ChatGPT ngay trên phần mềm, thêm được tài khoản thứ 02.
