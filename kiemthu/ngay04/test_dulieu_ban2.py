@@ -52,7 +52,7 @@ def dung_ban1(thumuc: Path) -> None:
         cn = ketnoi.mo(ten, thumuc)
         try:
             cn.execute("PRAGMA foreign_keys=OFF")
-            cn.execute(f"DROP TABLE {bang}")
+            cn.execute(f"DROP TABLE {khoitao.DOI_TEN.get(3, {}).get((ten, bang), bang)}")  # bảng đổi tên ở bản 3
             cn.execute(ddl)
             cn.execute("PRAGMA user_version=1")
         finally:
@@ -87,10 +87,10 @@ class KiemBan2(unittest.TestCase):
         cn = self.mo("Bot")
         try:
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh (id) VALUES (?)", (maso.tao(),))
+                cn.execute("INSERT INTO kenh_nhan (id) VALUES (?)", (maso.tao(),))
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, 'cahai')", (maso.tao(),))
-            cn.execute("INSERT INTO kenh (id, vai) VALUES (?, 'bot_giaoviec')", (maso.tao(),))
+                cn.execute("INSERT INTO kenh_nhan (id, vai) VALUES (?, 'cahai')", (maso.tao(),))
+            cn.execute("INSERT INTO kenh_nhan (id, vai) VALUES (?, 'bot_giaoviec')", (maso.tao(),))
         finally:
             cn.close()
         cn = self.mo("Dulieu_Chinh")
@@ -143,7 +143,7 @@ class KiemBan2(unittest.TestCase):
         cn = self.mo("Bot")
         try:
             self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)
-            self.assertEqual(cn.execute("SELECT ten, vai FROM kenh WHERE id = ?", (ma_kenh,)).fetchone(),
+            self.assertEqual(cn.execute("SELECT ten, vai FROM kenh_nhan WHERE id = ?", (ma_kenh,)).fetchone(),
                              ("Kênh báo anh", "anh_nhan_baocao"))
             self.assertEqual(cn.execute("PRAGMA foreign_key_check").fetchall(), [])
             with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại tới bảng dựng lại vẫn chạy

@@ -109,7 +109,7 @@ def _cat_khoa_2lop(nguoidung_id: str, khoa: str, thumuc: Path | None) -> None:
     try:
         cn.execute("BEGIN IMMEDIATE")
         cu = cn.execute("SELECT totp_khoa_id FROM nguoidung WHERE id = ?", (nguoidung_id,)).fetchone()[0]
-        moi = kho.cat("totp_2lop", khoa, thumuc, nguoi_nhap="anh", cn=cn)
+        moi = kho.cat("totp_2lop", khoa, thumuc, nguoi_nhap=nguoidung_id, cn=cn)
         cn.execute("UPDATE nguoidung SET totp_khoa_id = ? WHERE id = ?", (moi, nguoidung_id))
         if cu:
             kho.xoa(cu, cn=cn)

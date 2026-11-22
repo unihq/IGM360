@@ -87,7 +87,7 @@ class KiemTaoFile(unittest.TestCase):
         ghep = {"id", "hieuluc_tu", "hieuluc_den", "nguoi_khai", "tao_luc"}
         mong = {("Dulieu_Chinh", "taikhoan"): danhmuc, ("Dulieu_Chinh", "barcode"): ghep,
                 ("Dulieu_Chinh", "combo_thanhphan"): ghep, ("Dulieu_Chinh", "ghep_mangoai"): ghep,
-                ("Bot", "kenh"): {"vai"}}
+                ("Bot", "kenh_nhan"): {"vai"}}
         for (ten, bang), cot in mong.items():
             cn = ketnoi.mo(ten, self.thumuc)
             try:
@@ -98,9 +98,9 @@ class KiemTaoFile(unittest.TestCase):
         cn = ketnoi.mo("Bot", self.thumuc)
         try:
             for vai in ("anh_nhan_baocao", "bot_giaoviec"):
-                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, ?)", (maso.tao(), vai))
+                cn.execute("INSERT INTO kenh_nhan (id, vai) VALUES (?, ?)", (maso.tao(), vai))
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, ?)", (maso.tao(), "cahai"))
+                cn.execute("INSERT INTO kenh_nhan (id, vai) VALUES (?, ?)", (maso.tao(), "cahai"))
         finally:
             cn.close()
 

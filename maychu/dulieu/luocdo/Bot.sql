@@ -1,15 +1,15 @@
 -- Lược đồ file Bot.sqlite3: 11 bảng.
 -- Sinh từ thiết kế cơ sở dữ liệu đã duyệt; sửa thiết kế thì sinh lại, không sửa tay.
 
--- H01 Kênh nhắn: 01 dòng = 01 kênh nhắn
-CREATE TABLE IF NOT EXISTS kenh (
+-- H01 Kênh nhắn: 01 dòng = 01 kênh nhắn (tên bảng kenh_nhan từ bản 3, QĐ109 L05)
+CREATE TABLE IF NOT EXISTS kenh_nhan (
   id TEXT PRIMARY KEY NOT NULL,
   ma TEXT,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
   phienban INTEGER,
-  trangthai TEXT,
+  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
   nguoi_khai TEXT,
   tao_luc TEXT,
   loai TEXT,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS the_duyet (
   loai_viec TEXT CHECK (loai_viec IS NULL OR loai_viec IN ('cuacho', 'toanquyen', 'caitien')),
   doituong_id TEXT,
   ma_ngan TEXT,
-  kenhnhan_id TEXT REFERENCES kenh(id),
+  kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   han TEXT,
   ketqua TEXT CHECK (ketqua IS NULL OR ketqua IN ('duyet', 'tuchoi', 'hethan')),
   cau_traloi TEXT,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS the_duyet (
 -- H03 Tin nhóm: 01 dòng = 01 tin hoặc file nhân viên gửi trong nhóm
 CREATE TABLE IF NOT EXISTS tin_nhom (
   id TEXT PRIMARY KEY NOT NULL,
-  kenhnhan_id TEXT REFERENCES kenh(id),
+  kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   chude_id TEXT REFERENCES chude_nhom(id),
   nguoigui TEXT,
   nguoi_id TEXT,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS chude_nhom (
   trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
   nguoi_khai TEXT,
   tao_luc TEXT,
-  kenhnhan_id TEXT REFERENCES kenh(id),
+  kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   ma_nhom TEXT,
   module TEXT,
   congsu_id TEXT
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS lich_baocao (
   nguoi_khai TEXT,
   tao_luc TEXT,
   gio_gui TEXT,
-  kenhnhan_id TEXT REFERENCES kenh(id),
+  kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   noidung_mau TEXT,
   lap_lai TEXT NOT NULL DEFAULT 'hangngay' CHECK (lap_lai IN ('hangngay', 'hangthang')),
   ngay_trongthang INTEGER CHECK (ngay_trongthang IS NULL OR ngay_trongthang BETWEEN 1 AND 31),
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS hoithoai (
   nguoidung_id TEXT,
   congsu_id TEXT,
   chatbot_id TEXT REFERENCES chatbot(id),
-  kenhnhan_id TEXT REFERENCES kenh(id),
+  kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   tieude TEXT,
   tomtat TEXT,
   trangthai TEXT,
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS chatbot (
   trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
   nguoi_khai TEXT,
   tao_luc TEXT,
-  kenhnhan_id TEXT REFERENCES kenh(id),
+  kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   congsu_id TEXT,
   nguon_trithuc_json TEXT,
   chinhsach_traloi TEXT,

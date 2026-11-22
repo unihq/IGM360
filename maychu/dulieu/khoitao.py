@@ -39,14 +39,17 @@ NANGCAP = {
                          'donhang'],                 # ngày 08: L02 không trùng (shop_id, ma_don_nguon)
         'Hotho': ['filegoc', 'banghigoc'],            # ngày 08: L02 không trùng
         'Ketnoi': ['hoptin'],                         # ngày 08: L02 không trùng (nguon, ma_sukien); QĐ112
-        'Bot': ['tin_nhom', 'lich_baocao'],
+        'Bot': ['kenh_nhan',                          # ngày 09: L04 trangthai bắt buộc (sau khi đổi tên, L05)
+                'tin_nhom', 'lich_baocao'],
         'Baomat': ['nguoidung'],
     },
 }
 # Bảng mới của từng bản (tạo theo lược đồ hiện hành trước khi dựng lại bảng khác).
 BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi']}}
 # Bảng đổi tên ở từng bản: {(file, tên cũ): tên mới}.
-DOI_TEN: dict[int, dict[tuple[str, str], str]] = {}
+DOI_TEN: dict[int, dict[tuple[str, str], str]] = {
+    3: {('Bot', 'kenh'): 'kenh_nhan'},  # L05 (QĐ109): H01 không trùng tên A02 `kenh` khi gắn thêm file đọc chéo
+}
 
 
 def _lay_ddl(ten: str, bang: str) -> str:

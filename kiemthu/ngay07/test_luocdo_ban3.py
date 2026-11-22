@@ -15,13 +15,16 @@ from maychu.hethong.taikhoan import datlai, nguoidung
 def dung_ban2(thumuc: Path) -> None:
     """Dựng 07 file như đang chạy trên VPS bản 2: bảng đổi ở bản 3 trở về lược đồ bản 2, chưa có A18."""
     khoitao.tao_het(thumuc)
+    ten_moi = khoitao.DOI_TEN.get(3, {})
     for ten in ketnoi.CAC_FILE:
         cn = ketnoi.mo(ten, thumuc)
         try:
             cn.execute("PRAGMA foreign_keys=OFF")
+            for (t, bang) in V2:
+                if t == ten:  # bảng đổi tên ở bản 3: xoá theo tên mới, tạo lại tên cũ
+                    cn.execute(f"DROP TABLE {ten_moi.get((t, bang), bang)}")
             for (t, bang), ddl in V2.items():
                 if t == ten:
-                    cn.execute(f"DROP TABLE {bang}")
                     cn.execute(ddl)
             if ten == "Dulieu_Chinh":
                 cn.execute("DROP TABLE nguoi")

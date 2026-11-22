@@ -98,7 +98,7 @@ def ve_trang(code: str, state: str, thumuc: Path | None = None, client=None) -> 
         kho.doi(cu, kq["refresh_token"], thumuc)
         khoa_id = cu
     else:
-        khoa_id = kho.cat(DV_LAMMOI, kq["refresh_token"], thumuc, nguoi_nhap="anh")
+        khoa_id = kho.cat(DV_LAMMOI, kq["refresh_token"], thumuc, nguoi_nhap=v["nguoi_id"])
     cn = ketnoi.mo("Ketnoi", thumuc)
     try:
         bay = _bay_gio()
