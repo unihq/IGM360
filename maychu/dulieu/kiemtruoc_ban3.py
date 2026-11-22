@@ -365,6 +365,14 @@ def _doi_cu(chu):
     return doi
 
 
+def _so(v, le=0) -> str:
+    """Số kiểu Việt Nam: 1–9 ghi 02 chữ số (số đếm), nghìn ngăn bằng dấu chấm, thập phân bằng dấu phẩy."""
+    if le == 0 and 0 <= v < 10:
+        return f"{int(v):02d}"
+    nguyen, _, phan = f"{v:,.{le}f}".partition(".")
+    return nguyen.replace(",", ".") + ("," + phan if phan else "")
+
+
 def _mo_bo_nho(duong: Path) -> sqlite3.Connection:
     nguon = sqlite3.connect(duong.resolve().as_uri() + "?mode=ro", uri=True)
     bo = sqlite3.connect(":memory:", isolation_level=None)
@@ -445,18 +453,20 @@ def kiem(thumuc: Path) -> tuple[bool, list[str]]:
         finally:
             cn.close()
         ghi(3, not vuong, f"Dựng thử bản 3 file {ten}: " + ("không vướng" if not vuong else "; ".join(vuong)))
-    ghi(4, not la, f"Giá trị \"ai bấm\": {tong_doi} dòng giá trị cũ sẽ đổi ('anh', tên đăng nhập chủ → mã tài khoản;"
+    ghi(4, not la, f"Giá trị \"ai bấm\": {_so(tong_doi)} dòng giá trị cũ sẽ đổi ('anh', tên đăng nhập chủ → mã tài khoản;"
                    f" 'lenh_vps' → 'hethong'); giá trị lạ: " + ("00" if not la else ", ".join(la)))
 
     # (5) chỗ trống ổ: bản chụp tự động của lần nâng + bản chụp tay trước khi cập nhật
     co = sum(f.stat().st_size for ten in CAC_FILE for f in thumuc.glob(f"{ten}.sqlite3*"))
     trong = shutil.disk_usage(thumuc).free
-    ghi(5, trong >= 3 * co, f"Ổ dữ liệu: 07 file {co / 1e6:.1f} MB, còn trống {trong / 1e6:.0f} MB (cần ≥ 03 lần)".replace(".", ","))
+    ghi(5, trong >= 3 * co, f"Ổ dữ liệu: 07 file {_so(co / 1e6, 1)} MB, còn trống {_so(trong / 1e6)} MB (cần ≥ 03 lần)")
     return dat, dong
 
 
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")   # in tiếng Việt đúng cả khi đưa qua đường ống, cửa sổ không UTF-8
     thumuc = Path(argv[0] if argv else "/dulieu")
     try:
         dat, dong = kiem(thumuc)
