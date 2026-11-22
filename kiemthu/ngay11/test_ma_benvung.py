@@ -331,12 +331,16 @@ class KiemBangQuyen(CoThuMuc):
         them = ("INSERT INTO quyen_vaitro (id, vaitro_ma, doituong_loai, doituong_ma, thaotac, phamvi_toida, hieuluc_tu)"
                 " VALUES (?, 'KT_LUONG', ?, ?, ?, ?, '2026-11-23')")
         for dong in (("nhom_nhaycam", "luong", "xem", "congty"), ("nhom_nhaycam", "luong", "nhap", "chinhminh"),
-                     ("nhom_nhaycam", "dongtien", "xem", "shop"), ("man", "16", "chiase", "congty")):
+                     ("nhom_nhaycam", "dongtien", "xem", "shop"), ("man", "16", "chiase", "congty"),
+                     ("nhom_nhaycam", "luong", "sua", "congty"), ("nhom_nhaycam", "luong", "xuat", "congty"),
+                     ("nhom_nhaycam", "dongtien", "chiase", "congty")):   # QĐ158: xem, nhập, sửa, xuất lương được cấp
             self.bm.execute(them, (maso.tao(), *dong))
         for dong in (("nhom_nhaycam", "luong", "xem", "shop"),        # QĐ156: nhóm lương không nhận phạm vi shop
                      ("nhom_nhaycam", "lai", "xem", "congty"),        # ngoài 03 nhóm
                      ("man", "16", "in", "congty"),                   # ngoài 06 thao tác
-                     ("man", "16", "xem", "phongban"), ("khac", "16", "xem", "congty")):
+                     ("man", "16", "xem", "phongban"), ("khac", "16", "xem", "congty"),
+                     ("nhom_nhaycam", "luong", "chiase", "congty"),   # QĐ158: chia sẻ lương chỉ Chủ
+                     ("nhom_nhaycam", "luong", "duyet", "congty")):   # QĐ158, CPO xác nhận: duyệt lương chỉ Chủ
             with self.subTest(dong=dong), self.assertRaises(sqlite3.IntegrityError):
                 self.bm.execute(them, (maso.tao(), *dong))
         with self.assertRaises(sqlite3.IntegrityError):              # hiệu lực bắt buộc

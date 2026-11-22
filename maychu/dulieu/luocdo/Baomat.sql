@@ -101,7 +101,8 @@ CREATE TABLE IF NOT EXISTS quyen_vaitro (
   hieuluc_tu TEXT NOT NULL,
   hieuluc_den TEXT,
   CHECK (doituong_loai <> 'nhom_nhaycam' OR doituong_ma IN ('loinhuan', 'luong', 'dongtien')),
-  CHECK (NOT (doituong_loai = 'nhom_nhaycam' AND doituong_ma = 'luong' AND phamvi_toida = 'shop'))
+  CHECK (NOT (doituong_loai = 'nhom_nhaycam' AND doituong_ma = 'luong' AND phamvi_toida = 'shop')),
+  CHECK (NOT (doituong_loai = 'nhom_nhaycam' AND doituong_ma = 'luong' AND thaotac IN ('chiase', 'duyet')))
 );
 
 -- F09 Gán vai trò: 01 dòng = 01 tài khoản × 01 vai trò × 01 khoảng hiệu lực (không sửa đè)
