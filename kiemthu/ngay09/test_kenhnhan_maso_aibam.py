@@ -17,20 +17,20 @@ class KiemKenhNhan(CoThuMuc):
         self.assertIn("kenh_nhan", bang)
         self.assertNotIn("kenh", bang)
         k = maso.tao()
-        self.ghi("Bot", "INSERT INTO kenh_nhan (id, vai) VALUES (?, 'anh_nhan_baocao')", (k,))
+        self.ghi("Bot", "INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, 'KN01', 'anh_nhan_baocao')", (k,))
         self.assertEqual(self.lay("Bot", "SELECT trangthai FROM kenh_nhan WHERE id = ?", (k,)), [("dung",)])
-        for sql in ("INSERT INTO kenh_nhan (id, vai, trangthai) VALUES (?, 'bot_giaoviec', NULL)",
-                    "INSERT INTO kenh_nhan (id, vai, trangthai) VALUES (?, 'bot_giaoviec', 'tam')",
-                    "INSERT INTO lich_baocao (id, kenhnhan_id) VALUES (?, 'khongco')"):
+        for sql in ("INSERT INTO kenh_nhan (id, ma, vai, trangthai) VALUES (?, 'KN02', 'bot_giaoviec', NULL)",
+                    "INSERT INTO kenh_nhan (id, ma, vai, trangthai) VALUES (?, 'KN02', 'bot_giaoviec', 'tam')",
+                    "INSERT INTO lich_baocao (id, ma, kenhnhan_id) VALUES (?, 'LICH01', 'khongco')"):
             with self.subTest(sql=sql), self.assertRaises(sqlite3.IntegrityError):
                 self.ghi("Bot", sql, (maso.tao(),))
-        self.ghi("Bot", "INSERT INTO chude_nhom (id, kenhnhan_id) VALUES (?, ?)", (maso.tao(), k))
+        self.ghi("Bot", "INSERT INTO chude_nhom (id, ma, kenhnhan_id) VALUES (?, 'CD01', ?)", (maso.tao(), k))
 
     def test_nang_ban_2_doi_ten_giu_du_lieu_va_khoa_ngoai(self):
         dung_ban2(self.thumuc)
         k = maso.tao()
-        self.ghi("Bot", "INSERT INTO kenh (id, ten, vai) VALUES (?, 'Kênh báo anh', 'anh_nhan_baocao')", (k,))  # trangthai trống ở bản 2
-        self.ghi("Bot", "INSERT INTO chude_nhom (id, kenhnhan_id) VALUES (?, ?)", (maso.tao(), k))
+        self.ghi("Bot", "INSERT INTO kenh (id, ma, ten, vai) VALUES (?, 'KN01', 'Kênh báo anh', 'anh_nhan_baocao')", (k,))  # trangthai trống ở bản 2
+        self.ghi("Bot", "INSERT INTO chude_nhom (id, ma, kenhnhan_id) VALUES (?, 'CD01', ?)", (maso.tao(), k))
         khoitao.tao_het(self.thumuc)
         self.assertEqual(self.lay("Bot", "SELECT ten, vai, trangthai FROM kenh_nhan WHERE id = ?", (k,)),
                          [("Kênh báo anh", "anh_nhan_baocao", "dung")])
@@ -40,7 +40,7 @@ class KiemKenhNhan(CoThuMuc):
             with self.subTest(bang=bang):
                 self.assertIn("kenh_nhan", sql)
         with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại tới bảng đổi tên vẫn chạy
-            self.ghi("Bot", "INSERT INTO chude_nhom (id, kenhnhan_id) VALUES (?, 'khongco')", (maso.tao(),))
+            self.ghi("Bot", "INSERT INTO chude_nhom (id, ma, kenhnhan_id) VALUES (?, 'CD02', 'khongco')", (maso.tao(),))
 
 
 class KiemMaNguoi(CoThuMuc):

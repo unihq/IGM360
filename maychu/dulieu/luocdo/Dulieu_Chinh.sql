@@ -4,7 +4,7 @@
 -- A01 Công ty: 01 dòng = 01 pháp nhân
 CREATE TABLE IF NOT EXISTS congty (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS congty (
 -- A02 Kênh bán: 01 dòng = 01 kênh bán
 CREATE TABLE IF NOT EXISTS kenh (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS kenh (
 -- A03 Shop: 01 dòng = 01 shop × 01 khoảng hiệu lực
 CREATE TABLE IF NOT EXISTS shop (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS vongdoi_shop (
 -- A05 Lý do shop chết: 01 dòng = 01 lý do
 CREATE TABLE IF NOT EXISTS lydo_shopchet (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS lydo_shopchet (
 -- A06 Kho: 01 dòng = 01 kho
 CREATE TABLE IF NOT EXISTS kho (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS kho (
 -- A07 SKU: 01 dòng = 01 SKU hoặc combo × hiệu lực
 CREATE TABLE IF NOT EXISTS sku (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS ghep_mangoai (
 -- A11 Tài khoản: 01 dòng = 01 tài khoản
 CREATE TABLE IF NOT EXISTS taikhoan (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS tygia_quantri (
 -- A14 Nhà cung cấp: 01 dòng = 01 nhà cung cấp
 CREATE TABLE IF NOT EXISTS nhacungcap (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS nhacungcap (
 -- A15 Nhân viên: 01 dòng = 01 nhân viên
 CREATE TABLE IF NOT EXISTS nhanvien (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS nhanvien (
   module_phutrach TEXT,
   kenh_chinh TEXT,
   kenh_duphong TEXT,
-  nguoi_id TEXT NOT NULL UNIQUE REFERENCES nguoi(id),
+  nguoi_id TEXT NOT NULL REFERENCES nguoi(id),
   tinhtrang TEXT NOT NULL DEFAULT 'danglam' CHECK (tinhtrang IN ('danglam', 'danghi')),
   ngay_nghiviec TEXT
 );
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS nhanvien (
 -- A16 Khoản chi: 01 dòng = 01 loại chi phí
 CREATE TABLE IF NOT EXISTS khoanchi (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -247,7 +247,7 @@ CREATE TABLE IF NOT EXISTS khoanchi (
 -- A17 Khu vực: 01 dòng = 01 khu vực giao hàng
 CREATE TABLE IF NOT EXISTS khuvuc (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS lonap (
 -- B05 Loại dữ liệu → module: 01 dòng = 01 loại dữ liệu
 CREATE TABLE IF NOT EXISTS loai_module (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -856,7 +856,7 @@ CREATE TABLE IF NOT EXISTS ky_chotso (
 -- C22 Hồ sơ pháp lý: 01 dòng = 01 hồ sơ
 CREATE TABLE IF NOT EXISTS hoso_phaply (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -876,7 +876,7 @@ CREATE TABLE IF NOT EXISTS hoso_phaply (
 -- D01 Định nghĩa chỉ số: 01 dòng = 01 chỉ số × 01 phiên bản
 CREATE TABLE IF NOT EXISTS chiso (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -1018,7 +1018,7 @@ CREATE TABLE IF NOT EXISTS nhiemvu_sukien (
 -- M02 Quy tắc kiểm đủ: 01 dòng = 01 quy tắc × 01 phiên bản
 CREATE TABLE IF NOT EXISTS quytac_kiemdu (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,

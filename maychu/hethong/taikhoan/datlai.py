@@ -10,7 +10,7 @@ import json
 import sys
 from datetime import datetime
 
-from maychu.dulieu import ketnoi, khoitao, maso, songuoi
+from maychu.dulieu import ketnoi, khoitao, maso, phienban, songuoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.taikhoan import chan, matkhau, nguoidung, phien
@@ -48,9 +48,9 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
                 return 1
             bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
             ma = maso.tao()
-            cn.execute("INSERT INTO nguoidung (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, vaitro, module_xem, nguoi_id)"
-                       " VALUES (?, ?, ?, ?, 1, 'hethong', ?, 'chu', ?, ?)",
-                       (ma, ten, ten, bay[:10], bay, json.dumps(["tatca"]), nguoi_id))
+            phienban.them(cn, "nguoidung", {"id": ma, "ma": ten, "ten": ten, "hieuluc_tu": bay[:10], "phienban": 1,
+                                            "nguoi_khai": "hethong", "tao_luc": bay, "vaitro": "chu",
+                                            "module_xem": json.dumps(["tatca"]), "nguoi_id": nguoi_id})
             u = (ma, None)
         cn.execute("UPDATE nguoidung SET matkhau_bam = ?, trangthai = 'dung' WHERE id = ?", (matkhau.bam(moi), u[0]))
         if "--tat-2lop" in thamso and u[1]:

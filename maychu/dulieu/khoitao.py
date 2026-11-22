@@ -15,7 +15,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import aibam, dsmorong, ketnoi, maso, songuoi
+from maychu.dulieu import aibam, dsmorong, ketnoi, phienban, songuoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 PHIENBAN_LUOCDO = 3
@@ -36,11 +36,18 @@ NANGCAP = {
     # Bản 3 (QĐ108 A18, QĐ109 L01-L05, QĐ112, QĐ93 H06; thiết kế mục 1.2).
     3: {
         'Dulieu_Chinh': ['ghep_mangoai', 'nhanvien', 'lonap', 'dieuchinh', 'nhiemvu', 'nhiemvu_sukien',
-                         'donhang'],                 # ngày 08: L02 không trùng (shop_id, ma_don_nguon)
-        'Hotho': ['filegoc', 'banghigoc'],            # ngày 08: L02 không trùng
-        'Ketnoi': ['hoptin'],                         # ngày 08: L02 không trùng (nguon, ma_sukien); QĐ112
+                         'donhang',                  # ngày 08: L02 không trùng (shop_id, ma_don_nguon)
+                         # Y18 (QĐ142, QĐ143): `ma` bắt buộc ở 29 bảng có phiên bản; A15 bỏ không trùng `nguoi_id`
+                         'chiso', 'congty', 'hoso_phaply', 'kenh', 'kho', 'khoanchi', 'khuvuc', 'loai_module',
+                         'lydo_shopchet', 'nhacungcap', 'quytac_kiemdu', 'shop', 'sku', 'taikhoan'],
+        'Hotho': ['filegoc', 'banghigoc',             # ngày 08: L02 không trùng
+                  'khuon'],                           # Y18
+        'Ketnoi': ['hoptin',                          # ngày 08: L02 không trùng (nguon, ma_sukien); QĐ112
+                   'ketnoi', 'theodoi_trang', 'webhook'],   # Y18
+        'Viecnen': ['congsu', 'kynang', 'nguon_ai', 'quytrinh', 'team'],   # Y18
         'Bot': ['kenh_nhan',                          # ngày 09: L04 trangthai bắt buộc (sau khi đổi tên, L05)
-                'tin_nhom', 'lich_baocao'],
+                'tin_nhom', 'lich_baocao',
+                'chatbot', 'chude_nhom'],             # Y18
         'Baomat': ['nguoidung'],
     },
 }
@@ -157,6 +164,12 @@ def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int, chu: t
                         cn.execute(f"ALTER TABLE {cu} RENAME TO {moi}")
                 for bang in BANG_MOI.get(ban, {}).get(ten, []):
                     cn.execute(_lay_ddl(ten, bang))
+            if tu_ban < 3:
+                # QĐ142, QĐ143: `ma` bắt buộc ở bảng có phiên bản; dòng cũ mã trống thì dừng, không điền im lặng.
+                trong = phienban.dem_ma_trong(cn)
+                if trong:
+                    raise RuntimeError(f"{ten}: {sum(trong.values())} dòng mã trống ở bảng "
+                                       + ", ".join(f"{b} ({so})" for b, so in trong.items()) + "; dừng nâng (QĐ142)")
             dien = _ban3_truoc(cn, ten, co_bm) if tu_ban < 3 else {}
             can = []
             for ban in range(tu_ban + 1, PHIENBAN_LUOCDO + 1):
@@ -239,25 +252,26 @@ LICH_KHOITAO = [
 
 
 def _dong_khoitao(cn: sqlite3.Connection, ten: str) -> None:
-    if ten == "Dulieu_Chinh":
-        # 20 thông số danh sách trước, rồi trigger kiểm danh sách mở rộng (thiết kế mục 0.6; QĐ109 L03).
-        cn.execute("BEGIN IMMEDIATE")
-        try:
+    cn.execute("BEGIN IMMEDIATE")
+    try:
+        if ten == "Dulieu_Chinh":
+            # 20 thông số danh sách trước, rồi trigger kiểm danh sách mở rộng (thiết kế mục 0.6; QĐ109 L03).
             dsmorong.khoi_tao(cn)
             dsmorong.tao_trigger(cn)
-            cn.execute("COMMIT")
-        except Exception:
-            cn.execute("ROLLBACK")
-            raise
-        return
-    if ten != "Bot":
-        return
-    bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
-    for ma, ten_lich, gio, lap, ngay, gui in LICH_KHOITAO:
-        if not cn.execute("SELECT 1 FROM lich_baocao WHERE ma = ?", (ma,)).fetchone():
-            cn.execute("INSERT INTO lich_baocao (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, gio_gui, lap_lai,"
-                       " ngay_trongthang, gui_tin) VALUES (?, ?, ?, ?, 1, 'hethong', ?, ?, ?, ?, ?)",
-                       (maso.tao(), ma, ten_lich, bay[:10], bay, gio, lap, ngay, gui))
+        # Trigger chặn mã trống, chặn sửa `ma` ở mọi bảng có phiên bản (QĐ142, QĐ143). Bảng dựng lại khi nâng mất
+        # trigger cũ, nên tạo lại ở đây sau cả 02 đường: file mới và file nâng.
+        phienban.tao_trigger(cn)
+        if ten == "Bot":
+            bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+            for ma, ten_lich, gio, lap, ngay, gui in LICH_KHOITAO:
+                if not cn.execute("SELECT 1 FROM lich_baocao WHERE ma = ?", (ma,)).fetchone():
+                    phienban.them(cn, "lich_baocao", {"ma": ma, "ten": ten_lich, "hieuluc_tu": bay[:10], "phienban": 1,
+                                                      "nguoi_khai": "hethong", "tao_luc": bay, "gio_gui": gio,
+                                                      "lap_lai": lap, "ngay_trongthang": ngay, "gui_tin": gui})
+        cn.execute("COMMIT")
+    except Exception:
+        cn.execute("ROLLBACK")
+        raise
 
 
 def tao_mot(ten: str, thumuc: Path, chu: tuple | None = None) -> int:

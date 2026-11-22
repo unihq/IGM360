@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS banghigoc (
 -- B04 Khuôn nhận diện: 01 dòng = 01 khuôn × 01 phiên bản
 CREATE TABLE IF NOT EXISTS khuon (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   phienban INTEGER,
   loai_dulieu TEXT,
   nguon TEXT,

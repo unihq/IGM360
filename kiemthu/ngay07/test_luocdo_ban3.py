@@ -77,9 +77,9 @@ class KiemFileMoiBan3(CoThuMuc):
                                 ("lay_tygia_vcb", "09:00", "hangngay", None, 0),
                                 ("nhac_khoa_tygia_thang", "09:00", "hangthang", 1, 1)])
         with self.assertRaises(sqlite3.IntegrityError):  # hằng tháng phải có ngày trong tháng
-            self.ghi("Bot", "INSERT INTO lich_baocao (id, lap_lai) VALUES (?, 'hangthang')", (maso.tao(),))
+            self.ghi("Bot", "INSERT INTO lich_baocao (id, ma, lap_lai) VALUES (?, 'LICH01', 'hangthang')", (maso.tao(),))
         with self.assertRaises(sqlite3.IntegrityError):
-            self.ghi("Bot", "INSERT INTO lich_baocao (id, gui_tin) VALUES (?, 2)", (maso.tao(),))
+            self.ghi("Bot", "INSERT INTO lich_baocao (id, ma, gui_tin) VALUES (?, 'LICH01', 2)", (maso.tao(),))
 
     def test_a18_rang_buoc(self):
         a = songuoi.tao("Anh", "anh", "hethong", self.thumuc)
@@ -104,12 +104,12 @@ class KiemFileMoiBan3(CoThuMuc):
         n = songuoi.tao("Nhân viên 01", "nhanvien", "hethong", self.thumuc)["id"]
         DC = "Dulieu_Chinh"
         with self.assertRaises(sqlite3.IntegrityError):  # A15 bắt buộc có người
-            self.ghi(DC, "INSERT INTO nhanvien (id) VALUES (?)", (maso.tao(),))
+            self.ghi(DC, "INSERT INTO nhanvien (id, ma) VALUES (?, 'NV01')", (maso.tao(),))
         with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại về A18
-            self.ghi(DC, "INSERT INTO nhanvien (id, nguoi_id) VALUES (?, 'khongco')", (maso.tao(),))
-        self.ghi(DC, "INSERT INTO nhanvien (id, nguoi_id) VALUES (?, ?)", (maso.tao(), n))
-        with self.assertRaises(sqlite3.IntegrityError):  # 01 nhân viên = 01 người
-            self.ghi(DC, "INSERT INTO nhanvien (id, nguoi_id) VALUES (?, ?)", (maso.tao(), n))
+            self.ghi(DC, "INSERT INTO nhanvien (id, ma, nguoi_id) VALUES (?, 'NV01', 'khongco')", (maso.tao(),))
+        self.ghi(DC, "INSERT INTO nhanvien (id, ma, nguoi_id) VALUES (?, 'NV01', ?)", (maso.tao(), n))
+        # QĐ143: A15 tách phiên bản, lược đồ cho 02 dòng cùng người; chồng lấn hiệu lực chặn ở lớp ghi (bài kiểm Y18)
+        self.ghi(DC, "INSERT INTO nhanvien (id, ma, nguoi_id) VALUES (?, 'NV01', ?)", (maso.tao(), n))
         self.assertEqual(self.lay(DC, "SELECT tinhtrang FROM nhanvien")[0][0], "danglam")
         self.assertNotIn("ma_trenkenh", {r[1] for r in self.lay(DC, "PRAGMA table_info(nhanvien)")})
         # E02 (L01): đúng 01 trong 02 cột người nhận theo loại
@@ -189,7 +189,7 @@ class KiemNangBan2LenBan3(CoThuMuc):
         self.assertEqual(len(self.lay("Dulieu_Chinh", "SELECT 1 FROM nguoi")), 1)
 
     def test_cot_bo_con_du_lieu_thi_dung(self):
-        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, ma_trenkenh) VALUES (?, '{\"telegram\": \"1\"}')", (maso.tao(),))
+        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, ma, ma_trenkenh) VALUES (?, 'NV01', '{\"telegram\": \"1\"}')", (maso.tao(),))
         with self.assertRaises(RuntimeError) as loi:
             khoitao.tao_het(self.thumuc)
         self.assertIn("ma_trenkenh", str(loi.exception))

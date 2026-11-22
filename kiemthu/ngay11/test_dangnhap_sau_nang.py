@@ -55,7 +55,7 @@ class KiemDangNhapSauNang(CoThuMuc):
         self.assertEqual(a18[0][1], "0000001")
         nv = songuoi.tao("Nhân viên 01", "nhanvien", "hethong", self.thumuc)
         self.assertEqual(self.lay("Dulieu_Chinh", "SELECT ma FROM nguoi WHERE id = ?", (nv["id"],)), [("0000002",)])
-        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, nguoi_id) VALUES (?, ?)", (maso.tao(), nv["id"]))
+        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, ma, nguoi_id) VALUES (?, 'NV01', ?)", (maso.tao(), nv["id"]))
         for ten in ketnoi.CAC_FILE:
             self.assertEqual(self.lay(ten, "PRAGMA foreign_key_check"), [], ten)
             for bang, cot in aibam.cac_cot(ten):

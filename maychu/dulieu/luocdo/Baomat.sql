@@ -4,7 +4,7 @@
 -- F01 Người dùng: 01 dòng = 01 người dùng
 CREATE TABLE IF NOT EXISTS nguoidung (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,

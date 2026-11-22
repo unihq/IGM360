@@ -98,9 +98,9 @@ class KiemTaoFile(unittest.TestCase):
         cn = ketnoi.mo("Bot", self.thumuc)
         try:
             for vai in ("anh_nhan_baocao", "bot_giaoviec"):
-                cn.execute("INSERT INTO kenh_nhan (id, vai) VALUES (?, ?)", (maso.tao(), vai))
+                cn.execute("INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, ?, ?)", (maso.tao(), "KN_" + vai, vai))
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh_nhan (id, vai) VALUES (?, ?)", (maso.tao(), "cahai"))
+                cn.execute("INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, 'KN_X', ?)", (maso.tao(), "cahai"))
         finally:
             cn.close()
 

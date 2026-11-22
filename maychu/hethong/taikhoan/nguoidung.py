@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso, songuoi
+from maychu.dulieu import ketnoi, maso, phienban, songuoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.taikhoan import chan, matkhau, phien, totp
@@ -39,9 +39,9 @@ def tao_quantri_tu_env(thumuc: Path | None = None) -> bool:
     nguoi_id = songuoi.lay_hoac_tao_anh(ten, "hethong", thumuc)
     cn = ketnoi.mo("Baomat", thumuc)
     try:
-        cn.execute("INSERT INTO nguoidung (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, vaitro, module_xem, matkhau_bam,"
-                   " nguoi_id) VALUES (?, ?, ?, ?, 1, 'hethong', ?, 'chu', ?, ?, ?)",
-                   (maso.tao(), ten, ten, _bay_gio()[:10], _bay_gio(), json.dumps(["tatca"]), matkhau.bam(mk), nguoi_id))
+        phienban.them(cn, "nguoidung", {"ma": ten, "ten": ten, "hieuluc_tu": _bay_gio()[:10], "phienban": 1,
+                                        "nguoi_khai": "hethong", "vaitro": "chu", "module_xem": json.dumps(["tatca"]),
+                                        "matkhau_bam": matkhau.bam(mk), "nguoi_id": nguoi_id})
         return True
     finally:
         cn.close()

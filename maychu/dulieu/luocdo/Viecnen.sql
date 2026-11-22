@@ -4,7 +4,7 @@
 -- G01 Cộng sự: 01 dòng = 01 cộng sự AI × phiên bản
 CREATE TABLE IF NOT EXISTS congsu (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS suco (
 -- G06 Nguồn AI: 01 dòng = 01 nguồn AI
 CREATE TABLE IF NOT EXISTS nguon_ai (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS mohinh_ai (
 -- G09 Team: 01 dòng = 01 team × phiên bản
 CREATE TABLE IF NOT EXISTS team (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS baihoc (
 -- G13 Kỹ năng: 01 dòng = 01 kỹ năng × phiên bản
 CREATE TABLE IF NOT EXISTS kynang (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS kynang (
 -- G14 Quy trình: 01 dòng = 01 quy trình × phiên bản
 CREATE TABLE IF NOT EXISTS quytrinh (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,

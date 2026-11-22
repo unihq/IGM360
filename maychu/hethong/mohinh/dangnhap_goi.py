@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import aibam, ketnoi, maso
+from maychu.dulieu import aibam, ketnoi, phienban
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 GOI = {
@@ -250,11 +250,9 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
             cn.execute("UPDATE nguon_ai SET trangthai = 'dung', da_het_luc = NULL WHERE id = ?", (d[0],))
             return d[0]
         uu = (cn.execute("SELECT coalesce(max(uutien), 0) FROM nguon_ai").fetchone()[0] or 0) + 1
-        moi = maso.tao()
-        cn.execute("INSERT INTO nguon_ai (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, loai, dungchung, uutien)"
-                   " VALUES (?, ?, ?, ?, 1, ?, ?, 'goi', 1, ?)",
-                   (moi, ma, f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}", bay[:10], nguoi, bay, uu))
-        return moi
+        return phienban.them(cn, "nguon_ai", {"ma": ma, "ten": f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}",
+                                              "hieuluc_tu": bay[:10], "phienban": 1, "nguoi_khai": nguoi, "tao_luc": bay,
+                                              "loai": "goi", "dungchung": 1, "uutien": uu})
     finally:
         cn.close()
 

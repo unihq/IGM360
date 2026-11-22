@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 from kiemthu.ngay07.test_luocdo_ban3 import CoThuMuc, dung_ban2
-from maychu.dulieu import aibam, ketnoi, khoitao, kiemtruoc_ban3 as kt, maso
+from maychu.dulieu import aibam, ketnoi, khoitao, kiemtruoc_ban3 as kt, maso, phienban
 
 TEN_GIA = "Chủ thử"
 LA = "ai-do-la"
@@ -119,11 +119,11 @@ class KiemTruoc(NenBan2):
         self.kiem_cung_ket_qua("filegoc: UNIQUE constraint failed")
 
     def test_cot_bo_con_du_lieu(self):
-        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, ma_trenkenh) VALUES (?, 'x')", (maso.tao(),))
+        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, ma, ma_trenkenh) VALUES (?, 'NV01', 'x')", (maso.tao(),))
         self.kiem_cung_ket_qua("nhanvien: cột ma_trenkenh sắp bỏ còn 01 dòng")
 
     def test_cot_bat_buoc_moi(self):
-        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id) VALUES (?)", (maso.tao(),))   # A15 bản 3: nguoi_id bắt buộc
+        self.ghi("Dulieu_Chinh", "INSERT INTO nhanvien (id, ma) VALUES (?, 'NV01')", (maso.tao(),))   # A15 bản 3: nguoi_id bắt buộc
         self.kiem_cung_ket_qua("nhanvien: NOT NULL constraint failed: nhanvien.nguoi_id")
 
     def test_ai_bam_la(self):
@@ -146,7 +146,15 @@ class KiemHangSo(unittest.TestCase):
         bang_moi = {f: list(ds) for f, ds in khoitao.BANG_MOI[3].items()}
         ddl = {f"{f}.{b}": khoitao._lay_ddl(f, b) for f in set(dung_lai) | set(bang_moi)
                for b in bang_moi.get(f, []) + dung_lai.get(f, [])}
-        mong = {"DOI_TEN": doi_ten, "BANG_MOI": bang_moi, "DUNG_LAI": dung_lai, "DDL": ddl,
+        bpb = {}   # Y18: bảng có phiên bản theo file, đọc từ lược đồ bản 3 nạp vào bộ nhớ
+        for f in ketnoi.CAC_FILE:
+            cn = sqlite3.connect(":memory:")
+            cn.executescript((khoitao.THUMUC_LUOCDO / f"{f}.sql").read_text(encoding="utf-8"))
+            if phienban.cac_bang(cn):
+                bpb[f] = phienban.cac_bang(cn)
+            cn.close()
+        self.assertEqual(sum(map(len, bpb.values())), 29)
+        mong = {"DOI_TEN": doi_ten, "BANG_MOI": bang_moi, "DUNG_LAI": dung_lai, "DDL": ddl, "BANG_PHIENBAN": bpb,
                 "AIBAM": {f: [list(x) for x in aibam.cac_cot(f)] for f in ketnoi.CAC_FILE},
                 "DOI_CU_MAY": aibam.DOI_CU_MAY, "MA_MAY": list(aibam.MA_MAY), "ULID": aibam._ULID.pattern}
         self.assertEqual(json.loads(json.dumps(kt.SINH)), json.loads(json.dumps(mong)),

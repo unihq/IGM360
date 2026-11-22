@@ -30,7 +30,7 @@ class KiemKhongTrung(CoThuMuc):
         with self.assertRaises(sqlite3.IntegrityError):
             self.ghi(HT, b03, (maso.tao(), "m1"))
         shop = maso.tao()
-        self.ghi("Dulieu_Chinh", "INSERT INTO shop (id) VALUES (?)", (shop,))
+        self.ghi("Dulieu_Chinh", "INSERT INTO shop (id, ma) VALUES (?, 'SHOP01')", (shop,))
         c01 = "INSERT INTO donhang (id, shop_id, ma_don_nguon) VALUES (?, ?, 'DH-01')"
         self.ghi("Dulieu_Chinh", c01, (maso.tao(), shop))
         with self.assertRaises(sqlite3.IntegrityError):
@@ -68,9 +68,9 @@ class KiemDanhSachMoRong(CoThuMuc):
 
     def test_trigger_chan_gia_tri_ngoai_danh_sach(self):
         DC = "Dulieu_Chinh"
-        self.ghi(DC, "INSERT INTO shop (id, thitruong, tien_ma) VALUES ('s1', 'VN', 'VND')")
-        for sql in ("INSERT INTO shop (id, thitruong) VALUES ('s2', 'TH')",
-                    "INSERT INTO shop (id, tien_ma) VALUES ('s3', 'USD')",
+        self.ghi(DC, "INSERT INTO shop (id, ma, thitruong, tien_ma) VALUES ('s1', 'SHOP01', 'VN', 'VND')")
+        for sql in ("INSERT INTO shop (id, ma, thitruong) VALUES ('s2', 'SHOP02', 'TH')",
+                    "INSERT INTO shop (id, ma, tien_ma) VALUES ('s3', 'SHOP03', 'USD')",
                     "UPDATE shop SET thitruong = 'XX' WHERE id = 's1'",
                     "INSERT INTO donhang (id, thitruong) VALUES ('d1', 'TH')",         # cột chung số liệu
                     "INSERT INTO donhang (id, tien_ma) VALUES ('d2', 'USD')",
@@ -93,7 +93,7 @@ class KiemDanhSachMoRong(CoThuMuc):
             cn.execute("UPDATE thongso SET hieuluc_den = ? WHERE id = ?", (cu[1], cu[0]))
             cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, hieuluc_tu, nguoi_dat) VALUES (?, 'ds_thitruong', ?, 'danhsach', ?, 'hethong')",
                        (maso.tao(), json.dumps(["VN", "MY", "TH"]), cu[1]))
-            cn.execute("INSERT INTO shop (id, thitruong) VALUES ('s4', 'TH')")
+            cn.execute("INSERT INTO shop (id, ma, thitruong) VALUES ('s4', 'SHOP04', 'TH')")
             self.assertEqual(dsmorong.doc(cn, "ds_thitruong"), ["VN", "MY", "TH"])
         finally:
             cn.close()

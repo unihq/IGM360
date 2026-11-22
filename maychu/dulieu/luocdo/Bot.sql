@@ -4,7 +4,7 @@
 -- H01 Kênh nhắn: 01 dòng = 01 kênh nhắn (tên bảng kenh_nhan từ bản 3, QĐ109 L05)
 CREATE TABLE IF NOT EXISTS kenh_nhan (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS tin_nhom (
 -- H04 Chủ đề nhóm: 01 dòng = 01 chủ đề
 CREATE TABLE IF NOT EXISTS chude_nhom (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS chude_nhom (
 -- H06 Lịch báo cáo: 01 dòng = 01 loại báo cáo
 CREATE TABLE IF NOT EXISTS lich_baocao (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS tinnhan (
 -- H09 Chatbot: 01 dòng = 01 chatbot × phiên bản
 CREATE TABLE IF NOT EXISTS chatbot (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
