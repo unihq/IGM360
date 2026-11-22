@@ -9,16 +9,16 @@ import sqlite3
 from pathlib import Path
 
 from kiemthu.ngay07.test_luocdo_ban3 import CoThuMuc, dung_ban2
-from maychu.dulieu import ketnoi, khoitao, kiemtruoc_ban3 as kt, luong, maso, phienban, songuoi
+from maychu.dulieu import aibam, ketnoi, khoitao, kiemtruoc_ban3 as kt, luong, maso, phienban, songuoi
 
-BANG_29 = {
+BANG_30 = {
     "Dulieu_Chinh": ['chiso', 'congty', 'hoso_phaply', 'kenh', 'kho', 'khoanchi', 'khuvuc', 'loai_module', 'lydo_shopchet',
                      'nhacungcap', 'nhanvien', 'quytac_kiemdu', 'shop', 'sku', 'taikhoan'],
     "Hotho": ['khuon'],
     "Ketnoi": ['ketnoi', 'theodoi_trang', 'webhook'],
     "Viecnen": ['congsu', 'kynang', 'nguon_ai', 'quytrinh', 'team'],
     "Bot": ['chatbot', 'chude_nhom', 'kenh_nhan', 'lich_baocao'],
-    "Baomat": ['nguoidung'],
+    "Baomat": ['nguoidung', 'vaitro'],   # Y20c: F07 là bảng có phiên bản thứ 30
 }
 GOC = Path(__file__).resolve().parents[2]
 
@@ -35,13 +35,13 @@ class NenMoi(CoThuMuc):
 
 
 class KiemLuocDo(NenMoi):
-    def test_29_bang_ma_bat_buoc_va_58_trigger(self):
+    def test_30_bang_ma_bat_buoc_va_60_trigger(self):
         tong = 0
         for ten in ketnoi.CAC_FILE:
             cn = self.mo(ten)
             try:
                 ds = phienban.cac_bang(cn)
-                self.assertEqual(ds, BANG_29.get(ten, []), ten)
+                self.assertEqual(ds, BANG_30.get(ten, []), ten)
                 for b in ds:
                     notnull = {r[1]: r[3] for r in cn.execute(f"PRAGMA table_info({b})")}["ma"]
                     self.assertEqual(notnull, 1, b)
@@ -52,7 +52,7 @@ class KiemLuocDo(NenMoi):
                     self.assertNotIn("quytrinh_lanchay", ds)
             finally:
                 cn.close()
-        self.assertEqual(tong, 29)
+        self.assertEqual(tong, 30)
 
     def test_trigger_chan_sua_nguoi_a15(self):
         """Y20a (QĐ155): lưới an toàn trong lược đồ, câu ghi thẳng không qua lớp ghi cũng không đổi được người của A15."""
@@ -256,7 +256,7 @@ class KiemNangBan2(CoThuMuc):
         self.ghi("Bot", "INSERT INTO kenh (id, ma, vai) VALUES (?, '', 'bot_giaoviec')", (maso.tao(),))
         ma, ra = self.chay_kiem()
         self.assertEqual(ma, 1, ra)
-        self.assertIn("(6) Mã trống ở 29 bảng có phiên bản (cần 00; còn thì lần nâng dừng): Dulieu_Chinh.shop 01 dòng,"
+        self.assertIn("(6) Mã trống ở 30 bảng có phiên bản (cần 00; còn thì lần nâng dừng): Dulieu_Chinh.shop 01 dòng,"
                       " Bot.kenh_nhan 01 dòng → DỪNG", ra)
         with self.assertRaises(RuntimeError) as loi:
             khoitao.tao_het(self.thumuc)
@@ -268,7 +268,7 @@ class KiemNangBan2(CoThuMuc):
         self.ghi("Dulieu_Chinh", "INSERT INTO shop (id, ma, hieuluc_tu) VALUES (?, 'SHOP01', '2026-03-01')", (s,))
         ma, ra = self.chay_kiem()
         self.assertEqual(ma, 0, ra)
-        self.assertIn("(6) Mã trống ở 29 bảng có phiên bản (cần 00; còn thì lần nâng dừng): 00 dòng → ĐẠT", ra)
+        self.assertIn("(6) Mã trống ở 30 bảng có phiên bản (cần 00; còn thì lần nâng dừng): 00 dòng → ĐẠT", ra)
         khoitao.tao_het(self.thumuc)
         self.assertEqual(self.lay("Dulieu_Chinh", "SELECT ma FROM shop WHERE id = ?", (s,)), [("SHOP01",)])
         with self.assertRaises(sqlite3.IntegrityError):   # bảng dựng lại có lại trigger chặn sửa mã
@@ -281,7 +281,7 @@ class KiemNangBan2(CoThuMuc):
 class KiemQuetMa(CoThuMuc):
     def test_khong_ghi_thang_vao_bang_phien_ban(self):
         """Mọi lần thêm dòng vào 29 bảng đi qua phienban.them; C16 đi qua luong.ghi_thang."""
-        bang = "|".join(b for ds in BANG_29.values() for b in ds)
+        bang = "|".join(b for ds in BANG_30.values() for b in ds)
         mau = re.compile(rf"INSERT\s+(OR\s+\w+\s+)?INTO\s+({bang}|luong_nhansu)\b")
         cho_phep = {"maychu/dulieu/phienban.py", "maychu/dulieu/luong.py"}
         sai = []
@@ -293,3 +293,84 @@ class KiemQuetMa(CoThuMuc):
                 if mau.search(dong):
                     sai.append(f"{ten}:{so}")
         self.assertEqual(sai, [])
+
+
+class KiemBangQuyen(CoThuMuc):
+    """Y20c (QĐ144, QĐ149, QĐ155, QĐ156): F07-F09 tạo sẵn, rỗng; D01, H01 thêm cột; F01 bỏ `module_xem`."""
+
+    def setUp(self):
+        super().setUp()
+        khoitao.tao_het(self.thumuc)
+        self.bm = self.mo("Baomat")
+
+    def tearDown(self):
+        self.bm.close()
+        super().tearDown()
+
+    def test_bang_moi_rong_va_cot_moi(self):
+        bang = {r[0] for r in self.bm.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        self.assertTrue({"vaitro", "quyen_vaitro", "gan_vaitro"} <= bang)
+        for b in ("vaitro", "quyen_vaitro", "gan_vaitro"):
+            self.assertEqual(self.bm.execute(f"SELECT count(*) FROM {b}").fetchone()[0], 0, b)
+        self.assertNotIn("module_xem", {r[1] for r in self.bm.execute("PRAGMA table_info(nguoidung)")})
+        self.assertIn("nhom_nhaycam", {r[1] for r in self.lay("Dulieu_Chinh", "PRAGMA table_info(chiso)")})
+        self.assertIn("nguoi_id", {r[1] for r in self.lay("Bot", "PRAGMA table_info(kenh_nhan)")})
+        self.assertIn(("gan_vaitro", "nguoi_cap"), aibam.cac_cot("Baomat"))
+
+    def test_f07_ma_ben(self):
+        with self.assertRaises(phienban.LoiPhienBan):
+            phienban.them(self.bm, "vaitro", {"ma": " ", "hieuluc_tu": "2026-11-23"})
+        v = phienban.them(self.bm, "vaitro", {"ma": "KT_LUONG", "ten": "Kế toán lương thử", "hieuluc_tu": "2026-11-23"})
+        for sql in ("INSERT INTO vaitro (id, ma) VALUES ('v2', '')", "INSERT INTO vaitro (id) VALUES ('v3')",
+                    f"UPDATE vaitro SET ma = 'KHAC' WHERE id = '{v}'"):
+            with self.subTest(sql=sql), self.assertRaises(sqlite3.IntegrityError):
+                self.bm.execute(sql)
+        self.assertEqual(self.bm.execute("SELECT la_macdinh, trangthai FROM vaitro").fetchall(), [(0, "dung")])
+
+    def test_f08_rang_buoc(self):
+        them = ("INSERT INTO quyen_vaitro (id, vaitro_ma, doituong_loai, doituong_ma, thaotac, phamvi_toida, hieuluc_tu)"
+                " VALUES (?, 'KT_LUONG', ?, ?, ?, ?, '2026-11-23')")
+        for dong in (("nhom_nhaycam", "luong", "xem", "congty"), ("nhom_nhaycam", "luong", "nhap", "chinhminh"),
+                     ("nhom_nhaycam", "dongtien", "xem", "shop"), ("man", "16", "chiase", "congty")):
+            self.bm.execute(them, (maso.tao(), *dong))
+        for dong in (("nhom_nhaycam", "luong", "xem", "shop"),        # QĐ156: nhóm lương không nhận phạm vi shop
+                     ("nhom_nhaycam", "lai", "xem", "congty"),        # ngoài 03 nhóm
+                     ("man", "16", "in", "congty"),                   # ngoài 06 thao tác
+                     ("man", "16", "xem", "phongban"), ("khac", "16", "xem", "congty")):
+            with self.subTest(dong=dong), self.assertRaises(sqlite3.IntegrityError):
+                self.bm.execute(them, (maso.tao(), *dong))
+        with self.assertRaises(sqlite3.IntegrityError):              # hiệu lực bắt buộc
+            self.bm.execute("INSERT INTO quyen_vaitro (id, vaitro_ma, doituong_loai, doituong_ma, thaotac, phamvi_toida)"
+                            " VALUES ('q9', 'KT_LUONG', 'man', '16', 'xem', 'congty')")
+
+    def test_f09_rang_buoc(self):
+        self.bm.execute("INSERT INTO nguoidung (id, ma, nguoi_id) VALUES ('u2', 'nhanvien_thu', 'n2')")
+        self.bm.execute("INSERT INTO gan_vaitro (id, nguoidung_id, vaitro_ma, phamvi_loai, phamvi_ma_json, hieuluc_tu)"
+                        " VALUES ('g1', 'u2', 'KT_LUONG', 'shop', '[\"SHOP01\"]', '2026-11-23')")
+        for sql in ("INSERT INTO gan_vaitro (id, nguoidung_id, vaitro_ma, phamvi_loai, hieuluc_tu) VALUES ('g2', 'khongco', 'X', 'congty', '2026-11-23')",
+                    "INSERT INTO gan_vaitro (id, nguoidung_id, vaitro_ma, phamvi_loai, hieuluc_tu) VALUES ('g3', 'u2', 'X', 'phongban', '2026-11-23')",
+                    "INSERT INTO gan_vaitro (id, nguoidung_id, vaitro_ma, phamvi_loai) VALUES ('g4', 'u2', 'X', 'congty')"):
+            with self.subTest(sql=sql), self.assertRaises(sqlite3.IntegrityError):
+                self.bm.execute(sql)
+
+
+class KiemNangBoModuleXem(CoThuMuc):
+    def test_nang_ban_2_bo_module_xem_co_du_lieu(self):
+        """F01 bản 2 có `module_xem` = ["tatca"]: lần nâng và bước kiểm trước đều cho bỏ (BO_COT), không dừng."""
+        dung_ban2(self.thumuc)
+        u = maso.tao()
+        self.ghi("Baomat", "INSERT INTO nguoidung (id, ma, ten, vaitro, module_xem, tao_luc, nguoi_khai) VALUES"
+                 " (?, 'chu', 'Chủ thử', 'chu', '[\"tatca\"]', '2026-11-21', 'lenh_vps')", (u,))
+        ra = io.StringIO()
+        with contextlib.redirect_stdout(ra):
+            self.assertEqual(kt.main([str(self.thumuc)]), 0, ra.getvalue())
+        self.assertNotIn("module_xem", ra.getvalue())
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
+        self.assertNotIn("module_xem", {r[1] for r in self.lay("Baomat", "PRAGMA table_info(nguoidung)")})
+        self.assertEqual(self.lay("Baomat", "SELECT ma, vaitro FROM nguoidung WHERE id = ?", (u,)), [("chu", "chu")])
+        self.assertEqual(self.lay("Baomat", "SELECT count(*) FROM gan_vaitro")[0][0], 0)
+
+    def test_cot_khac_bo_con_du_lieu_van_dung(self):
+        """Chỉ cột trong BO_COT được bỏ khi còn dữ liệu; cột khác vẫn dừng như cũ."""
+        self.assertEqual(khoitao.BO_COT, {3: {("Baomat", "nguoidung"): ["module_xem"]}})
+

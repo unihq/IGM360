@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS kenh_nhan (
   co_nutbam INTEGER,
   co_nhom INTEGER,
   cuaso_gui_gio INTEGER,
-  ketnoi_id TEXT
+  ketnoi_id TEXT,
+  nguoi_id TEXT
 );
 
 -- H02 Thẻ duyệt: 01 dòng = 01 thẻ duyệt

@@ -46,7 +46,7 @@ class KiemDoiAiBam(NenBan2):
 
     def test_55_cot_ai_bam(self):
         ds = {t: aibam.cac_cot(t) for t in ketnoi.CAC_FILE}
-        self.assertEqual(sum(map(len, ds.values())), 55)            # thiết kế mục 0.4: 55 cột, gồm `nguoi_khai` của A18
+        self.assertEqual(sum(map(len, ds.values())), 58)            # thiết kế mục 0.4: 55 cột, gồm `nguoi_khai` của A18
         self.assertIn(("nhatky_thaotac", "nguoi_id"), ds["Nhatky"])
         self.assertNotIn(("nguoidung", "nguoi_id"), ds["Baomat"])   # nguoi_id khác F04 trỏ A18, không phải "ai bấm"
 
@@ -153,8 +153,11 @@ class KiemHangSo(unittest.TestCase):
             if phienban.cac_bang(cn):
                 bpb[f] = phienban.cac_bang(cn)
             cn.close()
-        self.assertEqual(sum(map(len, bpb.values())), 29)
-        mong = {"DOI_TEN": doi_ten, "BANG_MOI": bang_moi, "DUNG_LAI": dung_lai, "DDL": ddl, "BANG_PHIENBAN": bpb,
+        self.assertEqual(sum(map(len, bpb.values())), 30)   # Y20c: F07 là bảng có phiên bản thứ 30
+        bo_cot = {}
+        for (f, b), ds in khoitao.BO_COT[3].items():
+            bo_cot.setdefault(f, {})[b] = list(ds)
+        mong = {"DOI_TEN": doi_ten, "BANG_MOI": bang_moi, "DUNG_LAI": dung_lai, "DDL": ddl, "BANG_PHIENBAN": bpb, "BO_COT": bo_cot,
                 "AIBAM": {f: [list(x) for x in aibam.cac_cot(f)] for f in ketnoi.CAC_FILE},
                 "DOI_CU_MAY": aibam.DOI_CU_MAY, "MA_MAY": list(aibam.MA_MAY), "ULID": aibam._ULID.pattern}
         self.assertEqual(json.loads(json.dumps(kt.SINH)), json.loads(json.dumps(mong)),

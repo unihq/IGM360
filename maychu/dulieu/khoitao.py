@@ -1,4 +1,4 @@
-"""Tạo 07 file dữ liệu và 105 bảng theo lược đồ trong `luocdo/`, nâng cấp file đã có lên bản mới.
+"""Tạo 07 file dữ liệu và 108 bảng theo lược đồ trong `luocdo/`, nâng cấp file đã có lên bản mới.
 
 Chạy lại nhiều lần không sao. Số phiên bản lược đồ ghi ở PRAGMA user_version của từng file
 (không thêm bảng phụ).
@@ -52,7 +52,10 @@ NANGCAP = {
     },
 }
 # Bảng mới của từng bản (tạo theo lược đồ hiện hành trước khi dựng lại bảng khác).
-BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi']}}
+BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi'],
+                'Baomat': ['vaitro', 'quyen_vaitro', 'gan_vaitro']}}   # Y20c (QĐ144, QĐ155): F07-F09 rỗng
+# Cột được bỏ có chủ đích khi còn dữ liệu (ngoài danh sách này, cột sắp bỏ còn dữ liệu thì dừng nâng).
+BO_COT = {3: {('Baomat', 'nguoidung'): ['module_xem']}}   # Y20c (QĐ144, QĐ155): quyền màn chuyển sang F08
 # Bảng đổi tên ở từng bản: {(file, tên cũ): tên mới}.
 DOI_TEN: dict[int, dict[tuple[str, str], str]] = {
     3: {('Bot', 'kenh'): 'kenh_nhan'},  # L05 (QĐ109): H01 không trùng tên A02 `kenh` khi gắn thêm file đọc chéo
@@ -73,15 +76,17 @@ def _ten_moi(ten: str, bang: str, tu_ban: int) -> str:
     return bang
 
 
-def _dung_lai(cn: sqlite3.Connection, ten: str, bang: str, dien: dict[str, str] | None = None) -> None:
-    """Dựng lại 01 bảng theo lược đồ hiện hành. `dien`: {cột mới: biểu thức SQL} để điền cột mới cho dòng cũ."""
+def _dung_lai(cn: sqlite3.Connection, ten: str, bang: str, dien: dict[str, str] | None = None,
+              duoc_bo: tuple = ()) -> None:
+    """Dựng lại 01 bảng theo lược đồ hiện hành. `dien`: {cột mới: biểu thức SQL} để điền cột mới cho dòng cũ.
+    `duoc_bo`: cột bỏ có chủ đích (BO_COT), bỏ cả khi còn dữ liệu."""
     dien = dien or {}
     moi = f"{bang}__moi"
     cn.execute(_lay_ddl(ten, bang).replace(f"CREATE TABLE IF NOT EXISTS {bang} (", f"CREATE TABLE {moi} (", 1))
     cot_moi = cn.execute(f"PRAGMA table_info({moi})").fetchall()  # (stt, tên, kiểu, bắt buộc, mặc định, khoá chính)
     cot_cu = {r[1] for r in cn.execute(f"PRAGMA table_info({bang})")}
     bo = cot_cu - {r[1] for r in cot_moi}
-    for c in sorted(bo):
+    for c in sorted(bo - set(duoc_bo)):
         so = cn.execute(f"SELECT count(*) FROM {bang} WHERE {c} IS NOT NULL").fetchone()[0]
         if so:
             raise RuntimeError(f"{ten}.{bang}: cột {c} sắp bỏ còn {so} dòng có dữ liệu, không bỏ được")
@@ -177,8 +182,13 @@ def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int, chu: t
                     moi = _ten_moi(ten, bang, ban - 1)
                     if moi not in can:
                         can.append(moi)
+            duoc_bo = {}
+            for ban in range(tu_ban + 1, PHIENBAN_LUOCDO + 1):
+                for (t, b), ds in BO_COT.get(ban, {}).items():
+                    if t == ten:
+                        duoc_bo.setdefault(b, []).extend(ds)
             for bang in can:
-                _dung_lai(cn, ten, bang, dien.get(bang))
+                _dung_lai(cn, ten, bang, dien.get(bang), tuple(duoc_bo.get(bang, ())))
             if tu_ban < 3:
                 _doi_aibam(cn, ten, chu)
             loi_noi = cn.execute("PRAGMA foreign_key_check").fetchall()

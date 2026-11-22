@@ -6,7 +6,6 @@ Hỏi mật khẩu mới 02 lần (không hiện chữ), thu hồi mọi phiên 
 sau phần mềm bắt bật lại. Chưa có tài khoản nào thì hỏi thêm tên đăng nhập và tạo tài khoản chủ.
 """
 import getpass
-import json
 import sys
 from datetime import datetime
 
@@ -50,7 +49,7 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
             ma = maso.tao()
             phienban.them(cn, "nguoidung", {"id": ma, "ma": ten, "ten": ten, "hieuluc_tu": bay[:10], "phienban": 1,
                                             "nguoi_khai": "hethong", "tao_luc": bay, "vaitro": "chu",
-                                            "module_xem": json.dumps(["tatca"]), "nguoi_id": nguoi_id})
+                                            "nguoi_id": nguoi_id})
             u = (ma, None)
         cn.execute("UPDATE nguoidung SET matkhau_bam = ?, trangthai = 'dung' WHERE id = ?", (matkhau.bam(moi), u[0]))
         if "--tat-2lop" in thamso and u[1]:

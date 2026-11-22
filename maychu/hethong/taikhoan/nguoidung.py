@@ -3,7 +3,6 @@
 Chặn đoán mật khẩu theo QĐ90 (chan.py): đang khoá thì không kiểm mật khẩu; sai mật khẩu hay mã 02 lớp đều đếm.
 Mã 02 lớp bắt buộc, không có cách tắt trên web (chỉ lệnh đặt lại trên VPS).
 """
-import json
 import os
 import secrets
 import time
@@ -40,7 +39,7 @@ def tao_quantri_tu_env(thumuc: Path | None = None) -> bool:
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         phienban.them(cn, "nguoidung", {"ma": ten, "ten": ten, "hieuluc_tu": _bay_gio()[:10], "phienban": 1,
-                                        "nguoi_khai": "hethong", "vaitro": "chu", "module_xem": json.dumps(["tatca"]),
+                                        "nguoi_khai": "hethong", "vaitro": "chu",
                                         "matkhau_bam": matkhau.bam(mk), "nguoi_id": nguoi_id})
         return True
     finally:

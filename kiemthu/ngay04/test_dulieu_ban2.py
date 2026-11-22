@@ -77,7 +77,7 @@ class KiemBan2(unittest.TestCase):
         return ketnoi.mo(ten, self.thumuc)
 
     def test_file_moi_ban_2_va_cot_bat_buoc(self):
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 105)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
         for ten in ketnoi.CAC_FILE:
             cn = self.mo(ten)
             try:
@@ -139,7 +139,7 @@ class KiemBan2(unittest.TestCase):
             cn.execute("INSERT INTO theodoi_maychu (id, ram_dung) VALUES (?, 639)", (ma_n02,))
         finally:
             cn.close()
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 105)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
         cn = self.mo("Bot")
         try:
             self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)

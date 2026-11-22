@@ -1,4 +1,5 @@
-"""Giá trị "ai bấm" cho 55 cột người thao tác (thiết kế mục 0.4, 0.7; QĐ108; 55 = 54 cột cũ + `nguoi_khai` của A18).
+"""Giá trị "ai bấm" cho 58 cột người thao tác (thiết kế mục 0.4, 0.7; QĐ108; 55 = 54 cột cũ + `nguoi_khai` của A18;
+Y20c thêm 03: F07 `nguoi_khai`, F08 `nguoi_dat`, F09 `nguoi_cap`).
 
 Chỉ nhận `id` tài khoản F01 (mã dòng ULID 26 ký tự) hoặc 01 trong 04 mã máy cố định. Không ghi chữ `anh`,
 không ghi tên đăng nhập: F01 nối 01-01 với A18 nên vẫn tra ra người. Mọi chỗ ghi cột "ai bấm" gọi `kiem`.
@@ -10,7 +11,7 @@ MA_MAY = ("hethong", "bot", "viecnen", "ai")
 _ULID = re.compile(r"^[0-9A-HJKMNP-TV-Z]{26}$")
 # Tên cột "ai bấm" (thiết kế mục 0.4). `nguoi_id` chỉ là cột "ai bấm" ở F04; các bảng khác `nguoi_id` trỏ A18.
 TEN_COT = ("nguoi_khai", "nguoi_duyet", "nguoi_tao", "nguoi_nhap", "nguoi_dat", "nguoi_chot", "nguoi_xuat",
-           "nguoi_ketluan", "nguoi_ghi", "nguoi_xuly", "nguoi_gui")
+           "nguoi_ketluan", "nguoi_ghi", "nguoi_xuly", "nguoi_gui", "nguoi_cap")
 _LUOCDO = Path(__file__).resolve().parent / "luocdo"
 # Giá trị cũ bản 0.5.0 trở về trước, đổi khi nâng lên lược đồ bản 3 (thiết kế mục 0.7): 'anh' và tên đăng nhập
 # của chủ → `id` tài khoản chủ; 'lenh_vps' (lệnh đặt lại mật khẩu) → 'hethong'. Giá trị lạ khác: dừng nâng.

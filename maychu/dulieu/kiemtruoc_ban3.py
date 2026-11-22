@@ -43,6 +43,18 @@ SINH = {
    [
     "link_chiase",
     "nguoi_tao"
+   ],
+   [
+    "vaitro",
+    "nguoi_khai"
+   ],
+   [
+    "quyen_vaitro",
+    "nguoi_dat"
+   ],
+   [
+    "gan_vaitro",
+    "nguoi_cap"
    ]
   ],
   "Bot": [
@@ -263,13 +275,19 @@ SINH = {
   ]
  },
  "BANG_MOI": {
+  "Baomat": [
+   "vaitro",
+   "quyen_vaitro",
+   "gan_vaitro"
+  ],
   "Dulieu_Chinh": [
    "nguoi"
   ]
  },
  "BANG_PHIENBAN": {
   "Baomat": [
-   "nguoidung"
+   "nguoidung",
+   "vaitro"
   ],
   "Bot": [
    "chatbot",
@@ -310,14 +328,24 @@ SINH = {
    "team"
   ]
  },
+ "BO_COT": {
+  "Baomat": {
+   "nguoidung": [
+    "module_xem"
+   ]
+  }
+ },
  "DDL": {
-  "Baomat.nguoidung": "CREATE TABLE IF NOT EXISTS nguoidung (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  vaitro TEXT CHECK (vaitro IS NULL OR vaitro IN ('chu', 'nhanvien')),\n  module_xem TEXT,\n  matkhau_bam TEXT,\n  totp_khoa_id TEXT REFERENCES kekhoa(id),\n  nguoi_id TEXT NOT NULL UNIQUE\n);",
+  "Baomat.gan_vaitro": "CREATE TABLE IF NOT EXISTS gan_vaitro (\n  id TEXT PRIMARY KEY NOT NULL,\n  nguoidung_id TEXT NOT NULL REFERENCES nguoidung(id),\n  vaitro_ma TEXT NOT NULL,\n  phamvi_loai TEXT NOT NULL CHECK (phamvi_loai IN ('congty', 'shop', 'chinhminh')),\n  phamvi_ma_json TEXT,\n  nguoi_cap TEXT,\n  cap_luc TEXT,\n  hieuluc_tu TEXT NOT NULL,\n  hieuluc_den TEXT,\n  lydo TEXT\n);",
+  "Baomat.nguoidung": "CREATE TABLE IF NOT EXISTS nguoidung (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  vaitro TEXT CHECK (vaitro IS NULL OR vaitro IN ('chu', 'nhanvien')),\n  matkhau_bam TEXT,\n  totp_khoa_id TEXT REFERENCES kekhoa(id),\n  nguoi_id TEXT NOT NULL UNIQUE\n);",
+  "Baomat.quyen_vaitro": "CREATE TABLE IF NOT EXISTS quyen_vaitro (\n  id TEXT PRIMARY KEY NOT NULL,\n  vaitro_ma TEXT NOT NULL,\n  doituong_loai TEXT NOT NULL CHECK (doituong_loai IN ('man', 'nhom_nhaycam')),\n  doituong_ma TEXT NOT NULL,\n  thaotac TEXT NOT NULL CHECK (thaotac IN ('xem', 'nhap', 'sua', 'duyet', 'xuat', 'chiase')),\n  phamvi_toida TEXT NOT NULL CHECK (phamvi_toida IN ('congty', 'shop', 'chinhminh')),\n  nguoi_dat TEXT,\n  tao_luc TEXT,\n  hieuluc_tu TEXT NOT NULL,\n  hieuluc_den TEXT,\n  CHECK (doituong_loai <> 'nhom_nhaycam' OR doituong_ma IN ('loinhuan', 'luong', 'dongtien')),\n  CHECK (NOT (doituong_loai = 'nhom_nhaycam' AND doituong_ma = 'luong' AND phamvi_toida = 'shop'))\n);",
+  "Baomat.vaitro": "CREATE TABLE IF NOT EXISTS vaitro (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  mota TEXT,\n  la_macdinh INTEGER NOT NULL DEFAULT 0 CHECK (la_macdinh IN (0, 1))\n);",
   "Bot.chatbot": "CREATE TABLE IF NOT EXISTS chatbot (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  kenhnhan_id TEXT REFERENCES kenh_nhan(id),\n  congsu_id TEXT,\n  nguon_trithuc_json TEXT,\n  chinhsach_traloi TEXT,\n  muc_tugui TEXT CHECK (muc_tugui IS NULL OR muc_tugui IN ('chi_dexuat', 'tugui_trongnguong'))\n);",
   "Bot.chude_nhom": "CREATE TABLE IF NOT EXISTS chude_nhom (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  kenhnhan_id TEXT REFERENCES kenh_nhan(id),\n  ma_nhom TEXT,\n  module TEXT,\n  congsu_id TEXT\n);",
-  "Bot.kenh_nhan": "CREATE TABLE IF NOT EXISTS kenh_nhan (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  loai TEXT,\n  vai TEXT NOT NULL CHECK (vai IN ('anh_nhan_baocao', 'bot_giaoviec')),\n  co_nutbam INTEGER,\n  co_nhom INTEGER,\n  cuaso_gui_gio INTEGER,\n  ketnoi_id TEXT\n);",
+  "Bot.kenh_nhan": "CREATE TABLE IF NOT EXISTS kenh_nhan (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  loai TEXT,\n  vai TEXT NOT NULL CHECK (vai IN ('anh_nhan_baocao', 'bot_giaoviec')),\n  co_nutbam INTEGER,\n  co_nhom INTEGER,\n  cuaso_gui_gio INTEGER,\n  ketnoi_id TEXT,\n  nguoi_id TEXT\n);",
   "Bot.lich_baocao": "CREATE TABLE IF NOT EXISTS lich_baocao (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  gio_gui TEXT,\n  kenhnhan_id TEXT REFERENCES kenh_nhan(id),\n  noidung_mau TEXT,\n  lap_lai TEXT NOT NULL DEFAULT 'hangngay' CHECK (lap_lai IN ('hangngay', 'hangthang')),\n  ngay_trongthang INTEGER CHECK (ngay_trongthang IS NULL OR ngay_trongthang BETWEEN 1 AND 31),\n  gui_tin INTEGER NOT NULL DEFAULT 1 CHECK (gui_tin IN (0, 1)),\n  CHECK (lap_lai <> 'hangthang' OR ngay_trongthang IS NOT NULL)\n);",
   "Bot.tin_nhom": "CREATE TABLE IF NOT EXISTS tin_nhom (\n  id TEXT PRIMARY KEY NOT NULL,\n  kenhnhan_id TEXT REFERENCES kenh_nhan(id),\n  chude_id TEXT REFERENCES chude_nhom(id),\n  nguoigui TEXT,\n  nguoi_id TEXT,\n  loai TEXT CHECK (loai IS NULL OR loai IN ('chu', 'file', 'anh', 'video', 'thoai')),\n  noidung TEXT,\n  giongnoi_id TEXT REFERENCES giongnoi_luot(id),\n  nhiemvu_id TEXT,\n  lonap_id TEXT,\n  trangthai TEXT\n);",
-  "Dulieu_Chinh.chiso": "CREATE TABLE IF NOT EXISTS chiso (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  nhom TEXT CHECK (nhom IS NULL OR nhom IN ('lai', 'tien', 'hang', 'ban', 'tmdt')),\n  donvi TEXT CHECK (donvi IS NULL OR donvi IN ('tien', 'tyle', 'so', 'ngay')),\n  ma_ham TEXT,\n  mota_congthuc TEXT,\n  cauhoi_quantri TEXT,\n  module_lamchu TEXT,\n  phamvi_chophep TEXT,\n  ky_tinh TEXT CHECK (ky_tinh IS NULL OR ky_tinh IN ('ngay', 'tuan', 'thang')),\n  chieu_tot TEXT CHECK (chieu_tot IS NULL OR chieu_tot IN ('tang', 'giam')),\n  bang_nguon TEXT,\n  quytac_du_ids TEXT\n);",
+  "Dulieu_Chinh.chiso": "CREATE TABLE IF NOT EXISTS chiso (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  nhom TEXT CHECK (nhom IS NULL OR nhom IN ('lai', 'tien', 'hang', 'ban', 'tmdt')),\n  donvi TEXT CHECK (donvi IS NULL OR donvi IN ('tien', 'tyle', 'so', 'ngay')),\n  ma_ham TEXT,\n  mota_congthuc TEXT,\n  cauhoi_quantri TEXT,\n  module_lamchu TEXT,\n  phamvi_chophep TEXT,\n  ky_tinh TEXT CHECK (ky_tinh IS NULL OR ky_tinh IN ('ngay', 'tuan', 'thang')),\n  chieu_tot TEXT CHECK (chieu_tot IS NULL OR chieu_tot IN ('tang', 'giam')),\n  bang_nguon TEXT,\n  quytac_du_ids TEXT,\n  nhom_nhaycam TEXT CHECK (nhom_nhaycam IS NULL OR nhom_nhaycam IN ('loinhuan', 'luong', 'dongtien'))\n);",
   "Dulieu_Chinh.congty": "CREATE TABLE IF NOT EXISTS congty (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  tien_goc INTEGER\n);",
   "Dulieu_Chinh.dieuchinh": "CREATE TABLE IF NOT EXISTS dieuchinh (\n  id TEXT PRIMARY KEY NOT NULL,\n  bang TEXT,\n  dong_id TEXT,\n  truong TEXT,\n  giatri_cu TEXT,\n  giatri_moi TEXT,\n  lydo TEXT,\n  nguoi_sua_loai TEXT CHECK (nguoi_sua_loai IS NULL OR nguoi_sua_loai IN ('anh', 'ai', 'nhanvien')),\n  nguoi_sua_id TEXT REFERENCES nguoi(id),\n  muc TEXT CHECK (muc IS NULL OR muc IN ('ai_tuapdung', 'anh_duyet')),\n  cuacho_id TEXT REFERENCES cuacho(id),\n  the_duyet_id TEXT,\n  sua_luc TEXT,\n  con_hieuluc INTEGER,\n  hoantac_boi_id TEXT\n);",
   "Dulieu_Chinh.donhang": "CREATE TABLE IF NOT EXISTS donhang (\n  id TEXT PRIMARY KEY NOT NULL,\n  congty_id TEXT REFERENCES congty(id),\n  shop_id TEXT REFERENCES shop(id),\n  thitruong TEXT,\n  ky TEXT,\n  ky_goc TEXT,\n  tien_ma TEXT,\n  sotien_nguyente INTEGER,\n  sotien_quydoi INTEGER,\n  tygia_id TEXT REFERENCES tygia_ngay(id),\n  nguon TEXT CHECK (nguon IS NULL OR nguon IN ('ketnoi', 'file', 'bot', 'nhaptay')),\n  lonap_id TEXT REFERENCES lonap(id),\n  banghigoc_id TEXT,\n  nhan_du TEXT CHECK (nhan_du IS NULL OR nhan_du IN ('du', 'tamtinh')),\n  tao_luc TEXT,\n  kenh_id TEXT REFERENCES kenh(id),\n  ma_don_nguon TEXT,\n  ma_don_pancake TEXT,\n  nguon_don TEXT CHECK (nguon_don IS NULL OR nguon_don IN ('pancake', 'san', 'file')),\n  khuvuc_id TEXT REFERENCES khuvuc(id),\n  dat_luc TEXT,\n  trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('moi', 'dangdong', 'danggiao', 'giao_thanhcong', 'giao_thatbai', 'hoan', 'huy')),\n  trangthai_nguon TEXT,\n  giao_thanhcong_luc TEXT,\n  doanhthu INTEGER,\n  giamgia INTEGER,\n  phisan INTEGER,\n  UNIQUE (shop_id, ma_don_nguon)\n);",
@@ -427,14 +455,14 @@ SINH = {
 # ---- HẾT PHẦN SINH BẰNG MÁY ----
 
 
-def _dung_lai(cn, bang, ddl, dien):
-    """Giống khoitao._dung_lai: trả số dòng còn dữ liệu ở cột sắp bỏ (0 = không vướng)."""
+def _dung_lai(cn, bang, ddl, dien, duoc_bo=()):
+    """Giống khoitao._dung_lai: trả số dòng còn dữ liệu ở cột sắp bỏ (0 = không vướng); `duoc_bo` = BO_COT."""
     moi = f"{bang}__moi"
     cn.execute(ddl.replace(f"CREATE TABLE IF NOT EXISTS {bang} (", f"CREATE TABLE {moi} (", 1))
     cot_moi = cn.execute(f"PRAGMA table_info({moi})").fetchall()
     cot_cu = {r[1] for r in cn.execute(f"PRAGMA table_info({bang})")}
     vuong = []
-    for c in sorted(cot_cu - {r[1] for r in cot_moi}):
+    for c in sorted(cot_cu - {r[1] for r in cot_moi} - set(duoc_bo)):
         so = cn.execute(f"SELECT count(*) FROM {bang} WHERE {c} IS NOT NULL").fetchone()[0]
         if so:
             vuong.append(f"cột {c} sắp bỏ còn {so:02d} dòng có dữ liệu")
@@ -536,7 +564,8 @@ def kiem(thumuc: Path) -> tuple[bool, list[str]]:
                     ma_trong.append(f"{ten}.{b} {_so(n)} dòng")
             for b in SINH["DUNG_LAI"].get(ten, []):
                 try:
-                    vuong += [f"{b}: {v}" for v in _dung_lai(cn, b, SINH["DDL"][f"{ten}.{b}"], DIEN.get(ten, {}).get(b, {}))]
+                    vuong += [f"{b}: {v}" for v in _dung_lai(cn, b, SINH["DDL"][f"{ten}.{b}"], DIEN.get(ten, {}).get(b, {}),
+                                                          SINH["BO_COT"].get(ten, {}).get(b, []))]
                 except sqlite3.IntegrityError as e:   # thông báo SQLite chỉ có loại ràng buộc và tên cột
                     vuong.append(f"{b}: {str(e).replace('__moi', '')}")
             so_fk = len(cn.execute("PRAGMA foreign_key_check").fetchall())

@@ -62,18 +62,18 @@ def tim(ma: str | None, thumuc: Path | None = None) -> dict | None:
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         d = cn.execute(
-            "SELECT p.id, p.nguoidung_id, u.ma, u.ten, u.vaitro, u.module_xem, p.lan_dung_cuoi, p.het_han FROM phien_truycap p"
+            "SELECT p.id, p.nguoidung_id, u.ma, u.ten, u.vaitro, p.lan_dung_cuoi, p.het_han FROM phien_truycap p"
             " JOIN nguoidung u ON u.id = p.nguoidung_id"
             " WHERE p.mabam = ? AND p.loai = 'phien_web' AND p.thuhoi_luc IS NULL AND u.trangthai = 'dung'",
             (_bam(ma),)).fetchone()
-        if not d or not d[7] or het_luc(d[6], d[7]) <= _bay_gio():
+        if not d or not d[6] or het_luc(d[5], d[6]) <= _bay_gio():
             return None
         bay = _bay_gio()
         cn.execute("UPDATE phien_truycap SET lan_dung_cuoi = ? WHERE id = ?", (bay, d[0]))
     finally:
         cn.close()
-    return {"phien_id": d[0], "nguoidung_id": d[1], "ten_dangnhap": d[2], "ten": d[3], "vaitro": d[4], "module_xem": d[5],
-            "het_luc": het_luc(bay, d[7])}
+    return {"phien_id": d[0], "nguoidung_id": d[1], "ten_dangnhap": d[2], "ten": d[3], "vaitro": d[4],
+            "het_luc": het_luc(bay, d[6])}   # Y20c: bỏ `module_xem`, quyền màn ở F08 (QĐ144)
 
 
 def danh_sach(nguoidung_id: str, thumuc: Path | None = None) -> list[dict]:

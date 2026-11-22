@@ -26,8 +26,8 @@ def dung_ban2(thumuc: Path) -> None:
             for (t, bang), ddl in V2.items():
                 if t == ten:
                     cn.execute(ddl)
-            if ten == "Dulieu_Chinh":
-                cn.execute("DROP TABLE nguoi")
+            for bang in khoitao.BANG_MOI.get(3, {}).get(ten, []):   # bảng mới của bản 3 chưa có ở bản 2 (A18; Y20c F07-F09)
+                cn.execute(f"DROP TABLE {bang}")
             cn.execute("PRAGMA user_version=2")
         finally:
             cn.close()
@@ -65,7 +65,7 @@ class KiemFileMoiBan3(CoThuMuc):
         self.kq = khoitao.tao_het(self.thumuc)
 
     def test_105_bang_ban_3(self):
-        self.assertEqual(sum(self.kq.values()), 105)
+        self.assertEqual(sum(self.kq.values()), 108)
         self.assertEqual(self.kq["Dulieu_Chinh"], 54)
         for ten in ketnoi.CAC_FILE:
             self.assertEqual(self.lay(ten, "PRAGMA user_version")[0][0], 3)
@@ -174,7 +174,7 @@ class KiemNangBan2LenBan3(CoThuMuc):
         self.ghi("Bot", "INSERT INTO lich_baocao (id, ma, gio_gui) VALUES (?, 'cu_01', '07:00')", (maso.tao(),))
 
     def test_nang_giu_du_lieu_tao_a18_cua_anh(self):
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 105)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
         for ten in ketnoi.CAC_FILE:
             self.assertEqual(self.lay(ten, "PRAGMA user_version")[0][0], 3)
             self.assertTrue((self.thumuc / "saoluu" / "truoc_nangcap_v03" / f"{ten}.sqlite3").exists())

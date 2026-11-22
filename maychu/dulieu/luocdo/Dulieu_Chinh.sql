@@ -894,7 +894,8 @@ CREATE TABLE IF NOT EXISTS chiso (
   ky_tinh TEXT CHECK (ky_tinh IS NULL OR ky_tinh IN ('ngay', 'tuan', 'thang')),
   chieu_tot TEXT CHECK (chieu_tot IS NULL OR chieu_tot IN ('tang', 'giam')),
   bang_nguon TEXT,
-  quytac_du_ids TEXT
+  quytac_du_ids TEXT,
+  nhom_nhaycam TEXT CHECK (nhom_nhaycam IS NULL OR nhom_nhaycam IN ('loinhuan', 'luong', 'dongtien'))
 );
 
 -- D02 Kết quả chỉ số: 01 dòng = 01 chỉ số × kỳ × phạm vi × 01 lần tính
