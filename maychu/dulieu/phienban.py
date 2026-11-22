@@ -17,7 +17,7 @@ from maychu.dulieu.saoluu import MUIGIO_VN
 
 # Khoá bền thêm ngoài `ma` (không chồng lấn hiệu lực theo cột này). QĐ143: A15 tách phiên bản theo người.
 KHOA_THEM = {"nhanvien": ("nguoi_id",)}
-# Cột không cho đổi khi sửa tại chỗ hoặc khi mở phiên bản mới.
+# Cột không cho đổi khi sửa tại chỗ hoặc khi mở phiên bản mới (cộng thêm cột ở KHOA_THEM của bảng đó, Y18b).
 KHONG_DOI = ("id", "ma")
 
 
@@ -106,6 +106,9 @@ def them(cn: sqlite3.Connection, bang: str, dong: dict) -> str:
                 raise LoiPhienBan(f"{bang}: thiếu {k}")
             if _chong_lan(cn, bang, k, dong[k], tu, den):
                 raise LoiPhienBan(f"{bang}: cùng {k} đã có phiên bản hiệu lực chồng lấn")
+            # Khoá bền gắn cố định với mã (Y18b, QĐ143): 01 mã nhân viên chỉ thuộc 01 người, kể cả ở khoảng không chồng lấn.
+            if cn.execute(f"SELECT 1 FROM {bang} WHERE ma = ? AND {k} IS NOT ? LIMIT 1", (dong["ma"], dong[k])).fetchone():
+                raise LoiPhienBan(f"{bang} mã {dong['ma']}: đã gắn với {k} khác; không đổi {k} của 01 mã")
         if dong.get("phienban") is None:
             lon = cn.execute(f"SELECT max(phienban) FROM {bang} WHERE ma = ?", (dong["ma"],)).fetchone()[0]
             dong["phienban"] = (lon or 0) + 1
@@ -121,9 +124,10 @@ def phienban_moi(cn: sqlite3.Connection, bang: str, ma: str, tu_ngay, thaydoi: d
     """Đổi nội dung có ngày hiệu lực (thiết kế mục 0.4): đóng phiên bản đang hiệu lực tại `tu_ngay` (phải là phiên bản
     mới nhất), thêm phiên bản kế tiếp cùng mã từ `tu_ngay`, chép cột cũ rồi áp `thaydoi`. Trả `id` mới."""
     cot = _kiem_bang(cn, bang)
-    doi = sorted(set(thaydoi) & set(KHONG_DOI + ("hieuluc_tu", "hieuluc_den", "phienban", "tao_luc", "nguoi_khai")))
+    doi = sorted(set(thaydoi) & set(KHONG_DOI + KHOA_THEM.get(bang, ()) + ("hieuluc_tu", "hieuluc_den", "phienban",
+                                                                          "tao_luc", "nguoi_khai")))
     if doi:
-        raise LoiPhienBan(f"{bang}: không đổi {', '.join(doi)} khi mở phiên bản mới (QĐ142: mã không sửa được)")
+        raise LoiPhienBan(f"{bang}: không đổi {', '.join(doi)} khi mở phiên bản mới (QĐ142, QĐ143: khoá bền không sửa được)")
     tu = _ngay(tu_ngay, "ngày áp dụng")
     with giao_dich(cn):
         dang = cn.execute(f"SELECT * FROM {bang} WHERE ma = ? AND COALESCE(hieuluc_tu, '') <= ?"
@@ -145,9 +149,9 @@ def phienban_moi(cn: sqlite3.Connection, bang: str, ma: str, tu_ngay, thaydoi: d
 def sua(cn: sqlite3.Connection, bang: str, ma_dong: str, thaydoi: dict) -> None:
     """Sửa tại chỗ 01 dòng (cột không mang nghĩa phiên bản, ví dụ trạng thái). Không cho đổi `id`, `ma`, khoảng hiệu lực."""
     cot = _kiem_bang(cn, bang)
-    cam = sorted(set(thaydoi) & set(KHONG_DOI + ("hieuluc_tu", "hieuluc_den", "phienban")))
+    cam = sorted(set(thaydoi) & set(KHONG_DOI + KHOA_THEM.get(bang, ()) + ("hieuluc_tu", "hieuluc_den", "phienban")))
     if cam:
-        raise LoiPhienBan(f"{bang}: không sửa {', '.join(cam)} tại chỗ (QĐ142: mã không sửa được)")
+        raise LoiPhienBan(f"{bang}: không sửa {', '.join(cam)} tại chỗ (QĐ142, QĐ143: khoá bền không sửa được)")
     la = sorted(set(thaydoi) - set(cot))
     if la:
         raise LoiPhienBan(f"{bang}: không có cột {', '.join(la)}")

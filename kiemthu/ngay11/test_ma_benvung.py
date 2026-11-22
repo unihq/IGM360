@@ -160,6 +160,21 @@ class KiemA15C16(NenMoi):
         with self.assertRaises(phienban.LoiPhienBan):
             phienban.tim_id(self.cn, "shop", "x", cot="nguoi_id")   # nguoi_id chỉ là khoá bền của A15
 
+    def test_a15_khong_doi_nguoi_cua_01_ma(self):
+        """Y18b (CDA, PTD-03 mục 10.9): 01 mã nhân viên chỉ gắn 01 người, chặn ở cả 03 lối ghi."""
+        v1 = phienban.them(self.cn, "nhanvien", {"ma": "NV01", "nguoi_id": self.n1, "hieuluc_tu": "2026-03-01"})
+        with self.assertRaises(phienban.LoiPhienBan) as loi:   # mở phiên bản mới với người khác
+            phienban.phienban_moi(self.cn, "nhanvien", "NV01", "2026-04-15", {"nguoi_id": self.n2}, "hethong")
+        self.assertIn("nguoi_id", str(loi.exception))
+        with self.assertRaises(phienban.LoiPhienBan):          # sửa tại chỗ
+            phienban.sua(self.cn, "nhanvien", v1, {"nguoi_id": self.n2})
+        self.cn.execute("UPDATE nhanvien SET hieuluc_den = '2026-04-15' WHERE id = ?", (v1,))
+        with self.assertRaises(phienban.LoiPhienBan) as loi:   # thêm thẳng phiên bản sau, không chồng lấn, người khác
+            phienban.them(self.cn, "nhanvien", {"ma": "NV01", "nguoi_id": self.n2, "hieuluc_tu": "2026-04-15"})
+        self.assertIn("đã gắn với nguoi_id khác", str(loi.exception))
+        self.assertEqual(self.cn.execute("SELECT DISTINCT nguoi_id FROM nhanvien WHERE ma = 'NV01'").fetchall(), [(self.n1,)])
+        phienban.them(self.cn, "nhanvien", {"ma": "NV01", "nguoi_id": self.n1, "hieuluc_tu": "2026-04-15"})   # cùng người: được
+
     def test_c16_khong_trung_nguoi_thang_qua_02_phien_ban(self):
         v1 = phienban.them(self.cn, "nhanvien", {"ma": "NV01", "nguoi_id": self.n1, "hieuluc_tu": "2026-03-01"})
         v2 = phienban.phienban_moi(self.cn, "nhanvien", "NV01", "2026-04-15", {"phongban": "kho"}, "hethong")
