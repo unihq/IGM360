@@ -370,7 +370,8 @@ CREATE TABLE IF NOT EXISTS donhang (
   giao_thanhcong_luc TEXT,
   doanhthu INTEGER,
   giamgia INTEGER,
-  phisan INTEGER
+  phisan INTEGER,
+  UNIQUE (shop_id, ma_don_nguon)
 );
 
 -- C02 Dòng đơn: 01 dòng = 01 SKU hoặc combo trong 01 đơn

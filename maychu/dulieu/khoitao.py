@@ -15,7 +15,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso, songuoi
+from maychu.dulieu import dsmorong, ketnoi, maso, songuoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 PHIENBAN_LUOCDO = 3
@@ -35,7 +35,10 @@ NANGCAP = {
     },
     # Bản 3 (QĐ108 A18, QĐ109 L01-L05, QĐ112, QĐ93 H06; thiết kế mục 1.2).
     3: {
-        'Dulieu_Chinh': ['ghep_mangoai', 'nhanvien', 'lonap', 'dieuchinh', 'nhiemvu', 'nhiemvu_sukien'],
+        'Dulieu_Chinh': ['ghep_mangoai', 'nhanvien', 'lonap', 'dieuchinh', 'nhiemvu', 'nhiemvu_sukien',
+                         'donhang'],                 # ngày 08: L02 không trùng (shop_id, ma_don_nguon)
+        'Hotho': ['filegoc', 'banghigoc'],            # ngày 08: L02 không trùng
+        'Ketnoi': ['hoptin'],                         # ngày 08: L02 không trùng (nguon, ma_sukien); QĐ112
         'Bot': ['tin_nhom', 'lich_baocao'],
         'Baomat': ['nguoidung'],
     },
@@ -200,9 +203,20 @@ LICH_KHOITAO = [
 
 
 def _dong_khoitao(cn: sqlite3.Connection, ten: str) -> None:
+    if ten == "Dulieu_Chinh":
+        # 20 thông số danh sách trước, rồi trigger kiểm danh sách mở rộng (thiết kế mục 0.6; QĐ109 L03).
+        cn.execute("BEGIN IMMEDIATE")
+        try:
+            dsmorong.khoi_tao(cn)
+            dsmorong.tao_trigger(cn)
+            cn.execute("COMMIT")
+        except Exception:
+            cn.execute("ROLLBACK")
+            raise
+        return
     if ten != "Bot":
         return
-    bay =datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
     for ma, ten_lich, gio, lap, ngay, gui in LICH_KHOITAO:
         if not cn.execute("SELECT 1 FROM lich_baocao WHERE ma = ?", (ma,)).fetchone():
             cn.execute("INSERT INTO lich_baocao (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, gio_gui, lap_lai,"

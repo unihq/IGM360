@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS filegoc (
   trangthai_day TEXT CHECK (trangthai_day IS NULL OR trangthai_day IN ('cho_day', 'da_day', 'loi')),
   nhan_luc TEXT,
   day_luc TEXT,
-  nguoi_gui TEXT
+  nguoi_gui TEXT,
+  UNIQUE (mabam_sha256)
 );
 
 -- B03 Bản ghi gốc: 01 dòng = 01 bản ghi mỗi lần lấy về
@@ -30,7 +31,8 @@ CREATE TABLE IF NOT EXISTS banghigoc (
   noidung_json TEXT,
   mabam TEXT,
   vitri_luu TEXT CHECK (vitri_luu IS NULL OR vitri_luu IN ('vps', 'drive')),
-  drive_goi_id TEXT
+  drive_goi_id TEXT,
+  UNIQUE (nguon, loai_dulieu, ma_doituong, mabam)
 );
 
 -- B04 Khuôn nhận diện: 01 dòng = 01 khuôn × 01 phiên bản

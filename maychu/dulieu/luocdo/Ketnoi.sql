@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS hoptin (
   lonap_id TEXT,
   trung INTEGER,
   trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('moi', 'dangxuly', 'xong', 'loi')),
-  so_lan_thu INTEGER
+  so_lan_thu INTEGER,
+  UNIQUE (nguon, ma_sukien)
 );
 
 -- K01 Kết nối: 01 dòng = 01 tài khoản kết nối
