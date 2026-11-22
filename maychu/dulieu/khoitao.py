@@ -15,7 +15,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import dsmorong, ketnoi, maso, songuoi
+from maychu.dulieu import aibam, dsmorong, ketnoi, maso, songuoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 PHIENBAN_LUOCDO = 3
@@ -112,8 +112,39 @@ def _ban3_truoc(cn: sqlite3.Connection, ten: str, co_bm: bool) -> dict[str, dict
     return {}
 
 
-def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int) -> None:
-    """Nâng 01 file từ `tu_ban` thẳng lên PHIENBAN_LUOCDO trong 01 giao dịch."""
+def _doc_chu(thumuc: Path) -> tuple | None:
+    """(id, ma, ten) tài khoản chủ cũ nhất ở F01 (đọc trước khi nâng); chưa có file hoặc chưa có tài khoản: None."""
+    if not ketnoi.duongdan("Baomat", thumuc).exists():
+        return None
+    cn = ketnoi.mo("Baomat", thumuc)
+    try:
+        return cn.execute("SELECT id, ma, ten FROM nguoidung WHERE vaitro = 'chu' ORDER BY tao_luc LIMIT 1").fetchone()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        cn.close()
+
+
+def _doi_aibam(cn: sqlite3.Connection, ten: str, chu: tuple | None) -> int:
+    """Bản 3 (QĐ108): đổi giá trị "ai bấm" cũ ở mọi cột "ai bấm" của file; còn giá trị lạ thì dừng nâng.
+    Báo lỗi không in giá trị (có thể là tên đăng nhập), chỉ in bảng, cột, số dòng. Trả số dòng đã đổi."""
+    doi = aibam.bang_doi_cu(chu)
+    cn.create_function("aibam_hople", 1, lambda v: int(aibam.la_hop_le(v)), deterministic=True)
+    so_doi = 0
+    for bang, cot in aibam.cac_cot(ten):
+        if cot not in {r[1] for r in cn.execute(f"PRAGMA table_info({bang})")}:
+            continue
+        for cu, moi in doi.items():
+            so_doi += cn.execute(f"UPDATE {bang} SET {cot} = ? WHERE {cot} = ?", (moi, cu)).rowcount
+        la = cn.execute(f"SELECT count(*) FROM {bang} WHERE {cot} IS NOT NULL AND NOT aibam_hople({cot})").fetchone()[0]
+        if la:
+            raise RuntimeError(f"{ten}.{bang}.{cot}: {la} dòng giá trị 'ai bấm' lạ (không phải mã tài khoản, mã máy,"
+                               " 'anh', tên đăng nhập chủ, 'lenh_vps'); dừng nâng")
+    return so_doi
+
+
+def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int, chu: tuple | None = None) -> None:
+    """Nâng 01 file từ `tu_ban` thẳng lên PHIENBAN_LUOCDO trong 01 giao dịch. `chu`: tài khoản chủ (đọc trước)."""
     co_bm = ten == "Dulieu_Chinh" and _gan_file(cn, "Baomat", "bm", thumuc)
     co_dc = ten == "Baomat" and _gan_file(cn, "Dulieu_Chinh", "dc", thumuc)
     cn.execute("PRAGMA foreign_keys=OFF")
@@ -135,6 +166,8 @@ def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int) -> Non
                         can.append(moi)
             for bang in can:
                 _dung_lai(cn, ten, bang, dien.get(bang))
+            if tu_ban < 3:
+                _doi_aibam(cn, ten, chu)
             loi_noi = cn.execute("PRAGMA foreign_key_check").fetchall()
             if loi_noi:
                 raise RuntimeError(f"{ten}: {len(loi_noi)} dòng trỏ tới dòng không có")
@@ -227,7 +260,7 @@ def _dong_khoitao(cn: sqlite3.Connection, ten: str) -> None:
                        (maso.tao(), ma, ten_lich, bay[:10], bay, gio, lap, ngay, gui))
 
 
-def tao_mot(ten: str, thumuc: Path) -> int:
+def tao_mot(ten: str, thumuc: Path, chu: tuple | None = None) -> int:
     """Tạo hoặc nâng cấp 01 file; trả về số bảng đang có trong file."""
     duong = ketnoi.duongdan(ten, thumuc)
     moi = not duong.exists()
@@ -238,7 +271,7 @@ def tao_mot(ten: str, thumuc: Path) -> int:
             cn.executescript((THUMUC_LUOCDO / f"{ten}.sql").read_text(encoding="utf-8"))
             cn.execute(f"PRAGMA user_version={PHIENBAN_LUOCDO}")
         elif ban < PHIENBAN_LUOCDO:
-            nang_cap(cn, ten, thumuc, ban)
+            nang_cap(cn, ten, thumuc, ban, chu)
         _dong_khoitao(cn, ten)
         so = cn.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0]
     finally:
@@ -255,10 +288,11 @@ def tao_het(thumuc: Path | None = None) -> dict:
     ban = {ten: _phienban(ten, thumuc) for ten in ketnoi.CAC_FILE}
     can_nang = any(0 < b < PHIENBAN_LUOCDO for b in ban.values())
     co_san = [t for t, b in ban.items() if b > 0]
+    chu = _doc_chu(thumuc) if can_nang else None
     if can_nang:
         _chup_het(thumuc, co_san)
     try:
-        ketqua = {ten: tao_mot(ten, thumuc) for ten in ketnoi.CAC_FILE}
+        ketqua = {ten: tao_mot(ten, thumuc, chu) for ten in ketnoi.CAC_FILE}
     except Exception:
         if can_nang:
             _tra_nguyen_trang(thumuc, co_san)
