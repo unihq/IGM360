@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import aibam, ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 GOI = {
@@ -143,7 +143,7 @@ def _duoi(p: dict, n: int = 2) -> str:
     return " ".join(x for x in p["dong"][-n - 2:] if not URL_RE.search(x))[-300:]
 
 
-def dan_ma(goi: str, taikhoan: int, ma: str) -> dict:
+def dan_ma(goi: str, taikhoan: int, ma: str, nguoi: str = "hethong") -> dict:
     """Gói Claude: ghi mã anh dán vào CLI, chờ tối đa khoảng 24 giây."""
     _kiem(goi, taikhoan)
     p = _PHIEN.get((goi, taikhoan))
@@ -161,24 +161,24 @@ def dan_ma(goi: str, taikhoan: int, ma: str) -> dict:
             return {"loi": "Lượt đăng nhập đã kết thúc: bấm Mở trang lấy mã mới"}
     for _ in range(120):
         if p["xong"]:
-            return _ket_thuc(goi, taikhoan)
+            return _ket_thuc(goi, taikhoan, nguoi)
         if p["loi"]:
             return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm \"Mở trang\" lấy mã mới rồi dán lại"}
         if pr.poll() is not None:
             time.sleep(0.3)
-            return _ket_thuc(goi, taikhoan) if p["xong"] else {"loi": "Đăng nhập chưa xong" + (f" ({_duoi(p)})" if _duoi(p) else "")}
+            return _ket_thuc(goi, taikhoan, nguoi) if p["xong"] else {"loi": "Đăng nhập chưa xong" + (f" ({_duoi(p)})" if _duoi(p) else "")}
         time.sleep(0.2)
     return {"loi": "Claude chưa trả lời sau 24 giây: bấm Kiểm tra lại hoặc lấy mã mới"}
 
 
-def hoi(goi: str, taikhoan: int) -> dict:
+def hoi(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     """Gói ChatGPT: giao diện hỏi lại mỗi vài giây tới khi xong."""
     _kiem(goi, taikhoan)
     p = _PHIEN.get((goi, taikhoan))
     if not p:
         return {"loi": "Chưa bắt đầu đăng nhập"}
     if p["xong"]:
-        return _ket_thuc(goi, taikhoan)
+        return _ket_thuc(goi, taikhoan, nguoi)
     if time.time() - p["bat_luc"] > HAN_PHIEN_GIAY:
         huy(goi, taikhoan)
         return {"loi": "Mã thiết bị đã hết hạn: bấm Đăng nhập để lấy mã mới"}
@@ -196,7 +196,7 @@ def huy(goi: str, taikhoan: int) -> None:
         _dung(p)
 
 
-def _ket_thuc(goi: str, taikhoan: int) -> dict:
+def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     p = _PHIEN.pop((goi, taikhoan), None)
     if p:
         _dung(p)
@@ -204,7 +204,7 @@ def _ket_thuc(goi: str, taikhoan: int) -> dict:
     tt = trang_thai(goi, taikhoan, bo_nho=True)
     if not tt["da_noi"]:
         return {"loi": "CLI báo xong nhưng kiểm lại vẫn chưa đăng nhập: bấm Đăng nhập lại"}
-    ghi_nguon(goi, taikhoan)
+    ghi_nguon(goi, taikhoan, nguoi=nguoi)
     return {"xong": True, **tt}
 
 
@@ -252,8 +252,10 @@ def ma_nguon(goi: str, taikhoan: int) -> str:
     return f"goi_{goi}_{taikhoan:02d}"
 
 
-def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None) -> str:
-    """Thêm hoặc bật lại dòng G06 của tài khoản gói; ưu tiên mới = sau nguồn cuối cùng."""
+def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = "hethong") -> str:
+    """Thêm hoặc bật lại dòng G06 của tài khoản gói; ưu tiên mới = sau nguồn cuối cùng.
+    `nguoi`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
+    aibam.kiem(nguoi)
     ma = ma_nguon(goi, taikhoan)
     bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
     cn = ketnoi.mo("Viecnen", thumuc)
@@ -265,8 +267,8 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None) -> str:
         uu = (cn.execute("SELECT coalesce(max(uutien), 0) FROM nguon_ai").fetchone()[0] or 0) + 1
         moi = maso.tao()
         cn.execute("INSERT INTO nguon_ai (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, loai, dungchung, uutien)"
-                   " VALUES (?, ?, ?, ?, 1, 'anh', ?, 'goi', 1, ?)",
-                   (moi, ma, f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}", bay[:10], bay, uu))
+                   " VALUES (?, ?, ?, ?, 1, ?, ?, 'goi', 1, ?)",
+                   (moi, ma, f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}", bay[:10], nguoi, bay, uu))
         return moi
     finally:
         cn.close()

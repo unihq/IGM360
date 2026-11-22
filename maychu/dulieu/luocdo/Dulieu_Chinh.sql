@@ -1,4 +1,4 @@
--- Lược đồ file Dulieu_Chinh.sqlite3: 53 bảng.
+-- Lược đồ file Dulieu_Chinh.sqlite3: 54 bảng (bản 3: thêm A18 Sổ người, QĐ108).
 -- Sinh từ thiết kế cơ sở dữ liệu đã duyệt; sửa thiết kế thì sinh lại, không sửa tay.
 
 -- A01 Công ty: 01 dòng = 01 pháp nhân
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS ghep_mangoai (
   nguon TEXT,
   shop_id TEXT REFERENCES shop(id),
   ma_ngoai TEXT,
-  doituong_loai TEXT CHECK (doituong_loai IS NULL OR doituong_loai IN ('sku', 'combo', 'taikhoan', 'kho', 'shop')),
+  doituong_loai TEXT CHECK (doituong_loai IS NULL OR doituong_loai IN ('sku', 'combo', 'taikhoan', 'kho', 'shop', 'nguoi')),
   doituong_id TEXT
 );
 
@@ -225,7 +225,9 @@ CREATE TABLE IF NOT EXISTS nhanvien (
   module_phutrach TEXT,
   kenh_chinh TEXT,
   kenh_duphong TEXT,
-  ma_trenkenh TEXT
+  nguoi_id TEXT NOT NULL UNIQUE REFERENCES nguoi(id),
+  tinhtrang TEXT NOT NULL DEFAULT 'danglam' CHECK (tinhtrang IN ('danglam', 'danghi')),
+  ngay_nghiviec TEXT
 );
 
 -- A16 Khoản chi: 01 dòng = 01 loại chi phí
@@ -258,6 +260,23 @@ CREATE TABLE IF NOT EXISTS khuvuc (
   nhom_vung TEXT
 );
 
+-- A18 Sổ người: 01 dòng = 01 người (anh, nhân viên, sau này khách), giữ nguyên mãi; không tách phiên bản (QĐ108)
+CREATE TABLE IF NOT EXISTS nguoi (
+  id TEXT PRIMARY KEY NOT NULL,
+  ma TEXT NOT NULL UNIQUE CHECK (length(ma) = 7 AND ma GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9]'),
+  ten TEXT NOT NULL,
+  loai TEXT NOT NULL,
+  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
+  trangthai_hoc TEXT NOT NULL DEFAULT 'chua_dongy' CHECK (trangthai_hoc IN ('chua_dongy', 'dang_hoc', 'dung_hoc')),
+  lydo_dung_hoc TEXT CHECK (lydo_dung_hoc IS NULL OR lydo_dung_hoc IN ('rutlai', 'nghiviec')),
+  trangthai_hoc_luc TEXT,
+  co_dlcn INTEGER NOT NULL DEFAULT 0 CHECK (co_dlcn IN (0, 1)),
+  gop_vao_id TEXT REFERENCES nguoi(id),
+  nguoi_khai TEXT NOT NULL,
+  tao_luc TEXT NOT NULL,
+  CHECK (trangthai_hoc <> 'dung_hoc' OR lydo_dung_hoc IS NOT NULL)
+);
+
 -- B01 Lô nạp: 01 dòng = 01 lần nạp file hoặc 01 lần lấy từ kết nối
 CREATE TABLE IF NOT EXISTS lonap (
   id TEXT PRIMARY KEY NOT NULL,
@@ -270,7 +289,8 @@ CREATE TABLE IF NOT EXISTS lonap (
   ky_tu TEXT,
   ky_den TEXT,
   khuon_id TEXT,
-  nguoi_nap TEXT,
+  nguoi_nap TEXT CHECK (nguoi_nap IS NULL OR nguoi_nap IN ('anh', 'nhanvien', 'bot', 'viecnen')),
+  nguoi_id TEXT REFERENCES nguoi(id),
   khoa_chongtrung TEXT,
   so_dong_doc INTEGER,
   so_dong_nhan INTEGER,
@@ -350,7 +370,8 @@ CREATE TABLE IF NOT EXISTS donhang (
   giao_thanhcong_luc TEXT,
   doanhthu INTEGER,
   giamgia INTEGER,
-  phisan INTEGER
+  phisan INTEGER,
+  UNIQUE (shop_id, ma_don_nguon)
 );
 
 -- C02 Dòng đơn: 01 dòng = 01 SKU hoặc combo trong 01 đơn
@@ -810,7 +831,7 @@ CREATE TABLE IF NOT EXISTS dieuchinh (
   giatri_moi TEXT,
   lydo TEXT,
   nguoi_sua_loai TEXT CHECK (nguoi_sua_loai IS NULL OR nguoi_sua_loai IN ('anh', 'ai', 'nhanvien')),
-  nguoi_sua_id TEXT,
+  nguoi_sua_id TEXT REFERENCES nguoi(id),
   muc TEXT CHECK (muc IS NULL OR muc IN ('ai_tuapdung', 'anh_duyet')),
   cuacho_id TEXT REFERENCES cuacho(id),
   the_duyet_id TEXT,
@@ -958,8 +979,9 @@ CREATE TABLE IF NOT EXISTS nhiemvu (
   viec_id TEXT REFERENCES viec_muctieu(id),
   tieude TEXT,
   mota TEXT,
-  loai_nguoinhan TEXT CHECK (loai_nguoinhan IS NULL OR loai_nguoinhan IN ('anh', 'nhanvien', 'congsu')),
-  nguoinhan_id TEXT REFERENCES nhanvien(id),
+  loai_nguoinhan TEXT NOT NULL CHECK (loai_nguoinhan IN ('anh', 'nhanvien', 'congsu')),
+  nguoi_id TEXT REFERENCES nguoi(id),
+  congsu_id TEXT,
   phongban TEXT,
   trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('cho', 'danglam', 'chodoichieu', 'xong', 'huy')),
   uutien INTEGER,
@@ -975,7 +997,9 @@ CREATE TABLE IF NOT EXISTS nhiemvu (
   cuacho_id TEXT REFERENCES cuacho(id),
   the_duyet_id TEXT,
   tao_luc TEXT,
-  xong_luc TEXT
+  xong_luc TEXT,
+  CHECK ((loai_nguoinhan IN ('anh', 'nhanvien') AND nguoi_id IS NOT NULL AND congsu_id IS NULL)
+      OR (loai_nguoinhan = 'congsu' AND congsu_id IS NOT NULL AND nguoi_id IS NULL))
 );
 
 -- E03 Sự kiện nhiệm vụ: 01 dòng = 01 sự kiện của 01 nhiệm vụ
@@ -985,8 +1009,9 @@ CREATE TABLE IF NOT EXISTS nhiemvu_sukien (
   loai TEXT CHECK (loai IS NULL OR loai IN ('phanhoi', 'doitrangthai', 'binhluan', 'file', 'dolai')),
   noidung TEXT,
   tin_id TEXT,
-  nguoi_loai TEXT,
-  nguoi_id TEXT,
+  nguoi_loai TEXT CHECK (nguoi_loai IS NULL OR nguoi_loai IN ('anh', 'nhanvien', 'congsu', 'bot')),
+  nguoi_id TEXT REFERENCES nguoi(id),
+  congsu_id TEXT,
   luc TEXT
 );
 

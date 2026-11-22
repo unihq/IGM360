@@ -6,7 +6,7 @@ Thông số trống: không chặn lưu, phần mềm làm cách an toàn nhất
 from datetime import date, datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import aibam, ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 NHOM = ("Tiền và giá", "Máy chủ và bảo mật", "AI", "Báo cáo và lấy dữ liệu")
@@ -134,8 +134,10 @@ def kiem_giatri(ten: str, giatri: str) -> str | None:
     return None
 
 
-def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "anh", thumuc: Path | None = None) -> dict:
-    """Thêm 01 phiên bản thông số. Ngày áp dụng phải sau ngày bắt đầu của dòng mới nhất (không chồng lấn)."""
+def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "hethong", thumuc: Path | None = None) -> dict:
+    """Thêm 01 phiên bản thông số. Ngày áp dụng phải sau ngày bắt đầu của dòng mới nhất (không chồng lấn).
+    `nguoi`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
+    aibam.kiem(nguoi)
     giatri = (giatri or "").strip()
     if ten in KHONG_SUA:
         return {"loi": KHONG_SUA[ten], "o": "giatri"}

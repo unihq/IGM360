@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import ketnoi, maso, songuoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.taikhoan import chan, matkhau, phien, totp
@@ -25,15 +25,23 @@ def _bay_gio() -> str:
 
 
 def tao_quantri_tu_env(thumuc: Path | None = None) -> bool:
-    """Chưa có người dùng nào thì tạo tài khoản chủ từ IGM360_ADMIN_USER, IGM360_ADMIN_PASSWORD (.env)."""
+    """Chưa có người dùng nào thì tạo tài khoản chủ từ IGM360_ADMIN_USER, IGM360_ADMIN_PASSWORD (.env).
+
+    Theo thứ tự có trạng thái (QĐ108): dòng A18 của anh trước (có rồi thì dùng lại), rồi F01 trỏ về dòng đó.
+    """
     ten, mk = os.environ.get("IGM360_ADMIN_USER", "").strip(), os.environ.get("IGM360_ADMIN_PASSWORD", "")
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         if cn.execute("SELECT count(*) FROM nguoidung").fetchone()[0] or not ten or not mk:
             return False
-        cn.execute("INSERT INTO nguoidung (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, vaitro, module_xem, matkhau_bam)"
-                   " VALUES (?, ?, ?, ?, 1, 'hethong', ?, 'chu', ?, ?)",
-                   (maso.tao(), ten, ten, _bay_gio()[:10], _bay_gio(), json.dumps(["tatca"]), matkhau.bam(mk)))
+    finally:
+        cn.close()
+    nguoi_id = songuoi.lay_hoac_tao_anh(ten, "hethong", thumuc)
+    cn = ketnoi.mo("Baomat", thumuc)
+    try:
+        cn.execute("INSERT INTO nguoidung (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, vaitro, module_xem, matkhau_bam,"
+                   " nguoi_id) VALUES (?, ?, ?, ?, 1, 'hethong', ?, 'chu', ?, ?, ?)",
+                   (maso.tao(), ten, ten, _bay_gio()[:10], _bay_gio(), json.dumps(["tatca"]), matkhau.bam(mk), nguoi_id))
         return True
     finally:
         cn.close()
@@ -101,7 +109,7 @@ def _cat_khoa_2lop(nguoidung_id: str, khoa: str, thumuc: Path | None) -> None:
     try:
         cn.execute("BEGIN IMMEDIATE")
         cu = cn.execute("SELECT totp_khoa_id FROM nguoidung WHERE id = ?", (nguoidung_id,)).fetchone()[0]
-        moi = kho.cat("totp_2lop", khoa, thumuc, nguoi_nhap="anh", cn=cn)
+        moi = kho.cat("totp_2lop", khoa, thumuc, nguoi_nhap=nguoidung_id, cn=cn)
         cn.execute("UPDATE nguoidung SET totp_khoa_id = ? WHERE id = ?", (moi, nguoidung_id))
         if cu:
             kho.xoa(cu, cn=cn)
