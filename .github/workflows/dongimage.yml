@@ -1,10 +1,10 @@
 name: Kiểm và đóng image (GHCR)
 
-# Mỗi lần đẩy lên main: chạy bài kiểm, đạt thì đóng image và đẩy lên ghcr.io/unihq/igm360.
-# VPS chỉ kéo image này về.
+# Mỗi lần đẩy lên bất kỳ nhánh nào: chạy bài kiểm trên Linux (nhánh riêng phải đạt đủ trước khi gộp main).
+# Chỉ khi đẩy lên main: kiểm đạt thì đóng image và đẩy lên ghcr.io/unihq/igm360. VPS chỉ kéo image này về.
 on:
   push:
-    branches: [main]
+    branches: ["**"]
     paths-ignore:
       - "tailieu/**"
       - "LICENSE"
@@ -29,6 +29,8 @@ jobs:
 
   dongimage:
     needs: kiemthu
+    # Nhánh riêng chỉ chạy bài kiểm, không đóng image.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
