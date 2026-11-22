@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS nguoidung (
   module_xem TEXT,
   matkhau_bam TEXT,
   totp_khoa_id TEXT REFERENCES kekhoa(id),
-  nhanvien_id TEXT
+  nguoi_id TEXT NOT NULL UNIQUE
 );
 
 -- F02 Quyền: 01 dòng = 01 đối tượng được cấp quyền

@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 04 (phần dữ liệu): lược đồ bản 2, nâng cấp file bản 1, cảnh báo tệp hoán đổi."""
+"""Bài kiểm ngày 04 (phần dữ liệu): lược đồ bản 2, nâng cấp file bản 1 (nay nâng thẳng lên bản hiện hành), cảnh báo tệp hoán đổi."""
 import sqlite3
 import tempfile
 import unittest
@@ -77,11 +77,11 @@ class KiemBan2(unittest.TestCase):
         return ketnoi.mo(ten, self.thumuc)
 
     def test_file_moi_ban_2_va_cot_bat_buoc(self):
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 104)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 105)
         for ten in ketnoi.CAC_FILE:
             cn = self.mo(ten)
             try:
-                self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], 2)
+                self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)
             finally:
                 cn.close()
         cn = self.mo("Bot")
@@ -113,7 +113,7 @@ class KiemBan2(unittest.TestCase):
         try:
             self.assertIn("thietbi", {r[1] for r in cn.execute("PRAGMA table_info(phien_truycap)")})
             ma = maso.tao()
-            cn.execute("INSERT INTO nguoidung (id, ma) VALUES (?, 'chu')", (ma,))
+            cn.execute("INSERT INTO nguoidung (id, ma, nguoi_id) VALUES (?, 'chu', 'n1')", (ma,))
             self.assertEqual(cn.execute("SELECT trangthai FROM nguoidung WHERE id = ?", (ma,)).fetchone()[0], "dung")
             with self.assertRaises(sqlite3.IntegrityError):
                 cn.execute("INSERT INTO nguoidung (id, trangthai) VALUES (?, NULL)", (maso.tao(),))
@@ -139,10 +139,10 @@ class KiemBan2(unittest.TestCase):
             cn.execute("INSERT INTO theodoi_maychu (id, ram_dung) VALUES (?, 639)", (ma_n02,))
         finally:
             cn.close()
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 104)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 105)
         cn = self.mo("Bot")
         try:
-            self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], 2)
+            self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)
             self.assertEqual(cn.execute("SELECT ten, vai FROM kenh WHERE id = ?", (ma_kenh,)).fetchone(),
                              ("Kênh báo anh", "anh_nhan_baocao"))
             self.assertEqual(cn.execute("PRAGMA foreign_key_check").fetchall(), [])
@@ -163,7 +163,7 @@ class KiemBan2(unittest.TestCase):
         finally:
             cn.close()
         for ten in ketnoi.CAC_FILE:
-            self.assertTrue((self.thumuc / "saoluu" / "truoc_nangcap_v02" / f"{ten}.sqlite3").exists())
+            self.assertTrue((self.thumuc / "saoluu" / "truoc_nangcap_v03" / f"{ten}.sqlite3").exists())
 
     def test_nang_cap_loi_thi_tra_nguyen_trang(self):
         dung_ban1(self.thumuc)

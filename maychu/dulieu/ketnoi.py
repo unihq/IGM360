@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 
 CAC_FILE = ("Dulieu_Chinh", "Hotho", "Ketnoi", "Viecnen", "Bot", "Nhatky", "Baomat")
-SO_BANG = {"Dulieu_Chinh": 53, "Hotho": 5, "Ketnoi": 6, "Viecnen": 19, "Bot": 11, "Nhatky": 5, "Baomat": 5}
+SO_BANG = {"Dulieu_Chinh": 54,"Hotho": 5, "Ketnoi": 6, "Viecnen": 19, "Bot": 11, "Nhatky": 5, "Baomat": 5}
 DO_BEN_FULL = {"Dulieu_Chinh", "Ketnoi", "Baomat"}
 CHO_BAN_MS = {"Viecnen": 30000}
 

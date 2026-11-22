@@ -96,7 +96,7 @@ class KiemThoiHanPhien(unittest.TestCase):
         khoitao.tao_het(self.t)
         cn = ketnoi.mo("Baomat", self.t)
         try:
-            cn.execute("INSERT INTO nguoidung (id, ma, vaitro) VALUES ('u1', 'chu', 'chu')")
+            cn.execute("INSERT INTO nguoidung (id, ma, vaitro, nguoi_id) VALUES ('u1', 'chu', 'chu', 'n1')")
         finally:
             cn.close()
 

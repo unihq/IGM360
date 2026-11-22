@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS tin_nhom (
   kenhnhan_id TEXT REFERENCES kenh(id),
   chude_id TEXT REFERENCES chude_nhom(id),
   nguoigui TEXT,
+  nguoi_id TEXT,
   loai TEXT CHECK (loai IS NULL OR loai IN ('chu', 'file', 'anh', 'video', 'thoai')),
   noidung TEXT,
   giongnoi_id TEXT REFERENCES giongnoi_luot(id),
@@ -77,7 +78,11 @@ CREATE TABLE IF NOT EXISTS lich_baocao (
   tao_luc TEXT,
   gio_gui TEXT,
   kenhnhan_id TEXT REFERENCES kenh(id),
-  noidung_mau TEXT
+  noidung_mau TEXT,
+  lap_lai TEXT NOT NULL DEFAULT 'hangngay' CHECK (lap_lai IN ('hangngay', 'hangthang')),
+  ngay_trongthang INTEGER CHECK (ngay_trongthang IS NULL OR ngay_trongthang BETWEEN 1 AND 31),
+  gui_tin INTEGER NOT NULL DEFAULT 1 CHECK (gui_tin IN (0, 1)),
+  CHECK (lap_lai <> 'hangthang' OR ngay_trongthang IS NOT NULL)
 );
 
 -- H07 Hội thoại: 01 dòng = 01 cuộc trò chuyện
