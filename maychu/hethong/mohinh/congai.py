@@ -371,6 +371,18 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, thumuc=None, client=Non
     return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua}
 
 
+def tom_tat_thang(thumuc=None) -> dict:
+    """Thẻ Khoá API màn 13 (QĐ122, bản vẽ "Tiền thật tháng 11"): tiền thật từ ngày 01 tháng này, giờ Việt Nam."""
+    bay = datetime.now(MUIGIO_VN)
+    tu = bay.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        r = cn.execute("SELECT count(*), coalesce(sum(sotien), 0) FROM nhatky_ai WHERE luc >= ?", (tu,)).fetchone()
+    finally:
+        cn.close()
+    return {"thang": bay.month, "luot": r[0], "tien_that_usd": r[1] / TRIEU}
+
+
 def tom_tat_tuan(thumuc=None) -> dict:
     """Số cho màn 13, 10: tiền thật (khoá API) và quy đổi tham khảo (gói) 07 ngày, tách riêng, không cộng lẫn."""
     tu = datetime.fromtimestamp(time.time() - 7 * 86400, MUIGIO_VN).isoformat(timespec="seconds")

@@ -163,7 +163,7 @@ def dan_ma(goi: str, taikhoan: int, ma: str) -> dict:
         if p["xong"]:
             return _ket_thuc(goi, taikhoan)
         if p["loi"]:
-            return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm Mở trang lấy mã mới rồi dán lại"}
+            return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm \"Mở trang\" lấy mã mới rồi dán lại"}
         if pr.poll() is not None:
             time.sleep(0.3)
             return _ket_thuc(goi, taikhoan) if p["xong"] else {"loi": "Đăng nhập chưa xong" + (f" ({_duoi(p)})" if _duoi(p) else "")}
@@ -233,6 +233,21 @@ def trang_thai(goi: str, taikhoan: int, bo_nho: bool = False) -> dict:
     return kq
 
 
+def nhan_dangnhap(goi: str, taikhoan: int) -> str:
+    """Chữ ghi ở F04 mỗi lần đăng nhập gói xong (api.py ghi); màn 13 đọc lại để hiện lúc đăng nhập (N09)."""
+    return f"{GOI[goi]['ten']} tài khoản {taikhoan:02d}"
+
+
+def _lan_dangnhap(thumuc: Path | None = None) -> dict:
+    """{chữ F04: lúc đăng nhập gần nhất}. Chưa có dòng nào = đăng nhập lúc cài máy (bước 2.04, ngoài phần mềm)."""
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        return dict(cn.execute("SELECT thamso_tomtat, max(luc) FROM nhatky_thaotac WHERE congcu = 'mohinh'"
+                               " AND lenhcon = 'dangnhap_goi' AND ketqua = 'dat' GROUP BY thamso_tomtat").fetchall())
+    finally:
+        cn.close()
+
+
 def ma_nguon(goi: str, taikhoan: int) -> str:
     return f"goi_{goi}_{taikhoan:02d}"
 
@@ -272,3 +287,22 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
             d["goi"], d["taikhoan"] = m.group(1), int(m.group(2))
             d.update(trang_thai(d["goi"], d["taikhoan"]))
     return dong
+
+
+def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
+    """Thẻ gói ở màn 13: tài khoản 01 luôn có; tài khoản 02 khi đã có thư mục. Tài khoản đã đăng nhập mà chưa có
+    dòng G06 (ví dụ phiên Claude đăng nhập lúc cài máy, bước 2.04) thì tự ghi nguồn để Cổng AI dùng được."""
+    ra, lan = {}, _lan_dangnhap(thumuc)
+    for goi in GOI:
+        ds = []
+        for tk in range(1, SO_TAIKHOAN_TOIDA + 1):
+            tm = thu_muc(goi, tk)
+            if tk > 1 and not (tm and tm.exists()):
+                continue
+            tt = trang_thai(goi, tk)
+            if tt["da_noi"]:
+                ghi_nguon(goi, tk, thumuc)
+            ds.append({"taikhoan": tk, "ma": ma_nguon(goi, tk), "dang_dangnhap": (goi, tk) in _PHIEN,
+                       "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt})
+        ra[goi] = ds
+    return ra

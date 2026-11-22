@@ -1,0 +1,44 @@
+# Dependabot: bao ban moi hang tuan cho thu vien Python, image goc trong Dockerfile
+# va ban cong cu trong tep luong. Moi de xuat nang la 01 nhanh rieng: tep luong tu chay
+# bai kiem Linux (khong dong image). Khong tu gop: anh duyet moi gop.
+# Chi co hieu luc khi tep nay nam tren nhanh main.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "Thu vien"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "Image goc"
+    ignore:
+      # Giu Python 3.12 (QD80) va Node.js 22: chi bao ban va, khong bao len dong moi.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "Cong cu tep luong"
