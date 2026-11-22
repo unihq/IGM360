@@ -46,7 +46,7 @@ class KiemDoiAiBam(NenBan2):
 
     def test_55_cot_ai_bam(self):
         ds = {t: aibam.cac_cot(t) for t in ketnoi.CAC_FILE}
-        self.assertEqual(sum(map(len, ds.values())), 55)            # 54 cột thiết kế + A18 `nguoi_khai`
+        self.assertEqual(sum(map(len, ds.values())), 55)            # thiết kế mục 0.4: 55 cột, gồm `nguoi_khai` của A18
         self.assertIn(("nhatky_thaotac", "nguoi_id"), ds["Nhatky"])
         self.assertNotIn(("nguoidung", "nguoi_id"), ds["Baomat"])   # nguoi_id khác F04 trỏ A18, không phải "ai bấm"
 
