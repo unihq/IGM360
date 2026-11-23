@@ -50,6 +50,8 @@ async def vongdoi(_app: FastAPI):
             from maychu.hethong.giamsat import lich
             viec = asyncio.create_task(lich.chay_mai())
         antoan.bao_quay_ve_loi()   # Y38c R1, R3: lệnh chạy không trả được dữ liệu / bản trước hỏng → ghi F04
+        from maychu.hethong.giamsat import thongbao
+        thongbao.quet_quayve_loi()   # Y38d: tin chuông đỏ khi quay về hỏng
         if viec is not None and antoan.can_kiem():   # 0.7.9 lớp 4: bản mới lần đầu chạy → kiểm 06 điểm (chạy nền, không chặn
             # khởi động). Chỉ khi lịch chạy nền bật (máy chủ thật): bài kiểm tắt lịch nên không bao giờ chạm CLI của máy kiểm.
             # Y38c R6: chờ 30 giây rồi chấm điểm lịch theo việc lịch còn chạy thật

@@ -162,7 +162,12 @@ def lich_su(thumuc=None) -> list[dict]:
         cn.close()
     # 0.7.9 lớp 4: mỗi bản lấy lượt kiểm sau cập nhật gần nhất ("0.7.9 · 06/06 đạt · chưa đạt: …")
     theo_ban = {k[0].split(" · ")[0]: {"chu": " · ".join(k[0].split(" · ")[1:]), "dat": k[1] == "dat"} for k in kiem if k[0]}
-    return [{"ban": d[1], "luc": d[0], "kiem": theo_ban.get(d[1])} for d in dong]
+    da, ra = set(), []
+    for d in dong:   # Y38d N39: quay về rồi lên lại thì F04 có 02 dòng khởi động cùng bản: giữ dòng mới nhất
+        if d[1] not in da:
+            da.add(d[1])
+            ra.append({"ban": d[1], "luc": d[0], "kiem": theo_ban.get(d[1])})
+    return ra
 
 
 def so_viec_ai_dangchay(thumuc=None) -> int:

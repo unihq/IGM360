@@ -34,6 +34,7 @@ LOAI = {
     "swap_vuot_nguong": ("do", "memory-stick", *MAYCHU),
     "banmoi": ("tin", "cloud-download", "capnhat", None, "Cài đặt › Cập nhật"),
     "capnhat_kiem": ("do", "shield-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # 0.7.9 lớp 4
+    "quayve_loi": ("do", "rotate-ccw", "capnhat", None, "Cài đặt › Cập nhật"),   # Y38d: quay về hỏng
 }
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
@@ -198,6 +199,18 @@ def quet_kiem_capnhat(ban: str, loi: list[str], thumuc: Path | None = None) -> N
             _mo(w, khoa, None, None, None, len(loi))
 
 
+def quet_quayve_loi(thumuc: Path | None = None) -> None:
+    """Y38d: lượt quay về hỏng gần nhất (07 ngày) mở 01 tin đỏ; quay về đạt sau đó thì đóng."""
+    from maychu.hethong import antoan
+    q = antoan.quay_ve_loi_gan(thumuc)
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, "quayve_loi:"):
+            if not q or k != f"quayve_loi:{q['luc']}":
+                _dong(w, k, "Đã có lượt quay về mới")
+        if q:
+            _mo(w, f"quayve_loi:{q['luc']}", None)
+
+
 def quet_saoluu(thumuc: Path | None = None) -> None:
     """Lượt sao lưu gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút)."""
     cn = ketnoi.mo("Nhatky", thumuc)
@@ -338,6 +351,9 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"Máy chủ dùng tệp hoán đổi {_nb(f'{gt} MB')}, quá {_nb(f'{ng} MB')}"
     if loai == "banmoi":
         return f"Có bản mới {sau}"
+    if loai == "quayve_loi":
+        from maychu.hethong import antoan, capnhat
+        return antoan.CHU["qv_loi"].format(ban=capnhat.ban_dang_chay())
     if loai == "capnhat_kiem":   # QĐ218 dòng 47: "Kiểm sau cập nhật bản 0.3.0: lịch chạy nền chưa bật"
         from maychu.hethong import capnhat
         ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")

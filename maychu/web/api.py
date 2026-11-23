@@ -219,7 +219,8 @@ def _them_antoan() -> dict:
     except Exception:  # noqa: BLE001 - ở chế độ an toàn bảng kết nối có thể chưa đọc được
         noi = False
     return {"o_trong": {"du": o["du"], "chu": o["chu"], "lam": None if o["du"] else antoan.CHU["o_thieu_lam"]}, "drive_noi": noi, "chu_drive": None if noi else antoan.CHU["drive_chua_noi"], "chu_qua_gio": antoan.CHU["drive_qua_gio"],
-            **capnhat.trang_thai_sao(), "an_toan": antoan.chu_an_toan(), "quay_ve": antoan.thong_tin_quayve()}
+            **capnhat.trang_thai_sao(), "an_toan": antoan.chu_an_toan(), "quay_ve": antoan.thong_tin_quayve(),
+            "quayve_loi": antoan.quay_ve_loi_gan(), "kiem_hien": next((x.get("kiem") for x in capnhat.lich_su() if x["ban"] == capnhat.ban_dang_chay()), None)}
 
 
 @router.get("/capnhat")
@@ -446,7 +447,8 @@ def _loi_dn(goi: str, taikhoan: int, kq: dict, p: dict) -> HTTPException:
     if kq.get("trung_voi"):
         ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap(goi, taikhoan), ketqua="bichan",
                 lydo=f"trùng tài khoản {kq['trung_voi']:02d}", nguoi_id=p["nguoidung_id"])
-        return HTTPException(409, {"loi": kq["loi"], "trung_voi": kq["trung_voi"]})   # giao diện hiện dải báo trùng
+        return HTTPException(409, {"loi": kq["loi"], "trung_voi": kq["trung_voi"],
+                                   **({"chu_rieng": True} if kq.get("chu_rieng") else {})})   # dải báo trùng; Y38d N41 câu riêng
     return HTTPException(400, kq["loi"])
 
 

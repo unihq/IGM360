@@ -44,6 +44,8 @@ CHU = {
     "qv_giu": "Lần cập nhật này không nâng dữ liệu: dữ liệu giữ nguyên.",                                         # 41
     "qv_an_toan": "Dữ liệu đã trả về lúc {luc}, quay về không mất thêm.",                                         # 42
     "qv_can_dong_y": "Lần cập nhật này có nâng dữ liệu: anh xác nhận chấp nhận mất dữ liệu nhập sau giờ cập nhật",
+    # Y38d: CHỮ TẠM, CHỜ ANH DUYỆT (CPO trình cùng bảng): quay về hỏng — lịch sử màn 09, chuông, trang đang chờ
+    "qv_loi": "Quay về bản trước chưa được, phần mềm chạy lại bản {ban}",
 }
 # Lý do chưa đạt của từng điểm kiểm sau cập nhật (QĐ218 dòng 46, 47: "05/06 · lịch chạy nền chưa bật")
 TEN_DIEM = {"ban": "chưa đúng bản đích", "dulieu": "tệp dữ liệu chưa đạt kiểm tra", "luocdo": "lược đồ chưa đúng",
@@ -222,6 +224,20 @@ def bao_quay_ve_loi(thumuc: Path | None = None) -> None:
         ghi(thumuc, quayve_loi=None)
 
 
+def quay_ve_loi_gan(thumuc: Path | None = None) -> dict | None:
+    """Y38d: lần quay về hỏng gần nhất trong 07 ngày (đọc F04 `quayve` kết quả `loi`), để màn 09, chuông hiện khi có chữ."""
+    from datetime import timedelta
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        d = cn.execute("SELECT luc, thamso_tomtat FROM nhatky_thaotac WHERE congcu = 'capnhat' AND lenhcon = 'quayve' AND ketqua = 'loi'"
+                       " AND luc >= ? ORDER BY luc DESC LIMIT 1",
+                       ((datetime.now(MUIGIO_VN) - timedelta(days=7)).isoformat(timespec="seconds"),)).fetchone()
+    finally:
+        cn.close()
+    from maychu.hethong import capnhat
+    return {"luc": d[0], "chu": d[1], "chu_hien": CHU["qv_loi"].format(ban=capnhat.ban_dang_chay())} if d else None
+
+
 def can_kiem(thumuc: Path | None = None) -> bool:
     """Bản đang chạy chưa có lượt kiểm sau cập nhật."""
     from maychu.hethong import capnhat
@@ -275,7 +291,7 @@ def quay_ve(nguoi_id: str, dong_y_mat: bool = False, thumuc: Path | None = None,
     if q["mat_tu"] and not dong_y_mat:
         return {"loi": CHU["qv_can_dong_y"], "mat_tu": q["mat_tu"]}
     dang = capnhat.ban_dang_chay()
-    co = {"ban_anh": dang, "ban_truoc": q["ban"], "luc": _bay()}
+    co = {"ban_anh": dang, "ban_truoc": q["ban"], "luc": _bay(), "nguoi": nguoi_id}
     if q["mat_tu"]:   # Y38c R1, G4: KHÔNG trả dữ liệu lúc phần mềm còn chạy (lịch nền vẫn ghi); chỉ ghi việc cần trả,
         # maychu/chay.py trả 07 tệp trước khi chạy bản trước (không tiến trình nào đang mở tệp), trả đủ hoặc không trả tệp nào
         noi = khoitao._thumuc_chup(thumuc)

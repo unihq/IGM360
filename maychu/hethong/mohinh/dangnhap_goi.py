@@ -283,7 +283,11 @@ def _dinh_danh(goi: str, taikhoan: int) -> tuple | None:
 
 
 # ---------------- QĐ216 (B', PTD-09 mục 8.4 N1–N8): tệp chụp tên, gói, dấu băm định danh ----------------
-TEP_CHUP = "igm360_hoso.json"   # mỗi tài khoản Claude 01 tệp, trong thư mục tài khoản (ổ lưu QĐ173), quyền 600
+TEP_CHUP = "igm360_hoso.json"
+# Y38d N40 (CHỜ ANH CHỌN): "Lấy tên, gói" mà đăng nhập trùng tài khoản khác.
+#   True  = gỡ mã của tài khoản đang lấy tên (cách hiện tại, Y38c R10; câu 22).
+#   False = giữ mã, chỉ đăng xuất kiểu cũ và báo anh đăng nhập lại đúng tài khoản (CDO đề xuất).
+GO_MA_KHI_TRUNG = True   # mỗi tài khoản Claude 01 tệp, trong thư mục tài khoản (ổ lưu QĐ173), quyền 600
 
 
 def _khoa_bam() -> bytes:
@@ -391,10 +395,12 @@ def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
         tk = tim_trung(goi, taikhoan, (c["email_bam"], c["tochuc_bam"]) if c else dinh_danh_bam(goi, taikhoan))
         if tk:
             _dang_xuat(goi, taikhoan)
-            if _co_ma(taikhoan):   # Y38c R10: "Lấy tên, gói" thấy trùng → gỡ luôn mã của tài khoản trùng (QĐ218 dòng 22)
+            if _co_ma(taikhoan):   # Y38c R10 / Y38d N40: "Lấy tên, gói" thấy trùng
                 from maychu.hethong.mohinh import madaihan
-                go(goi, taikhoan)
-                return {"loi": madaihan.CHU_DAN["trung"].format(tk=tk), "trung_voi": tk}
+                if GO_MA_KHI_TRUNG:   # gỡ luôn mã của tài khoản trùng (câu 22)
+                    go(goi, taikhoan)
+                    return {"loi": madaihan.CHU_DAN["trung"].format(tk=tk), "trung_voi": tk, "chu_rieng": True}
+                return {"loi": madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=tk), "trung_voi": tk, "chu_rieng": True}
             _don(goi, taikhoan)
             return {"loi": f"Tài khoản này đã kết nối ở tài khoản {tk:02d}", "trung_voi": tk}
     if c and _co_ma(taikhoan):   # QĐ216 bước anh làm 01 lần: đăng nhập kiểu cũ để chụp tên, gói; chụp xong đăng xuất (Đ8)

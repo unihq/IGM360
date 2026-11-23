@@ -528,6 +528,11 @@ button.o-bam:hover{border-color:var(--xanh)}
 .dai-antoan{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:2px solid var(--canh);background:#fff;color:var(--chu);font-size:13px}
 .dai-antoan b{color:var(--canh)}
 #cn-antoan .dong{margin-top:8px}
+/* Y38d (Z16): dòng ổ trống, kiểm sau cập nhật, nút trong thẻ cập nhật, danh sách thẻ an toàn */
+.ot-dong{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:6px}.ot-dong.dat{color:var(--dat)}.ot-dong.canh{color:var(--canh)}
+.ks{display:flex;align-items:center;gap:4px;font-size:12px;margin-top:4px}.ks.dat{color:var(--dat)}.ks.canh{color:var(--canh)}
+.cn-nut{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.mb .cn-nut{align-items:flex-start}
+.at-ds{margin:6px 0 0 18px;padding:0;font-size:13px}.at-ds li{margin:2px 0}
 </style><style>.cho-dung{padding:20px 24px}.dien-thoai #app.mb .kh{min-height:100vh;min-height:100dvh}.o-nhap.loi{border-color:#E22E28}.dien-thoai #app.mb .tab-duoi{position:fixed;left:0;right:0;bottom:0}.dien-thoai #app.mb{padding-bottom:64px}a.btn{text-decoration:none}</style>
 </head><body>
 
@@ -1608,8 +1613,8 @@ button.o-bam:hover{border-color:var(--xanh)}
   <circle cx="12" cy="12" r="10" />
   <path d="m9 12 2 2 4-4" />
 </svg><small></small></b></div>
-      <div class="f1"><div class="t20 b7">Đang dùng bản mới nhất</div><div class="phu">Bản <b class="so" id="ban-hien"></b> · tự kiểm tra mỗi <span id="cn-nhip">05&nbsp;phút</span>, lần gần nhất <span id="cn-luc"></span><span id="cn-loi" class="xem-chu"></span></div></div>
-      <button class="btn btn-phu" data-kiemtra><svg
+      <div class="f1"><div class="t20 b7">Đang dùng bản mới nhất</div><div class="phu">Bản <b class="so" id="ban-hien"></b> · tự kiểm tra mỗi <span id="cn-nhip">05&nbsp;phút</span>, lần gần nhất <span id="cn-luc"></span><span id="cn-loi" class="xem-chu"></span></div><div class="ks canh" id="cn-kiemloi" hidden></div></div>
+      <div class="cn-nut"><button class="btn btn-phu" data-kiemtra><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-refresh-cw"
   xmlns="http://www.w3.org/2000/svg"
   width="16"
@@ -1625,7 +1630,7 @@ button.o-bam:hover{border-color:var(--xanh)}
   <path d="M21 3v5h-5" />
   <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
   <path d="M8 16H3v5" />
-</svg>Kiểm tra lại</button></div>
+</svg>Kiểm tra lại</button><button class="btn-chu" data-quayve data-qv-nut hidden><span data-ico="rotate-ccw"></span>Quay về bản trước</button></div></div>
     <div class="the cn" data-s="cn:coban"><div class="giua" style="width:96px;height:96px"><svg width="96" height="96" viewBox="0 0 96 96"><circle cx="48.0" cy="48.0" r="42.0" fill="none" stroke="#F5F6F7" stroke-width="10"/><circle cx="48.0" cy="48.0" r="42.0" fill="none" stroke="#1456F0" stroke-width="10" stroke-linecap="round" stroke-dasharray="263.9 263.9" transform="rotate(-90 48.0 48.0)"/></svg><b><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-cloud-download"
   xmlns="http://www.w3.org/2000/svg"
@@ -1732,7 +1737,6 @@ button.o-bam:hover{border-color:var(--xanh)}
   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
   <path d="M3 3v5h5" />
 </svg>Thử cập nhật lại</button></div>
-    <div class="the cn" id="cn-quayve" hidden></div>
     <div class="dau-muc"><span class="t16 b7">Lịch sử cập nhật</span></div>
     <div class="bang"><div class="hang tieu-de" style="grid-template-columns:120px 1fr 160px"><span>Bản</span><span>Nội dung</span><span>Ngày cài</span></div>
       <div id="ls-capnhat"></div></div></div>

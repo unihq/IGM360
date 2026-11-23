@@ -56,8 +56,11 @@ CHU_DAN = {
     "trong": "Anh dán mã dài hạn vào ô",
     "chua_tron": "Mã vừa dán có {n} ký tự, chưa trọn. Chép lại cả mã rồi dán lại",   # Z15b dòng 23 (CPO trình anh)
     "trung": "Tài khoản Claude này đã kết nối ở Tài khoản {tk}. Phần mềm không lưu mã. Thu hồi mã vừa tạo ở claude.ai/settings/claude-code",   # Z15b dòng 22
-    # Y38c CPO-1: CHỮ MỚI, CHƯA DUYỆT (CPO trình anh): chuỗi dán vào không có sk-ant-oat01- (ví dụ khoá API)
-    "khong_phai_ma": "Chuỗi vừa dán không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-). Chép lại đúng mã rồi dán lại",
+    # Y38d N30: CHỮ MỚI do CDO đề xuất, CHỜ ANH DUYỆT (CPO trình): khoá API, và chuỗi không có tiền tố
+    "khoa_api": "Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API",
+    "sai_tien_to": "Mã dài hạn bắt đầu bằng sk-ant-oat01-. Chép lại đúng mã rồi dán lại",
+    # Y38d N40 cách CDO (CHỜ ANH CHỌN, CHỜ DUYỆT CHỮ): giữ mã, báo đăng nhập lại
+    "trung_dang_nhap_lai": "Tài khoản vừa đăng nhập đã kết nối ở Tài khoản {tk}. Mã dài hạn giữ nguyên; anh đăng nhập lại đúng tài khoản Claude này",
 }
 
 
@@ -80,8 +83,10 @@ def chu_loi_dan(ma) -> str:
     s = lam_sach(ma)
     if not s:
         return CHU_DAN["trong"]
-    if not s.startswith(TIEN_TO):   # Y38c CPO-1: không có chuỗi sk-ant-oat01- (ví dụ khoá API) — câu riêng, chờ anh duyệt
-        return CHU_DAN["khong_phai_ma"]
+    if s.startswith("sk-ant-api"):   # Y38d N30: khoá API dán nhầm hộp
+        return CHU_DAN["khoa_api"]
+    if not s.startswith(TIEN_TO):
+        return CHU_DAN["sai_tien_to"]
     return CHU_DAN["chua_tron"].format(n=len(s))
 
 
@@ -414,6 +419,8 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
         trung_tk = dg.tim_trung("claude", tk, (chup["email_bam"], chup["tochuc_bam"]) if chup else None)
         if trung_tk:
             return {"loi": CHU_DAN["trung"].format(tk=trung_tk), "trung_voi": trung_tk}
+    cu_md = thong_tin(tk, thumuc)   # Y38d N29: mã cũ còn hạn thì giữ lại để trả về nếu mã mới gọi thử chưa được
+    ma_cu = lay(tk, thumuc) if cu_md and not cu_md["het"] else None
     tt = luu(tk, ma, thumuc, nguoi)
     dg._NHO_TRANGTHAI.pop(("claude", tk), None)
     moi = _trang_thai_cli(tk, dung_ma=True)            # (c) `auth status` khi có mã dài hạn
@@ -425,9 +432,15 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
         kiem["rate_limit_event"] = bool(kq.get("hanmuc"))   # (b)
         dat = True
         hanmuc_thu = kq.get("hanmuc") or {}
-    except Exception as e:  # noqa: BLE001 - mọi lỗi gọi thử đều báo lại, mã đã lưu vẫn giữ
+    except Exception as e:  # noqa: BLE001 - mọi lỗi gọi thử đều báo lại
         dat, loi = False, che(str(e))[:200]
-    if chup:   # N1: ghi tệp trước khi đăng xuất kiểu cũ; Y38c G1: ghi cả khi gọi thử chưa được (chặn trùng vẫn so được)
+        kiem["het_hanmuc"] = isinstance(e, congai.HetHanMuc)   # Y38d N37: hỏng vì hết hạn mức, không phải do mã
+    giu_cu = not dat and ma_cu is not None
+    if giu_cu:   # Y38d N29 (B): mã mới chưa gọi được thì trả mã cũ (giữ hạn cũ), không đụng tệp chụp, đăng nhập kiểu cũ
+        kho.doi(kho.tim(dichvu(tk), thumuc), ma_cu, thumuc, han=cu_md["han"])
+        tt = thong_tin(tk, thumuc)
+        dg._NHO_TRANGTHAI.pop(("claude", tk), None)
+    elif chup:   # N1: ghi tệp trước khi đăng xuất kiểu cũ; Y38c G1: ghi cả khi gọi thử chưa được (chặn trùng vẫn so được)
         dg.ghi_chup(tk, chup)
     else:      # Y38c R11: không chụp được (không còn đăng nhập kiểu cũ) thì bỏ tệp cũ — mã mới có thể của tài khoản khác (N6)
         dg.xoa_chup(tk)
@@ -446,10 +459,11 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
            f" · rate_limit_event {co(kiem.get('rate_limit_event'))}"
            f" · tên {co(kiem['ten_truoc'])}/{co(kiem.get('ten_sau'))}, gói {co(kiem['goi_truoc'])}/{co(kiem.get('goi_sau'))}"
            f" (trước/sau đăng xuất kiểu cũ) · kiểu cũ {'đã đăng xuất' if kiem.get('dang_xuat_cu') else 'không có' if not cu['loggedIn'] else 'giữ'}"
-           + (f" · tên, gói theo đăng nhập kiểu cũ lúc {chup['chup_luc'][11:16]}" if chup and dat else " · chưa chụp được tên, gói"))   # N7
+           + (f" · tên, gói theo đăng nhập kiểu cũ lúc {chup['chup_luc'][11:16]}" if chup and dat else " · chưa chụp được tên, gói")   # N7
+           + (" · hết hạn mức" if kiem.get("het_hanmuc") else "") + (" · giữ mã cũ" if giu_cu else ""))   # Y38d N37, N29
     nhatky.ghi("mohinh", "kiem_madaihan", tom, ketqua="dat" if dat else "loi", nguoi_id=None if nguoi == "hethong" else nguoi,
                lydo=loi or None, thumuc=thumuc)
-    return {"xong": True, "goi_thu": dat, **({"loi_goi_thu": loi} if loi else {}), **(tt or {})}
+    return {"xong": True, "goi_thu": dat, **({"loi_goi_thu": loi} if loi else {}), **({"giu_ma_cu": True} if giu_cu else {}), **(tt or {})}
 
 
 def kiem_gan_nhat(tk: int, thumuc=None) -> dict | None:
@@ -465,4 +479,5 @@ def kiem_gan_nhat(tk: int, thumuc=None) -> dict | None:
     if not d:
         return None
     phan = d[2].split(" · ")
-    return {"luc": d[0], "dat": d[1] == "dat", "chu": " · ".join(p for p in phan if p.startswith(("gọi thử", "tên, gói", "chưa chụp")))}
+    return {"luc": d[0], "dat": d[1] == "dat", "het_hanmuc": "hết hạn mức" in phan, "giu_ma_cu": "giữ mã cũ" in phan,
+            "chu": " · ".join(p for p in phan if p.startswith(("gọi thử", "tên, gói", "chưa chụp")))}

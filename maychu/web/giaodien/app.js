@@ -25,6 +25,7 @@ const CUM = ['Việc nền', 'mục Chờ duyệt', 'mục Két khoá', 'mục B
   'bản mới', 'máy chủ', 'Chờ duyệt', 'Két khoá', 'đề xuất', 'chờ anh', 'tự áp dụng', 'thao tác', 'hằng ngày', 'quy đổi',
   'tham khảo', 'ưu tiên', 'gì mới', 'Cài đặt', 'Thông số', 'dự phòng', 'cài máy',
   'Mở trang', 'TikTok Shop', 'mã sàn'];   // N12, T1
+CUM.push('trả về', 'giữ được', 'an toàn', 'bản sao Drive');   // Y38d N35: câu 25, 30, 40 không ngắt giữa cụm
 // Số luôn đi liền chữ đứng sau (04 dòng, 1.240 dòng); "tài khoản 01", "ưu tiên 2", "bản 0.5.0", "02 lớp" không tách.
 const cum = s => { let r = esc(s).replace(/(?<![\p{L}\d])(\d+(?:[.,]\d+)*) (?=\p{L})/gu, '$1&nbsp;');
   CUM.forEach(c => { r = r.split(c).join(c.replace(/ /g, '&nbsp;')); });
@@ -66,7 +67,9 @@ function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
 function dongHop() { $$('.lop').forEach(e => e.hidden = true); }
 function mo(id) { dongTha(); $('#' + id).hidden = false; }
 function bao(t) { const e = $('#tb-msg'); e.textContent = t; e.hidden = false; clearTimeout(bao.h); bao.h = setTimeout(() => e.hidden = true, 3200); }
-function xacnhan(tieu, chu, nut, cb) { $('#h-xacnhan [data-tieu]').textContent = tieu; $('#xn-chu').innerHTML = chu;
+function xacnhan(tieu, chu, nut, cb, ico) { const dau = $('#h-xacnhan .hop-dau svg');
+  if (dau) { if (!xacnhan.goc) xacnhan.goc = dau.outerHTML; dau.outerHTML = ico ? icoMau(ICON[ico], '#1456F0', 20) : xacnhan.goc; }
+  $('#h-xacnhan [data-tieu]').textContent = tieu; $('#xn-chu').innerHTML = chu;
   $('#xn-nut').textContent = nut; D.xnCb = cb; mo('h-xacnhan'); }
 const ma6 = goc => $$('.o6', goc).map(i => i.value).join('');
 const xoa6 = goc => $$('.o6', goc).forEach(i => i.value = '');
@@ -268,37 +271,52 @@ const CHU_CN = {sao: {chup: 'Bước 1/2 · Đang tạo bản sao Drive (tối �
   quayve: 'Quay về bản trước', qvRe: b => 'Chạy lại bản ' + b + ' đi kèm gói cài, không cần mạng', qvTieu: b => 'Quay về bản ' + b + '?',   // 38, 39
   qvChung: 'Phần mềm tạm ngừng rồi tự mở lại. Thao tác ghi vào nhật ký.',   // 43: bỏ "khoảng 30 giây" vì chưa đo được trên máy thử (QĐ218)
   qvBao: 'Đang quay về bản trước. Trang tự tải lại khi xong.', kiem: 'Kiểm sau cập nhật: ',                                          // 44, 45, 46
+  // Y38d: CHỮ MỚI CHỜ ANH DUYỆT (CPO trình): N32 thẻ lúc đang quay về; câu quay về hỏng (CDO soạn ở U13b, null = chưa hiện)
+  qvDang: 'Đang quay về bản ',
+  qvDam: 'việc nhập sau lúc đó không giữ được',   // N36 (f): in đậm trong câu 40
   cho: 'Trang tự tải lại khi xong. Anh không cần bấm gì thêm.'};
-function veAnToan(d) {   // lớp 2: dải trên cùng (35) và thẻ ở màn Cập nhật (36), viền đỏ, không nền đỏ
-  let o = $('#dai-antoan'); const the = $('#cn-the-antoan');
-  if (the) { the.hidden = !d.an_toan; if (d.an_toan) the.innerHTML = '<div class="f1"><div class="t16 b7 do-chu">' + CHU_CN.theTieu + '</div>'
-    + '<div class="t13">' + CHU_CN.theDong1 + '</div><div class="t13 phu">' + cum(CHU_CN.theDong2) + '</div></div>'; }
+function veAnToan(d) {   // lớp 2 theo bản vẽ Z16: dải trên (35, nút ở dải), thẻ viền đỏ có vòng icon, 02 dòng (36) và nút
+  let o = $('#dai-antoan'); const the = $('#cn-the-antoan'), qv = (d.quay_ve || {}).co;
+  const nut = c => qv ? '<button class="btn btn-chinh' + c + '" data-quayve>' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>' : '';
+  if (the) { the.hidden = !d.an_toan; if (d.an_toan) the.innerHTML = '<div class="giua" style="width:96px;height:96px">'
+    + icoMau(ICON['shield-alert'], '#E22E28', 40) + '</div><div class="f1"><div class="t20 b7">' + CHU_CN.theTieu + '</div>'
+    + '<ul class="at-ds"><li>' + cum(CHU_CN.theDong1) + '</li><li>' + cum(CHU_CN.theDong2) + '</li></ul></div>' + nut(''); }
   if (!d.an_toan) { if (o) o.hidden = true; return; }
-  if (!o) { $('#app').insertAdjacentHTML('afterbegin', '<div id="dai-antoan" class="dai-antoan"></div>'); o = $('#dai-antoan'); }
+  if (!o) { const m = $('.vach[data-s="k:matketnoi"]');
+    if (m) m.insertAdjacentHTML('afterend', '<div class="vach do-v" id="dai-antoan"></div>'); else $('#app').insertAdjacentHTML('afterbegin', '<div class="vach do-v" id="dai-antoan"></div>');
+    o = $('#dai-antoan'); }
   o.hidden = false;
-  o.innerHTML = icoMau(ICON['shield-alert'], '#E22E28', 18) + '<span class="f1">' + cum(d.an_toan) + '</span>'
-    + ((d.quay_ve || {}).co ? '<button class="btn btn-phu nho" data-quayve>' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>' : '');
+  const c = String(d.an_toan), i = c.indexOf(':');   // "Chế độ an toàn:" in đậm như bản vẽ
+  o.innerHTML = icoMau(ICON['shield-alert'], '#E22E28', 18) + '<span class="f1"><b>' + cum(c.slice(0, i + 1)) + '</b>' + cum(c.slice(i + 1)) + '</span>' + nut(' nho');
 }
-function veQuayVe(d) {   // lớp 3: thẻ "Quay về bản trước" (38)
-  const o = $('#cn-quayve'); if (!o) return; const q = d.quay_ve || {};
-  o.hidden = !q.co || !!d.an_toan;   // chế độ an toàn: nút nằm ở dải trên cùng
-  if (q.co) o.innerHTML = '<div class="f1"><div class="t16 b7">' + CHU_CN.quayve + '</div><div class="phu t13">' + cum(CHU_CN.qvRe(q.ban)) + '</div></div>'
-    + '<button class="btn btn-phu" data-quayve title="' + esc(CHU_CN.qvRe(q.ban)) + '">' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>';
+function veQuayVe(d) {   // lớp 3 theo bản vẽ Z16: nút chữ dưới "Kiểm tra lại", câu 38 ở rê; khoá khi đang cập nhật (N33)
+  const q = d.quay_ve || {}, dang = S.cn === 'dangcn' || ['chup', 'day', 'qua_gio', 'cho_viec', 'gui', 'tai'].includes(d.dang_sao);
+  $$('[data-qv-nut]').forEach(b => { b.hidden = !q.co || !!d.an_toan; b.title = q.co ? CHU_CN.qvRe(q.ban) : '';
+    b.innerHTML = ICON['rotate-ccw'] + nbsp(CHU_CN.quayve); });
+  $$('[data-quayve]').forEach(b => { b.disabled = dang; });
 }
 function moQuayVe() {   // 39–44
-  const q = (D.capnhat || {}).quay_ve || {}; if (!q.co) return;
-  xacnhan(CHU_CN.qvTieu(q.ban), cum(q.chu) + '<div class="t12 phu" style="margin-top:8px">' + cum(CHU_CN.qvChung) + '</div>', CHU_CN.quayve, async () => {
+  const q = (D.capnhat || {}).quay_ve || {}; if (!q.co || S.cn === 'dangcn') return;   // N33
+  const dam = cum(CHU_CN.qvDam), chu = cum(q.chu).replace(dam, '<b>' + dam + '</b>');
+  xacnhan(CHU_CN.qvTieu(q.ban), chu + '<div class="t12 phu" style="margin-top:8px">' + cum(CHU_CN.qvChung) + '</div>', CHU_CN.quayve, async () => {
     try { await api('/capnhat/quayve', {dong_y_mat: !!q.mat_tu}); }
     catch (e) { if (e.status) bao(e.message); return; }
-    bao(CHU_CN.qvBao); S.cn = 'dangcn'; $$('.cn-moi').forEach(x => { x.textContent = q.ban; }); ve(); const het = Date.now() + 3 * 60e3;
+    bao(CHU_CN.qvBao); S.cn = 'dangcn'; tieuDangCn(CHU_CN.qvDang + q.ban); ve(); veQuayVe(D.capnhat); const het = Date.now() + 3 * 60e3;   // N32
+    let roi = false;   // đã thấy máy chủ dừng
     const cho = async () => { try { const k = await (await fetch('/suckhoe', {cache: 'no-store'})).json();
-      if (k.phienban === q.ban) { location.reload(); return; } } catch (e) { /* đang bật lại */ }
+      if (k.phienban === q.ban) { location.reload(); return; }
+      if (roi && k.phienban) { const s = await api('/capnhat').catch(() => ({}));   // Y38d: lên lại bằng bản mới = quay về hỏng
+        if (s.quayve_loi) { tieuDangCn(cau(s.quayve_loi.chu_hien)); $('[data-s="cn:dangcn"] .phu').textContent = ''; setTimeout(() => location.reload(), 5000); return; } }
+    } catch (e) { roi = true; }
       if (Date.now() < het) setTimeout(cho, 3000); };
-    setTimeout(cho, 3000); });
+    setTimeout(cho, 3000); }, 'rotate-ccw');
 }
+function tieuDangCn(chu) {   // tiêu đề thẻ đang cập nhật: mặc định "Đang cập nhật lên <bản>", lúc quay về "Đang quay về bản …"
+  const e = $('[data-s="cn:dangcn"] .t20'); if (!e) return; if (!tieuDangCn.goc) tieuDangCn.goc = e.innerHTML;
+  if (chu) e.textContent = chu; else e.innerHTML = tieuDangCn.goc; }
 function moHopDrive(loai, cheDo) {   // lớp 5: hộp "Cập nhật khi chưa có bản sao Drive?" (30–34)
   if (!$('#h-cndrive')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-cndrive" hidden><div class="hop"><div class="hop-dau">'
-    + ICON['cloud-upload'] + '<b class="f1 t16">' + CHU_CN.hopTieu + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div>'
+    + ICON['cloud-upload'] + '<b class="f1 t16">' + cum(CHU_CN.hopTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div>'
     + '<div class="hop-than" id="cndrive-than"></div><div class="hop-chan" id="cndrive-chan"></div></div></div>');
   D.cnDrive = {loai, cheDo};
   $('#cndrive-than').innerHTML = '<div class="dong t13 xem-chu">' + ICON['circle-alert'] + '<span>' + cum(loai === 'qua_gio' ? D.capnhat.chu_qua_gio : D.capnhat.chu_drive) + '</span></div>'
@@ -309,7 +327,7 @@ function moHopDrive(loai, cheDo) {   // lớp 5: hộp "Cập nhật khi chưa c
 }
 function veCapNhat(d) {
   D.capnhat = d;
-  if (S.cn !== 'hong') S.cn = d.co_ban_moi ? 'coban' : 'moinhat';
+  if (S.cn !== 'hong' && S.cn !== 'dangcn') S.cn = d.an_toan ? 'antoan' : d.co_ban_moi ? 'coban' : 'moinhat';   // N31
   $('#ban-hien').textContent = d.ban_dang; $$('.cn-dang').forEach(e => e.textContent = d.ban_dang);
   $$('.cn-moi').forEach(e => e.textContent = d.ban_moi || '');
   $('#cn-luc').textContent = d.luc_kiem ? luc(d.luc_kiem) : 'chưa kiểm';
@@ -319,13 +337,19 @@ function veCapNhat(d) {
   $('#cn-thaydoi').innerHTML = moi.dong.slice(0, 5).map(x => '<div class="dong t13">' + ICON.check + '<span>' + cum(x) + '</span></div>').join('');
   const tomTat = ban => (d.tomtat || {})[ban] || (ban === d.ban_dang ? 'Bản đang dùng' : 'Bản đã dùng');   // dòng "Tóm tắt:" ở THAYDOI.md (N07)
   const cot = 'grid-template-columns:120px 1fr 160px';
-  const kiem = x => !x.kiem ? '' : '<span class="t12 khoi ' + (x.kiem.dat ? 'phu' : 'do-chu') + '">' + CHU_CN.kiem + esc(x.kiem.chu) + '</span>';   // lớp 4
+  const kiem = x => !x.kiem ? '' : '<span class="ks ' + (x.kiem.dat ? 'dat' : 'canh') + '">' + icoMau(ICON[x.kiem.dat ? 'circle-check' : 'circle-alert'],
+    x.kiem.dat ? '#258832' : '#E22E28', 13) + '<span>' + CHU_CN.kiem + cum(x.kiem.chu) + '</span></span>';   // lớp 4, N36 (b)
   $('#ls-capnhat').innerHTML = d.lichsu.map(x => '<div class="hang" style="' + cot + '"><b class="so">' + esc(x.ban)
     + '</b><span data-l="Nội dung">' + cum(tomTat(x.ban)) + kiem(x) + '</span><span data-l="Ngày cài" class="so">' + ngay(x.luc) + '</span></div>').join('');
   veAnToan(d); veQuayVe(d);
   const o = d.o_trong || {du: true}, oc = $('#cn-otrong');
-  if (oc) oc.innerHTML = o.chu ? '<span class="dong t13 ' + (o.du ? 'phu' : 'do-chu') + '">' + icoMau(ICON['hard-drive'], o.du ? '#646A73' : '#E22E28', 14)
-    + '<span>' + cum(o.chu) + (o.lam ? ' ' + cum(o.lam) : '') + '</span></span>' : '';
+  if (oc) oc.innerHTML = !o.chu ? '' : '<div class="ot-dong ' + (o.du ? 'dat' : 'canh') + '">' + icoMau(ICON[o.du ? 'circle-check' : 'hard-drive'], o.du ? '#258832' : '#E22E28', 14)
+    + '<span>' + cum(o.chu) + '</span></div>' + (o.lam ? '<div class="t12 phu" style="margin-top:2px">' + cum(o.lam) + '</div>' : '');   // N36 (b)
+  const kl = $('#cn-kiemloi'), k = d.kiem_hien;   // N36 (e): lỗi kiểm sau cập nhật hiện cả ở thẻ đầu
+  if (kl) { kl.hidden = !k || k.dat; if (k && !k.dat) kl.innerHTML = icoMau(ICON['circle-alert'], '#E22E28', 13) + '<span>' + CHU_CN.kiem + cum(k.chu) + '</span>'; }
+  if (d.quayve_loi) $('#ls-capnhat').insertAdjacentHTML('afterbegin', '<div class="hang" style="' + cot + '"><b class="so">' + esc(d.ban_dang)   // Y38d
+    + '</b><span data-l="Nội dung"><span class="ks canh">' + icoMau(ICON['rotate-ccw'], '#E22E28', 13) + '<span>' + cum(cau(d.quayve_loi.chu_hien))
+    + '</span></span></span><span data-l="Ngày cài" class="so">' + ngay(d.quayve_loi.luc) + '</span></div>');
   $$('[data-s="cn:coban"] [data-capnhat]').forEach(b => { b.disabled = !o.du; b.title = o.du ? '' : CHU_CN.khoaRe; });
   $('.tab[data-tab="capnhat"] .cham-xanh').hidden = !d.co_ban_moi;
   ve();
@@ -345,7 +369,7 @@ async function capNhat(cheDo, van) {
   choCapNhat(cu, moi);
 }
 function choCapNhat(cu, moi) {
-  S.cn = 'dangcn'; ve(); const het = Date.now() + 5 * 60e3 + 10 * 60e3;   // 0.7.9: cộng 10 phút chờ bản sao lên Drive
+  S.cn = 'dangcn'; tieuDangCn(); ve(); veQuayVe(D.capnhat || {});   // N33: khoá quay về const het = Date.now() + 5 * 60e3 + 10 * 60e3;   // 0.7.9: cộng 10 phút chờ bản sao lên Drive
   const cho = async () => {
     try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
       if (k.phienban && k.phienban !== cu) { location.reload(); return; }
@@ -475,7 +499,12 @@ const CHU_Z15 = {
   layMoi: 'Lấy mã mới · tài khoản ', dungTk: 'Đăng nhập đúng tài khoản ',                                               // 20, 21
   danTrong: 'Anh dán mã dài hạn vào ô', chuaTron: n => 'Mã vừa dán có ' + n + ' ký tự, chưa trọn. Chép lại cả mã rồi dán lại.',   // 23 (22 ở máy chủ)
   // Y38c CPO-1: CHỮ MỚI, CHƯA DUYỆT (CPO trình anh) — chuỗi dán vào không có sk-ant-oat01-
-  khongPhaiMa: 'Chuỗi vừa dán không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-). Chép lại đúng mã rồi dán lại.'};
+  // Y38d: CHỮ MỚI CHỜ ANH DUYỆT (CPO trình): N30 khoá API, sai tiền tố (CDO đề xuất); N34 trình duyệt chặn chép; N37 gọi thử hết hạn mức
+  khoaApi: 'Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API.',
+  saiTienTo: 'Mã dài hạn bắt đầu bằng sk-ant-oat01-. Chép lại đúng mã rồi dán lại.',
+  chepLoi: 'Trình duyệt chặn chép. Anh bôi đen lệnh rồi chép tay.',
+  kiemHanMucRe: 'Mã đã lưu; lần gọi thử gặp hết hạn mức của gói nên chưa kiểm được mã.'};
+const giuTienTo = h => String(h).split('sk-ant-oat01-').join('<span class="nw">sk-ant-oat01-</span>');   // Y38d N42
 // N28 (a): làm sạch mã dán vào như máy chủ (bỏ khoảng trắng, xuống dòng, ký tự ẩn; nhận dạng TÊN=mã, dấu nháy)
 function lamSachMa(s) { let m = String(s || '').replace(/[\s\u200b\u200c\u200d\u2060\ufeff]+/g, '');
   const i = m.indexOf('sk-ant-oat01-'); if (i > 0) m = m.slice(i);   // Y38c R9: chữ đứng trước mã bỏ đi
@@ -491,7 +520,7 @@ function theMd(x, go) {
       : '<div class="md-han' + (canh ? ' canh' : '') + '">hết hạn ' + esc(ngay(md.han)) + '</div><div class="md-han' + (canh ? ' canh' : '') + '">còn ' + hai(md.con_ngay) + '&nbsp;ngày</div>');
   else if (x.da_noi) h += '<div class="md-chip xem">Đăng nhập kiểu&nbsp;cũ</div>' + nutMdGt() + '<div class="md-han xem">có thể hết phiên giữa&nbsp;chừng</div>';
   if (md && k) h += k.dat ? '<div class="md-han dat-chu dong-i">' + icoMau(ICON['circle-check'], '#258832', 13) + nbsp(CHU_Z15.kiemDat + gioKiem(k.luc)) + '</div>'   // 16
-    : '<div class="md-han canh dong-i" title="' + CHU_Z15.kiemLoiRe + '">' + icoMau(ICON['circle-alert'], '#E22E28', 13) + nbsp(CHU_Z15.kiemLoi + gioKiem(k.luc)) + '</div>';   // 17
+    : '<div class="md-han canh dong-i" title="' + (k.het_hanmuc ? CHU_Z15.kiemHanMucRe : CHU_Z15.kiemLoiRe) + '">' + icoMau(ICON['circle-alert'], '#E22E28', 13) + nbsp(CHU_Z15.kiemLoi + gioKiem(k.luc)) + '</div>';   // 17
   const chuaKiem = md && !md.het && x.chua_kiem_trung;   // QĐ216 N6
   if (chuaKiem) h += '<div class="md-han xem" title="' + CHU_Z15.chuaKiemRe + '">' + nbsp(CHU_Z15.chuaKiem) + '</div>';   // 18
   h += '<div class="md-nut">';
@@ -542,10 +571,10 @@ function veMdDan() { const k = D.mdDan; if (!k) return;
   $('#mdh-than').innerHTML = (k.tin ? '<div class="bao-xanh t13">' + ICON['info'] + '<span>' + cum(cau(k.tin)) + '</span></div>' : '')
     + '<div class="t13 phu">Dùng khi anh đã tạo ' + CHU_MDH.toLowerCase() + ' ở máy khác. Mã bắt đầu bằng <b class="nw">sk-ant-oat01-</b>, dùng 365&nbsp;ngày.</div>'
     + '<div class="b6 t13">' + CHU_MDH + '</div><div class="o-nhap' + (k.loi ? ' loi' : '') + '">' + ICON['key-round'] + '<input id="md-ma-dan" type="password" placeholder="sk-ant-oat01-…" autocomplete="off"></div>'
-    + (k.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(cau(k.loi)) + '</span></div>' : '')
+    + (k.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + giuTienTo(cum(cau(k.loi))) + '</span></div>' : '')
     + '<div class="t13">' + CHU_Z15.danLenh + '</div><div class="dong ma-lenh"><code class="f1">' + CHU_Z15.lenh + '</code>'   // 11
     + '<button class="btn btn-phu nho" data-md-chep>' + ICON.copy + CHU_Z15.chep + '</button></div>'
-    + '<div class="t12 phu">' + CHU_Z15.thuHoi + '<a href="https://' + CHU_Z15.thuHoiTrang + '" target="_blank" rel="noopener noreferrer">' + CHU_Z15.thuHoiTrang + '</a></div>'   // 12
+    + '<div class="t12 phu">' + CHU_Z15.thuHoi + '<a class="nw" href="https://' + CHU_Z15.thuHoiTrang + '" target="_blank" rel="noopener noreferrer">' + CHU_Z15.thuHoiTrang + '</a></div>'   // 12
     + '<div class="t12 phu">Phần mềm cất mã đã mã hoá ở Két&nbsp;khoá, trên màn chỉ hiện 04 ký tự&nbsp;cuối.</div>'; }
 async function mdLay(tk) {   // 0.7.8: máy chủ chạy lệnh lấy mã của Claude; "Lấy link mới" chạy lại từ đầu
   try { const kq = await api('/mohinh/goi/claude/madaihan/batdau', {taikhoan: tk});
@@ -555,6 +584,7 @@ async function mdLay(tk) {   // 0.7.8: máy chủ chạy lệnh lấy mã của 
   catch (e) { if (D.mdh[tk]) { D.mdh[tk] = {...D.mdh[tk], loi: e.message, ct: (e.ct || {}).chi_tiet || ''}; veMoHinh(); } else bao(e.message + '.'); }
 }
 async function mdXong(tk, kq) { D.mdh[tk] = null;
+  if (kq.giu_ma_cu) { bao(CHU_Z15.kiemLoiRe); await napMoHinh(); return; }   // Y38d N29: giữ mã cũ
   bao(kq.goi_thu ? 'Đã lưu ' + CHU_MDH.toLowerCase() + ' cho tài khoản ' + tk + ', hết hạn ' + ngay(kq.han) + '.'
     : 'Đã lưu ' + CHU_MDH.toLowerCase() + ' nhưng gọi thử chưa được: ' + (kq.loi_goi_thu || 'chưa rõ lý do') + '.');
   await napMoHinh(); }
@@ -589,7 +619,8 @@ function theGoi(g, ds, nguon, uu) {
   if (g === 'claude') { ds.filter(x => x.ma_daihan && x.ma_daihan.het).forEach(x => { h += theMdHet(x, ds); });   // N13, N23
     mdMo.forEach(tk => { h += theMdKetNoi(tk, D.mdh[tk]); }); }
   // QĐ164 ý 1 (Z6-TK): đăng nhập trùng thì không tạo ô, dải xanh dưới ô đang có; số là số của ô đang giữ tài khoản đó
-  if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.</span></div>';
+  if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>' + ((D.trungChu || {})[g] ? giuTienTo(cum(cau(D.trungChu[g])))   // Y38d N41: câu 22
+    : 'Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.') + '</span></div>';
   if (dn.url) {
     h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + '</div>' + (dn.tk >= 2 ? canhTk(ten) : '')
       + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài&nbsp;khoản&nbsp;Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
@@ -679,7 +710,8 @@ async function danMaClaude() {
   const dn = D.dn.claude, ma = ($('#ma-claude') || {}).value || '';
   if (!ma.trim()) { bao('Anh dán mã trang Claude hiện ra.'); return; }
   try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.'); await napMoHinh(); }
-  catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
+  catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi;
+      D.trungChu = {...(D.trungChu || {}), claude: (e.ct || {}).chu_rieng ? (e.ct || {}).loi : ''}; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
 }
 
 // ---- Ô chọn mô hình màn 08 + hộp "Đổi" màn 13 (QĐ178–QĐ183, PTD-08, bản vẽ Z10, Z10b): 01 danh sách G08 dùng chung
@@ -903,7 +935,7 @@ document.addEventListener('click', async ev => {
   else if ('cnHuy' in d) { await chonDrive(false); return; }
   else if ('cnKetnoi' in d) { dongHop(); S.trang = '11'; ve(); return; }
   else if ('mdGt' in d) { moMdGt(); return; }
-  else if ('mdChep' in d) { try { await navigator.clipboard.writeText(CHU_Z15.lenh); bao(CHU_Z15.daChep); } catch (e) { /* trình duyệt chặn chép */ } return; }
+  else if ('mdChep' in d) { try { await navigator.clipboard.writeText(CHU_Z15.lenh); bao(CHU_Z15.daChep); } catch (e) { bao(CHU_Z15.chepLoi); } return; }   // N34
   else if ('cncho' in d) { await capNhat('cho'); }
   else if ('gd' in d) { const g = t.nextElementSibling; g.hidden = !g.hidden; }
   else if ('giu' in d) { try { const k = await api('/phien/giahan', {}); D.hetLuc = k.het_luc; S.k = 'binhthuong';
@@ -926,7 +958,8 @@ document.addEventListener('click', async ev => {
   else if (d.mdLuu) { const tk = Number(d.mdLuu), o = $('#md-ma-dan'), ma = lamSachMa((o || {}).value);   // N28 (a)
     if (!ma) { D.mdDan = {...D.mdDan, loi: CHU_Z15.danTrong}; veMdDan(); return; }
     if (!/^sk-ant-oat01-[A-Za-z0-9_-]{20,}$/.test(ma)) { if (o) o.value = '';
-      D.mdDan = {...D.mdDan, loi: ma.startsWith('sk-ant-oat01-') ? CHU_Z15.chuaTron(ma.length) : CHU_Z15.khongPhaiMa}; veMdDan(); return; }   // 23, CPO-1
+      D.mdDan = {...D.mdDan, loi: ma.startsWith('sk-ant-oat01-') ? CHU_Z15.chuaTron(ma.length) : ma.startsWith('sk-ant-api') ? CHU_Z15.khoaApi
+        : CHU_Z15.saiTienTo}; veMdDan(); return; }   // 23, N30
     t.disabled = true; if (o) o.value = '';   // không giữ mã trên màn
     try { const kq = await api('/mohinh/goi/claude/madaihan/dan', {taikhoan: tk, ma}); dongHop(); D.mdDan = null; await mdXong(tk, kq); }
     catch (e) { D.mdDan = {...D.mdDan, loi: e.message}; veMdDan(); } t.disabled = false; return; }

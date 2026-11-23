@@ -69,10 +69,41 @@ def _bo_co(tep: Path, tt: dict, loi: str | None = None) -> None:
     _ghi(tep, tt)
 
 
-def tra_du_lieu(dl: Path, tra: dict) -> str | None:
-    """R1: trả các tệp ghi trong `tra` từ thư mục chụp; đủ cả mới thay. Trả None khi xong, chuỗi lỗi khi không trả."""
+DUOI = ("", "-wal", "-shm")
+
+
+def _ten(dl: Path, t: str, d: str = "") -> Path:
+    return dl / f"{t}.sqlite3{d}"
+
+
+def _doi_ve_cu(dl: Path, tep: list) -> None:
+    """V2: đổi các tệp `.cu` (dữ liệu trước lúc thay) về chỗ cũ; tệp đã thay bị ghi đè lại bằng tệp cũ."""
+    for t in tep:
+        for d in DUOI:
+            cu = Path(str(_ten(dl, t, d)) + ".cu")
+            if cu.exists():
+                os.replace(cu, _ten(dl, t, d))
+            elif d and _ten(dl, t, d).exists() and Path(str(_ten(dl, t)) + ".cu").exists():
+                _ten(dl, t, d).unlink()
+
+
+def _xoa_cu(dl: Path, tep: list) -> None:
+    for t in tep:
+        for d in DUOI:
+            Path(str(_ten(dl, t, d)) + ".cu").unlink(missing_ok=True)
+
+
+def _tep_tra(tra: dict) -> list:
+    return [t for t in tra.get("tep", []) if isinstance(t, str) and t.isidentifier()]
+
+
+def tra_du_lieu(dl: Path, tra: dict, ghi_buoc=lambda b: None) -> str | None:
+    """R1, V2: trả các tệp ghi trong `tra` từ thư mục chụp. Bước 1: chép ra tệp tạm, `quick_check`, đủ cả mới sang bước 2.
+    Bước 2 (ghi `buoc` = "thay" trước): tệp đang có (kèm -wal, -shm) đổi tên sang `.cu`, tệp tạm vào chỗ; lỗi ở tệp nào
+    thì đổi các `.cu` về hết (07 tệp như trước lúc trả). Xong đủ thì ghi `buoc` = "xong_thay" rồi mới xoá `.cu`.
+    Trả None khi xong; chuỗi lỗi khi không trả (dữ liệu giữ nguyên)."""
     noi = dl / "saoluu" / str(tra.get("thumuc", ""))
-    tep = [t for t in tra.get("tep", []) if isinstance(t, str) and t.isidentifier()]
+    tep = _tep_tra(tra)
     if not tep or not noi.is_dir():
         return "không có bản chụp để trả dữ liệu"
     tam = {}
@@ -91,15 +122,26 @@ def tra_du_lieu(dl: Path, tra: dict) -> str | None:
                 dich.close()
                 nguon.close()
             os.chmod(dich_duong, 0o600)
-        for t, p in tam.items():   # đủ 07 tệp tạm mới thay: bỏ nhật ký WAL của tệp cũ rồi đổi tên
-            for duoi in ("-wal", "-shm"):
-                (dl / f"{t}.sqlite3{duoi}").unlink(missing_ok=True)
-            os.replace(p, dl / f"{t}.sqlite3")
-        return None
     except (OSError, sqlite3.Error) as e:
         for p in tam.values():
             p.unlink(missing_ok=True)
         return f"không trả được dữ liệu: {type(e).__name__}"
+    ghi_buoc("thay")
+    try:
+        for t, p in tam.items():
+            for d in DUOI:
+                if _ten(dl, t, d).exists():
+                    os.replace(_ten(dl, t, d), Path(str(_ten(dl, t, d)) + ".cu"))
+            os.replace(p, _ten(dl, t))
+    except OSError as e:
+        _doi_ve_cu(dl, tep)   # lỗi ở đây thì để lỗi lan ra: cờ còn `buoc` = "thay", lần khởi động sau đổi về tiếp
+        for p in tam.values():
+            p.unlink(missing_ok=True)
+        ghi_buoc(None)
+        return f"không trả được dữ liệu: {type(e).__name__}"
+    ghi_buoc("xong_thay")
+    _xoa_cu(dl, tep)
+    return None
 
 
 def _ghi_f04_da_tra(dl: Path, yc: dict) -> None:
@@ -107,22 +149,42 @@ def _ghi_f04_da_tra(dl: Path, yc: dict) -> None:
         from maychu.dulieu import maso
         cn = sqlite3.connect(dl / "Nhatky.sqlite3", isolation_level=None)
         try:
-            cn.execute("INSERT INTO nhatky_thaotac (id, luc, congcu, lenhcon, thamso_tomtat, ketqua) VALUES (?, ?, 'capnhat', 'quayve', ?, 'dat')",
-                       (maso.tao(), _bay(), f"{yc.get('ban_anh')} → {yc.get('ban_truoc')} · đã trả dữ liệu về bản chụp trước lúc nâng"))
+            nguoi = yc.get("nguoi")   # V2 nhỏ: ghi đúng người bấm quay về
+            cn.execute("INSERT INTO nhatky_thaotac (id, luc, nguoi_loai, nguoi_id, congcu, lenhcon, thamso_tomtat, ketqua)"
+                       " VALUES (?, ?, ?, ?, 'capnhat', 'quayve', ?, 'dat')",
+                       (maso.tao(), _bay(), "anh" if nguoi else None, nguoi,
+                        f"{yc.get('ban_anh')} → {yc.get('ban_truoc')} · đã trả dữ liệu về bản chụp trước lúc nâng"))
         finally:
             cn.close()
     except Exception:  # noqa: BLE001 - không ghi được nhật ký thì vẫn chạy bản trước
         pass
 
 
+def _xong_tra(dl: Path, tep: Path, tt: dict, yc: dict) -> None:
+    _ghi_f04_da_tra(dl, yc)   # dòng F04 "quayve" ghi trước khi trả đã bị trả về theo bản chụp: ghi lại
+    yc.pop("tra_du_lieu", None)
+    tt.pop("nang_luocdo", None)
+    tt["chay_ban_truoc"] = yc
+    _ghi(tep, tt)
+
+
 def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
-    """Thư mục mã sẽ chạy (và trả dữ liệu nếu cần, R1). Bản trước hỏng quá SO_LAN_HONG lần thì bỏ cờ (R3)."""
+    """Thư mục mã sẽ chạy (và trả dữ liệu nếu cần, R1, V2). Bản trước hỏng quá SO_LAN_HONG lần thì bỏ cờ (R3)."""
     dl = thumuc_dulieu or Path(os.environ.get("IGM360_THUMUC_DULIEU", "/dulieu"))
     tep = dl / TEN_TEP
     tt = _doc(tep)
     yc = tt.get("chay_ban_truoc")
     if not isinstance(yc, dict):
         return goc
+    tra = yc.get("tra_du_lieu") if isinstance(yc.get("tra_du_lieu"), dict) else None
+    if tra and tra.get("buoc") == "thay":   # V2: lần trước dừng giữa lúc thay tệp (mất điện, bị dừng) → đổi `.cu` về, làm lại
+        _doi_ve_cu(dl, _tep_tra(tra))
+        tra.pop("buoc", None)
+        _ghi(tep, tt)
+    elif tra and tra.get("buoc") == "xong_thay":   # đã thay đủ, chưa kịp dọn `.cu`
+        _xoa_cu(dl, _tep_tra(tra))
+        _xong_tra(dl, tep, tt, yc)
+        tra = None
     ban_truoc = goc / "ban_truoc"
     if not (yc.get("ban_anh") == _so(goc / "VERSION") and yc.get("ban_truoc") == _so(ban_truoc / "VERSION")
             and (ban_truoc / "maychu").is_dir()):
@@ -131,16 +193,19 @@ def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
     if int(yc.get("so_lan_hong") or 0) >= SO_LAN_HONG:
         _bo_co(tep, tt, f"bản {yc.get('ban_truoc')} khởi động hỏng {SO_LAN_HONG:02d} lần, đã chạy lại bản {yc.get('ban_anh')}")
         return goc
-    if yc.get("tra_du_lieu"):
-        loi = tra_du_lieu(dl, yc["tra_du_lieu"])
-        if loi:
+    if tra:
+        def ghi_buoc(b):
+            if b:
+                tra["buoc"] = b
+            else:
+                tra.pop("buoc", None)
+            _ghi(tep, tt)
+        loi = tra_du_lieu(dl, tra, ghi_buoc)
+        if loi:   # dữ liệu đã đổi về như trước lúc trả: chạy bản mới (anh vẫn vào được giao diện)
             _bo_co(tep, tt, loi)
             return goc
-        _ghi_f04_da_tra(dl, yc)   # dòng F04 "quayve" ghi trước khi trả đã bị trả về theo bản chụp: ghi lại
-        yc.pop("tra_du_lieu", None)
-        tt.pop("nang_luocdo", None)
-        tt["chay_ban_truoc"] = yc
-        _ghi(tep, tt)
+        _xoa_cu(dl, _tep_tra(tra))
+        _xong_tra(dl, tep, tt, yc)
     return ban_truoc
 
 

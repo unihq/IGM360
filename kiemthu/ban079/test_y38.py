@@ -400,7 +400,7 @@ class KiemN28(NenAT):
         c = madaihan.chu_loi_dan(MA_GIA[:25])
         self.assertEqual(c, madaihan.CHU_DAN["chua_tron"].format(n=25))
         self.assertNotIn(MA_GIA[13:25], c)
-        self.assertEqual(madaihan.chu_loi_dan("sk-ant-api03-xyz"), madaihan.CHU_DAN["khong_phai_ma"])   # Y38c CPO-1
+        self.assertEqual(madaihan.chu_loi_dan("sk-ant-api03-xyz"), madaihan.CHU_DAN["khoa_api"])   # Y38d N30
         self.assertEqual(c, "Mã vừa dán có 25 ký tự, chưa trọn. Chép lại cả mã rồi dán lại")
 
     def test_o_buoc_2_gap_ma_dai_han_thi_luu_nhu_dan(self):
@@ -593,6 +593,189 @@ class KiemY38c(NenAT):
         self.assertTrue(dg.tep_chup(1).exists())
         self.ket_noi(1, cu=False)                                                  # mã mới, không còn đăng nhập kiểu cũ
         self.assertFalse(dg.tep_chup(1).exists())
+
+
+# ---------------- Y38d: lỗi CDO U13 (N29–N37) và chỗ hở V2 của CDA ----------------
+MA_MOI = "sk-ant-oat01-" + "R" * 30 + "moiN29"
+
+
+class KiemY38d(NenAT):
+    def ket_noi(self, tk, ma, goi_ok=True, loi=None):
+        tt = [{"loggedIn": False, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
+        goi = mock.Mock(return_value={"hanmuc": {}}) if goi_ok else mock.Mock(side_effect=loi or congai.LoiAI("Claude", "lỗi", "x"))
+        with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), mock.patch.object(congai, "_goi_claude", goi):
+            return madaihan.ket_noi(tk, ma)
+
+    def test_n29_ma_moi_chua_goi_duoc_thi_giu_ma_cu(self):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        madaihan.luu(1, MA_GIA)
+        self.han(days=200)
+        han_cu = madaihan.thong_tin(1)["han"]
+        kq = self.ket_noi(1, MA_MOI, goi_ok=False)
+        self.assertEqual((kq["goi_thu"], kq.get("giu_ma_cu")), (False, True))
+        self.assertEqual(madaihan.lay(1), MA_GIA)                                   # mã cũ còn nguyên
+        self.assertEqual(madaihan.thong_tin(1)["han"], han_cu)                      # hạn cũ giữ
+        self.assertTrue(madaihan.kiem_gan_nhat(1)["giu_ma_cu"])
+        kq = self.ket_noi(1, MA_MOI)                                               # gọi thử đạt thì thay
+        self.assertEqual((kq["goi_thu"], madaihan.lay(1)), (True, MA_MOI))
+
+    def test_n29_chua_co_ma_hoac_ma_cu_het_han_thi_luu_ma_moi(self):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        self.ket_noi(1, MA_GIA, goi_ok=False)
+        self.assertEqual(madaihan.lay(1), MA_GIA)                                   # chưa có mã cũ: giữ như trước
+        self.han(minutes=-1)
+        self.ket_noi(1, MA_MOI, goi_ok=False)
+        self.assertEqual(madaihan.lay(1), MA_MOI)                                   # mã cũ hết hạn: không giữ
+
+    def test_n37_het_han_muc_ghi_ro(self):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        self.ket_noi(1, MA_GIA, goi_ok=False, loi=congai.HetHanMuc("hết hạn mức"))
+        k = madaihan.kiem_gan_nhat(1)
+        self.assertEqual((k["dat"], k["het_hanmuc"]), (False, True))
+
+    def test_n30_khoa_api_va_sai_tien_to(self):
+        self.assertEqual(madaihan.chu_loi_dan("sk-ant-api03-" + "x" * 85), madaihan.CHU_DAN["khoa_api"])
+        self.assertEqual(madaihan.chu_loi_dan("abc-xyz-123"), madaihan.CHU_DAN["sai_tien_to"])
+        self.assertEqual(madaihan.chu_loi_dan(MA_GIA[:25]), madaihan.CHU_DAN["chua_tron"].format(n=25))
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        nut = js[js.index("else if (d.mdLuu)"):js.index("else if (d.mdHuy)")]
+        self.assertIn("ma.startsWith('sk-ant-api') ? CHU_Z15.khoaApi", nut)
+        self.assertIn(": CHU_Z15.saiTienTo", nut)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_n31_n33_giao_dien(self):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        doan = js[js.index("function veQuayVe(d) {"):js.index("function moQuayVe() {")]
+        dong = next(x for x in js.splitlines() if "S.cn = d.an_toan ? 'antoan'" in x)
+        ma = ("const S = {cn: 'moinhat'}; const nbsp = s => s; const ICON = new Proxy({}, {get: () => '<svg/>'});"
+              "const CHU_CN = {quayve: 'Quay về bản trước', qvRe: b => 'Chạy lại bản ' + b};"
+              "const nut = [{dataset: {}}, {dataset: {}}]; const $$ = q => nut;\n" + doan
+              + "\nlet d = {an_toan: 'x', co_ban_moi: true};\n" + dong
+              + "\nconst a = S.cn; S.cn = 'dangcn'; veQuayVe({quay_ve: {co: true, ban: '0.7.8'}}); const b = nut.every(x => x.disabled);"
+              + "\nS.cn = 'moinhat'; veQuayVe({quay_ve: {co: true, ban: '0.7.8'}, dang_sao: 'day'}); const c = nut.every(x => x.disabled);"
+              + "\nveQuayVe({quay_ve: {co: true, ban: '0.7.8'}}); const e = nut.every(x => !x.disabled);"
+              + "\nconsole.log(JSON.stringify([a, b, c, e]));")
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "n31.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), ["antoan", True, True, True])        # N31: an toàn ẩn thẻ mới nhất; N33 khoá
+        self.assertNotIn('id="cn-quayve"', (GD / "index.html").read_text(encoding="utf-8"))   # N36 (a): không còn thẻ riêng
+
+    def chuan_bi_tra(self):
+        g = self.g / "app"
+        (g / "ban_truoc" / "maychu").mkdir(parents=True)
+        (g / "VERSION").write_text("0.7.9", encoding="utf-8")
+        (g / "ban_truoc" / "VERSION").write_text("0.7.8", encoding="utf-8")
+        khoitao._chup_het(self.dl, ketnoi.CAC_FILE)
+        KiemLop2.them_dong(self)
+        noi = khoitao._thumuc_chup(self.dl)
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.7.9", "ban_truoc": "0.7.8", "nguoi": "nguoi_thu",
+                                            "tra_du_lieu": {"thumuc": noi.name, "tep": list(ketnoi.CAC_FILE)}})
+        return g
+
+    def bam(self):
+        import hashlib
+        return {t: hashlib.sha256(ketnoi.duongdan(t, self.dl).read_bytes()).hexdigest() for t in ketnoi.CAC_FILE}
+
+    def test_v2_loi_o_tep_thu_04_thi_doi_ve_du_07_tep(self):
+        g = self.chuan_bi_tra()
+        truoc = self.bam()
+        goc_replace, dem = os.replace, {"n": 0}
+
+        def replace_hong(a, b):
+            if str(a).endswith(".trave.tam"):
+                dem["n"] += 1
+                if dem["n"] == 4:
+                    raise OSError("giả lập lỗi ở tệp thứ 04")
+            return goc_replace(a, b)
+        with mock.patch.object(chay.os, "replace", side_effect=replace_hong):
+            self.assertEqual(chay.chon(self.dl, g), g)                             # không chạy bản trước
+        self.assertEqual(self.bam(), truoc)                                         # 07 tệp như trước lúc trả
+        self.assertNotEqual(self.f04("thu"), [])
+        self.assertEqual([p.name for p in self.dl.iterdir() if p.name.endswith((".cu", ".tam"))], [])
+        tt = antoan.doc(self.dl)
+        self.assertNotIn("chay_ban_truoc", tt)
+        self.assertIn("không trả được dữ liệu", tt["quayve_loi"]["chu"])
+
+    def test_v2_mat_dien_giua_luc_thay_thi_doi_ve_roi_tra_lai(self):
+        g = self.chuan_bi_tra()
+        for t in ("Dulieu_Chinh", "Hotho", "Ketnoi"):                               # lần trước đã đổi 03 tệp sang .cu rồi dừng
+            os.replace(ketnoi.duongdan(t, self.dl), str(ketnoi.duongdan(t, self.dl)) + ".cu")
+            shutil.copy(khoitao._thumuc_chup(self.dl) / f"{t}.sqlite3", ketnoi.duongdan(t, self.dl))
+        tt = antoan.doc(self.dl)
+        tt["chay_ban_truoc"]["tra_du_lieu"]["buoc"] = "thay"
+        antoan.ghi(self.dl, chay_ban_truoc=tt["chay_ban_truoc"])
+        self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                   # đổi .cu về, trả lại từ đầu, đạt
+        self.assertEqual(self.f04("thu"), [])
+        self.assertEqual([p.name for p in self.dl.iterdir() if p.name.endswith(".cu")], [])
+        dong = self.f04("quayve")[-1]
+        self.assertIn("đã trả dữ liệu về bản chụp", dong[0])
+        cn = ketnoi.mo("Nhatky")
+        try:
+            self.assertEqual(cn.execute("SELECT nguoi_id FROM nhatky_thaotac WHERE lenhcon = 'quayve' ORDER BY luc DESC LIMIT 1").fetchone()[0],
+                             "nguoi_thu")                                           # V2 nhỏ: có người bấm
+        finally:
+            cn.close()
+
+
+class KiemY38dBoSung(NenAT):
+    def test_n39_lich_su_moi_ban_01_dong(self):
+        for ban in ("0.7.9", "0.7.8", "0.7.9"):                                     # lên 0.7.9, quay về 0.7.8, lên lại 0.7.9
+            capnhat._ghi_f04("khoidong", ban, "dat")
+            time.sleep(1.1)
+        self.assertEqual([x["ban"] for x in capnhat.lich_su()], ["0.7.9", "0.7.8"])
+
+    def lay_ten_trung(self, go_ma):
+        self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        madaihan.luu(2, MA_GIA)
+        c = {"ten_hien": "B", "goi_ten": "Max", "email_bam": "b" * 64, "tochuc_bam": None, "chup_luc": "x"}
+        with mock.patch.object(dg, "GO_MA_KHI_TRUNG", go_ma), mock.patch.object(dg, "chup_song", return_value=c), \
+                mock.patch.object(dg, "tim_trung", return_value=1), mock.patch.object(dg, "_dang_xuat", return_value=True):
+            return dg._ket_thuc("claude", 2)
+
+    def test_n40_02_cach(self):
+        kq = self.lay_ten_trung(True)                                              # cách hiện tại: gỡ mã
+        self.assertEqual((kq["loi"], kq["chu_rieng"]), (madaihan.CHU_DAN["trung"].format(tk=1), True))
+        self.assertIsNone(madaihan.thong_tin(2))
+
+    def test_n40_cach_cdo_giu_ma(self):
+        kq = self.lay_ten_trung(False)                                             # cách CDO: giữ mã, báo đăng nhập lại
+        self.assertEqual(kq["loi"], madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=1))
+        self.assertEqual(madaihan.lay(2), MA_GIA)
+        self.assertFalse(dg.tep_chup(2).exists())
+
+    def test_n41_api_chuyen_cau_rieng(self):
+        from maychu.web import api
+        e = api._loi_dn("claude", 2, {"loi": "Câu 22", "trung_voi": 1, "chu_rieng": True}, {"nguoidung_id": maso.tao()})
+        self.assertEqual((e.status_code, e.detail["chu_rieng"], e.detail["loi"]), (409, True, "Câu 22"))
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("(D.trungChu || {})[g] ? giuTienTo(cum(cau(D.trungChu[g])))", js)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_n42_tien_to_khong_ngat(self):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        dong = next(x for x in js.splitlines() if x.startswith("const giuTienTo"))
+        ma = dong + "\nconsole.log(giuTienTo('Mã dài hạn bắt đầu bằng sk-ant-oat01-. Chép lại'));"
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "n42.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertIn('<span class="nw">sk-ant-oat01-</span>', r.stdout)
+
+    def test_quay_ve_hong_chuong_va_lich_su(self):
+        capnhat._ghi_f04("quayve", "không trả được dữ liệu: OSError", "loi")
+        q = antoan.quay_ve_loi_gan()
+        self.assertEqual(q["chu_hien"], antoan.CHU["qv_loi"].format(ban=capnhat.ban_dang_chay()))
+        thongbao.quet_quayve_loi()
+        tin = [d for d in thongbao.danh_sach()["ds"] if d["loai"] == "quayve_loi"]
+        self.assertEqual((len(tin), tin[0]["icon"], tin[0]["muc"], tin[0]["chu"]), (1, "rotate-ccw", "do", q["chu_hien"]))
+        from maychu.web import api
+        with mock.patch.object(capnhat, "kiem_tra", return_value={"co_ban_moi": False, "ban_moi": None}):
+            self.assertEqual(api._them_antoan()["quayve_loi"]["chu_hien"], q["chu_hien"])
 
 
 # ---------------- Chữ ở 01 chỗ ----------------
