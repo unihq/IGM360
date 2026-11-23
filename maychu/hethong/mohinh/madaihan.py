@@ -293,7 +293,7 @@ def bat_dau_lay(tk: int, env: dict) -> dict:
             return {"url": p["url"], "xong": bool(p["ma"])}
         duoi = _duoi(p["tho"])
     huy_lay(tk)
-    return {"loi": "Claude không đưa ra đường link đăng nhập" + (f" ({duoi})" if duoi else "")}
+    return {"loi": "Claude không đưa ra đường link đăng nhập", "chi_tiet": duoi}
 
 
 def gui_ma(tk: int, ma_web: str) -> dict:
@@ -335,11 +335,11 @@ def gui_ma(tk: int, ma_web: str) -> dict:
                     return {"ma": p["ma"]}
                 loi = _duoi(p["tho"]) or "Lấy mã chưa được"
             huy_lay(tk)
-            return {"loi": f"Lấy mã chưa được ({loi}): bấm Lấy mã mới"}
+            return {"loi": "Lấy mã chưa được: bấm Lấy link mới", "chi_tiet": loi}
         time.sleep(0.2)
     else:
-        return {"loi": "Claude chưa trả mã sau 45 giây: bấm Lấy mã mới"}
-    return {"loi": f"Claude không nhận mã này ({loi}). Bấm \"Mở trang\" lấy mã mới rồi dán lại."}
+        return {"loi": "Claude chưa trả mã sau 45 giây: bấm Lấy link mới"}
+    return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm Lấy link mới rồi dán mã mới.", "chi_tiet": loi}   # N17
 
 
 def dang_lay(tk: int) -> bool:

@@ -210,9 +210,19 @@ class KiemKetNoi(NenMa):
         lenh = [r[0] for r in self.f04()]
         for x in ("kiem_madaihan", "luu_madaihan", "dangnhap_goi"):
             self.assertIn(x, lenh)
-        self.assertEqual(api.md_ngat(api.TaiKhoanGoi(taikhoan=1), p), {"ok": True, "co_ma": True})
+        self.assertFalse(hasattr(api, "md_ngat"))                 # N14: bỏ "Ngắt", dùng "Gỡ tài khoản" (QĐ164)
         self.assertNotIn(MA_GIA, json.dumps(self.f04(), ensure_ascii=False))
         self.khong_lot()
+
+    def test_api_loi_chi_tieng_viet(self):                         # N17: câu gốc của Claude tách riêng để rê chuột
+        from maychu.web import api
+        p = {"nguoidung_id": maso.tao()}
+        with mock.patch.object(madaihan, "gui_ma", return_value={"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm Lấy link mới rồi dán mã mới.",
+                                                                 "chi_tiet": "Error: invalid code"}):
+            with self.assertRaises(HTTPException) as e:
+                api.md_gui_ma(api.MaGoi(taikhoan=1, ma="ma-sai"), p)
+        d = e.exception.detail
+        self.assertEqual((d["chi_tiet"], "invalid" in d["loi"]), ("Error: invalid code", False))
 
 
 CLI_GIA = r'''
@@ -255,42 +265,63 @@ class KiemLayMaPty(NenMa):
         r = madaihan.gui_ma(1, "ma-sai")
         self.assertIn("loi", r)
         self.assertNotIn("ma", r)
+        self.assertNotIn("invalid", r["loi"].lower())               # N17: câu báo chỉ tiếng Việt
+        self.assertIn("invalid code", r.get("chi_tiet", "").lower())
 
 
 class KiemGiaoDien(unittest.TestCase):
-    def test_the_va_nut(self):
-        js = (GD / "app.js").read_text(encoding="utf-8")
-        for chu in ("const CHU_MDH = 'Mã dài hạn';", "' ••••' + esc(md.kytu_cuoi || '')", "' · còn ' + hai(md.con_ngay) + '&nbsp;ngày'",
-                    "data-md-lay=", "data-md-dan=", "data-md-ngat=", "\">Chuyển sang '", 'type="password"',
-                    "if (o) o.value = '';", "api('/mohinh/goi/claude/madaihan/batdau'",
-                    "if (Object.values(D.mdh || {}).some(x => x)) return;",
-                    "tenMh(hong.dung, hong.nguon_id, null, true)"):                     # N10: tên ngắn
-            self.assertIn(chu, js, chu)
-        doan = js.lower().split("// 0.7.8 (qđ198")[1].split("function thegoi")[0].replace("claude setup-token", "")
-        self.assertNotIn("token", doan)   # QĐ135: giao diện không dùng chữ "token" (trừ tên lệnh anh gõ)
-        html = (GD / "index.html").read_text(encoding="utf-8")
-        self.assertIn(".md-dong.md-vang .t12{color:#8F5F00;font-weight:600}", html)
+    """Y37b (CDO U12, bản vẽ Z13): N11–N22."""
+    def setUp(self):
+        self.js = (GD / "app.js").read_text(encoding="utf-8")
+        self.html = (GD / "index.html").read_text(encoding="utf-8")
 
+    def test_chu_va_nut(self):
+        js = self.js
+        for chu in ("const CHU_MDH = 'Mã dài hạn';", "'Kết nối Claude</button>", "data-md-dan=\"' + chua.taikhoan + '\">'",   # N21
+                    "'<span class=\"nhan n-canh\"><i></i>Mã hết hạn</span>'",                                                # N13
+                    ">Xác nhận mã</button>", "'Lấy link mới</button>",                                                       # N16
+                    "'<div class=\"bao-xanh t13\">' + ICON.info",                                                            # N18
+                    "if (kq.khong_ho_tro) { D.mdh[tk] = null; veMoHinh(); moMdDan(tk, kq.loi); return; }",
+                    "(k.ct ? ' title=\"' + esc(k.ct) + '\"' : '')",                                                          # N17
+                    'type="password"', "if (o) o.value = '';", "tenMh(hong.dung, hong.nguon_id, null, true)",
+                    " bị xoá khỏi Két&nbsp;khoá; mã vẫn còn hiệu lực ở Claude"):                                                                           # N14 + Đ5
+            self.assertIn(chu, js, chu)
+        self.assertNotIn("data-md-ngat", js)                                                                                  # N14
+        self.assertNotIn("setup-token", js)                                                                                   # N20, QĐ135
+        doan = js[js.index("const CHU_MDH"):js.index("function theGoi")].lower()
+        self.assertNotIn("token", doan)
+        for chu in (".mb .lop{position:fixed!important}", ".mb #h-xacnhan,.mb #h-mdh{align-items:center;padding:16px}",      # N22
+                    ".md-chip.canh{border-color:#F2A7A5;color:var(--canh)}", ".md-han.canh{color:var(--canh);font-weight:600}",  # N12
+                    ".md-nut{display:flex;flex-direction:column;"):                                                          # N11
+            self.assertIn(chu, self.html, chu)
 
     @unittest.skipUnless(__import__("shutil").which("node"), "máy không có node")
     def test_ve_the_bang_node(self):
         import subprocess as sp
-        js = (GD / "app.js").read_text(encoding="utf-8")
-        doan = js[js.index("const CHU_MDH"):js.index("async function mdXong")]
-        ma = ("const D = {}; const ICON = new Proxy({}, {get: () => '<svg/>'}); const icoMau = s => s; const esc = s => String(s);"
+        doan = self.js[self.js.index("const CHU_MDH"):self.js.index("// Z13 trạng thái 6")]
+        ma = ("const D = {}; const ICON = new Proxy({}, {get: () => '<svg/>'}); const icoMau = (s, m) => '[' + m + ']'; const esc = s => String(s);"
               "const ngay = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '';"
               "const hai = n => n < 10 && n >= 0 ? '0' + n : String(n); const cum = s => s; const cau = s => s;\n" + doan
-              + "\nconst a = theMd({taikhoan: 1, da_noi: true, ma_daihan: {kytu_cuoi: 'ab12', han: '2027-11-23T23:00:00+07:00', con_ngay: 5, het: false, vang: true}});"
-              + "\nconst b = theMd({taikhoan: 2, da_noi: true, ma_daihan: null});"
-              + "\nD.mdh[1] = {kieu: 'dan', loi: ''}; const c = theMd({taikhoan: 1, da_noi: true, ma_daihan: null});"
-              + "\nconsole.log(JSON.stringify([a.includes('md-vang'), a.includes('••••ab12'), a.includes('hết hạn 23/11/2027'), a.includes('còn 05&nbsp;ngày'),"
-              + " b.includes('Chuyển sang'), c.includes('type=\"password\"'), theMd({taikhoan: 3, da_noi: false, ma_daihan: null}) === '']));")
+              + "\nconst han = '2027-11-23T23:00:00+07:00', go = '<GO>';"
+              + "\nconst a = theMd({taikhoan: 1, da_noi: true, ma_daihan: {kytu_cuoi: 'ab12', han, con_ngay: 5, het: false, vang: true}}, go);"
+              + "\nconst a2 = theMd({taikhoan: 1, da_noi: true, ma_daihan: {kytu_cuoi: 'ab12', han, con_ngay: 200, het: false, vang: false}}, go);"
+              + "\nconst b = theMd({taikhoan: 2, da_noi: true, ma_daihan: null}, go);"
+              + "\nconst x = {taikhoan: 1, da_noi: false, ma_daihan: {kytu_cuoi: 'ab12', han, con_ngay: -1, het: true, vang: true}};"
+              + "\nconst c = theMd(x, go), c2 = theMdHet(x);"
+              + "\nconst k = theMdKetNoi(1, {url: 'https://claude.ai/oauth/authorize?x=1', loi: 'Mã chưa đúng', ct: 'Error: invalid code'});"
+              + "\nconsole.log(JSON.stringify(["
+              + " a.includes('md-chip canh'), a.includes('[#E22E28]'), a.includes('••••ab12'), a.includes('hết hạn 23/11/2027'), a.includes('còn 05&nbsp;ngày'),"
+              + " a.includes('md-nut') && a.indexOf('md-nut') > a.indexOf('còn 05'), a.endsWith(go + '</div>'), !a.includes('data-md-ngat'),"
+              + " !a2.includes('canh'), a2.includes('[#258832]'),"
+              + " b.includes('Đăng nhập kiểu&nbsp;cũ'), b.includes('Chuyển sang'),"
+              + " c.includes('Mã dài hạn hết hạn 23/11/2027'), c.includes('ngừng&nbsp;chạy'), c2.includes('md-het'), c2.includes('data-md-lay=\"1\"'),"
+              + " k.includes('Xác nhận mã'), k.includes('Lấy link mới'), k.includes('title=\"Error: invalid code\"'), !k.includes('>Error')]));")
         with tempfile.TemporaryDirectory() as tm:
             p = Path(tm) / "the.js"
             p.write_text(ma, encoding="utf-8")
             r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout), [True] * 7)
+        self.assertEqual(json.loads(r.stdout), [True] * 20)
 
 
 if __name__ == "__main__":

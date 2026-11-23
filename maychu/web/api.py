@@ -474,7 +474,7 @@ def md_bat_dau(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     if kq.get("khong_ho_tro"):
         return {"khong_ho_tro": True, "loi": kq["loi"]}
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
+        raise HTTPException(400, {"loi": kq["loi"], "chi_tiet": kq.get("chi_tiet") or ""})   # N17: câu gốc để rê chuột
     if kq.get("xong"):   # lệnh in mã ngay, không cần mã trang đăng nhập
         r = madaihan.gui_ma(body.taikhoan, "")
         if "ma" in r:
@@ -488,7 +488,7 @@ def md_gui_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
     _goi("claude", body.taikhoan)
     r = madaihan.gui_ma(body.taikhoan, body.ma)
     if "loi" in r:
-        raise HTTPException(400, r["loi"])
+        raise HTTPException(400, {"loi": r["loi"], "chi_tiet": r.get("chi_tiet") or ""})
     return _md_xong(body.taikhoan, r["ma"], p)
 
 
@@ -506,16 +506,6 @@ def md_huy(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi("claude", body.taikhoan)
     madaihan.huy_lay(body.taikhoan)
     return {"ok": True}
-
-
-@router.post("/mohinh/goi/claude/madaihan/ngat")
-def md_ngat(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
-    """Ngắt: xoá mã ở Két khoá (giao diện đã hỏi lại 01 lần). Mã vẫn sống ở hãng tới khi thu hồi trên trang của hãng."""
-    _goi("claude", body.taikhoan)
-    co = madaihan.xoa(body.taikhoan)
-    dangnhap_goi._NHO_TRANGTHAI.pop(("claude", body.taikhoan), None)
-    ghi_f04("mohinh", "ngat_madaihan", _md_nhan(body.taikhoan), ketqua="dat" if co else "loi", nguoi_id=p["nguoidung_id"])
-    return {"ok": True, "co_ma": co}
 
 
 @router.get("/mohinh/danhsach")
