@@ -279,7 +279,7 @@ async function capNhat(cheDo) {
 }
 
 // ---- Màn 13 Mô hình AI: thẻ gói Claude, gói ChatGPT, khoá API; bảng mô hình mặc định
-const GOI_TEN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT · qua&nbsp;Codex'};   // T2
+const GOI_TEN = {claude: 'Claude&nbsp;·&nbsp;Code', chatgpt: 'ChatGPT&nbsp;·&nbsp;Codex'};   // QĐ172 (Z9): "Hãng · Công cụ", thay T2
 const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'};
 // N15: tên mô hình đọc được từ mã mô hình (claude-sonnet-4-6 → Claude Sonnet 4.6); chưa có lần gọi nào ghi mô hình
 // thì ghi "mô hình mặc định" (gói chạy mô hình mặc định của gói).
