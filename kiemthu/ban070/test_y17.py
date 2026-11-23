@@ -172,7 +172,7 @@ class KiemChuGiaoDien(unittest.TestCase):
         self.assertEqual(congai.dung_duoc({"ma": "khoa_thu_01", "loai": "khoa_api", "tran_tien_thang": None, "id": "x"})[1], "chưa đặt hạn mức")
 
     def test_05_loi_nho(self):
-        self.assertIn("'Chưa có tài&nbsp;khoản'", self.js)                                 # N10 a
+        self.assertIn("<b>Chưa có tài&nbsp;khoản</b>", self.js)                         # N10 a
         self.assertIn("ưu&nbsp;tiên&nbsp;2", self.html)                                       # N14
         for c in ("'Mở trang'", "'TikTok Shop'", "'mã sàn'"):                                 # N12, T1
             self.assertIn(c, self.js)

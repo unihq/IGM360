@@ -379,9 +379,21 @@ def xem_mohinh(p: dict = Depends(can_dang_nhap)):
 def goi_bat_dau(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi(goi, body.taikhoan)
     kq = dangnhap_goi.bat_dau(goi, body.taikhoan)
+    # QĐ164 ý 3: ghi F04 cả lúc bắt đầu đăng nhập (không ghi đường link, mã)
+    ghi_f04("mohinh", "batdau_goi", dangnhap_goi.nhan_dangnhap(goi, body.taikhoan), ketqua="loi" if "loi" in kq else "dat",
+            nguoi_id=p["nguoidung_id"])
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return kq
+
+
+def _loi_dn(goi: str, taikhoan: int, kq: dict, p: dict) -> HTTPException:
+    """QĐ164 ý 1: lượt bị chặn vì trùng ghi F04 kết quả `bichan`, chỉ ghi số ô bị trùng, không ghi định danh."""
+    if kq.get("trung_voi"):
+        ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap(goi, taikhoan), ketqua="bichan",
+                lydo=f"trùng tài khoản {kq['trung_voi']:02d}", nguoi_id=p["nguoidung_id"])
+        return HTTPException(409, {"loi": kq["loi"], "trung_voi": kq["trung_voi"]})   # giao diện hiện dải báo trùng
+    return HTTPException(400, kq["loi"])
 
 
 @router.post("/mohinh/goi/claude/ma")
@@ -389,7 +401,7 @@ def goi_dan_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
     _goi("claude", body.taikhoan)
     kq = dangnhap_goi.dan_ma("claude", body.taikhoan, body.ma, nguoi=p["nguoidung_id"])
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
+        raise _loi_dn("claude", body.taikhoan, kq, p)
     ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("claude", body.taikhoan), nguoi_id=p["nguoidung_id"])
     return kq
 
@@ -399,7 +411,7 @@ def goi_hoi(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi("chatgpt", body.taikhoan)
     kq = dangnhap_goi.hoi("chatgpt", body.taikhoan, nguoi=p["nguoidung_id"])
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
+        raise _loi_dn("chatgpt", body.taikhoan, kq, p)
     if kq.get("xong"):
         ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("chatgpt", body.taikhoan), nguoi_id=p["nguoidung_id"])
     return kq
@@ -410,6 +422,18 @@ def goi_huy(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi(goi, body.taikhoan)
     dangnhap_goi.huy(goi, body.taikhoan)
     return {"ok": True}
+
+
+@router.post("/mohinh/goi/{goi}/go")
+def goi_go(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
+    """QĐ164 ý 2: gỡ tài khoản gói (giao diện đã hỏi lại 01 lần)."""
+    _goi(goi, body.taikhoan)
+    kq = dangnhap_goi.go(goi, body.taikhoan)
+    ghi_f04("mohinh", "go_goi", dangnhap_goi.nhan_dangnhap(goi, body.taikhoan), ketqua="loi" if "loi" in kq else "dat",
+            nguoi_id=p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return kq
 
 
 @router.post("/mohinh/{nguon_id}/goithu")
