@@ -187,6 +187,6 @@ class KiemChuGiaoDien(unittest.TestCase):
         self.assertIn("tài&nbsp;khoản&nbsp;Claude của anh.", self.js)
         self.assertIn("mục&nbsp;Bộ&nbsp;mã&nbsp;chung", self.html)
         self.assertIn("'mục Chờ duyệt', 'mục Két khoá', 'mục Bộ mã chung'", self.js)
-        self.assertIn("'ChatGPT&nbsp;·&nbsp;Codex'", self.js)                                 # QĐ172 (Z9)
+        self.assertIn("chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'", self.js)               # QĐ172 (Z9)
         nguon = (GOC / "maychu" / "hethong" / "mohinh" / "dangnhap_goi.py").read_text(encoding="utf-8")
         self.assertIn('Bấm \\"Mở trang\\" lấy mã mới rồi dán lại."', nguon)                # N12: dấu chấm cuối

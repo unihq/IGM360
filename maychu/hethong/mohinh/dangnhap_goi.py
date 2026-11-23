@@ -482,7 +482,7 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
     """Thẻ màn 13: nguồn AI (G06) theo ưu tiên, kèm trạng thái đăng nhập của tài khoản gói."""
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
-        cot = ["id", "ma", "ten", "loai", "uutien", "trangthai", "tran_tien_thang", "tyle_5gio", "tyle_tuan",
+        cot = ["id", "ma", "ten", "loai", "hang", "uutien", "trangthai", "tran_tien_thang", "tyle_5gio", "tyle_tuan",
                "datlai_5gio_luc", "datlai_tuan_luc", "do_luc", "da_het_luc"]
         dong = thu_tu([dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai")])
     finally:

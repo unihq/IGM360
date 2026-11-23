@@ -115,11 +115,51 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
     def test_tieu_de_the_z9(self):
         js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
         html = (GOC / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
-        self.assertIn("const GOI_TEN = {claude: 'Claude&nbsp;·&nbsp;Code', chatgpt: 'ChatGPT&nbsp;·&nbsp;Codex'}", js)
+        self.assertIn("const TEN_NGUON_GOI = {claude: 'Claude' + NB + '·' + NB + 'Code', chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'}", js)
+        self.assertIn("const GOI_TEN = TEN_NGUON_GOI;", js)
+        self.assertIn("const NB = '\\u00a0';", js)
         self.assertIn('<b class="khoi">Claude&nbsp;·&nbsp;Code</b>', html)
         self.assertIn('<b class="khoi">ChatGPT&nbsp;·&nbsp;Codex</b>', html)
         self.assertNotIn("qua&nbsp;Codex", js + html)
-        self.assertIn("GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'}", js)   # chỗ khác giữ, chờ anh chốt
+        self.assertIn("GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'}", js)   # chỉ còn lấy tên hãng
+
+    def test_ten_nguon_z9b_z9c(self):
+        """QĐ176, QĐ177: đổi chữ trên giao diện, 0 đổi dữ liệu; câu văn về gói giữ "Gói Claude"."""
+        js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
+        # Z9b: thẻ "Khoá API", dòng khoá "Hãng · API"
+        self.assertIn('<div class="t16 b7">Khoá API</div>', js)
+        self.assertNotIn("Khoá API AI</div>", js)
+        for hang, chu in (("anthropic", "Claude · API"), ("openai", "OpenAI · API"), ("google", "Gemini · API"),
+                          ("openrouter", "OpenRouter · API"), ("groq", "Groq · API"), ("deepseek", "DeepSeek · API"),
+                          ("ollama", "Ollama · Cloud")):
+            self.assertIn(f"{hang}: '{chu}'", js)
+        self.assertIn("<b>' + esc(tenNguon(n)) + '</b>", js)
+        # Z9c: cột Nguồn, khung đăng nhập, câu báo kết nối, đủ 02 tài khoản, hộp gỡ, dòng nguồn màn 08
+        self.assertIn("(dau ? cum(tenNguon(dau)) : 'Chưa có nguồn')", js)
+        self.assertIn("Đăng nhập tài khoản ' + dn.tk + '</div>", js)
+        self.assertIn("bao('Đã kết nối ' + tenNguon({goi: 'chatgpt'}) + ', tài khoản ' + tk + '.')", js)
+        self.assertIn("bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.')", js)
+        self.assertIn("ten = 'tài khoản ' + tk + ' của ' + tenNguon({goi: g});", js)
+        self.assertIn("const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);", js)
+        self.assertIn("const moHinhDong = (ma, n) => {", js)                   # QĐ178: 01 hàm rút gọn dùng chung
+        self.assertNotIn("'Đã kết nối Gói", js)
+        # Giữ: tên lưu (F04, chuông) và câu văn về gói
+        self.assertEqual(dg.GOI["claude"]["ten"], "Gói Claude")
+        self.assertEqual(dg.nhan_dangnhap("claude", 1), "Gói Claude tài khoản 01")
+        self.assertIn("{GOI[goi]['ten']} · tài khoản {taikhoan:02d}", (GOC / "maychu/hethong/mohinh/dangnhap_goi.py").read_text(encoding="utf-8"))
+
+    def test_danh_sach_tra_ma_hang(self):
+        khoitao.tao_het(self.t / "dulieu")
+        from maychu.dulieu import ketnoi, phienban
+        cn = ketnoi.mo("Viecnen", self.t / "dulieu")
+        try:
+            phienban.them(cn, "nguon_ai", {"ma": "khoa_thu_01", "ten": "Tên lưu cũ", "hieuluc_tu": "2026-11-23",
+                                            "loai": "khoa_api", "uutien": 5, "hang": "anthropic", "cach_goi": "anthropic"})
+        finally:
+            cn.close()
+        ds = dg.danh_sach(self.t / "dulieu")
+        d = next(x for x in ds if x["ma"] == "khoa_thu_01")
+        self.assertEqual((d["hang"], d["ten"]), ("anthropic", "Tên lưu cũ"))   # tên lưu giữ nguyên, giao diện tự đặt chữ
 
     def test_image_dat_bien_dung_o_luu(self):
         df = (GOC / "Dockerfile").read_text(encoding="utf-8")

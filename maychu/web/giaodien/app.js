@@ -280,15 +280,28 @@ async function capNhat(cheDo) {
 }
 
 // ---- Màn 13 Mô hình AI: thẻ gói Claude, gói ChatGPT, khoá API; bảng mô hình mặc định
-const GOI_TEN = {claude: 'Claude&nbsp;·&nbsp;Code', chatgpt: 'ChatGPT&nbsp;·&nbsp;Codex'};   // QĐ172 (Z9): "Hãng · Công cụ", thay T2
-const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'};
+// QĐ172, QĐ176, QĐ177 (Z9, Z9b, Z9c; từ điển dòng 60, 61): tên nguồn đứng riêng "Hãng · Công cụ", viết ở 01 chỗ này.
+// Chỉ đổi chữ trên giao diện: tên lưu trong bảng nguồn AI giữ nguyên (F04, câu chuông "Gói Claude …" vẫn dùng tên gói).
+const NB = '\u00a0';   // dấu "·" nối không ngắt 02 bên
+const TEN_NGUON_GOI = {claude: 'Claude' + NB + '·' + NB + 'Code', chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'};
+const TEN_NGUON_HANG = {anthropic: 'Claude · API', openai: 'OpenAI · API', google: 'Gemini · API', openrouter: 'OpenRouter · API',
+  groq: 'Groq · API', deepseek: 'DeepSeek · API', ollama: 'Ollama · Cloud'};
+const tenNguon = n => !n ? '' : n.goi ? TEN_NGUON_GOI[n.goi]
+  : (n.loai === 'khoa_api' && TEN_NGUON_HANG[n.hang] ? TEN_NGUON_HANG[n.hang].replace(' · ', NB + '·' + NB) : n.ten);
+const GOI_TEN = TEN_NGUON_GOI;   // tiêu đề thẻ gói
+const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'};   // chỉ còn lấy tên hãng ("Thêm tài khoản Claude khác")
 // N15: tên mô hình đọc được từ mã mô hình (claude-sonnet-4-6 → Claude Sonnet 4.6); chưa có lần gọi nào ghi mô hình
 // thì ghi "mô hình mặc định" (gói chạy mô hình mặc định của gói).
 const tenMoHinh = ma => { if (!ma) return 'mô hình mặc định'; const p = String(ma).split(/[-_\s]+/);
   const chu = p.filter(x => !/^\d+(\.\d+)*$/.test(x)).map(x => /^gpt$/i.test(x) ? 'GPT' : x.charAt(0).toUpperCase() + x.slice(1));
   const so = p.filter(x => /^\d+(\.\d+)*$/.test(x) && x.length < 6).join('.');
   return chu.join(' ') + (so ? ' ' + so : ''); };
-const dongNguon = n => (n.goi ? GOI_NGAN[n.goi] : n.ten) + ' · ' + tenMoHinh(n.mohinh_gannhat);
+// QĐ178: "Hãng · Công cụ · Mô hình" bỏ chữ trùng tên hãng ở đầu tên mô hình ("Claude · Code · Sonnet 4.6").
+// 01 hàm rút gọn dùng chung cho mọi chỗ ghi tên mô hình sau tên nguồn.
+const moHinhDong = (ma, n) => { const mh = tenMoHinh(ma); if (!ma) return mh;
+  const hang = tenNguon(n).split(NB + '·')[0].split(' · ')[0].trim();
+  return hang && mh.toLowerCase().startsWith(hang.toLowerCase() + ' ') ? mh.slice(hang.length + 1) : mh; };
+const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
   : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
@@ -306,7 +319,7 @@ function theGoi(g, ds, nguon, uu) {
   const coTk = ds.some(x => x.da_noi), coDong = x => nguon.some(y => y.ma === x.ma && y.trangthai === 'dung');
   // QĐ164 (Z6-TK): mới cài hoặc đã gỡ hết thì thẻ hiện 01 dòng "Chưa có tài khoản" (N10)
   const rong = !ds.length || (ds.length === 1 && !ds[0].da_noi && !ds[0].khong_ro && !coDong(ds[0]));
-  let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + GOI_TEN[g] + '</div><div class="t12 phu">Phí cố định tháng'
+  let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + esc(GOI_TEN[g]) + '</div><div class="t12 phu">Phí cố định tháng'
     + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>';
   if (rong && !dn.url) h += '<div class="tk-dong"><span class="anh-dd mini xam">1</span><div class="f1"><b>Chưa có tài&nbsp;khoản</b><div class="t12 phu">'
     + (g === 'claude' ? 'Đăng nhập để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu : 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng') + '</div></div><span class="nhan n-xem"><i></i>Chưa đăng nhập</span></div>';
@@ -322,7 +335,7 @@ function theGoi(g, ds, nguon, uu) {
   // QĐ164 ý 1 (Z6-TK): đăng nhập trùng thì không tạo ô, dải xanh dưới ô đang có; số là số của ô đang giữ tài khoản đó
   if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.</span></div>';
   if (dn.url) {
-    h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + ' · ' + GOI_NGAN[g] + '</div>'
+    h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + '</div>'
       + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài&nbsp;khoản&nbsp;Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
       + '<div class="dong lk"><span class="t12 phu f1 cat">' + esc(dn.url.replace(/^https?:\/\//, '')) + '</span><a class="btn btn-phu nho" href="' + esc(dn.url) + '" target="_blank" rel="noopener noreferrer">' + ICON['external-link'] + 'Mở trang</a></div>';
     if (g === 'claude') h += '<div class="buoc-dn"><span class="so-b">2</span><span class="f1">Trang sẽ hiện 01 mã. Chép mã, dán vào ô dưới.</span></div>'
@@ -352,7 +365,7 @@ async function themTk(g) {
   if (!so) { const c = ds.find(x => !x.da_noi); await batDauDn(g, c ? c.taikhoan : oTrong(ds)); return; }
   const o = oTrong(ds);
   if (so >= 2 || !o) { const c = ds.find(x => !x.da_noi); if (c && so < 2) { await batDauDn(g, c.taikhoan); return; }
-    bao(GOI_NGAN[g] + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.'); return; }
+    bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.'); return; }
   xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi anh có 02 gói riêng, mỗi gói 01 tài khoản ' + ten + ' khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.',
     'Tiếp tục', () => batDauDn(g, o));
 }
@@ -365,8 +378,8 @@ function veMoHinh() {
   d.nguon.filter(n => n.loai !== 'khoa_api' && n.trangthai === 'dung').forEach(n => { ++k; if (n.goi && !(n.goi in uu)) uu[n.goi] = k; });
   ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
-    + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API AI</div><div class="t12 phu">Phí theo lượt</div></div></div>'
-    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(n.ten) + '</b><div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
+    + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API</div><div class="t12 phu">Phí theo lượt</div></div></div>'
+    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
         + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt hạn mức</span>') + '</div>').join('')
       : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở mục Két khoá (có ở bản sau).</div>')
     + '<div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
@@ -376,7 +389,7 @@ function veMoHinh() {
   const cot = 'grid-template-columns:1.4fr 1fr 1fr';
   $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span></div>'
     + VIEC.map(v => '<div class="hang" style="' + cot + '"><b class="rong-mb">' + v + '</b><span data-l="Mô hình">Mặc định của nguồn</span><span data-l="Nguồn">'
-      + (dau ? cum(dau.ten) : 'Chưa có nguồn') + '</span></div>').join('');
+      + (dau ? cum(tenNguon(dau)) : 'Chưa có nguồn') + '</span></div>').join('');
 }
 async function napMoHinh() { try { D.md = await api('/mohinh'); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
 async function batDauDn(g, tk) {
@@ -388,14 +401,14 @@ async function batDauDn(g, tk) {
 async function hoiChatGPT(tk) {
   const dn = D.dn.chatgpt; if (!dn || dn.tk !== tk || !dn.url) return;
   try { const kq = await api('/mohinh/goi/chatgpt/hoi', {taikhoan: tk});
-    if (kq.xong) { D.dn.chatgpt = {}; bao('Đã kết nối Gói ChatGPT · Tài khoản ' + tk + '.'); await napMoHinh(); return; } }
+    if (kq.xong) { D.dn.chatgpt = {}; bao('Đã kết nối ' + tenNguon({goi: 'chatgpt'}) + ', tài khoản ' + tk + '.'); await napMoHinh(); return; } }
   catch (e) { if (e.status) { D.dn.chatgpt = {}; if (e.status === 409) D.trung.chatgpt = (e.ct || {}).trung_voi; else bao(e.message + '.'); await napMoHinh(); return; } }
   setTimeout(() => hoiChatGPT(tk), 4000);
 }
 async function danMaClaude() {
   const dn = D.dn.claude, ma = ($('#ma-claude') || {}).value || '';
   if (!ma.trim()) { bao('Anh dán mã trang Claude hiện ra.'); return; }
-  try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối Gói Claude · Tài khoản ' + dn.tk + '.'); await napMoHinh(); }
+  try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.'); await napMoHinh(); }
   catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
 }
 
@@ -486,7 +499,7 @@ document.addEventListener('click', async ev => {
     const tk = Number(d.dnTk); if (tk) await batDauDn(d.dnGoi, tk); else await themTk(d.dnGoi); return; }
   else if (d.themGoi) { await themTk(d.themGoi); return; }
   else if ('mcXacnhan' in d) { await danMaClaude(); return; }
-  else if (d.goGoi) { const g = d.goGoi, tk = Number(d.goTk), ten = 'Tài khoản ' + tk + ' · ' + GOI_NGAN[g];
+  else if (d.goGoi) { const g = d.goGoi, tk = Number(d.goTk), ten = 'tài khoản ' + tk + ' của ' + tenNguon({goi: g});
     xacnhan('Gỡ ' + ten + '?', 'Phần mềm ngừng dùng tài khoản này, ô ẩn khỏi màn. Số đã dùng và chi phí cũ giữ nguyên; thao tác ghi vào nhật ký.<br><br>Dùng lại thì đăng nhập lại.', 'Gỡ tài khoản', async () => {
       D.trung[g] = 0;
       try { await api('/mohinh/goi/' + g + '/go', {taikhoan: tk}); bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.'); } catch (e) { bao(e.message + '.'); }
