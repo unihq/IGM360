@@ -319,7 +319,7 @@ class KiemGiaoDien(unittest.TestCase):
         for chu in ("Tìm nguồn, mô hình…", "Dùng ngay cho cuộc này và các cuộc mới", "Thêm nguồn AI ở mục Mô hình AI",
                     "Đang tải danh sách mô hình…", "Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối",
                     ") cho cuộc này và các cuộc mới.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
-                    "' (mặc định) cho tới khi đặt lại'", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
+                    "' (mặc định)' + (hong.het ? ' cho tới khi đặt lại' : '')", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
             self.assertIn(chu, self.js, chu)
         self.assertIn("#8F5F00", self.js)                                   # chữ vàng tương phản 5,5:1
         self.assertIn(".tn-meta.mh-vang{color:#8F5F00}", self.html)

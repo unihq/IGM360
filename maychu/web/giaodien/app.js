@@ -344,7 +344,7 @@ const nhanTraLoi = x => { const n = timNguon(x.nguon_id), mh = mhThucDung(x);
 const tieuTraLoi = x => { const p = [], mh = mhThucDung(x), dp = x.du_phong;
   if (mh) p.push('Bản cụ thể: ' + mh);
   if (x.chay_tk) p.push('chạy bằng tài khoản ' + x.chay_tk + (dp && dp.tk ? ' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)
-    : 'tài khoản ' + dp.tk + ' hết hạn mức' + (dp.den ? ' đến ' + denLuc(dp.den) : '')) + ')' : ''));
+    : 'tài khoản ' + dp.tk + ' đang tạm nghỉ' + (dp.den ? ' đến ' + denLuc(dp.den) : '')) + ')' : ''));   // Y36f N8
   return p.join(' · '); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
@@ -520,6 +520,9 @@ const chuNghi = (g, n0) => 'Tài khoản ' + (n0 && n0.goi ? GOI_NGAN[n0.goi].re
 function chuGhimHong(x) { const g = x.ghim_hong || x.md_hong, a = x.ghim_hong && g.khoa && timMh(g.khoa), n = timNguon(x.nguon_id);
   const n0 = (x.md_hong || g.tk_nghi) && timNguon(g.nguon_id);   // Y36c: lượt thường, nguồn đứng trước đang hết hạn mức
   if (g.tk_nghi) return esc(chuNghi(g, n0)) + ', đã dùng ' + esc(nbsp(n ? tenLoai(n).replace(/ /g, ' ') : 'mô hình'));   // Y36d P3b
+  if (x.md_hong && !g.het_hanmuc)   // Y36f N6: lượt thường, nguồn đứng trước lỗi (không phải hạn mức) rồi sang hãng khác
+    return esc(n0 && n0.goi ? GOI_NGAN[n0.goi].replace('Gói ', '') : n0 ? tenLoai(n0) : 'Nguồn ưu tiên 1') + ' chưa dùng được'
+      + (g.loi ? ' (' + esc(nbsp(g.loi)) + ')' : '') + ', đã dùng ' + esc(nbsp(n ? tenLoai(n).replace(/ /g, ' ') : 'mô hình'));
   const ten = x.md_hong ? chuHoa(tenHet(g, n0) || (n0 ? tenLoai(n0).replace(/ /g, ' ') : 'Mô hình mặc định'))
     : a ? tenMh(a.m.ma, a.g.nhom, a.g, true) : g.ma ? tenMh(g.ma, null, null, true) : 'Mô hình đã chọn';   // N3
   const dung = mhThucDung(x) ? tenMh(mhThucDung(x), x.nguon_id, n, true) : (n ? tenLoai(n).replace(/ /g, ' ') : 'mô hình');   // U10b F2
@@ -529,7 +532,7 @@ const logoNhom = g => { const l = g.goi === 'claude' || g.hang === 'anthropic' ?
 function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 phu">Chưa có nguồn AI đã kết nối</span>';
   const ten = c.m ? tenMh(c.m.ma, c.g.nhom, c.g) : 'Mặc định', hong = c.ghim && D.hong[D.htId];
   const tieu = hong && hong.nghi ? chuNghi(hong.nghi, timNguon(hong.nghi.nguon_id)) + ' · tạm dùng ' + (timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình')
-    : hong ? ten + (hong.het ? ' đang hết hạn mức' : ' chưa dùng được') + ' · tạm dùng ' + (hong.dung ? tenMh(hong.dung, hong.nguon_id) : timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình') + ' (mặc định) cho tới khi đặt lại'
+    : hong ? ten + (hong.het ? ' đang hết hạn mức' : ' chưa dùng được') + ' · tạm dùng ' + (hong.dung ? tenMh(hong.dung, hong.nguon_id) : timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình') + ' (mặc định)' + (hong.het ? ' cho tới khi đặt lại' : '')
     : tenNguon(c.g).replace(/\u00a0/g, ' ') + ' · ' + ten + (c.m ? ' · Bản cụ thể: ' + c.m.ma : '') + (c.ghim ? ' · đã ghim cho cuộc trò chuyện này' : ' · theo mặc định chung');
   return '<button type="button" class="mh-nut' + (MH.noi === 'chat' ? ' mo' : '') + '" data-mhnut title="' + esc(tieu) + '"><span class="mh-cham"' + (hong ? ' style="background:#8F5F00"' : '') + '></span>' + esc(ten)
     + (c.ghim ? '<span aria-label="' + (hong ? 'ghim chưa dùng được' : 'đã ghim') + '">' + icoMau(ICON.pin, hong ? '#8F5F00' : '#646A73', 13) + '</span>' : '')
@@ -625,7 +628,7 @@ function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
-    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || {}).loi_ct ? ' title="' + esc(x.ghim_hong.loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
+    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || x.md_hong || {}).loi_ct ? ' title="' + esc((x.ghim_hong || x.md_hong).loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();

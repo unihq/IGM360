@@ -147,7 +147,7 @@ class KiemGiaoDien076(unittest.TestCase):
                     "(mh ? tenMh(mh, n.id, n, true) : 'Mặc định')", "tenMh(mhThucDung(x), x.nguon_id, n, true)",   # N3
                     "' title=\"' + esc(tieuTraLoi(x)) + '\"'",
                     "const tenLoai = n => n && n.goi ? TEN_NGUON_GOI[n.goi] : tenNguon(n);",      # QĐ189: không ghi tài khoản
-                    "'chạy bằng tài khoản ' + x.chay_tk", "' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)", "'tài khoản ' + dp.tk + ' hết hạn mức'",
+                    "'chạy bằng tài khoản ' + x.chay_tk", "' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)", "'tài khoản ' + dp.tk + ' đang tạm nghỉ'",
                     "trên cùng phần mềm, hãng có thể khoá tài&nbsp;khoản.",                         # Z11b
                     "khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.' + canhTk(ten)",
                     "(dn.tk >= 2 ? canhTk(ten) : '')"):

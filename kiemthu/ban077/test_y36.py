@@ -532,9 +532,51 @@ class KiemY36e(Nen):
     def test_giao_dien_va_thaydoi(self):
         js = (GD / "app.js").read_text(encoding="utf-8")
         self.assertIn("'chưa dùng được' + (g.loi ? ' (' + esc(nbsp(g.loi)) + ')' : '')", js)
-        self.assertIn("((x.ghim_hong || {}).loi_ct ? ' title=\"' + esc(x.ghim_hong.loi_ct) + '\"' : '')", js)
+        self.assertIn("((x.ghim_hong || x.md_hong || {}).loi_ct ? ' title=\"' + esc((x.ghim_hong || x.md_hong).loi_ct) + '\"' : '')", js)
         td = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.6")[0]
         self.assertIn("- Trò chuyện AI qua Claude được tra web", td)
+
+
+class KiemY36f(KiemY36e):
+    """Y36f (CDO U11e): N6 dòng vàng khi lượt thường lỗi (không phải hạn mức) rồi sang hãng khác; N7 bỏ "cho tới khi
+    đặt lại" khi lý do không phải hạn mức; N8 dự phòng vì cả tài khoản tạm nghỉ ghi "đang tạm nghỉ"."""
+    test_a_lenh_tro_chuyen_va_viec_khac = test_b_loi_dung_loai = test_c_ghim_va_mac_dinh_deu_ap = None
+    test_n5_man13_tai_khoan_tam_nghi = test_giao_dien_va_thaydoi = None
+
+    def test_n6_luot_thuong_loi_sang_hang_khac(self):
+        self.dau_ra = [{"type": "result", "subtype": "error_during_execution", "is_error": True, "errors": ["boom"]}]
+        self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        c3 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
+        with mock.patch.object(congai, "_chay", side_effect=self.chay),                 mock.patch.object(congai, "_goi_chatgpt", return_value=dict(TRA, mohinh_bao="gpt-6-luna")):
+            kq = congai.goi("x", loai_viec="trochuyen")
+        self.assertEqual((kq["nguon_id"], len(self.lenh)), (c3, 2))          # 02 tài khoản Claude lỗi rồi sang ChatGPT
+        self.assertIsNone(kq["ghim_hong"])
+        self.assertEqual(kq["md_hong"], {"nguon_id": self.c1, "het_hanmuc": False, "loi": "lỗi khi chạy",
+                                         "loi_ct": "error_during_execution: boom"})
+        with mock.patch.object(congai, "_chay", side_effect=subprocess.TimeoutExpired("claude", 600)),                 mock.patch.object(congai, "_goi_chatgpt", return_value=dict(TRA)):
+            kq = congai.goi("x", loai_viec="trochuyen")
+        self.assertEqual((kq["md_hong"]["loi"], kq["md_hong"]["het_hanmuc"]), ("quá giờ", False))
+        with mock.patch.object(congai, "_chay", side_effect=self.chay):   # cùng hãng (Claude) trả lời được: không có dòng vàng
+            self.dau_ra = None
+            self.assertIsNone(congai.goi("x", loai_viec="trochuyen")["md_hong"])
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("if (x.md_hong && !g.het_hanmuc)", js)
+        self.assertIn("' chưa dùng được'\n      + (g.loi ? ' (' + esc(nbsp(g.loi)) + ')' : '') + ', đã dùng '", js)
+
+    def test_n7_khong_cho_toi_khi_dat_lai_khi_loi(self):
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("' (mặc định)' + (hong.het ? ' cho tới khi đặt lại' : '')", js)
+        self.assertNotIn("' (mặc định) cho tới khi đặt lại'", js)
+
+    def test_n8_du_phong_tai_khoan_tam_nghi(self):
+        c2 = self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        den = congai.ghi_het_tai_khoan(self.c1, time.time() + 1800)
+        with mock.patch.object(congai, "_chay", side_effect=self.chay):
+            kq = congai.goi("x", loai_viec="trochuyen")
+        self.assertEqual((kq["nguon_id"], kq["chay_tk"]), (c2, 2))
+        self.assertEqual(kq["du_phong"], {"tk": 1, "den": datetime.fromtimestamp(den, MUIGIO_VN).isoformat(timespec="seconds")})
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("'tài khoản ' + dp.tk + ' đang tạm nghỉ' + (dp.den ? ' đến ' + denLuc(dp.den) : '')", js)
 
 
 class KiemZ12(unittest.TestCase):

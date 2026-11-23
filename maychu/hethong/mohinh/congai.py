@@ -699,7 +699,7 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
 
 
 def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client) -> dict:
-    ghim_hong, nghi, nghi_mh, het_dau = None, {}, {}, None
+    ghim_hong, nghi, nghi_mh, het_dau, loi_dau = None, {}, {}, None, None
     with sem:
         ds = _nguon(thumuc, loai_viec)
         if danhmuc_mohinh.la_viec_nen(loai_viec) or viecnen_id is not None:
@@ -744,14 +744,21 @@ def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id,
                 md_hong = None
                 if not ghim_hong and het_dau and dangnhap_goi.loai_nguon(het_dau) != dangnhap_goi.loai_nguon(d):
                     ma0 = (het_dau["mohinh"] or {}).get("ma")
-                    md_hong = {**mo_ta_het(het_dau["id"], ma0), "nguon_id": het_dau["id"], "het_hanmuc": True,
-                               **_ly_do_nghi(het_dau, ma0, nghi.get(het_dau["id"]))}   # P3b
+                    if loi_dau is not None:   # Y36f N6: nguồn đứng trước lỗi (không phải hạn mức) rồi sang hãng khác
+                        md_hong = {"nguon_id": het_dau["id"], "het_hanmuc": False, **loi_dau}
+                    else:
+                        md_hong = {**mo_ta_het(het_dau["id"], ma0), "nguon_id": het_dau["id"], "het_hanmuc": True,
+                                   **_ly_do_nghi(het_dau, ma0, nghi.get(het_dau["id"]))}   # P3b
                 return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
                         "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "mohinh_bao": kq.get("mohinh_bao"),
                         "ghim_hong": ghim_hong, "md_hong": md_hong, "ghim_khoa": None, "bo_qua": bo_qua,
                         **_chay_bang(d, ds, nghi, thumuc, nghi_mh)}
             if het_dau is None and str(kq).startswith("hết hạn mức"):
                 het_dau = d
+            elif het_dau is None and kq in ("lỗi", "quá giờ"):   # Y36f N6
+                het_dau = d
+                b = bo_qua[-1] if bo_qua else {}
+                loi_dau = {"loi": b.get("loi") or kq, "loi_ct": b.get("loi_ct") or ""}
             nghi.setdefault(d["id"], kq)
             nghi_mh.setdefault(d["id"], (d["mohinh"] or {}).get("ma"))
     return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua,
