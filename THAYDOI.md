@@ -3,6 +3,16 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.9
+Tóm tắt: 05 lớp an toàn khi cập nhật, tên gói Claude
+- Trước khi cập nhật, phần mềm kiểm ổ trống; ổ không đủ thì khoá nút Cập nhật và ghi rõ còn bao nhiêu, cần bao nhiêu.
+- Trước khi gửi lệnh cập nhật, phần mềm chụp bản sao 07 tệp dữ liệu, đẩy lên Drive (chờ tối đa 10 phút) rồi mới cập nhật.
+- Bản mới nâng dữ liệu không thành thì dữ liệu trả về như trước và phần mềm chạy chế độ an toàn, chỉ mở Cài đặt › Cập nhật.
+- Có nút Quay về bản trước: chạy lại bản liền trước để sẵn trong gói cài, không cần mạng.
+- Sau khi lên bản mới, phần mềm tự kiểm 06 điểm và ghi kết quả ở lịch sử cập nhật; có điểm chưa đạt thì báo ở chuông.
+- Thẻ Claude hiện lại tên, gói khi dùng mã dài hạn; chặn 02 tài khoản trùng nhau; dòng Kiểm mã cho biết lần gọi thử đạt hay chưa.
+- Dán mã dài hạn chép từ PowerShell không còn bị từ chối vì xuống dòng, dấu cách; dán nhầm ô mã xác nhận cũng nhận đúng.
+
 ## 0.7.8
 Tóm tắt: Mã dài hạn 365 ngày cho gói Claude
 - Gói Claude kết nối bằng mã dài hạn dùng 365 ngày, không còn hết phiên giữa chừng như kiểu đăng nhập cũ.

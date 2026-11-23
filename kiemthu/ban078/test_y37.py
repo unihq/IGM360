@@ -30,7 +30,11 @@ CUOI = MA_GIA[-4:]
 class NenMa(Nen):
     def setUp(self):
         super().setUp()
-        bien = mock.patch.dict(os.environ, {"IGM360_THUMUC_CLAUDE": str(self.g / "claude")})
+        # 0.7.9: không bao giờ gọi CLI thật của máy chạy bài kiểm (CLI trỏ tới đường không có; bài cần CLI thì tự đặt CLI giả);
+        # tài khoản 01 dùng thư mục tạm, không đụng thư mục nhà
+        bien = mock.patch.dict(os.environ, {"IGM360_THUMUC_CLAUDE": str(self.g / "claude"), "CLAUDE_CONFIG_DIR": str(self.g / "claude01"),
+                                            "IGM360_CLAUDE_CLI": str(self.g / "khong_co_cli_claude"),
+                                            "IGM360_CODEX_CLI": str(self.g / "khong_co_cli_codex")})
         bien.start()
         self.addCleanup(bien.stop)
         madaihan._PHIEN.clear()
@@ -56,7 +60,8 @@ class KiemLuuVaMoiTruong(NenMa):
     def test_che_va_hop_le(self):
         self.assertEqual(chemod.che("lỗi " + MA_GIA + " xong"), "lỗi sk-ant-oat01-•••• xong")
         self.assertTrue(madaihan.hop_le(MA_GIA))
-        for sai in ("sk-ant-api03-" + "Q" * 30, "sk-ant-oat01-ngan", "", None, MA_GIA + " x"):
+        # 0.7.9 N28: khoảng trắng ở giữa là chỗ cửa sổ lệnh ngắt dòng nên được bỏ; chữ có dấu đứng sau mã thì vẫn từ chối
+        for sai in ("sk-ant-api03-" + "Q" * 30, "sk-ant-oat01-ngan", "", None, MA_GIA + " Lưu mã này"):
             self.assertFalse(madaihan.hop_le(sai), sai)
 
     def test_luu_lay_thay_xoa(self):
@@ -310,7 +315,7 @@ class KiemY37d(NenMa):
         ma = ("const CHU_MDH = 'Mã dài hạn'; const NB = '\\u00a0'; const nbsp = s => String(s).replace(/ /g, NB);"
               "const ICON = new Proxy({}, {get: () => '<svg/>'}); const cum = s => s; const cau = s => s;"
               "const o = {'#mdh-tieu': {}, '#mdh-luu': {dataset: {mdLuu: '1'}}, '#mdh-than': {}}; const $ = s => o[s];"
-              "const D = {mdDan: null};\n" + doan
+              "const D = {mdDan: null}; const CHU_Z15 = {danLenh: '', lenh: '', chep: '', thuHoi: '', thuHoiTrang: ''};\n" + doan
               + "\nD.mdDan = {tk: 2, loi: '', tin: ''}; veMdDan(); const a = o['#mdh-luu'].dataset.mdLuu;"
               + "\nD.mdDan = {tk: 1, loi: '', tin: ''}; veMdDan(); const b = o['#mdh-luu'].dataset.mdLuu;"
               + "\nconsole.log(JSON.stringify([String(a), String(b), o['#mdh-tieu'].textContent.endsWith('2') === false]));")
@@ -398,8 +403,10 @@ class KiemGiaoDien(unittest.TestCase):
                     "h += theMdHet(x, ds);"):                                                                           # N14 + Đ5
             self.assertIn(chu, js, chu)
         self.assertNotIn("data-md-ngat", js)                                                                                  # N14
-        self.assertNotIn("setup-token", js)                                                                                   # N20, QĐ135
-        doan = js[js.index("const CHU_MDH"):js.index("function theGoi")].lower()
+        # QĐ217 (Z15 dòng 07, 11) thay N20: lệnh `claude setup-token` chỉ hiện ở khối chữ đã duyệt CHU_Z15
+        khoi = js[js.index("const CHU_Z15 = {"):js.index("// N28 (a): làm sạch mã")]
+        self.assertEqual(js.count("setup-token"), khoi.count("setup-token"))
+        doan = js[js.index("const CHU_MDH"):js.index("function theGoi")].lower().replace(khoi.lower(), "")
         self.assertNotIn("token", doan)
         for chu in (".mb .lop{position:fixed!important}", ".mb #h-xacnhan,.mb #h-mdh{align-items:center;padding:16px}",      # N22
                     ".md-chip.canh{border-color:#F2A7A5;color:var(--canh)}", ".md-han.canh{color:var(--canh);font-weight:600}",  # N12

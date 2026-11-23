@@ -3,6 +3,11 @@
 # Mã để chỉ đọc; mọi dữ liệu nằm ở ổ gắn ngoài /dulieu và 02 ổ giữ đăng nhập gói AI.
 # Không cài thêm gói hệ điều hành nào ngoài image nền.
 
+# 0.7.9 lớp 3 (QĐ213, QĐ215): ảnh liền trước trên kho ảnh (công khai, không cần khoá). Mã của nó được để sẵn ở
+# /app/ban_truoc để nút "Quay về bản trước" chạy lại bản đó mà không cần mạng, không cần quyền Docker.
+ARG ANH_TRUOC=ghcr.io/unihq/igm360:latest
+FROM ${ANH_TRUOC} AS anh_truoc
+
 # Nguồn Node.js 22: lấy từ image chính thức, ghim bản vá bảo mật (22.23.4, phát hành 21/10/2026).
 FROM node:22.23.4-bookworm-slim AS nguon_node
 
@@ -46,6 +51,16 @@ RUN pip install -r requirements.txt
 COPY VERSION LICENSE ./
 COPY maychu ./maychu
 
+# 0.7.9 lớp 3: chọn mã bản liền trước. Ảnh `latest` đã là chính bản này (đóng lại lần 02) thì lấy bản trước của nó;
+# ảnh trước không có mã (lần đầu) thì không có nút quay về. Chỉ chép mã và số bản, không chép thư viện.
+COPY --from=anh_truoc /app /tmp/anh_truoc
+RUN set -e; t=/tmp/anh_truoc; dang="$(tr -d ' \n\r' < VERSION)"; \
+    if [ -f "$t/VERSION" ] && [ "$(tr -d ' \n\r' < $t/VERSION)" = "$dang" ]; then t=/tmp/anh_truoc/ban_truoc; fi; \
+    if [ -f "$t/VERSION" ] && [ -d "$t/maychu" ]; then \
+        mkdir -p ban_truoc && cp -r "$t/maychu" "$t/VERSION" ban_truoc/ && echo "Bản trước: $(cat ban_truoc/VERSION)"; \
+    else echo "Không có bản trước"; fi; \
+    rm -rf /tmp/anh_truoc
+
 # Chạy bằng người dùng thường, không phải root.
 RUN useradd -u 10001 -m -d /home/igm igm \
     && mkdir -p /dulieu /home/igm/.claude /home/igm/.codex \
@@ -72,4 +87,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 # Chỉ tin địa chỉ IP thật do cổng HTTPS chuyển tới: địa chỉ cổng đặt ở biến FORWARDED_ALLOW_IPS (tệp compose).
 # Mặc định chỉ tin chính máy, không tin nguồn nào khác.
 ENV FORWARDED_ALLOW_IPS=127.0.0.1
-CMD ["python", "-m", "uvicorn", "maychu.khoidong:app", "--host", "0.0.0.0", "--port", "8360", "--proxy-headers"]
+# 0.7.9 lớp 3: `maychu.chay` chọn bản chạy (bản này, hoặc bản trước khi anh bấm Quay về bản trước) rồi chạy uvicorn.
+CMD ["python", "-m", "maychu.chay"]

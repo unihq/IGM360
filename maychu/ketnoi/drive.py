@@ -9,6 +9,7 @@ Gọi API bằng httpx (thư viện đã duyệt, QĐ80); không thêm thư vi�
 """
 import json
 import secrets
+import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -168,8 +169,17 @@ def dang_noi(thumuc: Path | None = None) -> bool:
     return bool(d and d[0] == "dung" and kho.tim(DV_LAMMOI, thumuc))
 
 
+_KHOA_DAY = threading.Lock()
+
+
 def day_hang_cho(thumuc: Path | None = None, client=None, gioi_han: int = 20) -> dict:
-    """Đẩy các dòng M01 đến lượt. Trả về số tệp đã đẩy, lỗi."""
+    """Đẩy các dòng M01 đến lượt. Trả về số tệp đã đẩy, lỗi. 0.7.9: lịch chạy nền và lượt sao trước cập nhật
+    có thể cùng gọi, nên đẩy lần lượt (không đẩy 01 tệp 02 lần)."""
+    with _KHOA_DAY:
+        return _day_hang_cho(thumuc, client, gioi_han)
+
+
+def _day_hang_cho(thumuc: Path | None, client, gioi_han: int) -> dict:
     if not dang_noi(thumuc):
         return {"day": 0, "loi": 0, "lydo": "chua_ket_noi"}
     bay = _bay_gio()

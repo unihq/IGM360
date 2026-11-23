@@ -49,8 +49,36 @@ def dichvu(tk: int) -> str:
     return f"goi_claude_{tk:02d}"
 
 
+TIEN_TO = "sk-ant-oat01-"
+_KY_TU_AN = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"))
+# N28 (QĐ216): chữ báo khi dán mã, viết ở 01 chỗ; anh duyệt nguyên văn (QĐ217, bảng Z15b dòng 22, 23)
+CHU_DAN = {
+    "trong": "Anh dán mã dài hạn vào ô",
+    "chua_tron": "Mã vừa dán có {n} ký tự, chưa trọn. Chép lại cả mã rồi dán lại",   # Z15b dòng 23 (CPO trình anh)
+    "trung": "Tài khoản Claude này đã kết nối ở Tài khoản {tk}. Phần mềm không lưu mã. Thu hồi mã vừa tạo ở claude.ai/settings/claude-code",   # Z15b dòng 22
+}
+
+
+def lam_sach(ma) -> str:
+    """N28 (a): bỏ mọi khoảng trắng, xuống dòng, ký tự ẩn mà bản chép từ cửa sổ lệnh mang theo; nhận dạng `TÊN=mã`
+    (ví dụ dòng `CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-…`) và dấu nháy bao ngoài. Chữ đứng SAU mã thì không tự cắt
+    (dễ cắt sai): để `hop_le` từ chối, câu báo chỉ chỗ dán."""
+    s = "".join(str(ma or "").split()).translate(_KY_TU_AN)
+    if "=" in s and TIEN_TO in s.split("=")[-1]:
+        s = s.split("=")[-1]
+    return s.strip("'\"`")
+
+
 def hop_le(ma: str) -> bool:
-    return isinstance(ma, str) and bool(MA_RE.fullmatch(ma.strip()))
+    return isinstance(ma, str) and bool(MA_RE.fullmatch(lam_sach(ma)))
+
+
+def chu_loi_dan(ma) -> str:
+    """N28 (c): câu báo ghi số ký tự đã nhận (không hiện mã), chỉ đúng chỗ dán."""
+    s = lam_sach(ma)
+    if not s:
+        return CHU_DAN["trong"]
+    return CHU_DAN["chua_tron"].format(n=len(s))
 
 
 # ---------------- Két khoá ----------------
@@ -100,9 +128,9 @@ def lay(tk: int, thumuc=None) -> str | None:
 
 def luu(tk: int, ma: str, thumuc=None, nguoi: str = "hethong") -> dict:
     """Đ1, Đ7, Đ8: kiểm tiền tố rồi cất (thay dòng cũ nếu có). Trả thông tin thẻ."""
-    ma = (ma or "").strip()
+    ma = lam_sach(ma)
     if not hop_le(ma):
-        raise ValueError("Mã không đúng dạng mã dài hạn của Claude")
+        raise ValueError(chu_loi_dan(ma))
     han = (datetime.now(MUIGIO_VN) + timedelta(days=SO_NGAY)).isoformat(timespec="seconds")
     cu = kho.tim(dichvu(tk), thumuc)
     if cu:
@@ -299,6 +327,9 @@ def bat_dau_lay(tk: int, env: dict) -> dict:
 def gui_ma(tk: int, ma_web: str) -> dict:
     """Gõ mã trang đăng nhập hiện, chờ mã dài hạn. {ma} (chỉ cho lớp lưu, không trả ra API) hoặc {loi}."""
     ma_web = "".join(str(ma_web or "").split())
+    if lam_sach(ma_web).startswith(TIEN_TO):   # N28 (b): mã dài hạn dán nhầm ô bước 2 → huỷ lượt, lưu như Dán mã
+        huy_lay(tk)
+        return {"ma": lam_sach(ma_web), "dan_nham": True} if hop_le(ma_web) else {"loi": chu_loi_dan(ma_web)}
     with _KHOA:
         p = _PHIEN.get(tk)
     if not p:
@@ -373,9 +404,14 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
     gọi thử đạt thì đăng xuất kiểu đăng nhập cũ của thư mục này (Đ8). Không bao giờ trả mã."""
     from maychu.hethong import nhatky
     from maychu.hethong.mohinh import congai, dangnhap_goi as dg
+    cu = _trang_thai_cli(tk, dung_ma=False)            # đăng nhập kiểu cũ còn không
+    chup = dg.chup_song(tk) if cu["loggedIn"] else None   # QĐ216 N1: chụp trước khi đăng xuất kiểu cũ
+    if tk > 1:   # N4: trùng thì không lưu mã, không ghi tệp
+        trung_tk = dg.tim_trung("claude", tk, (chup["email_bam"], chup["tochuc_bam"]) if chup else None)
+        if trung_tk:
+            return {"loi": CHU_DAN["trung"].format(tk=trung_tk), "trung_voi": trung_tk}
     tt = luu(tk, ma, thumuc, nguoi)
     dg._NHO_TRANGTHAI.pop(("claude", tk), None)
-    cu = _trang_thai_cli(tk, dung_ma=False)            # đăng nhập kiểu cũ còn không
     moi = _trang_thai_cli(tk, dung_ma=True)            # (c) `auth status` khi có mã dài hạn
     hs = dg.ho_so("claude", tk)                        # (a) trước khi đăng xuất kiểu cũ
     kiem = {"ten_truoc": bool(hs.get("ten_hien")), "goi_truoc": bool(hs.get("goi_ten"))}
@@ -384,21 +420,43 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
         kq = congai._goi_claude(tk, "Trả lời đúng 01 chữ: được", None)
         kiem["rate_limit_event"] = bool(kq.get("hanmuc"))   # (b)
         dat = True
+        hanmuc_thu = kq.get("hanmuc") or {}
     except Exception as e:  # noqa: BLE001 - mọi lỗi gọi thử đều báo lại, mã đã lưu vẫn giữ
         dat, loi = False, che(str(e))[:200]
     if dat:
+        if chup:
+            dg.ghi_chup(tk, chup)   # N1: ghi tệp xong mới đăng xuất kiểu cũ; lấy mã mới thì chụp lại, ghi đè (N5)
         if cu["loggedIn"]:
             kiem["dang_xuat_cu"] = dg._dang_xuat("claude", tk)
         hs2 = dg.ho_so("claude", tk)
         kiem.update(ten_sau=bool(hs2.get("ten_hien")), goi_sau=bool(hs2.get("goi_ten")))
-        dg.ghi_nguon("claude", tk, thumuc, nguoi=nguoi)
+        nguon_id = dg.ghi_nguon("claude", tk, thumuc, nguoi=nguoi)
+        if hanmuc_thu:   # QĐ216 mục 02: số đo hạn mức của lần gọi thử được lưu (trước đây bỏ qua)
+            congai.ghi_han_muc(nguon_id, hanmuc_thu, thumuc)
     dg._NHO_TRANGTHAI.pop(("claude", tk), None)
     co = lambda v: "chưa rõ" if v is None else ("có" if v else "không")   # noqa: E731
     tom = (f"Gói Claude tài khoản {tk:02d} · mã dài hạn · gọi thử {'đạt' if dat else 'chưa được'}"
            f" · auth status loggedIn {co(moi['loggedIn'])}, authMethod {moi['authMethod'] or 'trống'}"
            f" · rate_limit_event {co(kiem.get('rate_limit_event'))}"
            f" · tên {co(kiem['ten_truoc'])}/{co(kiem.get('ten_sau'))}, gói {co(kiem['goi_truoc'])}/{co(kiem.get('goi_sau'))}"
-           f" (trước/sau đăng xuất kiểu cũ) · kiểu cũ {'đã đăng xuất' if kiem.get('dang_xuat_cu') else 'không có' if not cu['loggedIn'] else 'giữ'}")
+           f" (trước/sau đăng xuất kiểu cũ) · kiểu cũ {'đã đăng xuất' if kiem.get('dang_xuat_cu') else 'không có' if not cu['loggedIn'] else 'giữ'}"
+           + (f" · tên, gói theo đăng nhập kiểu cũ lúc {chup['chup_luc'][11:16]}" if chup and dat else " · chưa chụp được tên, gói"))   # N7
     nhatky.ghi("mohinh", "kiem_madaihan", tom, ketqua="dat" if dat else "loi", nguoi_id=None if nguoi == "hethong" else nguoi,
                lydo=loi or None, thumuc=thumuc)
     return {"xong": True, "goi_thu": dat, **({"loi_goi_thu": loi} if loi else {}), **(tt or {})}
+
+
+def kiem_gan_nhat(tk: int, thumuc=None) -> dict | None:
+    """QĐ216 mục 02: dòng "Kiểm lần dán mã" trên thẻ, đọc F04 `kiem_madaihan` gần nhất của tài khoản (dòng không có mã)."""
+    from maychu.dulieu import ketnoi
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        d = cn.execute("SELECT luc, ketqua, thamso_tomtat FROM nhatky_thaotac WHERE congcu = 'mohinh' AND lenhcon = 'kiem_madaihan'"
+                       " AND substr(thamso_tomtat, 1, ?) = ? ORDER BY luc DESC LIMIT 1",
+                       (len(f"Gói Claude tài khoản {tk:02d} ·"), f"Gói Claude tài khoản {tk:02d} ·")).fetchone()
+    finally:
+        cn.close()
+    if not d:
+        return None
+    phan = d[2].split(" · ")
+    return {"luc": d[0], "dat": d[1] == "dat", "chu": " · ".join(p for p in phan if p.startswith(("gọi thử", "tên, gói", "chưa chụp")))}

@@ -517,6 +517,17 @@ button.o-bam:hover{border-color:var(--xanh)}
 .logo-shop{font-size:8px;font-weight:700;line-height:1;margin-top:2px;color:#000;letter-spacing:.3px}
 .logo-n{display:inline-flex;align-items:center;justify-content:center;flex:none}
 .vien-do .cau{color:var(--canh)}
+/* QĐ214, QĐ216 (Z15, Z15b): nút (i), dòng Kiểm mã, hộp hướng dẫn, khung lệnh */
+.nut-i{border:0;background:none;padding:0 0 0 4px;cursor:pointer;vertical-align:middle;line-height:0}
+.dong-i{display:flex;align-items:center;gap:4px}.dat-chu{color:var(--dat)}
+.md-hd{margin-top:8px;border:1px solid #1456F0;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.ma-lenh code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#F5F6F7;border-radius:6px;padding:6px 10px}
+.md-gt{margin-bottom:8px;align-items:flex-start}
+.bao-vang{display:flex;gap:10px;align-items:center;border:1px solid #F0C36D;border-radius:10px;padding:10px 14px;font-size:13px}
+/* 0.7.9 lớp 2: dải chế độ an toàn (nền trắng, viền và chữ màu cảnh báo; không nền đỏ) */
+.dai-antoan{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:2px solid var(--canh);background:#fff;color:var(--chu);font-size:13px}
+.dai-antoan b{color:var(--canh)}
+#cn-antoan .dong{margin-top:8px}
 </style><style>.cho-dung{padding:20px 24px}.dien-thoai #app.mb .kh{min-height:100vh;min-height:100dvh}.o-nhap.loi{border-color:#E22E28}.dien-thoai #app.mb .tab-duoi{position:fixed;left:0;right:0;bottom:0}.dien-thoai #app.mb{padding-bottom:64px}a.btn{text-decoration:none}</style>
 </head><body>
 
@@ -1720,6 +1731,7 @@ button.o-bam:hover{border-color:var(--xanh)}
   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
   <path d="M3 3v5h5" />
 </svg>Thử cập nhật lại</button></div>
+    <div class="the cn" id="cn-quayve" hidden></div>
     <div class="dau-muc"><span class="t16 b7">Lịch sử cập nhật</span></div>
     <div class="bang"><div class="hang tieu-de" style="grid-template-columns:120px 1fr 160px"><span>Bản</span><span>Nội dung</span><span>Ngày cài</span></div>
       <div id="ls-capnhat"></div></div></div>

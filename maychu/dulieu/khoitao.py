@@ -321,23 +321,46 @@ def tao_mot(ten: str, thumuc: Path, chu: tuple | None = None) -> int:
     return so
 
 
+def _noi_tiep_lan_bi_ngat(thumuc: Path) -> None:
+    """0.7.9 lớp 2 (QĐ213): còn cờ "đang nâng" = lần nâng trước bị ngắt giữa chừng (mất điện, bị dừng). Trả nguyên
+    trạng từ bản chụp của đúng lần đó rồi để `tao_het` nâng lại từ đầu; cờ của lược đồ khác thì chỉ bỏ cờ."""
+    from maychu.hethong import antoan
+    d = antoan.doc(thumuc).get("dang_nang")
+    if not d:
+        return
+    noi = _thumuc_chup(thumuc)
+    if d.get("den") == PHIENBAN_LUOCDO and noi.is_dir():
+        _tra_nguyen_trang(thumuc, [t for t in d.get("tep", []) if (noi / f"{t}.sqlite3").exists()])
+    antoan.ghi(thumuc, dang_nang=None)
+
+
 def tao_het(thumuc: Path | None = None) -> dict:
-    """Tạo đủ 07 file. Trả về {tên file: số bảng}; lệch thiết kế thì báo lỗi."""
+    """Tạo đủ 07 file. Trả về {tên file: số bảng}; lệch thiết kế thì trả nguyên trạng rồi báo lỗi.
+    0.7.9 lớp 2: trước khi nâng ghi cờ "đang nâng" (tệp trạng thái, không phải bảng); nâng xong bỏ cờ."""
+    from maychu.hethong import antoan
     thumuc = thumuc or ketnoi.thumuc_dulieu()
     thumuc.mkdir(parents=True, exist_ok=True)
+    _noi_tiep_lan_bi_ngat(thumuc)
     ban = {ten: _phienban(ten, thumuc) for ten in ketnoi.CAC_FILE}
     can_nang = any(0 < b < PHIENBAN_LUOCDO for b in ban.values())
     co_san = [t for t, b in ban.items() if b > 0]
     chu = _doc_chu(thumuc) if can_nang else None
     if can_nang:
         _chup_het(thumuc, co_san)
+        luc = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+        antoan.ghi(thumuc, dang_nang={"tu": min(b for b in ban.values() if b > 0), "den": PHIENBAN_LUOCDO, "luc": luc,
+                                      "tep": co_san}, chup_luc=luc)
     try:
         ketqua = {ten: tao_mot(ten, thumuc, chu) for ten in ketnoi.CAC_FILE}
+        lech = {t: (so, ketnoi.SO_BANG[t]) for t, so in ketqua.items() if so != ketnoi.SO_BANG[t]}
+        if lech:   # 0.7.9: lệch số bảng cũng trả nguyên trạng (trước đây báo lỗi mà dữ liệu đã nâng dở)
+            raise RuntimeError(f"số bảng lệch thiết kế: {lech}")
     except Exception:
         if can_nang:
             _tra_nguyen_trang(thumuc, co_san)
+            antoan.ghi(thumuc, dang_nang=None)
         raise
-    lech = {t: (so, ketnoi.SO_BANG[t]) for t, so in ketqua.items() if so != ketnoi.SO_BANG[t]}
-    if lech:
-        raise RuntimeError(f"số bảng lệch thiết kế: {lech}")
+    if can_nang:   # lớp 3: ghi lại bản nào đã nâng lược đồ, để nút quay về biết phải trả bản chụp (mất dữ liệu mới)
+        from maychu.hethong import capnhat
+        antoan.ghi(thumuc, dang_nang=None, nang_luocdo={"den": PHIENBAN_LUOCDO, "ban": capnhat.ban_dang_chay(), "luc": luc})
     return ketqua

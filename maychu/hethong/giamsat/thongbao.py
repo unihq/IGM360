@@ -33,6 +33,7 @@ LOAI = {
     "ocung_vuot": ("do", "hard-drive", *MAYCHU),
     "swap_vuot_nguong": ("do", "memory-stick", *MAYCHU),
     "banmoi": ("tin", "cloud-download", "capnhat", None, "Cài đặt › Cập nhật"),
+    "capnhat_kiem": ("do", "shield-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # 0.7.9 lớp 4
 }
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
@@ -186,6 +187,17 @@ def quet_madaihan(thumuc: Path | None = None) -> None:
                 _dong(w, khoa, "Đã ngắt mã dài hạn")
 
 
+def quet_kiem_capnhat(ban: str, loi: list[str], thumuc: Path | None = None) -> None:
+    """0.7.9 lớp 4: kiểm sau cập nhật có điểm chưa đạt thì mở 01 tin đỏ; bản sau kiểm đạt thì đóng tin của bản cũ."""
+    khoa = f"capnhat_kiem:{ban}"
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, "capnhat_kiem:"):
+            if k != khoa or not loi:
+                _dong(w, k, f"Kiểm sau cập nhật bản {ban} đạt" if not loi else f"Đã lên bản {ban}")
+        if loi:
+            _mo(w, khoa, None, None, None, len(loi))
+
+
 def quet_saoluu(thumuc: Path | None = None) -> None:
     """Lượt sao lưu gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút)."""
     cn = ketnoi.mo("Nhatky", thumuc)
@@ -326,6 +338,8 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"Máy chủ dùng tệp hoán đổi {_nb(f'{gt} MB')}, quá {_nb(f'{ng} MB')}"
     if loai == "banmoi":
         return f"Có bản mới {sau}"
+    if loai == "capnhat_kiem":
+        return f"Bản {sau}: kiểm sau cập nhật có {_nb(f'{_so(gt):02d} điểm')} chưa đạt"
     return "Có cảnh báo mới"
 
 

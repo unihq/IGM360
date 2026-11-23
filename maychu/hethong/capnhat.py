@@ -1,7 +1,9 @@
 """Ngăn Cập nhật (màn 09): bản đang chạy, bản mới nhất trên kho ảnh GHCR (công khai), nội dung thay đổi,
 lệnh "Cập nhật ngay" gửi watchtower (chỉ nghe trong mạng nội bộ Docker), lịch sử ghi ở F04."""
+import json
 import os
 import re
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -154,9 +156,13 @@ def lich_su(thumuc=None) -> list[dict]:
     try:
         dong = cn.execute("SELECT luc, thamso_tomtat FROM nhatky_thaotac WHERE congcu = 'capnhat' AND lenhcon = 'khoidong'"
                           " ORDER BY luc DESC LIMIT 20").fetchall()
+        kiem = cn.execute("SELECT thamso_tomtat, ketqua FROM nhatky_thaotac WHERE congcu = 'capnhat' AND lenhcon = 'kiem_saunang'"
+                          " ORDER BY luc").fetchall()
     finally:
         cn.close()
-    return [{"ban": d[1], "luc": d[0]} for d in dong]
+    # 0.7.9 lớp 4: mỗi bản lấy lượt kiểm sau cập nhật gần nhất ("0.7.9 · 06/06 đạt · chưa đạt: …")
+    theo_ban = {k[0].split(" · ")[0]: {"chu": " · ".join(k[0].split(" · ")[1:]), "dat": k[1] == "dat"} for k in kiem if k[0]}
+    return [{"ban": d[1], "luc": d[0], "kiem": theo_ban.get(d[1])} for d in dong]
 
 
 def so_viec_ai_dangchay(thumuc=None) -> int:
@@ -173,13 +179,21 @@ CHO_TOIDA_GIAY = 30 * 60
 
 def yeu_cau(nguoi_id: str, che_do: str, thumuc=None) -> dict:
     """che_do 'ngay': gửi lệnh luôn. 'cho': không có việc AI đang chạy thì gửi luôn; có thì chờ việc xong,
-    tối đa 30 phút (lịch chạy nền gọi xu_ly_cho mỗi phút). Việc mới không nhận khi đang chờ: dang_cho()."""
-    if not kiem_tra()["co_ban_moi"]:   # QĐ174 điểm 04: chỉ cập nhật khi gói bản mới đã đóng xong trên kho
+    tối đa 30 phút (lịch chạy nền gọi xu_ly_cho mỗi phút). Việc mới không nhận khi đang chờ: dang_cho().
+    0.7.9 (QĐ213): lớp 1 ổ trống không đủ thì chặn; "gửi lệnh" = lớp 5 chụp bản sao, đẩy Drive rồi mới gửi."""
+    from maychu.hethong import antoan
+    kq = kiem_tra()
+    if not kq["co_ban_moi"]:   # QĐ174 điểm 04: chỉ cập nhật khi gói bản mới đã đóng xong trên kho
         return {"loi": "Chưa có bản mới đóng gói xong, anh chờ vài phút rồi bấm Kiểm tra lại"}
+    o = antoan.o_trong(thumuc)
+    if not o["du"]:
+        _ghi_f04("chan_otrong", f"còn {antoan.chu_dungluong(o['trong'])}, cần {antoan.chu_dungluong(o['can'])}",
+                 "bichan", None, nguoi_id, thumuc)
+        return {"loi": o["chu"], "o_trong": o}
     if che_do == "cho" and so_viec_ai_dangchay(thumuc):
         _CHO.update(tu=time.time(), nguoi=nguoi_id)
         return {"ok": True, "cho": True}
-    return cap_nhat_ngay(nguoi_id, thumuc)
+    return bat_dau(nguoi_id, kq["ban_moi"], thumuc)
 
 
 def dang_cho() -> bool:
@@ -190,7 +204,76 @@ def xu_ly_cho(thumuc=None) -> None:
     if _CHO["tu"] and (not so_viec_ai_dangchay(thumuc) or time.time() - _CHO["tu"] > CHO_TOIDA_GIAY):
         nguoi = _CHO["nguoi"]
         _CHO.update(tu=0.0, nguoi=None)
-        cap_nhat_ngay(nguoi, thumuc)
+        bat_dau(nguoi, kiem_tra()["ban_moi"], thumuc)
+
+
+# ---------------- 0.7.9 lớp 5: bản sao Drive trước khi gửi lệnh ----------------
+_SAO = {"buoc": None, "tu": 0.0, "loi": None, "den": None}
+_KHOA_SAO = threading.Lock()
+
+
+def _chay_nen(viec) -> None:
+    threading.Thread(target=viec, daemon=True, name="igm360-truoc-capnhat").start()
+
+
+def trang_thai_sao() -> dict:
+    return {"dang_sao": _SAO["buoc"], "sao_loi": _SAO["loi"], "sao_den": _SAO["den"]}
+
+
+def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None) -> dict:
+    """Chụp bản sao 07 tệp vào thư mục riêng, chờ đẩy lên Drive (tối đa CHO_DRIVE_GIAY), rồi gửi lệnh. Chạy nền vì
+    đẩy Drive có thể vài phút; giao diện hỏi lại /api/capnhat để biết bước đang chạy."""
+    with _KHOA_SAO:
+        if _SAO["buoc"]:
+            return {"ok": True, "sao": True}
+        _SAO.update(buoc="chup", tu=time.time(), loi=None, den=ban_moi)
+    _chay_nen(lambda: _sao_roi_gui(nguoi_id, ban_moi, thumuc))
+    return {"ok": True, "sao": True}
+
+
+def _con_cho_drive(noi: Path, thumuc=None) -> int:
+    cn = ketnoi.mo("Hotho", thumuc)
+    try:
+        return cn.execute("SELECT count(*) FROM cho_day_drive WHERE substr(duongdan_tam, 1, ?) = ? AND trangthai != 'xong'",
+                          (len(str(noi)), str(noi))).fetchone()[0]
+    finally:
+        cn.close()
+
+
+def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
+    from maychu.dulieu import saoluu
+    from maychu.hethong import antoan
+    from maychu.ketnoi import drive
+    dang = ban_dang_chay()
+    try:
+        kq = saoluu.chay(thumuc, truoc_ban=ban_moi or "moi")
+        if kq["ketqua"] == "loi":
+            loi = next((x for x in kq["file"] if x["ketqua"] == "loi"), {})
+            lydo = (json.loads(loi.get("ketqua_tungbuoc_json") or "{}").get("loi") or "lỗi chụp")[:200]
+            _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=lydo))
+            _ghi_f04("capnhat_ngay", dang, "bichan", "chưa chụp được bản sao: " + lydo, nguoi_id, thumuc)
+            return
+        if drive.dang_noi(thumuc):
+            _SAO["buoc"] = "day"
+            het = time.time() + antoan.CHO_DRIVE_GIAY
+            while _con_cho_drive(kq["noi"], thumuc) and time.time() < het:
+                drive.day_hang_cho(thumuc)
+                if _con_cho_drive(kq["noi"], thumuc):
+                    time.sleep(NGHI_DAY_GIAY)
+        _SAO["buoc"] = "gui"
+        antoan.ghi(thumuc, yeu_cau={"tu": dang, "den": ban_moi, "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
+                                    "drive": not _con_cho_drive(kq["noi"], thumuc)})
+        r = cap_nhat_ngay(nguoi_id, thumuc)
+        if "loi" in r:
+            _SAO.update(loi=r["loi"])
+    except Exception as e:  # noqa: BLE001 - mọi lỗi đều báo lại, không gửi lệnh khi chưa có bản sao
+        _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=type(e).__name__))
+        _ghi_f04("capnhat_ngay", dang, "loi", "trước cập nhật: " + type(e).__name__, nguoi_id, thumuc)
+    finally:
+        _SAO.update(buoc=None)
+
+
+NGHI_DAY_GIAY = 15
 
 
 def cap_nhat_ngay(nguoi_id: str, thumuc=None) -> dict:
