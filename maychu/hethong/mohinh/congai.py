@@ -36,6 +36,7 @@ from maychu.dulieu import ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
+from maychu.hethong.kekhoa.che import che
 from maychu.hethong.mohinh import dangnhap_goi, danhmuc_mohinh
 
 TRIEU = 1_000_000
@@ -418,6 +419,11 @@ def dung_duoc(d: dict, thumuc=None) -> tuple[bool, str]:
             return False, "mã nguồn gói không đúng"
         if _het_luc_dat_lai(d) or het_tai_khoan(d["id"]):   # Y36c P2: mốc nghỉ riêng, không bỏ qua vì giờ đặt lại cũ đã qua
             return False, "hết hạn mức"
+        if m.group(1) == "claude":
+            from maychu.hethong.mohinh import madaihan
+            md = madaihan.thong_tin(int(m.group(2)), thumuc)
+            if md and md["het"]:   # 0.7.8 Đ6: mã dài hạn hết hạn thì không gọi tài khoản này, xoay tài khoản cùng loại
+                return False, "mã dài hạn hết hạn"
         if not dangnhap_goi.trang_thai(m.group(1), int(m.group(2)))["da_noi"]:
             return False, "chưa đăng nhập"
         return True, ""
@@ -462,10 +468,10 @@ def _loi_claude(kq: dict | None, r) -> tuple[str, str]:
         loi = [str(x) for x in (kq.get("errors") or []) if x]
         if isinstance(kq.get("result"), str) and kq["result"].strip():
             loi.append(kq["result"].strip())
-        ct = (sub + (": " if sub and loi else "") + "; ".join(loi))[:200]
+        ct = che((sub + (": " if sub and loi else "") + "; ".join(loi)))[:200]
         return LOI_CLAUDE.get(sub, "báo lỗi"), ct
     dong = [d.strip() for d in (r.stderr or "").splitlines() if d.strip() and not d.strip().startswith("{")]
-    return "không trả kết quả", (dong[-1][:200] if dong else "")
+    return "không trả kết quả", (che(dong[-1])[:200] if dong else "")
 
 
 def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
@@ -624,7 +630,7 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
             ghi_het_tai_khoan(d["id"], dl_tk, hm)
         hm["het"] = tk_het
         ghi_han_muc(d["id"], hm, thumuc)
-        bo_qua.append({"nguon": ten, "lydo": f"hết hạn mức: {e}"[:200]})
+        bo_qua.append({"nguon": ten, "lydo": che(f"hết hạn mức: {e}")[:200]})
         return HET_CA_TK if tk_het else "hết hạn mức"
     except subprocess.TimeoutExpired:
         _ghi_g04(d, None, "quagio", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
@@ -632,7 +638,7 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
         return "quá giờ"
     except Exception as e:  # noqa: BLE001 - lỗi 01 nguồn thì thử nguồn sau
         _ghi_g04(d, None, "loi", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-        bo_qua.append({"nguon": ten, "lydo": str(e)[:200], **({"loi": e.ngan, "loi_ct": e.ct} if isinstance(e, LoiAI) else {})})
+        bo_qua.append({"nguon": ten, "lydo": che(str(e))[:200], **({"loi": e.ngan, "loi_ct": e.ct} if isinstance(e, LoiAI) else {})})
         return "lỗi"
     ms = int((time.monotonic() - t0) * 1000)
     bo_het_mo_hinh(d["id"], ma_mh)

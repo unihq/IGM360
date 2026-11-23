@@ -27,6 +27,8 @@ LOAI = {
     "hanmuc_tuan": ("xem", "hourglass", "13", None, "Mô hình AI"),
     "khoa_hethan": ("do", "key-round", "ketkhoa", None, "Cài đặt › Két khoá"),
     "khoa_saphethan": ("xem", "key-round", "ketkhoa", None, "Cài đặt › Két khoá"),
+    "madaihan_hethan": ("do", "key-round", "13", None, "Mô hình AI"),
+    "madaihan_saphethan": ("xem", "key-round", "13", None, "Mô hình AI"),
     "saoluu_loi": ("do", "database-backup", *MAYCHU),
     "ocung_vuot": ("do", "hard-drive", *MAYCHU),
     "swap_vuot_nguong": ("do", "memory-stick", *MAYCHU),
@@ -131,7 +133,7 @@ def quet_khoa(thumuc: Path | None = None) -> None:
     """Khoá kết nối đã hết hạn (đỏ); còn ≤ `songay_baotruoc_khoa_hethan` ngày (vàng)."""
     from maychu.hethong.kekhoa import kho
     n = _so(thongso.doc_mot("songay_baotruoc_khoa_hethan", "5", thumuc))
-    ds = kho.danh_sach(thumuc, n)
+    ds = [k for k in kho.danh_sach(thumuc, n) if not (k["dichvu"] or "").startswith("goi_claude_")]   # mã dài hạn: quet_madaihan
     with _Ghi(thumuc) as w:
         con = set()
         for k in ds:
@@ -149,6 +151,39 @@ def quet_khoa(thumuc: Path | None = None) -> None:
         for khoa in _khoa_mo(w, "khoa_hethan:") + _khoa_mo(w, "khoa_saphethan:"):
             if khoa.split(":", 1)[1] not in con:
                 _dong(w, khoa, "Khoá đã xoá")
+
+
+def quet_madaihan(thumuc: Path | None = None) -> None:
+    """0.7.8 (QĐ198, QĐ200, PTD-09 mục 3): mã dài hạn gói Claude hết hạn (đỏ, 01 dòng mở tới khi lấy mã mới hoặc gỡ);
+    còn ≤ `madaihan.SO_NGAY_NHAC` ngày (vàng) thì MỖI NGÀY 01 dòng: khoá chống trùng gắn ngày, dòng ngày cũ đóng."""
+    from maychu.hethong.mohinh import madaihan
+    bay = datetime.now(MUIGIO_VN)
+    hom_nay = bay.date().isoformat()
+    cn = ketnoi.mo("Baomat", thumuc)
+    try:
+        dv = [r[0] for r in cn.execute("SELECT DISTINCT dichvu FROM kekhoa WHERE trangthai = 'dung'"
+                                       " AND substr(dichvu, 1, 11) = 'goi_claude_'")]
+    finally:
+        cn.close()
+    tt = {d: madaihan.thong_tin(int(d[11:]), thumuc, bay) for d in dv if d[11:].isdigit()}
+    with _Ghi(thumuc) as w:
+        for d, t in tt.items():
+            het, sap = f"madaihan_hethan:{d}", f"madaihan_saphethan:{d}:{hom_nay}"
+            for khoa in _khoa_mo(w, f"madaihan_saphethan:{d}:"):
+                if khoa != sap:
+                    _dong(w, khoa, "Đã sang ngày mới")
+            if t and t["het"]:
+                _mo(w, het, "kekhoa", d)
+                _dong(w, sap, "Mã đã hết hạn")
+            elif t and t["con_ngay"] is not None and t["con_ngay"] <= madaihan.SO_NGAY_NHAC:
+                _mo(w, sap, "kekhoa", d, nguong=madaihan.SO_NGAY_NHAC, giatri=t["con_ngay"])
+                _dong(w, het, "Đã lấy mã mới")
+            else:
+                _dong(w, het, "Đã lấy mã mới")
+                _dong(w, sap, "Đã lấy mã mới")
+        for khoa in _khoa_mo(w, "madaihan_hethan:") + _khoa_mo(w, "madaihan_saphethan:"):
+            if khoa.split(":")[1] not in tt:
+                _dong(w, khoa, "Đã ngắt mã dài hạn")
 
 
 def quet_saoluu(thumuc: Path | None = None) -> None:
@@ -209,7 +244,7 @@ def quet_banmoi(thumuc: Path | None = None, hoi_kho: bool = False) -> None:
             _mo(w, f"banmoi:{moi}", None)
 
 
-NGUON = (quet_goi, quet_khoa, quet_saoluu, quet_maychu, quet_banmoi)
+NGUON = (quet_goi, quet_khoa, quet_madaihan, quet_saoluu, quet_maychu, quet_banmoi)
 
 
 def quet(thumuc: Path | None = None) -> dict:
@@ -248,7 +283,7 @@ def _ten_khoa(thumuc) -> dict:
     from maychu.hethong.kekhoa import kho
     cn = ketnoi.mo("Baomat", thumuc)
     try:
-        return {i: kho.TEN_DICHVU.get(dv, dv) for i, dv in cn.execute("SELECT id, dichvu FROM kekhoa")}
+        return {i: kho.ten_dichvu(dv) for i, dv in cn.execute("SELECT id, dichvu FROM kekhoa")}
     finally:
         cn.close()
 
@@ -274,6 +309,11 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         ten = f"Khoá {ten_khoa.get(sau, 'kết nối')}"
         if loai == "khoa_hethan":
             return f"{ten} đã {_nb('hết hạn')}"
+        return f"{ten} {_nb('hết hạn')} hôm nay" if not gt else f"{ten} còn {_nb(f'{gt:02d} ngày')} {_nb('hết hạn')}"
+    if loai in ("madaihan_hethan", "madaihan_saphethan"):
+        ten = f"Mã dài hạn {_ten_goi(sau.split(':')[0])}"
+        if loai == "madaihan_hethan":
+            return f"{ten} đã {_nb('hết hạn')}: lấy mã mới ở {_nb('Mô hình AI')}"
         return f"{ten} {_nb('hết hạn')} hôm nay" if not gt else f"{ten} còn {_nb(f'{gt:02d} ngày')} {_nb('hết hạn')}"
     if loai == "saoluu_loi":
         luc = gio_sl.get(d["dong_nguon_id"]) or d["tao_luc"] or ""

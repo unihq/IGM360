@@ -72,16 +72,20 @@ def thu_muc(goi: str, taikhoan: int) -> Path | None:
     return goc / f"taikhoan_{taikhoan:02d}"
 
 
-def _env(goi: str, taikhoan: int, tao: bool = True) -> dict:
+def _env(goi: str, taikhoan: int, tao: bool = True, ma_daihan: bool = True) -> dict:
+    """Môi trường 01 lần chạy CLI của 01 tài khoản. Gói Claude (0.7.8, PTD-09 Đ2): luôn bỏ khoá API
+    (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` đứng trước mã dài hạn trong thứ tự của CLI) và mã của tài khoản khác;
+    `ma_daihan` thì đặt mã dài hạn còn hạn của đúng tài khoản này. Đăng nhập, đăng xuất kiểu cũ, lấy mã: `ma_daihan=False`."""
     tm = thu_muc(goi, taikhoan)
     env = dict(os.environ)
     if tm is not None:
-        if not tao:
-            env[GOI[goi]["bien_thumuc"]] = str(tm)
-            return env
-        tm.mkdir(parents=True, exist_ok=True)
-        os.chmod(tm, 0o700)
+        if tao:
+            tm.mkdir(parents=True, exist_ok=True)
+            os.chmod(tm, 0o700)
         env[GOI[goi]["bien_thumuc"]] = str(tm)
+    if goi == "claude":
+        from maychu.hethong.mohinh import madaihan
+        madaihan.moi_truong(env, taikhoan, dung_ma=ma_daihan)
     return env
 
 
@@ -122,7 +126,7 @@ def bat_dau(goi: str, taikhoan: int = 1) -> dict:
         try:
             pr = subprocess.Popen([_cli(goi), *GOI[goi]["lenh"]], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", bufsize=1,
-                                  start_new_session=True, env=_env(goi, taikhoan))
+                                  start_new_session=True, env=_env(goi, taikhoan, ma_daihan=False))
         except FileNotFoundError:
             return {"loi": f"Máy chủ chưa có công cụ đăng nhập {GOI[goi]['ten']}"}
         p = {"proc": pr, "url": "", "ma_thietbi": "", "xong": False, "loi": "", "dong": [], "bat_luc": time.time()}
@@ -289,7 +293,7 @@ def _dang_xuat(goi: str, taikhoan: int) -> bool:
     lenh = ["auth", "logout"] if goi == "claude" else ["logout"]
     try:
         subprocess.run([_cli(goi), *lenh], capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       timeout=20, env=_env(goi, taikhoan, tao=False))
+                       timeout=20, env=_env(goi, taikhoan, tao=False, ma_daihan=False))   # đăng xuất kiểu cũ
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     _NHO_TRANGTHAI.pop((goi, taikhoan), None)
@@ -321,6 +325,11 @@ def go(goi: str, taikhoan: int, thumuc: Path | None = None) -> dict:
     p = _PHIEN.pop((goi, taikhoan), None)
     if p:
         _dung(p)
+    if goi == "claude":   # 0.7.8 Đ5: gỡ là xoá mã dài hạn ở Két khoá, dừng lượt lấy mã dở
+        from maychu.hethong.mohinh import madaihan
+        madaihan.huy_lay(taikhoan)
+        madaihan.xoa(taikhoan, thumuc)
+        _NHO_TRANGTHAI.pop((goi, taikhoan), None)
     if trang_thai(goi, taikhoan, bo_nho=True)["da_noi"] and not _dang_xuat(goi, taikhoan):
         return {"loi": f"Chưa đăng xuất được tài khoản {taikhoan:02d}: anh thử lại sau ít phút"}
     cn = ketnoi.mo("Viecnen", thumuc)
@@ -349,6 +358,10 @@ def trang_thai(goi: str, taikhoan: int, bo_nho: bool = False) -> dict:
         if goi == "claude":
             d = json.loads((r.stdout or "").strip() or "{}")
             kq = {"da_noi": bool(d.get("loggedIn")), "goi_dang_dung": d.get("subscriptionType") or None}
+            from maychu.hethong.mohinh import madaihan
+            md = madaihan.thong_tin(taikhoan)
+            if md and not md["het"]:   # 0.7.8: mã dài hạn còn hạn = đã kết nối (CLI báo gì khi dùng mã: chưa xác minh)
+                kq.update(da_noi=True, ma_daihan=True)
         else:
             chu = MAU_RE.sub("", r.stdout + r.stderr).lower()   # Codex in "Logged in using ChatGPT" hoặc "Not logged in"
             kq = {"da_noi": r.returncode == 0 and "logged in using chatgpt" in chu, "goi_dang_dung": None}
@@ -532,6 +545,8 @@ def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
     không tự bật lại, chỉ bật lại khi anh đăng nhập lại trên giao diện."""
     for k in [k for k, p in list(_PHIEN.items()) if time.time() - p["bat_luc"] > HAN_PHIEN_GIAY]:
         huy(*k)   # lượt bỏ dở quá 15 phút
+    from maychu.hethong.mohinh import madaihan
+    madaihan.don_phien()
     ra, lan, g06 = {}, _lan_dangnhap(thumuc), _g06(thumuc)
     for goi in GOI:
         ds = []
@@ -543,7 +558,9 @@ def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
             if tt["da_noi"] and g06.get(ma) != "ngung" and (tk == 1 or ma in g06):
                 ghi_nguon(goi, tk, thumuc)
             hs = ho_so(goi, tk, tt.get("goi_dang_dung")) if tt["da_noi"] else {"ten_hien": None, "goi_ten": None, "mota_goi": None}
+            them = {"ma_daihan": madaihan.thong_tin(tk, thumuc), "dang_lay_ma": madaihan.dang_lay(tk),
+                    "lay_ma_tudong": madaihan.ho_tro()} if goi == "claude" else {}
             ds.append({"taikhoan": tk, "ma": ma_nguon(goi, tk), "dang_dangnhap": (goi, tk) in _PHIEN,
-                       "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt, **hs})
+                       "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt, **hs, **them})
         ra[goi] = ds
     return ra
