@@ -144,7 +144,7 @@ class KiemCongAI(NenCongAI):
 
     def test_khoa_api_tran_tien_va_tien_that(self):
         nid = self.them_khoa("khoa_anthropic_01", 1, None)
-        self.assertEqual(congai.goi("x")["bo_qua"][0]["lydo"], "chưa đặt trần tiền")
+        self.assertEqual(congai.goi("x")["bo_qua"][0]["lydo"], "chưa đặt hạn mức")
         cn = ketnoi.mo("Viecnen")
         cn.execute("UPDATE nguon_ai SET tran_tien_thang = 1 WHERE id = ?", (nid,))
         cn.close()
@@ -163,7 +163,7 @@ class KiemCongAI(NenCongAI):
         cn.execute("UPDATE nhatky_ai SET sotien = 1000000")              # tháng này đã tiêu 01 USD = chạm trần 01 USD
         cn.close()
         self.assertEqual(congai.goi("x", client=httpx.Client(transport=httpx.MockTransport(gia)))["bo_qua"][0]["lydo"],
-                         "chạm trần tiền tháng")
+                         "chạm hạn mức chi tháng")
         self.assertEqual(len(goi_den), 1)
 
     def test_khong_co_nguon(self):

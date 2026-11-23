@@ -163,7 +163,7 @@ def dan_ma(goi: str, taikhoan: int, ma: str, nguoi: str = "hethong") -> dict:
         if p["xong"]:
             return _ket_thuc(goi, taikhoan, nguoi)
         if p["loi"]:
-            return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm \"Mở trang\" lấy mã mới rồi dán lại"}
+            return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm \"Mở trang\" lấy mã mới rồi dán lại."}   # N12
         if pr.poll() is not None:
             time.sleep(0.3)
             return _ket_thuc(goi, taikhoan, nguoi) if p["xong"] else {"loi": "Đăng nhập chưa xong" + (f" ({_duoi(p)})" if _duoi(p) else "")}
@@ -273,15 +273,46 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
         cn.close()
 
 
+# QĐ160 (N10 b): thứ tự dùng nguồn theo cách tính phí trước, `uutien` sau: gói (phí cố định tháng) luôn đứng trước
+# mô hình chạy trên máy, rồi tới Khoá API (phí theo lượt); thêm gói thì tự đứng trước Khoá API (PTD-05 mục 3).
+NHOM_PHI = {"goi": 0, "tuchay": 1, "khoa_api": 2}
+
+
+def thu_tu(ds: list[dict]) -> list[dict]:
+    return sorted(ds, key=lambda d: (NHOM_PHI.get(d.get("loai"), 9), d.get("uutien") or 0, d.get("ma") or ""))
+
+
+def _mohinh_gannhat(thumuc: Path | None = None) -> dict:
+    """N15: {nguon_ai_id: mã mô hình} của lần gọi AI gần nhất có ghi mô hình (G04 `mohinh_id` → G08 `ma_mohinh`)."""
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        cap = cn.execute("SELECT nguon_ai_id, mohinh_id FROM nhatky_ai WHERE mohinh_id IS NOT NULL ORDER BY luc").fetchall()
+    finally:
+        cn.close()
+    if not cap:
+        return {}
+    gan = dict(cap)   # dòng sau đè dòng trước: còn lại lần gần nhất của mỗi nguồn
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        ten = dict(cn.execute(f"SELECT id, ma_mohinh FROM mohinh_ai WHERE id IN ({','.join('?' * len(gan))})",
+                              list(gan.values())).fetchall())
+    finally:
+        cn.close()
+    return {n: ten[m] for n, m in gan.items() if m in ten}
+
+
 def danh_sach(thumuc: Path | None = None) -> list[dict]:
     """Thẻ màn 13: nguồn AI (G06) theo ưu tiên, kèm trạng thái đăng nhập của tài khoản gói."""
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cot = ["id", "ma", "ten", "loai", "uutien", "trangthai", "tran_tien_thang", "tyle_5gio", "tyle_tuan",
                "datlai_5gio_luc", "datlai_tuan_luc", "do_luc", "da_het_luc"]
-        dong = [dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai ORDER BY uutien, ma")]
+        dong = thu_tu([dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai")])
     finally:
         cn.close()
+    gan = _mohinh_gannhat(thumuc)
+    for d in dong:
+        d["mohinh_gannhat"] = gan.get(d["id"])
     for d in dong:
         m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", d["ma"] or "")
         if m:
