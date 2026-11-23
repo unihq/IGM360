@@ -162,7 +162,7 @@ class KiemChuGiaoDien(unittest.TestCase):
 
     def test_chu_moi_theo_tu_dien(self):
         for moi in ("Chờ duyệt", "Mô hình AI", "Phí theo lượt", "Phí cố định tháng", "Chi phí AI tháng", "Chưa đặt hạn mức",
-                    "mục Chờ duyệt", "mục Két&nbsp;khoá", "Mở Mô hình AI", "Tài chính", "Báo cáo, dữ liệu"):
+                    "mục Chờ duyệt", "mục&nbsp;Két&nbsp;khoá", "Mở Mô hình AI", "Tài chính", "Báo cáo, dữ liệu"):
             with self.subTest(moi=moi):
                 self.assertTrue(moi in self.html or moi in self.js or moi in self.ico, moi)
         self.assertIn("Ngoại lệ cần duyệt: đề xuất AI hoặc 01&nbsp;trong 03&nbsp;cách xử lý", self.html)
@@ -177,6 +177,11 @@ class KiemChuGiaoDien(unittest.TestCase):
         for c in ("'Mở trang'", "'TikTok Shop'", "'mã sàn'"):                                 # N12, T1
             self.assertIn(c, self.js)
         self.assertIn("Gói ChatGPT · qua&nbsp;Codex", self.html)                              # T2
+        # U4 (CDO, S1–S3): không tách cụm "mục Két khoá ·", "tài khoản Claude", "mục Bộ mã chung"
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;", self.js)
+        self.assertIn("tài&nbsp;khoản&nbsp;Claude của anh.", self.js)
+        self.assertIn("mục&nbsp;Bộ&nbsp;mã&nbsp;chung", self.html)
+        self.assertIn("'mục Chờ duyệt', 'mục Két khoá', 'mục Bộ mã chung'", self.js)
         self.assertIn("'Gói ChatGPT · qua&nbsp;Codex'", self.js)
         nguon = (GOC / "maychu" / "hethong" / "mohinh" / "dangnhap_goi.py").read_text(encoding="utf-8")
         self.assertIn('Bấm \\"Mở trang\\" lấy mã mới rồi dán lại."', nguon)                # N12: dấu chấm cuối
