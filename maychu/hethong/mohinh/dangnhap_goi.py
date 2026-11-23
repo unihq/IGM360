@@ -23,9 +23,9 @@ from maychu.dulieu import aibam, ketnoi, phienban
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 GOI = {
-    "claude": {"ten": "Gói Claude", "cli_bien": "IGM360_CLAUDE_CLI", "cli": "claude", "bien_thumuc": "CLAUDE_CONFIG_DIR",
+    "claude": {"ten": "Gói Claude", "hang": "anthropic", "cli_bien": "IGM360_CLAUDE_CLI", "cli": "claude", "bien_thumuc": "CLAUDE_CONFIG_DIR",
                "thumuc": "/home/igm/.claude", "lenh": ["auth", "login", "--claudeai"]},
-    "chatgpt": {"ten": "Gói ChatGPT", "cli_bien": "IGM360_CODEX_CLI", "cli": "codex", "bien_thumuc": "CODEX_HOME",
+    "chatgpt": {"ten": "Gói ChatGPT", "hang": "openai", "cli_bien": "IGM360_CODEX_CLI", "cli": "codex", "bien_thumuc": "CODEX_HOME",
                 "thumuc": "/home/igm/.codex", "lenh": ["login", "--device-auth"]},
 }
 SO_TAIKHOAN_TOIDA = 2
@@ -252,7 +252,8 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
         uu = (cn.execute("SELECT coalesce(max(uutien), 0) FROM nguon_ai").fetchone()[0] or 0) + 1
         return phienban.them(cn, "nguon_ai", {"ma": ma, "ten": f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}",
                                               "hieuluc_tu": bay[:10], "phienban": 1, "nguoi_khai": nguoi, "tao_luc": bay,
-                                              "loai": "goi", "dungchung": 1, "uutien": uu})
+                                              "loai": "goi", "dungchung": 1, "uutien": uu,
+                                              "hang": GOI[goi]["hang"], "cach_goi": "cli"})
     finally:
         cn.close()
 

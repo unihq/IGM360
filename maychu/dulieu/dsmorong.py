@@ -1,6 +1,6 @@
 """Danh sách giá trị mở rộng được (thiết kế mục 0.6; QĐ68 khởi tạo; QĐ109 L03 trigger).
 
-- 20 thông số `ds_<tên>` ở P01, kiểu `danhsach`, `giatri` là mảng JSON. Thêm giá trị = thêm phiên bản thông số,
+- 21 thông số `ds_<tên>` ở P01, kiểu `danhsach`, `giatri` là mảng JSON (`ds_hang_ai`: mảng mục có `ma`, Y22a). Thêm giá trị = thêm phiên bản thông số,
   không đổi cấu trúc bảng. Không hiện ở ngăn Thông số màn 09 (bản vẽ đợt 1 chỉ có 13 thông số).
 - Kiểm 02 lớp: lớp 1 ở lớp ghi trong mã (`kiem`); lớp 2 là trigger trước khi thêm, sửa cho bảng nằm cùng file
   `Dulieu_Chinh` với P01 (SQLite không cho CHECK đọc bảng khác; trigger không đọc được file gắn thêm, nên bảng ở
@@ -36,6 +36,19 @@ KHOITAO = {
     "ds_donvi_vanchuyen": [],
     "ds_kenh_nhan": ["telegram", "zalo", "mail", "whatsapp"],
     "ds_loai_nguoi": ["anh", "nhanvien", "khach"],
+    # Y22a (QĐ161, PTD-05): 09 hãng AI; mỗi mục kèm đường gọi mặc định (địa chỉ công khai của hãng) và cách gọi mặc định.
+    # G06 `diachi_goc` trống thì lấy đường mặc định ở đây (01 nơi, QĐ85). `tukhai`: người dùng điền đường gọi.
+    "ds_hang_ai": [
+        {"ma": "anthropic", "diachi": "https://api.anthropic.com", "cach_goi": "anthropic"},
+        {"ma": "openai", "diachi": "https://api.openai.com/v1", "cach_goi": "openai"},
+        {"ma": "xai", "diachi": None, "cach_goi": "cli"},
+        {"ma": "google", "diachi": "https://generativelanguage.googleapis.com/v1beta/openai", "cach_goi": "openai"},
+        {"ma": "openrouter", "diachi": "https://openrouter.ai/api/v1", "cach_goi": "openai"},
+        {"ma": "groq", "diachi": "https://api.groq.com/openai/v1", "cach_goi": "openai"},
+        {"ma": "deepseek", "diachi": "https://api.deepseek.com", "cach_goi": "openai"},
+        {"ma": "ollama", "diachi": "https://ollama.com/v1", "cach_goi": "openai"},
+        {"ma": "tukhai", "diachi": None, "cach_goi": None},
+    ],
 }
 
 # Cột → thông số cho bảng trong Dulieu_Chinh (lớp 2). Cột chung số liệu (nhóm C có `thitruong`) thêm tự động.
@@ -82,7 +95,7 @@ def anh_xa_day_du(cn: sqlite3.Connection) -> dict[str, list[tuple[str, str]]]:
 
 
 def khoi_tao(cn: sqlite3.Connection) -> int:
-    """Ghi 20 thông số danh sách chưa có dòng nào (chạy lại không sao). Người gọi giữ giao dịch hoặc không."""
+    """Ghi 21 thông số danh sách chưa có dòng nào (chạy lại không sao). Người gọi giữ giao dịch hoặc không."""
     bay = datetime.now(MUIGIO_VN)
     them = 0
     for ten, gt in KHOITAO.items():
@@ -123,6 +136,8 @@ def kiem(cn: sqlite3.Connection, ten: str, giatri: str | None) -> None:
     if giatri is None:
         return
     for muc in doc(cn, ten):
+        if isinstance(muc, dict):   # danh sách có thuộc tính (ds_hang_ai): so theo `ma`
+            muc = muc.get("ma") or ""
         if giatri == muc or ("*" in muc and _glob(giatri, muc)):
             return
     raise ValueError(f"giá trị '{giatri}' ngoài danh sách {ten}")

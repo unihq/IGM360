@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS nguon_ai (
   trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),
   nguoi_khai TEXT,
   tao_luc TEXT,
-  loai TEXT CHECK (loai IS NULL OR loai IN ('goi', 'khoa_api')),
+  loai TEXT CHECK (loai IS NULL OR loai IN ('goi', 'khoa_api', 'tuchay')),
   hanmuc INTEGER,
   tran_tien_thang INTEGER,
   dungchung INTEGER CHECK (dungchung IS NULL OR dungchung IN (0, 1)),
@@ -94,7 +94,10 @@ CREATE TABLE IF NOT EXISTS nguon_ai (
   datlai_5gio_luc TEXT,
   datlai_tuan_luc TEXT,
   do_luc TEXT,
-  da_het_luc INTEGER
+  da_het_luc INTEGER,
+  hang TEXT NOT NULL,
+  cach_goi TEXT NOT NULL CHECK (cach_goi IN ('cli', 'anthropic', 'openai')),
+  diachi_goc TEXT
 );
 
 -- G07 Lịch định kỳ: 01 dòng = 01 việc lặp lại

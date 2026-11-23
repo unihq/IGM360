@@ -9,7 +9,7 @@ import sqlite3
 from pathlib import Path
 
 from kiemthu.ngay07.test_luocdo_ban3 import CoThuMuc, dung_ban2
-from maychu.dulieu import aibam, ketnoi, khoitao, kiemtruoc_ban3 as kt, luong, maso, phienban, songuoi
+from maychu.dulieu import aibam, dsmorong, ketnoi, khoitao, kiemtruoc_ban3 as kt, luong, maso, phienban, songuoi
 
 BANG_30 = {
     "Dulieu_Chinh": ['chiso', 'congty', 'hoso_phaply', 'kenh', 'kho', 'khoanchi', 'khuvuc', 'loai_module', 'lydo_shopchet',
@@ -377,4 +377,78 @@ class KiemNangBoModuleXem(CoThuMuc):
     def test_cot_khac_bo_con_du_lieu_van_dung(self):
         """Chỉ cột trong BO_COT được bỏ khi còn dữ liệu; cột khác vẫn dừng như cũ."""
         self.assertEqual(khoitao.BO_COT, {3: {("Baomat", "nguoidung"): ["module_xem"]}})
+
+
+class KiemNguonAI(CoThuMuc):
+    """Y22a (QĐ161, PTD-05 phương án A): G06 thêm hãng, cách gọi, đường gọi gốc; `loai` thêm `tuchay`; P01 `ds_hang_ai`."""
+
+    def test_cot_moi_va_rang_buoc(self):
+        khoitao.tao_het(self.thumuc)
+        vn = self.mo("Viecnen")
+        try:
+            cot = {r[1]: r[3] for r in vn.execute("PRAGMA table_info(nguon_ai)")}
+            self.assertEqual((cot["hang"], cot["cach_goi"], cot["diachi_goc"]), (1, 1, 0))
+            phienban.them(vn, "nguon_ai", {"ma": "nguon_thu_01", "hieuluc_tu": "2026-11-23", "loai": "tuchay",
+                                           "hang": "ollama", "cach_goi": "openai", "diachi_goc": "http://may-thu.local:11434"})
+            phienban.them(vn, "nguon_ai", {"ma": "nguon_thu_02", "hieuluc_tu": "2026-11-23", "loai": "goi",
+                                           "hang": "ollama", "cach_goi": "openai"})   # Ollama Cloud: phí cố định tháng
+            for dong in ({"loai": "khac", "hang": "openai", "cach_goi": "openai"},
+                         {"loai": "khoa_api", "hang": "openai", "cach_goi": "grpc"},
+                         {"loai": "khoa_api", "cach_goi": "openai"}, {"loai": "khoa_api", "hang": "openai"}):
+                with self.subTest(dong=dong), self.assertRaises(sqlite3.IntegrityError):
+                    phienban.them(vn, "nguon_ai", {"ma": "nguon_thu_09", "hieuluc_tu": "2026-11-23", **dong})
+        finally:
+            vn.close()
+
+    def test_ds_hang_ai_09_hang(self):
+        khoitao.tao_het(self.thumuc)
+        dc = self.mo("Dulieu_Chinh")
+        try:
+            ds = dsmorong.doc(dc, "ds_hang_ai")
+            self.assertEqual([m["ma"] for m in ds], ["anthropic", "openai", "xai", "google", "openrouter", "groq",
+                                                      "deepseek", "ollama", "tukhai"])
+            self.assertEqual({m["cach_goi"] for m in ds}, {"anthropic", "openai", "cli", None})
+            for m in ds:   # đường mặc định là địa chỉ công khai của hãng (https), không có địa chỉ máy trong mạng
+                self.assertTrue(m["diachi"] is None or m["diachi"].startswith("https://"), m)
+            dsmorong.kiem(dc, "ds_hang_ai", "groq")
+            with self.assertRaises(ValueError):
+                dsmorong.kiem(dc, "ds_hang_ai", "hang_la")
+        finally:
+            dc.close()
+
+    def test_nang_ban_2_dien_hang_theo_ma_cu(self):
+        dung_ban2(self.thumuc)
+        self.ghi("Baomat", "INSERT INTO nguoidung (id, ma, ten, vaitro, tao_luc, nguoi_khai) VALUES (?, 'chu', 'Chủ thử', 'chu',"
+                 " '2026-11-21', 'lenh_vps')", (maso.tao(),))
+        for ma in ("goi_claude_01", "goi_chatgpt_02", "khoa_anthropic_01", "khoa_openai_01"):
+            self.ghi("Viecnen", "INSERT INTO nguon_ai (id, ma, loai, nguoi_khai) VALUES (?, ?, 'goi', 'hethong')", (maso.tao(), ma))
+        ra = io.StringIO()
+        with contextlib.redirect_stdout(ra):
+            self.assertEqual(kt.main([str(self.thumuc)]), 0, ra.getvalue())
+        khoitao.tao_het(self.thumuc)
+        self.assertEqual(self.lay("Viecnen", "SELECT ma, hang, cach_goi, diachi_goc FROM nguon_ai ORDER BY ma"),
+                         [("goi_chatgpt_02", "openai", "cli", None), ("goi_claude_01", "anthropic", "cli", None),
+                          ("khoa_anthropic_01", "anthropic", "anthropic", None), ("khoa_openai_01", "openai", "openai", None)])
+
+    def test_nang_ban_2_ma_la_thi_dung(self):
+        dung_ban2(self.thumuc)
+        self.ghi("Baomat", "INSERT INTO nguoidung (id, ma, ten, vaitro, tao_luc, nguoi_khai) VALUES (?, 'chu', 'Chủ thử', 'chu',"
+                 " '2026-11-21', 'lenh_vps')", (maso.tao(),))
+        self.ghi("Viecnen", "INSERT INTO nguon_ai (id, ma, nguoi_khai) VALUES (?, 'khoa_gemini_01', 'hethong')", (maso.tao(),))
+        ra = io.StringIO()
+        with contextlib.redirect_stdout(ra):
+            self.assertEqual(kt.main([str(self.thumuc)]), 1, ra.getvalue())
+        self.assertIn("nguon_ai: 01 dòng không nhận ra hang theo mã cũ", ra.getvalue())
+        with self.assertRaises(RuntimeError) as loi:
+            khoitao.tao_het(self.thumuc)
+        self.assertIn("không nhận ra hang", str(loi.exception))
+        self.assertEqual({t: self.lay(t, "PRAGMA user_version")[0][0] for t in ketnoi.CAC_FILE}, dict.fromkeys(ketnoi.CAC_FILE, 2))
+
+    def test_ghi_nguon_goi_co_hang(self):
+        khoitao.tao_het(self.thumuc)
+        from maychu.hethong.mohinh import dangnhap_goi
+        dangnhap_goi.ghi_nguon("claude", 1, self.thumuc)
+        dangnhap_goi.ghi_nguon("chatgpt", 1, self.thumuc)
+        self.assertEqual(self.lay("Viecnen", "SELECT ma, loai, hang, cach_goi FROM nguon_ai ORDER BY uutien"),
+                         [("goi_claude_01", "goi", "anthropic", "cli"), ("goi_chatgpt_01", "goi", "openai", "cli")])
 

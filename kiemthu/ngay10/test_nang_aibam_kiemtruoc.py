@@ -66,7 +66,7 @@ class KiemDoiAiBam(NenBan2):
                     self.assertTrue(aibam.la_hop_le(v), f"{ten}.{bang}.{cot}")
 
     def test_gia_tri_la_thi_dung_tra_ca_07_file_khong_in_gia_tri(self):
-        self.ghi("Viecnen", "INSERT INTO nguon_ai (id, ma, nguoi_khai) VALUES (?, 'x', ?)", (maso.tao(), LA))
+        self.ghi("Viecnen", "INSERT INTO nguon_ai (id, ma, nguoi_khai) VALUES (?, 'goi_claude_09', ?)", (maso.tao(), LA))
         with self.assertRaises(RuntimeError) as loi:
             khoitao.tao_het(self.thumuc)
         self.assertIn("nguon_ai.nguoi_khai", str(loi.exception))
@@ -127,7 +127,7 @@ class KiemTruoc(NenBan2):
         self.kiem_cung_ket_qua("nhanvien: NOT NULL constraint failed: nhanvien.nguoi_id")
 
     def test_ai_bam_la(self):
-        self.ghi("Viecnen", "INSERT INTO nguon_ai (id, ma, nguoi_khai) VALUES (?, 'x', ?)", (maso.tao(), LA))
+        self.ghi("Viecnen", "INSERT INTO nguon_ai (id, ma, nguoi_khai) VALUES (?, 'goi_claude_09', ?)", (maso.tao(), LA))
         self.kiem_cung_ket_qua("Viecnen.nguon_ai.nguoi_khai 01 dòng")
 
     def test_02_tai_khoan_chu(self):
@@ -154,10 +154,13 @@ class KiemHangSo(unittest.TestCase):
                 bpb[f] = phienban.cac_bang(cn)
             cn.close()
         self.assertEqual(sum(map(len, bpb.values())), 30)   # Y20c: F07 là bảng có phiên bản thứ 30
+        dien3 = {}   # Y22a: điền cột mới bắt buộc theo mã cũ
+        for (f, b), d in khoitao.DIEN_BAN3.items():
+            dien3.setdefault(f, {})[b] = dict(d)
         bo_cot = {}
         for (f, b), ds in khoitao.BO_COT[3].items():
             bo_cot.setdefault(f, {})[b] = list(ds)
-        mong = {"DOI_TEN": doi_ten, "BANG_MOI": bang_moi, "DUNG_LAI": dung_lai, "DDL": ddl, "BANG_PHIENBAN": bpb, "BO_COT": bo_cot,
+        mong = {"DOI_TEN": doi_ten, "BANG_MOI": bang_moi, "DUNG_LAI": dung_lai, "DDL": ddl, "BANG_PHIENBAN": bpb, "BO_COT": bo_cot, "DIEN_BAN3": dien3,
                 "AIBAM": {f: [list(x) for x in aibam.cac_cot(f)] for f in ketnoi.CAC_FILE},
                 "DOI_CU_MAY": aibam.DOI_CU_MAY, "MA_MAY": list(aibam.MA_MAY), "ULID": aibam._ULID.pattern}
         self.assertEqual(json.loads(json.dumps(kt.SINH)), json.loads(json.dumps(mong)),

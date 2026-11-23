@@ -58,13 +58,13 @@ class KiemDanhSachMoRong(CoThuMuc):
 
     def test_20_thong_so_danh_sach_khong_hien_o_ngan_thong_so(self):
         dong = self.lay("Dulieu_Chinh", "SELECT ten, kieu, giatri, nguoi_dat FROM thongso WHERE ten LIKE 'ds\\_%' ESCAPE '\\'")
-        self.assertEqual(len(dong), 20)
+        self.assertEqual(len(dong), 21)   # Y22a thêm ds_hang_ai
         self.assertEqual({d[0] for d in dong}, set(dsmorong.KHOITAO))
         self.assertTrue(all(d[1] == "danhsach" and d[3] == "hethong" for d in dong))
         self.assertEqual(json.loads(dict((d[0], d[2]) for d in dong)["ds_loai_nguoi"]), ["anh", "nhanvien", "khach"])
         self.assertEqual(thongso.doc_het(self.thumuc)["tong"], 13)  # ngăn Thông số không đổi (màn 09 "…/13")
         khoitao.tao_het(self.thumuc)  # chạy lại không thêm
-        self.assertEqual(len(self.lay("Dulieu_Chinh", "SELECT 1 FROM thongso WHERE ten LIKE 'ds\\_%' ESCAPE '\\'")), 20)
+        self.assertEqual(len(self.lay("Dulieu_Chinh", "SELECT 1 FROM thongso WHERE ten LIKE 'ds\\_%' ESCAPE '\\'")), 21)
 
     def test_trigger_chan_gia_tri_ngoai_danh_sach(self):
         DC = "Dulieu_Chinh"
@@ -133,7 +133,7 @@ class KiemNangBan2CoTrung(CoThuMuc):
     def test_nang_ban_2_co_danh_sach_va_trigger(self):
         dung_ban2(self.thumuc)
         khoitao.tao_het(self.thumuc)
-        self.assertEqual(len(self.lay("Dulieu_Chinh", "SELECT 1 FROM thongso WHERE ten LIKE 'ds\\_%' ESCAPE '\\'")), 20)
+        self.assertEqual(len(self.lay("Dulieu_Chinh", "SELECT 1 FROM thongso WHERE ten LIKE 'ds\\_%' ESCAPE '\\'")), 21)
         with self.assertRaises(sqlite3.IntegrityError):  # trigger có cả trên bảng vừa dựng lại
             self.ghi("Dulieu_Chinh", "INSERT INTO donhang (id, tien_ma) VALUES ('d1', 'USD')")
 

@@ -98,8 +98,9 @@ class NenCongAI(unittest.TestCase):
         cn = ketnoi.mo("Viecnen")
         try:
             nid = maso.tao()
-            cn.execute("INSERT INTO nguon_ai (id, ma, ten, loai, uutien, tran_tien_thang) VALUES (?, ?, ?, 'khoa_api', ?, ?)",
-                       (nid, ma, "Khoá API AI", uu, tran))
+            hang = "anthropic" if "anthropic" in ma else "openai"   # Y22a: G06 bắt buộc hang, cach_goi (QĐ161)
+            cn.execute("INSERT INTO nguon_ai (id, ma, ten, loai, uutien, tran_tien_thang, hang, cach_goi)"
+                       " VALUES (?, ?, ?, 'khoa_api', ?, ?, ?, ?)", (nid, ma, "Khoá API AI", uu, tran, hang, hang))
             cn.execute("INSERT INTO mohinh_ai (id, nguon_ai_id, ma_mohinh, gia_vao, gia_ra, tien_ma, trangthai)"
                        " VALUES (?, ?, 'mo-hinh-x', ?, ?, 'USD', 'dung')", (maso.tao(), nid, *gia))
         finally:

@@ -376,9 +376,17 @@ SINH = {
   "Ketnoi.webhook": "CREATE TABLE IF NOT EXISTS webhook (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  chieu TEXT CHECK (chieu IS NULL OR chieu IN ('vao', 'ra')),\n  duongdan TEXT,\n  khoa_id TEXT,\n  cach_kiem TEXT,\n  quytac_json TEXT,\n  viec_gan TEXT,\n  thu_lai TEXT\n);",
   "Viecnen.congsu": "CREATE TABLE IF NOT EXISTS congsu (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  vaitro TEXT,\n  module TEXT,\n  cachlam TEXT,\n  kynang_ids TEXT,\n  congcu_ids TEXT,\n  mohinh_id TEXT REFERENCES mohinh_ai(id),\n  nguon_ai_id TEXT REFERENCES nguon_ai(id),\n  ngansach_thang INTEGER,\n  chude_ids TEXT,\n  muc_quyen_toida INTEGER\n);",
   "Viecnen.kynang": "CREATE TABLE IF NOT EXISTS kynang (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  mota_khinao TEXT,\n  noidung TEXT,\n  congsu_ids TEXT,\n  nguon TEXT CHECK (nguon IS NULL OR nguon IN ('vietmoi', 'chuyen', 'caitien')),\n  so_lan_dung INTEGER\n);",
-  "Viecnen.nguon_ai": "CREATE TABLE IF NOT EXISTS nguon_ai (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  loai TEXT CHECK (loai IS NULL OR loai IN ('goi', 'khoa_api')),\n  hanmuc INTEGER,\n  tran_tien_thang INTEGER,\n  dungchung INTEGER CHECK (dungchung IS NULL OR dungchung IN (0, 1)),\n  uutien INTEGER,\n  tyle_5gio INTEGER,\n  tyle_tuan INTEGER,\n  datlai_5gio_luc TEXT,\n  datlai_tuan_luc TEXT,\n  do_luc TEXT,\n  da_het_luc INTEGER\n);",
+  "Viecnen.nguon_ai": "CREATE TABLE IF NOT EXISTS nguon_ai (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  loai TEXT CHECK (loai IS NULL OR loai IN ('goi', 'khoa_api', 'tuchay')),\n  hanmuc INTEGER,\n  tran_tien_thang INTEGER,\n  dungchung INTEGER CHECK (dungchung IS NULL OR dungchung IN (0, 1)),\n  uutien INTEGER,\n  tyle_5gio INTEGER,\n  tyle_tuan INTEGER,\n  datlai_5gio_luc TEXT,\n  datlai_tuan_luc TEXT,\n  do_luc TEXT,\n  da_het_luc INTEGER,\n  hang TEXT NOT NULL,\n  cach_goi TEXT NOT NULL CHECK (cach_goi IN ('cli', 'anthropic', 'openai')),\n  diachi_goc TEXT\n);",
   "Viecnen.quytrinh": "CREATE TABLE IF NOT EXISTS quytrinh (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  cacbuoc_json TEXT,\n  kichhoat TEXT CHECK (kichhoat IS NULL OR kichhoat IN ('tay', 'lich', 'webhook', 'sukien'))\n);",
   "Viecnen.team": "CREATE TABLE IF NOT EXISTS team (\n  id TEXT PRIMARY KEY NOT NULL,\n  ma TEXT NOT NULL,\n  ten TEXT,\n  hieuluc_tu TEXT,\n  hieuluc_den TEXT,\n  phienban INTEGER,\n  trangthai TEXT NOT NULL DEFAULT 'dung' CHECK (trangthai IN ('dung', 'ngung')),\n  nguoi_khai TEXT,\n  tao_luc TEXT,\n  muctieu TEXT,\n  truongnhom_id TEXT REFERENCES congsu(id),\n  cach_duyet TEXT CHECK (cach_duyet IS NULL OR cach_duyet IN ('moibuoc', 'cuoi'))\n);"
+ },
+ "DIEN_BAN3": {
+  "Viecnen": {
+   "nguon_ai": {
+    "cach_goi": "(CASE WHEN ma GLOB 'goi_claude_*' OR ma GLOB 'goi_chatgpt_*' THEN 'cli' WHEN ma GLOB 'khoa_anthropic*' THEN 'anthropic' WHEN ma GLOB 'khoa_openai*' THEN 'openai' END)",
+    "hang": "(CASE WHEN ma GLOB 'goi_claude_*' OR ma GLOB 'khoa_anthropic*' THEN 'anthropic' WHEN ma GLOB 'goi_chatgpt_*' OR ma GLOB 'khoa_openai*' THEN 'openai' END)"
+   }
+  }
  },
  "DOI_CU_MAY": {
   "lenh_vps": "hethong"
@@ -562,9 +570,16 @@ def kiem(thumuc: Path) -> tuple[bool, list[str]]:
                 n = cn.execute(f"SELECT count(*) FROM {b} WHERE ma IS NULL OR trim(ma) = ''").fetchone()[0]
                 if n:
                     ma_trong.append(f"{ten}.{b} {_so(n)} dòng")
+            dien_them = SINH["DIEN_BAN3"].get(ten, {})   # Y22a: cột mới bắt buộc điền theo mã cũ (QĐ161)
+            for b, dien in dien_them.items():
+                for c, bt in dien.items():
+                    n = cn.execute(f"SELECT count(*) FROM {b} WHERE {bt} IS NULL").fetchone()[0]
+                    if n:
+                        vuong.append(f"{b}: {_so(n)} dòng không nhận ra {c} theo mã cũ")
             for b in SINH["DUNG_LAI"].get(ten, []):
                 try:
-                    vuong += [f"{b}: {v}" for v in _dung_lai(cn, b, SINH["DDL"][f"{ten}.{b}"], DIEN.get(ten, {}).get(b, {}),
+                    vuong += [f"{b}: {v}" for v in _dung_lai(cn, b, SINH["DDL"][f"{ten}.{b}"],
+                                                          {**DIEN.get(ten, {}).get(b, {}), **dien_them.get(b, {})},
                                                           SINH["BO_COT"].get(ten, {}).get(b, []))]
                 except sqlite3.IntegrityError as e:   # thông báo SQLite chỉ có loại ràng buộc và tên cột
                     vuong.append(f"{b}: {str(e).replace('__moi', '')}")

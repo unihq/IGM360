@@ -54,6 +54,14 @@ NANGCAP = {
 # Bảng mới của từng bản (tạo theo lược đồ hiện hành trước khi dựng lại bảng khác).
 BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi'],
                 'Baomat': ['vaitro', 'quyen_vaitro', 'gan_vaitro']}}   # Y20c (QĐ144, QĐ155): F07-F09 rỗng
+# Điền cột mới bắt buộc cho dòng cũ khi nâng bản 3: {(file, bảng): {cột: biểu thức}}. Biểu thức ra NULL thì dòng đó
+# không nhận ra được: dừng nâng, không đoán (QĐ143). Y22a (QĐ161, PTD-05 mục 4 câu 06): G06 theo tiền tố mã cũ.
+DIEN_BAN3 = {("Viecnen", "nguon_ai"): {
+    "hang": "(CASE WHEN ma GLOB 'goi_claude_*' OR ma GLOB 'khoa_anthropic*' THEN 'anthropic'"
+            " WHEN ma GLOB 'goi_chatgpt_*' OR ma GLOB 'khoa_openai*' THEN 'openai' END)",
+    "cach_goi": "(CASE WHEN ma GLOB 'goi_claude_*' OR ma GLOB 'goi_chatgpt_*' THEN 'cli'"
+                " WHEN ma GLOB 'khoa_anthropic*' THEN 'anthropic' WHEN ma GLOB 'khoa_openai*' THEN 'openai' END)",
+}}
 # Cột được bỏ có chủ đích khi còn dữ liệu (ngoài danh sách này, cột sắp bỏ còn dữ liệu thì dừng nâng).
 BO_COT = {3: {('Baomat', 'nguoidung'): ['module_xem']}}   # Y20c (QĐ144, QĐ155): quyền màn chuyển sang F08
 # Bảng đổi tên ở từng bản: {(file, tên cũ): tên mới}.
@@ -118,6 +126,14 @@ def _ban3_truoc(cn: sqlite3.Connection, ten: str, co_bm: bool) -> dict[str, dict
         chu = cn.execute("SELECT ten, ma FROM bm.nguoidung WHERE vaitro = 'chu' ORDER BY tao_luc LIMIT 1").fetchone()
         if chu and not songuoi.id_cua_anh(cn):
             songuoi.them(cn, chu[0] or chu[1], "anh", "hethong")
+    them = {b: dict(d) for (t, b), d in DIEN_BAN3.items() if t == ten}
+    for bang, dien in them.items():
+        for cot, bt in dien.items():
+            so = cn.execute(f"SELECT count(*) FROM {bang} WHERE {bt} IS NULL").fetchone()[0]
+            if so:
+                raise RuntimeError(f"{ten}.{bang}: {so} dòng không nhận ra {cot} theo mã cũ; dừng nâng (QĐ161)")
+    if them:
+        return them
     if ten == "Baomat":
         return {"nguoidung": {"nguoi_id": "(CASE WHEN vaitro = 'chu' THEN (SELECT id FROM dc.nguoi WHERE loai = 'anh'"
                                           " AND trangthai = 'dung' ORDER BY ma LIMIT 1) END)"}}
