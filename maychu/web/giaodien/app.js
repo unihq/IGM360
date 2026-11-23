@@ -292,7 +292,7 @@ function theGoi(g, ds, nguon, uu) {
   const rong = !ds.length || (ds.length === 1 && !ds[0].da_noi && !ds[0].khong_ro && !coDong(ds[0]));
   let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + GOI_TEN[g] + '</div><div class="t12 phu">Phí cố định tháng'
     + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>';
-  if (rong) h += '<div class="tk-dong"><span class="anh-dd mini xam">1</span><div class="f1"><b>Chưa có tài&nbsp;khoản</b><div class="t12 phu">'
+  if (rong && !dn.url) h += '<div class="tk-dong"><span class="anh-dd mini xam">1</span><div class="f1"><b>Chưa có tài&nbsp;khoản</b><div class="t12 phu">'
     + (g === 'claude' ? 'Đăng nhập để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu : 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng') + '</div></div><span class="nhan n-xem"><i></i>Chưa đăng nhập</span></div>';
   else ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
     const go = (x.da_noi || coDong(x)) && !(dn.url && dn.tk === x.taikhoan);

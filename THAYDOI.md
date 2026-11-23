@@ -5,9 +5,9 @@ Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử
 
 ## 0.7.1
 Tóm tắt: Sửa lỗi trùng tài khoản gói AI
-- Đăng nhập lại đúng tài khoản gói AI đã kết nối thì phần mềm báo "Tài khoản này đã kết nối ở tài khoản 01", không thêm ô mới.
+- Đăng nhập lại đúng tài khoản gói AI đã kết nối thì phần mềm báo "Tài khoản Claude này đã kết nối ở Tài khoản 1", không thêm ô mới.
 - Mỗi tài khoản gói Claude, gói ChatGPT có nút Gỡ tài khoản, hỏi lại 01 lần trước khi gỡ; lịch sử dùng AI vẫn giữ.
-- Ô tài khoản thứ 02 chỉ hiện khi anh đang đăng nhập hoặc đã đăng nhập xong; nút thêm đổi thành "Thêm tài khoản Claude khác".
+- Ô tài khoản thứ 02 chỉ hiện sau khi đăng nhập xong; nút thêm đổi thành "Thêm tài khoản Claude khác".
 
 ## 0.7.0
 Tóm tắt: Nền dữ liệu mới, tên gọi chuẩn, sửa lỗi nhỏ

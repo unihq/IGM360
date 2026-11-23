@@ -294,6 +294,12 @@ class KiemY24(unittest.TestCase):
         self.assertIn("bao('Đã kết nối Gói Claude · Tài khoản ' + dn.tk + '.')", js)
         self.assertIn("D.trung.claude = (e.ct || {}).trung_voi", js)
         self.assertIn("'Đăng nhập để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu", js)
+        self.assertIn("if (rong && !dn.url) h += ", js)   # U5-2: đang đăng nhập lần đầu thì ẩn dòng "Chưa có tài khoản"
+        thay = Path(api.__file__).parents[2] / "THAYDOI.md"
+        muc = thay.read_text(encoding="utf-8").split("## 0.7.1", 1)[1].split("\n## ", 1)[0]   # U5-1
+        self.assertIn("ở Tài khoản 1", muc)
+        self.assertIn("chỉ hiện sau khi đăng nhập xong", muc)
+        self.assertNotIn("đang đăng nhập hoặc", muc)
         ico = (Path(api.__file__).parent / "giaodien" / "icon.js").read_text(encoding="utf-8")
         self.assertIn("lucide lucide-user-minus", ico)
         self.assertIn("n.trangthai === 'dung').forEach", js)
