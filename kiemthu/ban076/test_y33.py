@@ -143,7 +143,7 @@ class KiemGiaoDien076(unittest.TestCase):
                     "data-mhnhom=\"' + esc(g.nhom) + '\"", "data-mhchon=\"' + esc(m.khoa) + '\"", "{loai_viec: lv, khoa: x.m.khoa}",
                     "{loai_viec: lv, khoa: g.khoa_md}", "const ghimKhoa = () =>", "gh = ghimKhoa();",
                     "(MH.dich && mdLoai(MH.dich)) || {g: nhomChinh(), m: null}",                     # N1
-                    "(noi === 'chat' ? !dang.ghim : !dang.m)",                                       # N2
+                    "const onMd = !dang.m && dang.g && dang.g.nhom === g.nhom;",                     # N2 → U10b F1
                     "(mh ? tenMh(mh, n.id, n, true) : 'Mặc định')", "tenMh(mhThucDung(x), x.nguon_id, n, true)",   # N3
                     "' title=\"' + esc(tieuTraLoi(x)) + '\"'",
                     "const tenLoai = n => n && n.goi ? TEN_NGUON_GOI[n.goi] : tenNguon(n);",      # QĐ189: không ghi tài khoản
@@ -182,7 +182,7 @@ class KiemY34(unittest.TestCase):
         self.js = (GD / "app.js").read_text(encoding="utf-8")
 
     def test_u10_g1_g3(self):
-        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
+        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
         html = (GD / "index.html").read_text(encoding="utf-8")
         self.assertIn(".hm{display:grid;grid-template-columns:92px 1fr minmax(40px,max-content);", html)   # "chưa đo" không tràn
 
@@ -227,6 +227,63 @@ class KiemY34(unittest.TestCase):
             r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout), ["goi_claude", None])   # đúng trạng thái làm 0.7.5 lỗi: m trống
+
+
+@unittest.skipUnless(shutil.which("node"), "máy không có node")
+class KiemU10b(unittest.TestCase):
+    """U10b F1 (QĐ190): ✓ đúng mô hình nút đang ghi, "Mặc định của nguồn" chỉ ✓ khi mặc định là mặc định của nguồn.
+    F2: công cụ không báo mô hình thì dòng vàng ghi tên nguồn thực chạy. Chạy thật các hàm trong app.js bằng node."""
+
+    def chay(self, macdinh_ct: dict, sau: str) -> list:
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        def lay(ten):
+            i = js.index("const " + ten + " ")
+            return js[i:js.index("\nconst ", i + 5)]
+        def ham(ten):
+            i = js.index("function " + ten + "(")
+            j = min(x for x in (js.find("\nconst ", i), js.find("\nfunction ", i + 5), js.find("\nasync function ", i)) if x > 0)
+            return js[i:j]
+        phan = [lay(t) for t in ("NB", "TEN_NGUON_GOI", "TEN_NGUON_HANG", "tenNguon", "chuHoa", "laSo", "phanMh", "hangCua", "gocMh",
+                                 "nhomMh", "tenHang", "tenMh", "timNguon", "mhThucDung", "tenLoai", "MH", "icoMau", "KHO_GHIM", "docGhim",
+                                 "luuGhim", "ghimId", "timMh", "datGhim", "ghimKhoa", "nhomChinh", "mdLoai", "mdChat", "nbsp", "logoNhom",
+                                 "chonDang", "CHU_MD", "nhomDangMo")]
+        phan += [ham(t) for t in ("dangChonChat", "chuGhimHong", "dsMhHtml")]
+        nhom = [{"nhom": "goi_claude", "khoa_md": "goi_claude|", "nguon_ids": ["c1"], "goi": "claude", "chinh": True, "dang_tai": False,
+                 "mohinh": [{"khoa": "goi_claude|sonnet", "ma": "sonnet"}, {"khoa": "goi_claude|opus", "ma": "opus"}]},
+                {"nhom": "goi_chatgpt", "khoa_md": "goi_chatgpt|", "nguon_ids": ["g1"], "goi": "chatgpt", "chinh": False, "dang_tai": False,
+                 "mohinh": []}]
+        nguon = [{"id": "c1", "goi": "claude", "taikhoan": 1}, {"id": "g1", "goi": "chatgpt", "taikhoan": 1}]
+        ma = ("const esc = s => String(s); const ICON = new Proxy({}, {get: () => '<svg stroke=\"#000\" width=\"1\" height=\"1\"></svg>'});\n"
+              "const localStorage = {d: {}, getItem(k) { return this.d[k] || null; }, setItem(k, v) { this.d[k] = v; }};\n"
+              "const D = {htId: 'h1', ghimMoi: null, hong: {}, md: {nguon: " + json.dumps(nguon) + "}, dsmh: {nhom: " + json.dumps(nhom)
+              + ", macdinh_ct: " + json.dumps(macdinh_ct) + "}};\n" + "\n".join(phan) + "\n" + sau)
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "thu.js"
+            p.write_text(ma, encoding="utf-8")
+            r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    DEM = ("const h = dsMhHtml('chat'); const on = [...h.matchAll(/class=\"mh-dong on\" data-(mhchon|mhmd)=\"([^\"]+)\"/g)].map(m => m[2]);"
+           " console.log(JSON.stringify(on));")
+
+    def test_f1_chua_ghim_mac_dinh_la_mo_hinh(self):
+        md = {"trochuyen": {"khoa": "goi_claude|opus", "nhom": "goi_claude", "ma": "opus", "mat": False}}
+        self.assertEqual(self.chay(md, self.DEM), ["goi_claude|opus"])          # ✓ Opus (nút ghi Opus), không ✓ "Mặc định của nguồn"
+
+    def test_f1_chua_ghim_mac_dinh_cua_nguon(self):
+        md = {"trochuyen": {"khoa": "goi_claude|", "nhom": "goi_claude", "ma": None, "mat": False}}
+        self.assertEqual(self.chay(md, self.DEM), ["goi_claude"])               # ✓ "Mặc định của nguồn"
+
+    def test_f1_da_ghim(self):
+        md = {"trochuyen": {"khoa": "goi_claude|opus", "nhom": "goi_claude", "ma": "opus", "mat": False}}
+        sau = "luuGhim('h1', 'goi_claude|sonnet'); " + self.DEM
+        self.assertEqual(self.chay(md, sau), ["goi_claude|sonnet"])             # ghim Sonnet: chỉ ✓ Sonnet
+
+    def test_f2_khong_bao_mo_hinh_ghi_ten_nguon(self):
+        sau = ("console.log(JSON.stringify([chuGhimHong({nguon_id: 'g1', mohinh: null, mohinh_bao: null, "
+               "ghim_hong: {khoa: 'goi_claude|opus', ma: 'opus', het_hanmuc: true}})].map(s => s.replace(/\u00a0/g, ' '))));")
+        self.assertEqual(self.chay({}, sau), ["Opus đang hết hạn mức, đã dùng ChatGPT · Codex (mặc định)"])
 
 
 if __name__ == "__main__":

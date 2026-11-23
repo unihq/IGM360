@@ -311,9 +311,9 @@ class KiemGiaoDien(unittest.TestCase):
     def test_o_chon_theo_ban_ve(self):
         self.assertNotIn('id="tc-nguon"', self.html)                       # bỏ ô chọn nguồn đầu cuộc
         self.assertIn('<div class="tc-duoi"><div class="mh-chon" id="mh-chat"></div></div>', self.html)
-        for chu in ("Tìm nguồn, mô hình…", "Dùng ngay cho cuộc này và các cuộc trò chuyện mới", "Thêm nguồn AI ở mục Mô hình AI",
+        for chu in ("Tìm nguồn, mô hình…", "Dùng ngay cho cuộc này và các cuộc mới", "Thêm nguồn AI ở mục Mô hình AI",
                     "Đang tải danh sách mô hình…", "Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối",
-                    "): dùng ngay cho cuộc trò chuyện này và các cuộc trò chuyện mới.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
+                    ") cho cuộc này và các cuộc mới.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
                     "' (mặc định) cho tới khi đặt lại'", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
             self.assertIn(chu, self.js, chu)
         self.assertIn("#8F5F00", self.js)                                   # chữ vàng tương phản 5,5:1
@@ -351,7 +351,7 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("try { const g = docGhim();", self.js)               # trình duyệt chặn lưu: không lỗi
 
     def test_g2_g3_g5(self):
-        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;", self.js)
+        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
         self.assertIn("'&nbsp;·&nbsp;<span class=\"nw\">' + esc(x.goi_ten)", self.js)
         self.assertIn("'Đăng nhập lúc&nbsp;' + esc(luc(x.dangnhap_luc))", self.js)
 
@@ -365,10 +365,10 @@ class KiemGiaoDien(unittest.TestCase):
 
     def test_y31c_s6(self):
         for chu in ("const CHU_MD = 'Mặc định của nguồn';", "data-mhmd=", "CHU_MD.toLowerCase().includes(q)",
-                    "'Đã bỏ ghim: cuộc trò chuyện này và các cuộc trò chuyện mới theo mặc định của nguồn '",
+                    "'Đã bỏ ghim: cuộc này và các cuộc mới theo mặc định của nguồn '",
                     "'\" về mặc định của nguồn ' + tn + '.'", "{loai_viec: lv, khoa: g.khoa_md}",
-                    "const onMd = dang.g && dang.g.nhom === g.nhom && (noi === 'chat' ? !dang.ghim : !dang.m);",
-                    "(noi !== 'chat' || dang.ghim)", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nhom, x.g)) : 'Mặc định của nguồn')"):
+                    "const onMd = !dang.m && dang.g && dang.g.nhom === g.nhom;",
+                    "const on = !!dang.m && dang.m.khoa === m.khoa;", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nhom, x.g)) : 'Mặc định của nguồn')"):
             self.assertIn(chu, self.js, chu)
 
     def test_ban(self):
