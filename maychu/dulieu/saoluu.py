@@ -97,8 +97,9 @@ def _don_ban_cu(goc: Path, thumuc: Path) -> None:
 
 
 def ten_truoc_capnhat(luc: datetime, ban: str) -> str:
-    """Thư mục bản sao trước cập nhật (0.7.9 lớp 5): tên trên Drive thành `<ngày>_truoc_<bản>_<tệp>.mahoa`."""
-    return f"{luc.strftime('%Y-%m-%d')}_truoc_{ban}"
+    """Thư mục bản sao trước cập nhật (0.7.9 lớp 5): tên trên Drive thành `<ngày>_truoc_<bản>_<giờ>_<tệp>.mahoa`.
+    Y38c R2: thêm giờ phút giây để mỗi lần bấm cập nhật 01 thư mục riêng (không 02 dòng M01 chung 01 tệp)."""
+    return f"{luc.strftime('%Y-%m-%d')}_truoc_{ban}_{luc.strftime('%H%M%S')}"
 
 
 GIU_TRUOC_CAPNHAT = 2   # giữ bản sao trước cập nhật của 02 lần gần nhất trên máy (bản lâu dài ở Drive)

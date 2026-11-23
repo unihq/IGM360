@@ -391,8 +391,11 @@ def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
         tk = tim_trung(goi, taikhoan, (c["email_bam"], c["tochuc_bam"]) if c else dinh_danh_bam(goi, taikhoan))
         if tk:
             _dang_xuat(goi, taikhoan)
-            if not _co_ma(taikhoan):
-                _don(goi, taikhoan)
+            if _co_ma(taikhoan):   # Y38c R10: "Lấy tên, gói" thấy trùng → gỡ luôn mã của tài khoản trùng (QĐ218 dòng 22)
+                from maychu.hethong.mohinh import madaihan
+                go(goi, taikhoan)
+                return {"loi": madaihan.CHU_DAN["trung"].format(tk=tk), "trung_voi": tk}
+            _don(goi, taikhoan)
             return {"loi": f"Tài khoản này đã kết nối ở tài khoản {tk:02d}", "trung_voi": tk}
     if c and _co_ma(taikhoan):   # QĐ216 bước anh làm 01 lần: đăng nhập kiểu cũ để chụp tên, gói; chụp xong đăng xuất (Đ8)
         ghi_chup(taikhoan, c)

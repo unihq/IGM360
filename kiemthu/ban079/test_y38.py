@@ -274,9 +274,16 @@ class KiemLop3(NenAT):
             self.assertEqual(antoan.quay_ve("nguoi", True, tre_giay=0.01), {"ok": True, "ban": "0.7.8"})
             time.sleep(0.3)
             th.assert_called_once()
-        self.assertEqual(self.f04("thu"), [])                                       # dữ liệu trả về bản chụp
-        self.assertEqual(antoan.doc(self.dl)["chay_ban_truoc"]["ban_truoc"], "0.7.8")
+        self.assertNotEqual(self.f04("thu"), [])                                    # Y38c R1: lúc còn chạy KHÔNG trả dữ liệu
+        co = antoan.doc(self.dl)["chay_ban_truoc"]
+        self.assertEqual((co["ban_truoc"], co["tra_du_lieu"]["thumuc"]), ("0.7.8", f"truoc_nangcap_v{khoitao.PHIENBAN_LUOCDO:02d}"))
         self.assertIn("0.7.9 → 0.7.8", self.f04("quayve")[0][0])
+        (g / "VERSION").write_text("0.7.9", encoding="utf-8")
+        self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                    # lệnh chạy trả dữ liệu trước khi chạy bản trước
+        self.assertEqual(self.f04("thu"), [])
+        self.assertNotIn("tra_du_lieu", antoan.doc(self.dl)["chay_ban_truoc"])
+        self.assertNotIn("nang_luocdo", antoan.doc(self.dl))
+        self.assertIn("đã trả dữ liệu về bản chụp", self.f04("quayve")[-1][0])   # nhật ký ghi lại sau khi trả
 
     def test_khong_nang_luocdo_giu_du_lieu_khong_co_ban_truoc_thi_khong_co_nut(self):
         g = self.goc()
@@ -393,7 +400,7 @@ class KiemN28(NenAT):
         c = madaihan.chu_loi_dan(MA_GIA[:25])
         self.assertEqual(c, madaihan.CHU_DAN["chua_tron"].format(n=25))
         self.assertNotIn(MA_GIA[13:25], c)
-        self.assertEqual(madaihan.chu_loi_dan("sk-ant-api03-xyz"), madaihan.CHU_DAN["chua_tron"].format(n=16))
+        self.assertEqual(madaihan.chu_loi_dan("sk-ant-api03-xyz"), madaihan.CHU_DAN["khong_phai_ma"])   # Y38c CPO-1
         self.assertEqual(c, "Mã vừa dán có 25 ký tự, chưa trọn. Chép lại cả mã rồi dán lại")
 
     def test_o_buoc_2_gap_ma_dai_han_thi_luu_nhu_dan(self):
@@ -438,6 +445,154 @@ class KiemN28(NenAT):
         nut = js[js.index("else if (d.mdGui)"):js.index("else if (d.mdLuu)")]
         self.assertIn("lamSachMa(ma).startsWith('sk-ant-oat01-')", nut)           # N28 (b) ở giao diện
         self.assertIn("'/mohinh/goi/claude/madaihan/dan'", nut)
+
+
+# ---------------- Y38c: sửa lỗi CDA và lượt rà độc lập của CPO ----------------
+class KiemY38c(NenAT):
+    def goc(self):
+        g = self.g / "app"
+        (g / "ban_truoc" / "maychu").mkdir(parents=True)
+        (g / "VERSION").write_text("0.7.9\n", encoding="utf-8")
+        (g / "ban_truoc" / "VERSION").write_text("0.7.8\n", encoding="utf-8")
+        return g
+
+    def test_r1_ban_chup_hong_thi_khong_thay_tep_nao(self):
+        g = self.goc()
+        khoitao._chup_het(self.dl, ketnoi.CAC_FILE)
+        noi = khoitao._thumuc_chup(self.dl)
+        (noi / "Viecnen.sqlite3").write_bytes(b"khong phai sqlite")              # 01 tệp chụp hỏng
+        KiemLop2.them_dong(self)
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.7.9", "ban_truoc": "0.7.8",
+                                            "tra_du_lieu": {"thumuc": noi.name, "tep": list(ketnoi.CAC_FILE)}})
+        self.assertEqual(chay.chon(self.dl, g), g)                                 # không trả, chạy bản mới
+        self.assertNotEqual(self.f04("thu"), [])                                   # Nhatky không bị thay (trả đủ hoặc không)
+        tt = antoan.doc(self.dl)
+        self.assertNotIn("chay_ban_truoc", tt)
+        self.assertIn("không trả được dữ liệu", tt["quayve_loi"]["chu"])
+        self.assertEqual([p.name for p in self.dl.iterdir() if p.name.endswith(".trave.tam")], [])
+        antoan.bao_quay_ve_loi(self.dl)
+        self.assertEqual(self.f04("quayve")[-1][1], "loi")
+        self.assertNotIn("quayve_loi", antoan.doc(self.dl))
+
+    def test_r1_nhat_ky_loi_thi_khong_ghi_co_khong_dung(self):
+        g = self.goc()
+        with mock.patch.object(antoan, "GOC_MA", g), mock.patch.object(capnhat, "ban_dang_chay", return_value="0.7.9"), \
+                mock.patch.object(capnhat, "_ghi_f04", side_effect=sqlite3.OperationalError("khoá")), \
+                mock.patch.object(antoan, "_thoat") as th:
+            kq = antoan.quay_ve("nguoi", tre_giay=0.01)
+            time.sleep(0.2)
+        self.assertIn("loi", kq)
+        th.assert_not_called()
+        self.assertNotIn("chay_ban_truoc", antoan.doc(self.dl))
+
+    def test_r3_ban_truoc_hong_03_lan_thi_ve_ban_moi(self):
+        import signal
+        g = self.goc()
+        for s in (signal.SIGTERM, signal.SIGINT):
+            self.addCleanup(signal.signal, s, signal.getsignal(s))
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.7.9", "ban_truoc": "0.7.8"})
+        tep = self.dl / antoan.TEN_TEP
+        with mock.patch.object(chay, "LENH", ["-c", "import sys; sys.exit(3)"]):
+            for _ in range(3):
+                self.assertEqual(chay.canh_ban_truoc(g / "ban_truoc", tep, cho_len=5, hoi=lambda: False), 3)
+        self.assertEqual(antoan.doc(self.dl)["chay_ban_truoc"]["so_lan_hong"], 3)
+        self.assertEqual(chay.chon(self.dl, g), g)
+        self.assertIn("khởi động hỏng 03 lần", antoan.doc(self.dl)["quayve_loi"]["chu"])
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.7.9", "ban_truoc": "0.7.8", "so_lan_hong": 2})
+        with mock.patch.object(chay, "LENH", ["-c", "import time; time.sleep(0.5)"]):
+            chay.canh_ban_truoc(g / "ban_truoc", tep, cho_len=5, hoi=lambda: True)   # lên được → xoá số đếm
+        self.assertEqual(antoan.doc(self.dl)["chay_ban_truoc"]["so_lan_hong"], 0)
+
+    def test_g5_co_la_thi_vao_che_do_an_toan(self):
+        antoan.ghi(self.dl, dang_nang={"tu": 2, "den": 99, "luc": "x", "tep": ["Bot"]})
+        with self.assertRaises(RuntimeError):
+            khoitao.tao_het(self.dl)
+        self.assertIn("dang_nang", antoan.doc(self.dl))                            # giữ cờ để soát
+
+    def test_r2_moi_lan_01_thu_muc_rieng(self):
+        from datetime import datetime as dt
+        a = saoluu.chay(bay_gio=dt(2026, 11, 24, 10, 0, 0, tzinfo=saoluu.MUIGIO_VN), truoc_ban="0.7.10")
+        b = saoluu.chay(bay_gio=dt(2026, 11, 24, 10, 15, 0, tzinfo=saoluu.MUIGIO_VN), truoc_ban="0.7.10")
+        self.assertNotEqual(a["noi"], b["noi"])
+        self.assertEqual((capnhat._con_cho_drive(a["noi"]), capnhat._con_cho_drive(b["noi"])), (7, 7))   # không lẫn nhau
+        cn = ketnoi.mo("Hotho")
+        try:
+            dup = cn.execute("SELECT count(*) FROM (SELECT duongdan_tam FROM cho_day_drive GROUP BY duongdan_tam HAVING count(*) > 1)").fetchone()[0]
+        finally:
+            cn.close()
+        self.assertEqual(dup, 0)                                                   # 01 tệp đúng 01 dòng M01
+
+    def test_r4_chup_truoc_roi_cho_viec_ai(self):
+        goi, so = [], iter([1, 1, 0])
+        with mock.patch.object(capnhat, "_chay_nen", side_effect=lambda f: f()), \
+                mock.patch.object(capnhat, "cap_nhat_ngay", side_effect=lambda n, t=None: goi.append(capnhat.dang_cho()) or {"ok": True}), \
+                mock.patch("maychu.ketnoi.drive.dang_noi", return_value=False), \
+                mock.patch.object(capnhat, "so_viec_ai_dangchay", side_effect=lambda t=None: next(so)), \
+                mock.patch.object(capnhat, "NGHI_DAY_GIAY", 0):
+            capnhat.bat_dau("nguoi", "0.7.10", cho_viec=True)
+        self.assertEqual(goi, [True])                                              # gửi lệnh sau khi việc AI xong; lúc đó vẫn chặn việc mới
+        self.assertTrue(any(p.name.startswith(time.strftime("%Y-")) and "_truoc_" in p.name for p in (self.dl / "saoluu").iterdir()))
+
+    def test_r6_lich_do_that(self):
+        with mock.patch.object(antoan, "CHO_KIEM_LICH_GIAY", 0), mock.patch.object(antoan, "_kiem_cli", return_value=True):
+            kq = antoan.kiem_sau_khi_chay(SimpleNamespace(done=lambda: True))
+        self.assertFalse(kq["diem"]["lich"])
+        self.assertIn("lịch chạy nền chưa bật", kq["loi"])
+
+    def test_r7_ghi_dong_thoi_khong_mat_muc(self):
+        import threading
+        ts = [threading.Thread(target=antoan.ghi, kwargs={f"muc{i}": i}) for i in range(20)]
+        [x.start() for x in ts]
+        [x.join() for x in ts]
+        d = antoan.doc(self.dl)
+        self.assertEqual(sorted(k for k in d if k.startswith("muc")), sorted(f"muc{i}" for i in range(20)))
+        self.assertEqual([p.name for p in self.dl.iterdir() if p.name.endswith(".tam")], [])
+
+    def test_r8_gio_che_do_an_toan_lay_luc_chup(self):
+        antoan.ghi(self.dl, chup_luc="2026-11-24T10:05:00+07:00")
+        antoan.vao_an_toan(RuntimeError("x"), self.dl)
+        self.assertEqual(antoan.CHE_DO["luc"], "2026-11-24T10:05:00+07:00")
+
+    def test_r9_chu_dung_truoc_ma(self):
+        for s in ("Token: " + MA_GIA, "Your OAuth token: " + MA_GIA[:30] + "\n" + MA_GIA[30:]):
+            self.assertEqual(madaihan.lam_sach(s), MA_GIA)
+        madaihan._PHIEN[1] = {"bat_luc": time.time(), "ma": "", "loi": "", "fd": -1, "tho": "", "proc": mock.Mock()}
+        with mock.patch.object(madaihan.os, "write") as gho:
+            self.assertEqual(madaihan.gui_ma(1, "Token: " + MA_GIA), {"ma": MA_GIA, "dan_nham": True})
+        gho.assert_not_called()
+
+    def test_r10_lay_ten_goi_thay_trung_thi_go_ma(self):
+        self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        madaihan.luu(2, MA_GIA)
+        c = {"ten_hien": "B", "goi_ten": "Max", "email_bam": "b" * 64, "tochuc_bam": None, "chup_luc": "x"}
+        with mock.patch.object(dg, "chup_song", return_value=c), mock.patch.object(dg, "tim_trung", return_value=1), \
+                mock.patch.object(dg, "_dang_xuat", return_value=True):
+            kq = dg._ket_thuc("claude", 2)
+        self.assertEqual(kq["loi"], madaihan.CHU_DAN["trung"].format(tk=1))
+        self.assertIsNone(madaihan.thong_tin(2))
+        self.assertFalse(dg.tep_chup(2).exists())
+
+    def ket_noi(self, tk, cu, goi_ok=True):
+        tt = [{"loggedIn": cu, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
+        goi = mock.Mock(return_value={"hanmuc": {}}) if goi_ok else mock.Mock(side_effect=congai.LoiAI("Claude", "lỗi", "x"))
+        with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), \
+                mock.patch.object(dg, "_dinh_danh", return_value=(EMAIL_A, "org1")), \
+                mock.patch.object(dg, "ho_so", return_value={"ten_hien": "Nguoi Gia", "goi_ten": "Ultra", "mota_goi": None}), \
+                mock.patch.object(dg, "_dang_xuat", return_value=True), mock.patch.object(congai, "_goi_claude", goi):
+            return madaihan.ket_noi(tk, MA_GIA)
+
+    def test_g1_goi_thu_chua_duoc_van_ghi_tep_chup(self):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        kq = self.ket_noi(1, cu=True, goi_ok=False)
+        self.assertFalse(kq["goi_thu"])
+        self.assertTrue(dg.tep_chup(1).exists())
+
+    def test_r11_khong_chup_duoc_thi_bo_tep_cu(self):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        self.ket_noi(1, cu=True)
+        self.assertTrue(dg.tep_chup(1).exists())
+        self.ket_noi(1, cu=False)                                                  # mã mới, không còn đăng nhập kiểu cũ
+        self.assertFalse(dg.tep_chup(1).exists())
 
 
 # ---------------- Chữ ở 01 chỗ ----------------

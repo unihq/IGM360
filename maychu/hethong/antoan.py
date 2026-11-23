@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -65,19 +66,38 @@ def doc(thumuc: Path | None = None) -> dict:
         return {}
 
 
-def ghi(thumuc: Path | None = None, **muc) -> dict:
-    """Gộp các mục vào tệp trạng thái (giá trị None = bỏ mục); ghi nguyên tử, quyền 600."""
-    d = doc(thumuc)
-    for k, v in muc.items():
-        d.pop(k, None) if v is None else d.__setitem__(k, v)
-    p = _tep(thumuc)
+_KHOA_GHI = threading.Lock()
+
+
+def ghi_nguyen_tu(p: Path, d: dict) -> None:
+    """Ghi JSON kiểu tệp tạm riêng (tên có số tiến trình, luồng) rồi đổi tên; fsync trước khi đổi (Y38c R7, CDA C2)."""
     p.parent.mkdir(parents=True, exist_ok=True)
-    tam = p.with_name(p.name + ".tam")
+    tam = p.with_name(f"{p.name}.{os.getpid()}.{threading.get_ident()}.tam")
     fd = os.open(tam, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False)
-    os.replace(tam, p)
-    return d
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tam, p)
+    finally:
+        tam.unlink(missing_ok=True)
+    if hasattr(os, "O_DIRECTORY"):   # Linux: ghi chắc cả lần đổi tên
+        dfd = os.open(p.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dfd)
+        finally:
+            os.close(dfd)
+
+
+def ghi(thumuc: Path | None = None, **muc) -> dict:
+    """Gộp các mục vào tệp trạng thái (giá trị None = bỏ mục); đọc – gộp – ghi trong 01 khoá (Y38c R7)."""
+    with _KHOA_GHI:
+        d = doc(thumuc)
+        for k, v in muc.items():
+            d.pop(k, None) if v is None else d.__setitem__(k, v)
+        ghi_nguyen_tu(_tep(thumuc), d)
+        return d
 
 
 def _bay() -> str:
@@ -115,7 +135,7 @@ def vao_an_toan(loi: BaseException, thumuc: Path | None = None) -> None:
     from maychu.hethong import capnhat
     from maychu.hethong.kekhoa.che import che
     tt = doc(thumuc)
-    luc = (tt.get("nang_xong_luc") or tt.get("dang_nang", {}).get("luc") or _bay())
+    luc = tt.get("chup_luc") or (tt.get("dang_nang") or {}).get("luc") or _bay()   # Y38c R8: khoitao ghi `chup_luc`
     CHE_DO.update(an_toan=True, den=capnhat.ban_dang_chay(), luc=luc,
                   lydo=che(f"{type(loi).__name__}: {loi}")[:300], luocdo=khoitao.PHIENBAN_LUOCDO)
     try:   # F04 có thể chưa ghi được nếu chính tệp Nhatky hỏng: không chặn chế độ an toàn
@@ -183,6 +203,25 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
     return {"diem": diem, "dat": dat, "tong": len(diem), "ban": ban, "loi": loi}
 
 
+CHO_KIEM_LICH_GIAY = 30
+
+
+def kiem_sau_khi_chay(viec, thumuc: Path | None = None) -> dict:
+    """Y38c R6: chờ CHO_KIEM_LICH_GIAY rồi mới chấm điểm "lịch chạy nền" theo việc lịch còn chạy thật (không tự đạt)."""
+    import time
+    time.sleep(CHO_KIEM_LICH_GIAY)
+    return kiem_sau_capnhat(viec is not None and not viec.done(), thumuc)
+
+
+def bao_quay_ve_loi(thumuc: Path | None = None) -> None:
+    """Lệnh chạy (maychu/chay.py) ghi `quayve_loi` khi không trả được dữ liệu hoặc bản trước khởi động hỏng: ghi F04 01 lần."""
+    from maychu.hethong import capnhat
+    loi = doc(thumuc).get("quayve_loi")
+    if loi:
+        capnhat._ghi_f04("quayve", str(loi.get("chu", ""))[:250], "loi", None, thumuc=thumuc)
+        ghi(thumuc, quayve_loi=None)
+
+
 def can_kiem(thumuc: Path | None = None) -> bool:
     """Bản đang chạy chưa có lượt kiểm sau cập nhật."""
     from maychu.hethong import capnhat
@@ -227,7 +266,6 @@ def _thoat() -> None:   # pragma: no cover - dừng tiến trình để Docker b
 
 def quay_ve(nguoi_id: str, dong_y_mat: bool = False, thumuc: Path | None = None, tre_giay: float = 1.5) -> dict:
     """Ghi cờ chạy bản trước (trả bản chụp trước lúc nâng nếu bản này có nâng lược đồ), ghi F04 `quayve`, rồi dừng."""
-    import threading
     from maychu.dulieu import khoitao
     from maychu.hethong import capnhat
     thumuc = thumuc or ketnoi.thumuc_dulieu()
@@ -237,11 +275,16 @@ def quay_ve(nguoi_id: str, dong_y_mat: bool = False, thumuc: Path | None = None,
     if q["mat_tu"] and not dong_y_mat:
         return {"loi": CHU["qv_can_dong_y"], "mat_tu": q["mat_tu"]}
     dang = capnhat.ban_dang_chay()
-    if q["mat_tu"]:
+    co = {"ban_anh": dang, "ban_truoc": q["ban"], "luc": _bay()}
+    if q["mat_tu"]:   # Y38c R1, G4: KHÔNG trả dữ liệu lúc phần mềm còn chạy (lịch nền vẫn ghi); chỉ ghi việc cần trả,
+        # maychu/chay.py trả 07 tệp trước khi chạy bản trước (không tiến trình nào đang mở tệp), trả đủ hoặc không trả tệp nào
         noi = khoitao._thumuc_chup(thumuc)
-        khoitao._tra_nguyen_trang(thumuc, [t for t in ketnoi.CAC_FILE if (noi / f"{t}.sqlite3").exists()])
-    ghi(thumuc, chay_ban_truoc={"ban_anh": dang, "ban_truoc": q["ban"], "luc": _bay()}, nang_luocdo=None)
-    capnhat._ghi_f04("quayve", f"{dang} → {q['ban']}" + (f" · dữ liệu trả về lúc {_gio(q['mat_tu'])}" if q["mat_tu"] else
-                                                         " · dữ liệu giữ nguyên"), "dat", None, nguoi_id, thumuc)
+        co["tra_du_lieu"] = {"thumuc": noi.name, "tep": [t for t in ketnoi.CAC_FILE if (noi / f"{t}.sqlite3").exists()]}
+    try:   # ghi nhật ký trước, rồi mới ghi cờ; lỗi ở bước nào thì không dừng phần mềm
+        capnhat._ghi_f04("quayve", f"{dang} → {q['ban']}" + (f" · dữ liệu trả về lúc {_gio(q['mat_tu'])}" if q["mat_tu"] else
+                                                             " · dữ liệu giữ nguyên"), "dat", None, nguoi_id, thumuc)
+        ghi(thumuc, chay_ban_truoc=co, nang_luocdo=None if not q["mat_tu"] else (doc(thumuc).get("nang_luocdo")))
+    except Exception as e:  # noqa: BLE001
+        return {"loi": "Chưa quay về được: " + type(e).__name__}
     threading.Timer(tre_giay, _thoat).start()
     return {"ok": True, "ban": q["ban"]}

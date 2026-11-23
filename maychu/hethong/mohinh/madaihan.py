@@ -56,6 +56,8 @@ CHU_DAN = {
     "trong": "Anh dán mã dài hạn vào ô",
     "chua_tron": "Mã vừa dán có {n} ký tự, chưa trọn. Chép lại cả mã rồi dán lại",   # Z15b dòng 23 (CPO trình anh)
     "trung": "Tài khoản Claude này đã kết nối ở Tài khoản {tk}. Phần mềm không lưu mã. Thu hồi mã vừa tạo ở claude.ai/settings/claude-code",   # Z15b dòng 22
+    # Y38c CPO-1: CHỮ MỚI, CHƯA DUYỆT (CPO trình anh): chuỗi dán vào không có sk-ant-oat01- (ví dụ khoá API)
+    "khong_phai_ma": "Chuỗi vừa dán không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-). Chép lại đúng mã rồi dán lại",
 }
 
 
@@ -64,8 +66,8 @@ def lam_sach(ma) -> str:
     (ví dụ dòng `CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-…`) và dấu nháy bao ngoài. Chữ đứng SAU mã thì không tự cắt
     (dễ cắt sai): để `hop_le` từ chối, câu báo chỉ chỗ dán."""
     s = "".join(str(ma or "").split()).translate(_KY_TU_AN)
-    if "=" in s and TIEN_TO in s.split("=")[-1]:
-        s = s.split("=")[-1]
+    if TIEN_TO in s and not s.startswith(TIEN_TO):   # Y38c R9: chữ đứng trước mã (`TÊN=`, `Token:`, `export …=`) bỏ đi
+        s = s[s.index(TIEN_TO):]
     return s.strip("'\"`")
 
 
@@ -78,6 +80,8 @@ def chu_loi_dan(ma) -> str:
     s = lam_sach(ma)
     if not s:
         return CHU_DAN["trong"]
+    if not s.startswith(TIEN_TO):   # Y38c CPO-1: không có chuỗi sk-ant-oat01- (ví dụ khoá API) — câu riêng, chờ anh duyệt
+        return CHU_DAN["khong_phai_ma"]
     return CHU_DAN["chua_tron"].format(n=len(s))
 
 
@@ -423,9 +427,11 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
         hanmuc_thu = kq.get("hanmuc") or {}
     except Exception as e:  # noqa: BLE001 - mọi lỗi gọi thử đều báo lại, mã đã lưu vẫn giữ
         dat, loi = False, che(str(e))[:200]
+    if chup:   # N1: ghi tệp trước khi đăng xuất kiểu cũ; Y38c G1: ghi cả khi gọi thử chưa được (chặn trùng vẫn so được)
+        dg.ghi_chup(tk, chup)
+    else:      # Y38c R11: không chụp được (không còn đăng nhập kiểu cũ) thì bỏ tệp cũ — mã mới có thể của tài khoản khác (N6)
+        dg.xoa_chup(tk)
     if dat:
-        if chup:
-            dg.ghi_chup(tk, chup)   # N1: ghi tệp xong mới đăng xuất kiểu cũ; lấy mã mới thì chụp lại, ghi đè (N5)
         if cu["loggedIn"]:
             kiem["dang_xuat_cu"] = dg._dang_xuat("claude", tk)
         hs2 = dg.ho_so("claude", tk)

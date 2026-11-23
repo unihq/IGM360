@@ -258,7 +258,8 @@ function datLaiDoiMay() { D.maTamDoiMay = ''; const hop = $('#h-2lop'); xoa6(hop
 // 0.7.9: chữ 05 lớp an toàn anh đã duyệt nguyên văn (QĐ218, bảng Z16 dòng 24–47), viết ở 01 chỗ này; số dòng ghi cuối câu.
 // Chữ máy chủ gửi (ổ trống, chế độ an toàn, quay về) viết ở maychu/hethong/antoan.py CHU.
 const CHU_CN = {sao: {chup: 'Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)', day: 'Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)',   // 27
-    qua_gio: 'Bước 1/2 · Bản sao Drive quá 10 phút, chờ anh chọn', gui: 'Bước 2/2 · Đang tải bản ', tai: 'Bước 2/2 · Đang tải bản '},   // 28, 29
+    qua_gio: 'Bước 1/2 · Bản sao Drive quá 10 phút, chờ anh chọn', gui: 'Bước 2/2 · Đang tải bản ', tai: 'Bước 2/2 · Đang tải bản ',   // 28, 29
+    cho_viec: 'Đã hẹn: chờ việc AI đang chạy xong (tối đa 30 phút) rồi tự cập nhật.'},   // Y38c R4: dùng lại câu đã có từ bản 0.6
   khoaRe: 'Chưa đủ ổ trống',                                                                                                         // 26
   hopTieu: 'Cập nhật khi chưa có bản sao Drive?', hopPhu: 'Máy chủ hỏng thì không lấy lại được bản sao này.',                      // 30, 33
   nutKetNoi: 'Kết nối Drive', nutHuy: 'Huỷ', nutVan: 'Vẫn cập nhật',                                                                // 34
@@ -472,10 +473,12 @@ const CHU_Z15 = {
   hdTieu: 'Làm 01 lần để hiện tên, gói', hdNut: 'Lấy tên, gói',                                                         // 19
   hdChu: 'Bấm "Lấy tên, gói", đăng nhập đúng tài khoản Claude này; phần mềm tự ghi tên, gói và giữ nguyên mã dài hạn.',
   layMoi: 'Lấy mã mới · tài khoản ', dungTk: 'Đăng nhập đúng tài khoản ',                                               // 20, 21
-  danTrong: 'Anh dán mã dài hạn vào ô', chuaTron: n => 'Mã vừa dán có ' + n + ' ký tự, chưa trọn. Chép lại cả mã rồi dán lại.'};   // 23 (22 ở máy chủ)
+  danTrong: 'Anh dán mã dài hạn vào ô', chuaTron: n => 'Mã vừa dán có ' + n + ' ký tự, chưa trọn. Chép lại cả mã rồi dán lại.',   // 23 (22 ở máy chủ)
+  // Y38c CPO-1: CHỮ MỚI, CHƯA DUYỆT (CPO trình anh) — chuỗi dán vào không có sk-ant-oat01-
+  khongPhaiMa: 'Chuỗi vừa dán không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-). Chép lại đúng mã rồi dán lại.'};
 // N28 (a): làm sạch mã dán vào như máy chủ (bỏ khoảng trắng, xuống dòng, ký tự ẩn; nhận dạng TÊN=mã, dấu nháy)
 function lamSachMa(s) { let m = String(s || '').replace(/[\s\u200b\u200c\u200d\u2060\ufeff]+/g, '');
-  if (m.includes('=') && m.split('=').pop().includes('sk-ant-oat01-')) m = m.split('=').pop();
+  const i = m.indexOf('sk-ant-oat01-'); if (i > 0) m = m.slice(i);   // Y38c R9: chữ đứng trước mã bỏ đi
   return m.replace(/^['"`]+|['"`]+$/g, ''); }
 const nutMdGt = () => '<button class="nut-i" data-md-gt title="' + CHU_Z15.iRe + '">' + icoMau(ICON['info'], '#646A73', 14) + '</button>';   // 01
 const gioKiem = iso => iso.slice(0, 10) === homNay() ? gio(iso) : iso.slice(8, 10) + '/' + iso.slice(5, 7) + ' ' + gio(iso);   // hôm khác ghi ngày
@@ -922,7 +925,8 @@ document.addEventListener('click', async ev => {
     catch (e) { D.mdh[tk] = {...(D.mdh[tk] || {}), loi: e.message, ct: (e.ct || {}).chi_tiet || ''}; veMoHinh(); } t.disabled = false; return; }
   else if (d.mdLuu) { const tk = Number(d.mdLuu), o = $('#md-ma-dan'), ma = lamSachMa((o || {}).value);   // N28 (a)
     if (!ma) { D.mdDan = {...D.mdDan, loi: CHU_Z15.danTrong}; veMdDan(); return; }
-    if (!/^sk-ant-oat01-[A-Za-z0-9_-]{20,}$/.test(ma)) { if (o) o.value = ''; D.mdDan = {...D.mdDan, loi: CHU_Z15.chuaTron(ma.length)}; veMdDan(); return; }   // 23
+    if (!/^sk-ant-oat01-[A-Za-z0-9_-]{20,}$/.test(ma)) { if (o) o.value = '';
+      D.mdDan = {...D.mdDan, loi: ma.startsWith('sk-ant-oat01-') ? CHU_Z15.chuaTron(ma.length) : CHU_Z15.khongPhaiMa}; veMdDan(); return; }   // 23, CPO-1
     t.disabled = true; if (o) o.value = '';   // không giữ mã trên màn
     try { const kq = await api('/mohinh/goi/claude/madaihan/dan', {taikhoan: tk, ma}); dongHop(); D.mdDan = null; await mdXong(tk, kq); }
     catch (e) { D.mdDan = {...D.mdDan, loi: e.message}; veMdDan(); } t.disabled = false; return; }

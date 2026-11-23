@@ -329,8 +329,9 @@ def _noi_tiep_lan_bi_ngat(thumuc: Path) -> None:
     if not d:
         return
     noi = _thumuc_chup(thumuc)
-    if d.get("den") == PHIENBAN_LUOCDO and noi.is_dir():
-        _tra_nguyen_trang(thumuc, [t for t in d.get("tep", []) if (noi / f"{t}.sqlite3").exists()])
+    if d.get("den") != PHIENBAN_LUOCDO or not noi.is_dir():   # Y38c G5: không biết dữ liệu đang ở đâu → không tự nâng tiếp
+        raise RuntimeError(f"lần nâng trước bị ngắt (lược đồ {d.get('den')}) mà không có bản chụp của lần đó")
+    _tra_nguyen_trang(thumuc, [t for t in d.get("tep", []) if (noi / f"{t}.sqlite3").exists()])
     antoan.ghi(thumuc, dang_nang=None)
 
 
@@ -340,7 +341,7 @@ def tao_het(thumuc: Path | None = None) -> dict:
     from maychu.hethong import antoan
     thumuc = thumuc or ketnoi.thumuc_dulieu()
     thumuc.mkdir(parents=True, exist_ok=True)
-    _noi_tiep_lan_bi_ngat(thumuc)
+    _noi_tiep_lan_bi_ngat(thumuc)   # G5: cờ lạ → báo lỗi → khoidong vào chế độ an toàn (cờ giữ nguyên để soát)
     ban = {ten: _phienban(ten, thumuc) for ten in ketnoi.CAC_FILE}
     can_nang = any(0 < b < PHIENBAN_LUOCDO for b in ban.values())
     co_san = [t for t, b in ban.items() if b > 0]

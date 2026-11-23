@@ -193,14 +193,15 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) 
     from maychu.ketnoi import drive
     if not van_capnhat and not drive.dang_noi(thumuc):   # QĐ218 dòng 30, 31: Drive chưa nối thì anh chọn trước
         return {"loi": antoan.CHU["drive_chua_noi"], "can_chon": "drive_chua_noi"}
-    if che_do == "cho" and so_viec_ai_dangchay(thumuc):
-        _CHO.update(tu=time.time(), nguoi=nguoi_id)
-        return {"ok": True, "cho": True}
-    return bat_dau(nguoi_id, kq["ban_moi"], thumuc)
+    # Y38c R4: chụp bản sao, đẩy Drive TRƯỚC; chế độ "cho" chờ việc AI xong (tối đa 30 phút) ngay trước khi gửi lệnh,
+    # nên việc AI bắt đầu trong lúc chụp vẫn được chờ. Từ lúc bấm tới lúc gửi lệnh, dang_cho() = True để không nhận việc mới.
+    return bat_dau(nguoi_id, kq["ban_moi"], thumuc, cho_viec=che_do == "cho")
 
 
 def dang_cho() -> bool:
-    return bool(_CHO["tu"])
+    """Đang chuẩn bị cập nhật (chụp, đẩy Drive, chờ việc AI, gửi lệnh): nơi nhận việc AI nền mới hỏi hàm này
+    (bộ chạy việc nền chưa có ở GĐ 1: chưa chỗ nào đặt `dangchay`)."""
+    return bool(_CHO["tu"]) or _SAO["buoc"] in ("chup", "day", "qua_gio", "cho_viec", "gui")
 
 
 def xu_ly_cho(thumuc=None) -> None:
@@ -238,6 +239,12 @@ def tiep_tuc(nguoi_id: str, van: bool, thumuc=None) -> dict:
 
 def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> None:
     from maychu.hethong import antoan
+    if _SAO.get("cho_viec"):   # Y38c R4: chế độ "Chờ xong rồi cập nhật"
+        _SAO["buoc"] = "cho_viec"
+        het = time.time() + CHO_TOIDA_GIAY
+        while so_viec_ai_dangchay(thumuc) and time.time() < het:
+            time.sleep(NGHI_DAY_GIAY)
+        _SAO["buoc"] = "gui"
     try:
         antoan.ghi(thumuc, yeu_cau={"tu": ban_dang_chay(), "den": ban_moi, "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
                                     "drive": len_drive})
@@ -248,13 +255,13 @@ def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> No
         _SAO.update(buoc="tai" if not _SAO["loi"] else None)
 
 
-def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None) -> dict:
+def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None, cho_viec: bool = False) -> dict:
     """Chụp bản sao 07 tệp vào thư mục riêng, chờ đẩy lên Drive (tối đa CHO_DRIVE_GIAY), rồi gửi lệnh. Chạy nền vì
     đẩy Drive có thể vài phút; giao diện hỏi lại /api/capnhat để biết bước đang chạy."""
     with _KHOA_SAO:
-        if _SAO["buoc"] in ("chup", "day", "qua_gio", "gui"):
+        if _SAO["buoc"] in ("chup", "day", "qua_gio", "cho_viec", "gui"):
             return {"ok": True, "sao": True}
-        _SAO.update(buoc="chup", tu=time.time(), loi=None, den=ban_moi)
+        _SAO.update(buoc="chup", tu=time.time(), loi=None, den=ban_moi, cho_viec=cho_viec)
     _chay_nen(lambda: _sao_roi_gui(nguoi_id, ban_moi, thumuc))
     return {"ok": True, "sao": True}
 
@@ -262,8 +269,9 @@ def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None) -> dict:
 def _con_cho_drive(noi: Path, thumuc=None) -> int:
     cn = ketnoi.mo("Hotho", thumuc)
     try:
+        dau = os.path.join(str(noi), "")   # Y38c R2: đúng thư mục này (có dấu ngăn cuối), không lẫn thư mục khác
         return cn.execute("SELECT count(*) FROM cho_day_drive WHERE substr(duongdan_tam, 1, ?) = ? AND trangthai != 'xong'",
-                          (len(str(noi)), str(noi))).fetchone()[0]
+                          (len(dau), dau)).fetchone()[0]
     finally:
         cn.close()
 
