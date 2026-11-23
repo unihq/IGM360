@@ -270,6 +270,68 @@ class KiemY37c(NenMa):
         self.assertEqual(kq, {"loi": "Máy chủ này không chạy được bước lấy mã tự động", "khong_ho_tro": True})
 
 
+class KiemY37d(NenMa):
+    """Y37d N27 (CDO U12c): dán mã cho tài khoản 2 phải vào đúng tài khoản 2; tài khoản 1 không đổi, không hiện lại."""
+    def g06(self):
+        cn = ketnoi.mo("Viecnen")
+        try:
+            return dict(cn.execute("SELECT ma, trangthai FROM nguon_ai WHERE substr(ma, 1, 11) = 'goi_claude_'").fetchall())
+        finally:
+            cn.close()
+
+    def f03(self):
+        cn = ketnoi.mo("Baomat")
+        try:
+            return sorted(r[0] for r in cn.execute("SELECT dichvu FROM kekhoa WHERE substr(dichvu, 1, 11) = 'goi_claude_'"))
+        finally:
+            cn.close()
+
+    def test_may_chu_dan_tai_khoan_2(self):
+        from maychu.web import api
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        cn = ketnoi.mo("Viecnen")
+        try:
+            cn.execute("UPDATE nguon_ai SET trangthai = 'ngung' WHERE ma = 'goi_claude_01'")   # tài khoản 1 đã gỡ
+        finally:
+            cn.close()
+        with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=[{"loggedIn": False, "authMethod": ""}] * 2), \
+                mock.patch.object(congai, "_goi_claude", return_value={"hanmuc": {}}):
+            api.md_dan(api.MaGoi(taikhoan=2, ma=MA_GIA), {"nguoidung_id": maso.tao()})
+        self.assertEqual(self.f03(), ["goi_claude_02"])                      # mã vào đúng tài khoản 2
+        self.assertIsNone(madaihan.thong_tin(1))
+        g = self.g06()
+        self.assertEqual((g["goi_claude_01"], g["goi_claude_02"]), ("ngung", "dung"))   # tài khoản 1 không hiện lại
+
+    @unittest.skipUnless(__import__("shutil").which("node"), "máy không có node")
+    def test_giao_dien_nut_luu_dung_tai_khoan(self):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        doan = js[js.index("function veMdDan()"):js.index("async function mdLay(")]
+        ma = ("const CHU_MDH = 'Mã dài hạn'; const NB = '\\u00a0'; const nbsp = s => String(s).replace(/ /g, NB);"
+              "const ICON = new Proxy({}, {get: () => '<svg/>'}); const cum = s => s; const cau = s => s;"
+              "const o = {'#mdh-tieu': {}, '#mdh-luu': {dataset: {mdLuu: '1'}}, '#mdh-than': {}}; const $ = s => o[s];"
+              "const D = {mdDan: null};\n" + doan
+              + "\nD.mdDan = {tk: 2, loi: '', tin: ''}; veMdDan(); const a = o['#mdh-luu'].dataset.mdLuu;"
+              + "\nD.mdDan = {tk: 1, loi: '', tin: ''}; veMdDan(); const b = o['#mdh-luu'].dataset.mdLuu;"
+              + "\nconsole.log(JSON.stringify([String(a), String(b), o['#mdh-tieu'].textContent.endsWith('2') === false]));")
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "dan.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), ["2", "1", True])           # N27: nút Lưu mã mang đúng tài khoản
+
+    def test_khong_co_lenh_bi_nuot_vao_chu_thich(self):
+        import re
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        chay = "\n".join(re.sub(r"(?<![:'\"])//(?!/).*$", "", x) for x in js.splitlines())
+        self.assertIn("$('#mdh-luu').dataset.mdLuu = k.tk", chay)
+        for dong in js.splitlines():                                          # chú thích không chứa lệnh gán của mã
+            m = re.search(r"(?<![:'\"])//(?!/)(.*)$", dong)
+            if m:
+                self.assertNotRegex(m.group(1), r"\$\('#[\w-]+'\)\.\w+(\.\w+)?\s*=", dong)
+
+
 CLI_GIA = r'''
 import sys, os
 if sys.argv[1:2] != ["setup-token"]:
