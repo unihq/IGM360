@@ -343,7 +343,8 @@ const nhanTraLoi = x => { const n = timNguon(x.nguon_id), mh = mhThucDung(x);
   return n ? tenLoai(n) + ' · ' + (mh ? tenMh(mh, n.id, n, true) : 'Mặc định') : (x.nguon || 'Trợ lý AI'); };   // N3: tên ngắn
 const tieuTraLoi = x => { const p = [], mh = mhThucDung(x), dp = x.du_phong;
   if (mh) p.push('Bản cụ thể: ' + mh);
-  if (x.chay_tk) p.push('chạy bằng tài khoản ' + x.chay_tk + (dp && dp.tk ? ' (dự phòng, tài khoản ' + dp.tk + ' hết hạn mức' + (dp.den ? ' đến ' + gio(dp.den) : '') + ')' : ''));
+  if (x.chay_tk) p.push('chạy bằng tài khoản ' + x.chay_tk + (dp && dp.tk ? ' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)
+    : 'tài khoản ' + dp.tk + ' hết hạn mức' + (dp.den ? ' đến ' + denLuc(dp.den) : '')) + ')' : ''));
   return p.join(' · '); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
@@ -360,9 +361,11 @@ D.hmCu = {};
 function thanhHm(ten, v, k) { const p = pct(v), cu = k && k in D.hmCu ? D.hmCu[k] : (p ?? 0); if (k) D.hmCu[k] = p ?? 0;
   return '<div class="hm"><span class="t12 phu nw">' + ten + '</span><div class="td" style="height:8px"><div class="tdf" data-w="' + (p ?? 0) + '" style="width:'
   + cu + '%;background:' + (p >= 90 ? '#E22E28' : '#1456F0') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : Math.round(p) + '%') + '</b></div>'; }
-// Y36b: tài khoản còn dùng được, riêng 01 mô hình hết hạn mức → rê chuột "Opus của tài khoản 1 hết hạn mức đến HH:MM"
-const tieuHetMh = (n, tk) => !(n.het_mh || []).length ? '' : ' title="' + esc(n.het_mh.map(m =>
-  chuHoa(m.ma ? tenMh(m.ma, n.id, n, true) : (m.ten_khung || 'Mô hình mặc định')) + ' của tài khoản ' + tk + ' hết hạn mức đến ' + gio(m.den)).join('; ')) + '"';
+// Y36b, Y36c N4: "Opus của tài khoản 1 hết hạn mức đến 20:45" (khác ngày: "đến 20:45 ngày 26/11"); dùng chung màn 13 và khung chat
+const denLuc = iso => !iso ? '' : gio(iso) + (String(iso).slice(0, 10) !== homNay() ? ' ngày ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');
+const tenHet = (m, n) => m.ma ? tenMh(m.ma, n && n.id, n, true) : m.ten_khung || (m.bao ? tenMh(m.bao, n && n.id, n, true) : '');
+const chuHetMh = (m, n, tk) => chuHoa(tenHet(m, n) || 'mô hình mặc định') + ' của tài khoản ' + tk + ' hết hạn mức' + (m.den ? ' đến ' + denLuc(m.den) : '');
+const tieuHetMh = (n, tk) => !(n.het_mh || []).length ? '' : ' title="' + esc(n.het_mh.map(m => chuHetMh(m, n, tk)).join('; ')) + '"';
 function theGoi(g, ds, nguon, uu) {
   const dn = D.dn[g] || {}, ten = GOI_NGAN[g].replace('Gói ', '');
   const coTk = ds.some(x => x.da_noi), coDong = x => nguon.some(y => y.ma === x.ma && y.trangthai === 'dung');
@@ -442,7 +445,7 @@ function veMoHinh() {
   // QĐ178 (Z10): nút "Đổi" mở hộp chọn dùng chung danh sách với màn 08; mặc định lưu ở G08 theo loại việc
   const LV = (D.dsmh && D.dsmh.loai_viec) || {trochuyen: 'Trò chuyện AI', trichvanban: 'Trích văn bản (đường D)', dexuat: 'Đề xuất ở mục Chờ duyệt', baocaosang: 'Viết báo cáo sáng'};
   const cot = 'grid-template-columns:1.4fr 1fr 1fr 70px';
-  if (LV.viecnen_chung) $('#md-ghichu').textContent = 'Trò chuyện AI chưa đặt thì dùng mặc định của nguồn ưu tiên 1; việc nền chưa đặt riêng theo dòng "' + LV.viecnen_chung + '"';
+  if (LV.viecnen_chung) $('#md-ghichu').textContent = 'Trò chuyện AI chưa đặt thì dùng mặc định của nguồn ưu tiên 1; việc nền chưa đặt riêng theo dòng "' + nbsp(LV.viecnen_chung) + '"';
   $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span><span></span></div>'
     + Object.entries(LV).map(([k, v]) => { const x = mdLoai(k);   // Z10c: x.m trống = "Mặc định của nguồn" x.g
       const mat = ((D.dsmh && D.dsmh.macdinh_ct) || {})[k] && D.dsmh.macdinh_ct[k].mat;   // Đ6: nhóm đã đặt không còn tài khoản
@@ -509,8 +512,10 @@ function ghiHong(tl, gh) { const k = D.htId; if (!tl || !gh) return;
   if (tl.ghim_hong) D.hong[k] = {het: tl.ghim_hong.het_hanmuc, dung: mhThucDung(tl), nguon_id: tl.nguon_id};
   else if (tl.ghim_khoa) delete D.hong[k]; }
 const nbsp = s => String(s).replace(/ /g, NB);
-function chuGhimHong(x) { const g = x.ghim_hong, a = g.khoa && timMh(g.khoa), n = timNguon(x.nguon_id);
-  const ten = a ? tenMh(a.m.ma, a.g.nhom, a.g, true) : g.ma ? tenMh(g.ma, null, null, true) : 'Mô hình đã chọn';   // N3
+function chuGhimHong(x) { const g = x.ghim_hong || x.md_hong, a = x.ghim_hong && g.khoa && timMh(g.khoa), n = timNguon(x.nguon_id);
+  const n0 = x.md_hong && timNguon(g.nguon_id);   // Y36c: lượt thường, nguồn đứng trước đang hết hạn mức
+  const ten = x.md_hong ? chuHoa(tenHet(g, n0) || (n0 ? tenLoai(n0).replace(/ /g, ' ') : 'Mô hình mặc định'))
+    : a ? tenMh(a.m.ma, a.g.nhom, a.g, true) : g.ma ? tenMh(g.ma, null, null, true) : 'Mô hình đã chọn';   // N3
   const dung = mhThucDung(x) ? tenMh(mhThucDung(x), x.nguon_id, n, true) : (n ? tenLoai(n).replace(/ /g, ' ') : 'mô hình');   // U10b F2
   return esc(ten) + ' ' + (g.het_hanmuc ? nbsp('đang hết hạn mức') : 'chưa dùng được') + ', đã dùng ' + esc(nbsp(dung + ' (mặc định)')); }
 const logoNhom = g => { const l = g.goi === 'claude' || g.hang === 'anthropic' ? ICON.logo_claude : g.goi === 'chatgpt' || g.hang === 'openai' ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16);
@@ -595,7 +600,7 @@ document.addEventListener('click', async ev => {
     bao('Đã bỏ ghim: cuộc này và các cuộc mới theo mặc định của nguồn ' + tn + '.'); return; }
   if (d.doimd) { await napDsMh(); if (!D.dsmh) { bao('Chưa tải được danh sách mô hình, anh thử lại.'); return; }
     MH.dich = d.doimd; MH.noi = 'md'; MH.tim = ''; MH.mo = null;
-    $('#mh-tieu').textContent = 'Chọn mô hình · ' + D.dsmh.loai_viec[d.doimd]; $('#mh-than13').innerHTML = bangMhHtml('md'); mo('h-chonmh'); }
+    $('#mh-tieu').textContent = 'Chọn mô hình · ' + nbsp(D.dsmh.loai_viec[d.doimd]); $('#mh-than13').innerHTML = bangMhHtml('md'); mo('h-chonmh'); }
 }, true);
 document.addEventListener('input', ev => { if (!ev.target.matches || !ev.target.matches('[data-mhtim]')) return; MH.tim = ev.target.value; veLaiMh(); });
 
@@ -613,7 +618,7 @@ function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
-    + (x.ghim_hong ? '<div class="tn-meta mh-vang">' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
+    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang">' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();

@@ -208,7 +208,8 @@ class KiemP1(Nen):
         self.assertEqual(h({"status": "rejected", "rateLimitType": "seven_day_opus", "resetsAt": 4102444800}),
                          {"het_mh": {"loai": "seven_day_opus", "datlai": 4102444800}})
         self.assertTrue(h({"status": "rejected", "rateLimitType": "five_hour", "utilization": 1.0, "resetsAt": 4102444800})["het"])
-        self.assertEqual(h({"status": "rejected"}), {"het_khongro": True})
+        self.assertEqual(h({"status": "rejected"}), {"het_khongro": {"datlai": None}})
+        self.assertEqual(h({"status": "rejected", "resetsAt": 4102444800}), {"het_khongro": {"datlai": 4102444800}})   # Y36c P3
 
     def test_opus_het_sonnet_van_dung(self):
         with mock.patch.object(congai, "_chay", side_effect=self.chay):
@@ -247,10 +248,136 @@ class KiemP1(Nen):
         self.assertNotIn("hai(Math.round(p)) + '%'", js)
         self.assertIn(".ten-i{display:flex;align-items:center;gap:4px}", html)        # N2: (i) cùng dòng với tên
         self.assertIn("const CUM = ['toàn hệ thống', 'Việc nền',", js)
-        self.assertIn("' của tài khoản ' + tk + ' hết hạn mức đến ' + gio(m.den)", js)
+        self.assertIn("' của tài khoản ' + tk + ' hết hạn mức' + (m.den ? ' đến ' + denLuc(m.den) : '')", js)
         self.assertIn("'<div class=\"tk-dong\"' + tieuHetMh(n, x.taikhoan) + '>", js)
         api = (GOC / "maychu/web/api.py").read_text(encoding="utf-8")
         self.assertIn('n["het_mh"] = congai.ds_het_mo_hinh(n["id"])', api)
+
+
+TRA = {"chu": "ok", "vao": 1, "ra": 1, "sotien": None, "sotien_thamkhao": None, "tien_ma": "USD", "hanmuc": {}, "mohinh_bao": None}
+
+
+class KiemY36c(Nen):
+    """Y36c (CDO U11b): P2 mốc nghỉ riêng 01 giờ khi hãng không báo khung; P3 có resetsAt thì dùng; N4 chữ dự phòng
+    theo mô hình; dòng vàng cho lượt thường đã sang hãng khác. Giả kết quả CLI qua han_muc_claude như đường thật."""
+    def setUp(self):
+        super().setUp()
+        self.c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        self.goi = []
+
+    def claude(self, tu_choi):
+        """tu_choi: {(tài khoản, mô hình): rate_limit_info}; mô hình None = mặc định của nguồn."""
+        def f(tk, cau, mohinh):
+            self.goi.append((tk, mohinh))
+            info = tu_choi.get((tk, mohinh))
+            if info is not None:
+                hm = congai.han_muc_claude(info)
+                hm["mh_bao"] = "claude-" + (mohinh or "opus") + "-9"
+                raise congai.HetHanMuc("limit reached", hm)
+            return dict(TRA, mohinh_bao="claude-" + (mohinh or "sonnet") + "-9")
+        return f
+
+    def g06_cu(self, nid):
+        cn = ketnoi.mo("Viecnen")
+        try:
+            cn.execute("UPDATE nguon_ai SET datlai_5gio_luc = ? WHERE id = ?", (_luc(hours=-3), nid))   # giờ đặt lại cũ đã qua
+        finally:
+            cn.close()
+
+    def test_p2_khong_bao_khung_nghi_01_gio(self):
+        self.g06_cu(self.c1)
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude({(1, None): {"status": "rejected"}})):
+            kq = congai.goi("hỏi", loai_viec="trochuyen")
+            self.assertIn("loi", kq)
+            self.assertAlmostEqual(congai.het_tai_khoan(self.c1), time.time() + 3600, delta=5)   # tính từ lúc bị từ chối
+            self.goi.clear()
+            congai.goi("hỏi", loai_viec="trochuyen")
+            self.assertEqual(self.goi, [])                       # không bỏ qua dấu vì giờ đặt lại cũ đã qua
+            with mock.patch.object(congai.time, "time", return_value=time.time() + 3700):
+                self.assertEqual(congai.het_tai_khoan(self.c1), 0)
+
+    def test_p3_co_resetsat_thi_dung(self):
+        dat = int(time.time()) + 5400
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude({(1, None): {"status": "rejected", "resetsAt": dat}})):
+            congai.goi("hỏi", loai_viec="trochuyen")
+        self.assertEqual(congai.het_tai_khoan(self.c1), dat)
+        congai._HET_TK.clear()
+        cn = ketnoi.mo("Viecnen")
+        try:
+            cn.execute("UPDATE nguon_ai SET da_het_luc = 0 WHERE id = ?", (self.c1,))   # bỏ dấu cả tài khoản của bước trước
+        finally:
+            cn.close()
+        dm.danh_sach()
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude({(1, "opus"): {"status": "rejected", "resetsAt": dat}})):
+            congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|opus")   # lượt ghim, không rõ khung
+        self.assertEqual(congai.het_mo_hinh(self.c1, "opus"), dat)
+        self.assertEqual(congai.het_tai_khoan(self.c1), 0)
+
+    def test_khoa_api_429_khong_nghi_01_gio(self):
+        k = self.nguon("khoa_openai", "khoa_api", 2, "openai", tran=5)
+        with mock.patch.object(congai, "dung_duoc", return_value=(True, "")), \
+                mock.patch.object(congai, "_goi_khoa", side_effect=congai.HetHanMuc("OpenAI báo vượt hạn mức (429)")), \
+                mock.patch.object(congai, "_goi_claude", side_effect=congai.HetHanMuc("x", {"het": True})):
+            congai.goi("hỏi", loai_viec="trochuyen")
+        self.assertEqual(congai.het_tai_khoan(k), 0)
+        self.assertGreater(congai.het_tai_khoan(self.c1), time.time())
+
+    def test_n4_du_phong_ghi_ten_mo_hinh(self):
+        c2 = self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        dm.danh_sach()
+        dat = int(time.time()) + 3 * 86400
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude(
+                {(1, "opus"): {"status": "rejected", "rateLimitType": "seven_day_opus", "resetsAt": dat}})):
+            kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|opus")
+        self.assertEqual(self.goi, [(1, "opus"), (2, "opus")])
+        self.assertEqual((kq["nguon_id"], kq["chay_tk"]), (c2, 2))
+        dp = kq["du_phong"]
+        self.assertEqual((dp["tk"], dp["rieng"], dp["ma"], dp["ten_khung"]), (1, True, "opus", "Opus"))
+        self.assertEqual(dp["den"], datetime.fromtimestamp(dat, MUIGIO_VN).isoformat(timespec="seconds"))
+
+    def test_luot_thuong_sang_hang_khac_co_dong_vang(self):
+        c2 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude(
+                {(1, None): {"status": "rejected", "rateLimitType": "seven_day_opus", "resetsAt": int(time.time()) + 600}})), \
+                mock.patch.object(congai, "_goi_chatgpt", return_value=dict(TRA, mohinh_bao="gpt-5-codex")):
+            kq = congai.goi("hỏi", loai_viec="trochuyen")
+        self.assertEqual(kq["nguon_id"], c2)
+        self.assertIsNone(kq["ghim_hong"])
+        self.assertEqual(kq["md_hong"], {"ma": None, "ten_khung": "Opus", "bao": "claude-opus-9", "nguon_id": self.c1, "het_hanmuc": True})
+        # cùng hãng (tài khoản dự phòng) thì không có dòng vàng, chỉ chữ rê chuột
+        congai._HET_MH.clear()
+        congai._HET_TK.clear()
+        self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude({(1, None): {"status": "rejected", "rateLimitType": "five_hour"}})):
+            kq = congai.goi("hỏi", loai_viec="trochuyen")
+        self.assertEqual((kq["chay_tk"], kq["md_hong"]), (2, None))
+
+    def test_giao_dien(self):
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        for chu in ("const denLuc = iso => !iso ? '' : gio(iso) + (String(iso).slice(0, 10) !== homNay() ? ' ngày ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');",
+                    "' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)",
+                    "const g = x.ghim_hong || x.md_hong,",
+                    "+ (x.ghim_hong || x.md_hong ? '<div class=\"tn-meta mh-vang\">'",
+                    "theo dòng \"' + nbsp(LV.viecnen_chung) + '\"'",
+                    "'Chọn mô hình · ' + nbsp(D.dsmh.loai_viec[d.doimd])"):
+            self.assertIn(chu, js, chu)
+        tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
+        self.assertIn('tl["md_hong"] = kq.get("md_hong")', tc)
+
+    @unittest.skipUnless(__import__("shutil").which("node"), "máy không có node")
+    def test_den_luc_khac_ngay(self):
+        import subprocess as sp
+        import tempfile
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        lay = lambda dau: js[js.index(dau):js.index("\n", js.index(dau))]
+        ma = "\n".join([lay("const gio = "), lay("const homNay = "), lay("const denLuc = "),
+                         "const h = homNay(); console.log(JSON.stringify([denLuc(h + 'T20:45:00+07:00'), denLuc('2099-11-26T20:45:00+07:00')]));"])
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "thu.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), ["20:45", "20:45 ngày 26/11"])
 
 
 class KiemZ12(unittest.TestCase):
@@ -264,7 +391,7 @@ class KiemZ12(unittest.TestCase):
         for chu in ("const CHU_VN = 'Việc nền chưa đặt riêng và bot nền sau này dùng dòng này. Trò chuyện AI không theo.';",
                     "k === 'viecnen_chung' ? ' <button class=\"nut-ico nho\" data-ivn title=\"' + CHU_VN",
                     "if ('ivn' in d) { ev.stopImmediatePropagation(); bao(CHU_VN); return; }",
-                    "'Trò chuyện AI chưa đặt thì dùng mặc định của nguồn ưu tiên 1; việc nền chưa đặt riêng theo dòng \"' + LV.viecnen_chung + '\"'",
+                    "'Trò chuyện AI chưa đặt thì dùng mặc định của nguồn ưu tiên 1; việc nền chưa đặt riêng theo dòng \"' + nbsp(LV.viecnen_chung) + '\"'",
                     "bao('Đã đổi mô hình cho \"' + D.dsmh.loai_viec[lv] + '\": ' + ten + ' · ' + tn + '.');"):
             self.assertIn(chu, self.js, chu)
         self.assertIn('id="md-ghichu"', self.html)
