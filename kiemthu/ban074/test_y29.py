@@ -142,7 +142,7 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
         self.assertIn("ten = 'tài khoản ' + tk + ' của ' + tenNguon({goi: g});", js)
         self.assertIn("const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);", js)
         self.assertIn("const moHinhDong = (ma, n) => tenMh(", js)                   # QĐ178: 01 hàm rút gọn dùng chung
-        self.assertIn("'<div class=\"tn-meta\">' + cum(nhanTraLoi(x))", js)     # Z10a: dòng dưới câu trả lời
+        self.assertIn("'<div class=\"tn-meta\"' + (tieuTraLoi(x) ? ' title=\"' + esc(tieuTraLoi(x)) + '\"' : '') + '>' + cum(nhanTraLoi(x))", js)   # 0.7.6 QĐ189     # Z10a: dòng dưới câu trả lời
         self.assertIn("(tenNguon(timNguon(d.goithu)) || k.nguon)", js)
         tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
         self.assertIn('tl["nguon"], tl["nguon_id"] = kq["nguon"], kq.get("nguon_id")', tc)

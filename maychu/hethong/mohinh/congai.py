@@ -190,8 +190,7 @@ def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
     - loại việc có mô hình mặc định (màn 13) → nguồn của mô hình đó đứng đầu, gọi đúng mô hình đó;
     - gói khác: mô hình mặc định của CLI (không truyền --model);
     - khoá API khác: dòng G08 đầu tiên đã có giá (cũ: dòng đầu tiên)."""
-    mid = danhmuc_mohinh.macdinh(thumuc).get(loai_viec) if loai_viec else None
-    md = danhmuc_mohinh.mot(mid, thumuc) if mid else None
+    md = danhmuc_mohinh.macdinh_khoa(loai_viec, thumuc) if loai_viec else None   # Đ6: (loại nguồn, mã) hoặc None
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cot = ["id", "ma", "ten", "loai", "uutien", "tran_tien_thang", "tyle_5gio", "tyle_tuan", "datlai_5gio_luc",
@@ -199,17 +198,18 @@ def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
         ds = dangnhap_goi.thu_tu([dict(zip(cot, r)) for r in cn.execute(
             f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'")])   # QĐ160: gói trước Khoá API
         for d in ds:
-            if md and md["nguon_ai_id"] == d["id"] and md["ma"]:
-                d["mohinh"], d["macdinh_loai"] = {k: md[k] for k in _COT_MH}, True
+            d["macdinh_loai"] = bool(md and dangnhap_goi.loai_nguon(d) == md[0])   # mọi tài khoản cùng loại (Đ6)
+            dong = danhmuc_mohinh.dong_cua(d["id"], md[1], thumuc) if d["macdinh_loai"] and md[1] else None
+            if dong:
+                d["mohinh"] = dong
             elif d["loai"] == "goi":   # gói: mô hình mặc định của CLI; "mặc định của nguồn" (Z10c) cũng vậy
-                d["mohinh"], d["macdinh_loai"] = None, bool(md and md["nguon_ai_id"] == d["id"])
+                d["mohinh"] = None
             else:
                 m = cn.execute("SELECT id, ma_mohinh, gia_vao, gia_ra, tien_ma FROM mohinh_ai WHERE nguon_ai_id = ?"
                                " AND coalesce(trangthai, 'dung') = 'dung' AND ma_mohinh IS NOT NULL"
                                " ORDER BY (gia_vao IS NULL), rowid LIMIT 1",
                                (d["id"],)).fetchone()
                 d["mohinh"] = dict(zip(_COT_MH, m)) if m else None
-                d["macdinh_loai"] = bool(md and md["nguon_ai_id"] == d["id"])
         return sorted(ds, key=lambda d: not d.get("macdinh_loai"))
     finally:
         cn.close()
@@ -414,32 +414,69 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
     return kq
 
 
+def _tk(d: dict) -> int | None:
+    m = re.fullmatch(r"goi_(?:claude|chatgpt)_(\d\d)", d.get("ma") or "")
+    return int(m.group(1)) if m else None
+
+
+def _den_luc(nguon_id: str, thumuc=None) -> str | None:
+    """Giờ tài khoản đang nghỉ dùng lại được: giờ đặt lại của cửa sổ đã đầy; không rõ cửa sổ thì giờ đặt lại sớm nhất."""
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        r = cn.execute("SELECT tyle_5gio, datlai_5gio_luc, tyle_tuan, datlai_tuan_luc FROM nguon_ai WHERE id = ?", (nguon_id,)).fetchone()
+    finally:
+        cn.close()
+    if not r:
+        return None
+    bay = _bay_gio()
+    day = [dl for tl, dl in ((r[0], r[1]), (r[2], r[3])) if (tl or 0) >= 100 and dl and dl > bay]
+    sau = sorted(dl for dl in (r[1], r[3]) if dl and dl > bay)
+    return max(day) if day else (sau[0] if sau else None)
+
+
+def _chay_bang(d: dict, ds: list, nghi: dict, thumuc=None) -> dict:
+    """QĐ189: tài khoản thực chạy; chạy dự phòng (tài khoản cùng loại đứng trước đang hết hạn mức) thì kèm tài khoản đó và
+    giờ dùng lại được. Chỉ để giao diện hiện khi rê chuột."""
+    tk = _tk(d)
+    if tk is None:
+        return {"chay_tk": None, "du_phong": None}
+    loai = dangnhap_goi.loai_nguon(d)
+    truoc = next((x for x in ds if x["id"] != d["id"] and dangnhap_goi.loai_nguon(x) == loai and x["id"] in nghi
+                  and str(nghi[x["id"]]).startswith("hết hạn mức")), None)
+    return {"chay_tk": tk, "du_phong": {"tk": _tk(truoc), "den": _den_luc(truoc["id"], thumuc)} if truoc else None}
+
+
 def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_id=None, thumuc=None,
         client=None) -> dict:
     """Gọi AI 01 lần theo thứ tự ưu tiên (hoặc chỉ 01 nguồn khi bấm Gọi thử). Trả {chu, nguon, nguon_id,
     nhatky_ai_id, mohinh_id, mohinh, ghim_hong, bo_qua} hoặc {loi, bo_qua}. `mohinh_id` (G08): mô hình ghim, thử trước;
     không dùng được thì `ghim_hong` = {mohinh_id, ma, het_hanmuc, lydo} và gọi theo mặc định."""
-    bo_qua, ghim_hong = [], None
+    bo_qua, ghim_hong, nghi = [], None, {}
     sem = _cho_phep()
     with sem:
         ds = _nguon(thumuc, loai_viec)
         if mohinh_id and not chi_nguon_id:
-            mh = danhmuc_mohinh.mot(mohinh_id, thumuc)
-            mh = mh if mh and mh["ma"] else None
-            d = next((x for x in ds if mh and x["id"] == mh["nguon_ai_id"]), None)
-            if d is None:   # mô hình ngừng, nguồn đã gỡ hoặc ngừng (Đ1, Đ2)
-                lydo = "không còn dùng được"
-                bo_qua.append({"nguon": "Mô hình đã chọn", "lydo": lydo})
-            else:
-                dg = {**d, "mohinh": {k: mh[k] for k in _COT_MH}}
-                kq = _thu(dg, cau, bo_qua, viecnen_id, thumuc, client, ghim=True)
+            # 0.7.6 (QĐ187, Đ1, Đ5): ghim "loại|mã" (dạng cũ id G08 đổi sang); thử lần lượt mọi tài khoản cùng loại có mô
+            # hình đó, mỗi tài khoản qua đủ kiểm giá, hạn mức; hết mới về mặc định (QĐ183)
+            khoa = danhmuc_mohinh.chuan_khoa(mohinh_id, thumuc)
+            loai, ma = danhmuc_mohinh.tach_khoa(khoa) if khoa else (None, None)
+            lydo, het, da_thu = "không còn dùng được", False, 0
+            for d in (x for x in ds if ma and dangnhap_goi.loai_nguon(x) == loai):
+                dong = danhmuc_mohinh.dong_cua(d["id"], ma, thumuc)
+                if not dong:
+                    continue
+                da_thu += 1
+                kq = _thu({**d, "mohinh": dong}, cau, bo_qua, viecnen_id, thumuc, client, ghim=True)
                 if isinstance(kq, dict):
                     return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
-                            "mohinh_id": mh["id"], "mohinh": mh["ma"], "mohinh_bao": kq.get("mohinh_bao"), "ghim_hong": None,
-                            "bo_qua": bo_qua}
+                            "mohinh_id": dong["id"], "mohinh": ma, "mohinh_bao": kq.get("mohinh_bao"), "ghim_hong": None,
+                            "ghim_khoa": khoa, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc)}
+                nghi[d["id"]] = kq
+                het = het or str(kq).startswith("hết hạn mức")
                 lydo = kq
-            ghim_hong = {"mohinh_id": mohinh_id, "ma": mh["ma"] if mh else None,
-                         "het_hanmuc": str(lydo).startswith("hết hạn mức"), "lydo": lydo}
+            if not da_thu:   # mô hình ngừng, cả nhóm đã gỡ hoặc ngừng (Đ1, Đ2)
+                bo_qua.append({"nguon": "Mô hình đã chọn", "lydo": lydo})
+            ghim_hong = {"khoa": khoa or mohinh_id, "ma": ma, "het_hanmuc": het, "lydo": "hết hạn mức" if het else lydo}
         for d in ds:
             if chi_nguon_id and d["id"] != chi_nguon_id:
                 continue
@@ -448,7 +485,8 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
                 mh = d["mohinh"] or {}
                 return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
                         "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "mohinh_bao": kq.get("mohinh_bao"),
-                        "ghim_hong": ghim_hong, "bo_qua": bo_qua}
+                        "ghim_hong": ghim_hong, "ghim_khoa": None, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc)}
+            nghi.setdefault(d["id"], kq)
     return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua,
             "ghim_hong": ghim_hong}
 

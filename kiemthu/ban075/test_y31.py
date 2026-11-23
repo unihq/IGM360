@@ -235,7 +235,7 @@ class KiemCongAI(Nen):
         kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id=self.ids["opus"])
         self.assertEqual(self.goi, [("claude", "opus"), ("claude", "sonnet")])   # không chuyển sang khoá API
         self.assertEqual((kq["mohinh"], kq["nguon_id"]), ("sonnet", self.claude))
-        self.assertEqual(kq["ghim_hong"], {"mohinh_id": self.ids["opus"], "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})
+        self.assertEqual(kq["ghim_hong"], {"khoa": "goi_claude|opus", "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})   # 0.7.6: khoá loại|mã
         self.assertEqual([r[2] for r in self.g04()], ["het_hanmuc", "xong"])
 
     def test_ghim_khoa_chua_co_gia_khong_goi(self):
@@ -311,9 +311,9 @@ class KiemGiaoDien(unittest.TestCase):
     def test_o_chon_theo_ban_ve(self):
         self.assertNotIn('id="tc-nguon"', self.html)                       # bỏ ô chọn nguồn đầu cuộc
         self.assertIn('<div class="tc-duoi"><div class="mh-chon" id="mh-chat"></div></div>', self.html)
-        for chu in ("Tìm nguồn, mô hình…", "Chọn ở đây chỉ áp cho cuộc trò chuyện này", "Thêm nguồn AI ở mục Mô hình AI",
+        for chu in ("Tìm nguồn, mô hình…", "Dùng ngay cho cuộc này và các cuộc mới", "Thêm nguồn AI ở mục Mô hình AI",
                     "Đang tải danh sách mô hình…", "Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối",
-                    "cho cuộc trò chuyện này. Cuộc khác vẫn theo mặc định.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
+                    ") cho cuộc này và các cuộc mới.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
                     "' (mặc định) cho tới khi đặt lại'", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
             self.assertIn(chu, self.js, chu)
         self.assertIn("#8F5F00", self.js)                                   # chữ vàng tương phản 5,5:1
@@ -351,28 +351,28 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("try { const g = docGhim();", self.js)               # trình duyệt chặn lưu: không lỗi
 
     def test_g2_g3_g5(self):
-        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá · ưu&nbsp;tiên&nbsp;", self.js)
+        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
         self.assertIn("'&nbsp;·&nbsp;<span class=\"nw\">' + esc(x.goi_ten)", self.js)
         self.assertIn("'Đăng nhập lúc&nbsp;' + esc(luc(x.dangnhap_luc))", self.js)
 
     def test_y31c_s3_s4(self):
         self.assertIn("'Tài' + NB + 'khoản' + NB + n.taikhoan", self.js)
         self.assertIn("const mhThucDung = x => x.mohinh_bao || x.mohinh || null;", self.js)
-        self.assertIn("(mh ? moHinhDong(mh, n) : 'Mặc định')", self.js)
+        self.assertIn("(mh ? tenMh(mh, n.id, n, true) : 'Mặc định')", self.js)   # 0.7.6 N3: tên ngắn
         self.assertNotIn("x.mohinh || n.mohinh_gannhat", self.js)   # không lấy mô hình gần nhất cũ
         tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
         self.assertIn('tl["mohinh_bao"] = kq.get("mohinh_bao")', tc)
 
     def test_y31c_s6(self):
         for chu in ("const CHU_MD = 'Mặc định của nguồn';", "data-mhmd=", "CHU_MD.toLowerCase().includes(q)",
-                    "'Đã bỏ ghim: cuộc trò chuyện này theo mặc định chung ('",
-                    "'\" về mặc định của nguồn ' + tn + '.'", "{loai_viec: lv, mohinh_id: null, nguon_id: g.nguon_id}",
-                    "const onMd = !dang.ghim && !dang.m && dang.g && dang.g.nguon_id === g.nguon_id;",
-                    "(noi !== 'chat' || dang.ghim)", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nguon_id, x.g)) : 'Mặc định của nguồn')"):
+                    "'Đã bỏ ghim: cuộc này và các cuộc mới theo mặc định của nguồn '",
+                    "'\" về mặc định của nguồn ' + tn + '.'", "{loai_viec: lv, khoa: g.khoa_md}",
+                    "const onMd = !dang.m && dang.g && dang.g.nhom === g.nhom;",
+                    "const on = !!dang.m && dang.m.khoa === m.khoa;", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nhom, x.g)) : 'Mặc định của nguồn')"):
             self.assertIn(chu, self.js, chu)
 
     def test_ban(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.5")
+        self.assertGreaterEqual(tuple(map(int, (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 7, 5))
         muc = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.5", 1)[1].split("\n## ", 1)[0]
         tt = re.search(r"Tóm tắt:(.*)", muc).group(1).strip()
         self.assertLess(len(tt), 50)
@@ -387,9 +387,9 @@ class KiemTenMoHinh(unittest.TestCase):
         lay = lambda ten: js[js.index("const " + ten + " "):js.index("\nconst ", js.index("const " + ten + " ") + 5)]
         ham = "\n".join(lay(t) for t in ("NB", "TEN_NGUON_GOI", "TEN_NGUON_HANG", "tenNguon", "chuHoa", "laSo", "phanMh",
                                           "hangCua", "gocMh", "nhomMh", "tenHang", "tenMh", "timNguon"))
-        nhom = [{"nguon_id": "k", "loai": "khoa_api", "hang": "anthropic", "mohinh": [{"ma": "claude-opus-4-1"}, {"ma": "claude-opus-4"}, {"ma": "claude-sonnet-4-5"}]},
-                {"nguon_id": "c", "goi": "claude", "mohinh": [{"ma": "sonnet"}, {"ma": "opus"}]},
-                {"nguon_id": "g", "goi": "chatgpt", "mohinh": [{"ma": "gpt-5.5"}, {"ma": "gpt-5"}, {"ma": "gpt-5-codex"}, {"ma": "gpt-4.1"}]}]
+        nhom = [{"nhom": "k", "nguon_id": "k", "loai": "khoa_api", "hang": "anthropic", "mohinh": [{"ma": "claude-opus-4-1"}, {"ma": "claude-opus-4"}, {"ma": "claude-sonnet-4-5"}]},
+                {"nhom": "c", "nguon_id": "c", "goi": "claude", "mohinh": [{"ma": "sonnet"}, {"ma": "opus"}]},
+                {"nhom": "g", "nguon_id": "g", "goi": "chatgpt", "mohinh": [{"ma": "gpt-5.5"}, {"ma": "gpt-5"}, {"ma": "gpt-5-codex"}, {"ma": "gpt-4.1"}]}]
         thu = [["opus", "c"], ["claude-opus-4-1", "k"], ["claude-opus-4", "k"], ["claude-sonnet-4-5", "k"],
                ["gpt-5.5", "g"], ["anthropic/claude-3.5-haiku", "k"], [None, "c"],
                ["gpt-5", "g"], ["gpt-5-codex", "g"], ["gpt-4.1", "g"], ["gpt-4o", "g"], ["o3-mini", "g"]]   # Y31b S2
@@ -412,7 +412,7 @@ class KiemTenNguonTaiKhoan(unittest.TestCase):
         js = (GD / "app.js").read_text(encoding="utf-8")
         lay = lambda ten: js[js.index("const " + ten + " "):js.index("\nconst ", js.index("const " + ten + " ") + 5)]
         ham = "\n".join(lay(t) for t in ("NB", "TEN_NGUON_GOI", "TEN_NGUON_HANG", "tenNguon", "chuHoa", "laSo", "phanMh", "hangCua",
-                                          "gocMh", "nhomMh", "tenHang", "tenMh", "moHinhDong", "timNguon", "mhThucDung", "nhanTraLoi"))
+                                          "gocMh", "nhomMh", "tenHang", "tenMh", "moHinhDong", "timNguon", "mhThucDung", "tenLoai", "nhanTraLoi"))
         nguon = [{"id": "c1", "goi": "claude", "taikhoan": 1, "mohinh_gannhat": "opus"}, {"id": "c2", "goi": "claude", "taikhoan": 2}]
         ma = ("const esc = s => s; const D = {md: {nguon: " + json.dumps(nguon) + "}, dsmh: null};\n" + ham
               + "\nconst ra = [tenNguon(D.md.nguon[0]), tenNguon(D.md.nguon[1]), nhanTraLoi({nguon_id: 'c1'}),"
@@ -424,7 +424,7 @@ class KiemTenNguonTaiKhoan(unittest.TestCase):
             r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout), ["Claude · Code", "Claude · Code · Tài khoản 2", "Claude · Code · Mặc định",
-                                                "Claude · Code · Opus", "Claude · Code · Tài khoản 2 · Sonnet"])
+                                                "Claude · Code · Opus", "Claude · Code · Sonnet"])   # 0.7.6 QĐ189: dòng nguồn không ghi tài khoản
 
 
 if __name__ == "__main__":

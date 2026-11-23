@@ -3,6 +3,16 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.6
+Tóm tắt: Chọn theo mô hình, tự xoay tài khoản
+- Sửa lỗi bản 0.7.5: bấm chọn mô hình ở khung trò chuyện không đổi được khi chưa đặt mô hình mặc định.
+- Chọn mô hình ở khung trò chuyện: dùng ngay cho cuộc đang mở và làm mặc định cho các cuộc trò chuyện mới.
+- Bảng chọn mô hình gộp theo hãng và công cụ (Claude · Code, ChatGPT · Codex…), không chia theo tài khoản.
+- Có nhiều tài khoản cùng loại: phần mềm dùng tài khoản đang chạy, hết hạn mức mới sang tài khoản dự phòng, dùng hết tài khoản cùng loại rồi mới sang loại khác.
+- Mô hình đã chọn hết hạn mức: phần mềm thử các tài khoản cùng loại còn lại, hết thì dùng mô hình mặc định; cả gói hết hạn mức thì tự chuyển sang hãng khác theo thứ tự nguồn (ví dụ Claude hết thì sang ChatGPT) và ghi rõ dưới câu trả lời.
+- Dòng dưới câu trả lời ghi hãng, công cụ và tên mô hình ngắn, không ghi tài khoản; rê chuột thấy bản cụ thể và tài khoản thực chạy.
+- Thêm tài khoản thứ 02 cho cùng 01 gói: phần mềm nhắc hãng có thể khoá tài khoản khi dùng nhiều tài khoản.
+
 ## 0.7.5
 Tóm tắt: Chọn mô hình AI ngay dưới khung trò chuyện
 - Nút chọn mô hình dưới khung trò chuyện: tìm theo tên, xem theo từng nguồn đã kết nối; chọn khác mặc định thì chỉ áp cho cuộc trò chuyện đó.

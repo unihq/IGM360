@@ -455,8 +455,25 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
 NHOM_PHI = {"goi": 0, "tuchay": 1, "khoa_api": 2}
 
 
+def loai_nguon(d: dict) -> str:
+    """Mã loại nguồn (QĐ187, PTD-08 Đ5, CDA K-MH5): 01 hàm duy nhất ở máy chủ. Mọi tài khoản cùng gói, mọi khoá cùng hãng
+    chung 01 mã ("goi_claude_02" → "goi_claude", "khoa_anthropic_01" → "khoa_anthropic"); trùng 1–1 với nhóm
+    "Hãng · Công cụ" ở giao diện. Nguồn khác giữ nguyên mã."""
+    ma = d.get("ma") or ""
+    m = re.fullmatch(r"(goi_(?:claude|chatgpt)|khoa_[a-z0-9]+?)_\d\d", ma)
+    return m.group(1) if m else ma
+
+
 def thu_tu(ds: list[dict]) -> list[dict]:
-    return sorted(ds, key=lambda d: (NHOM_PHI.get(d.get("loai"), 9), d.get("uutien") or 0, d.get("ma") or ""))
+    """Thứ tự dùng nguồn 03 tầng (PTD-08 Đ5): (1) cách tính phí (QĐ160: gói → chạy trên máy → khoá API); (2) loại
+    nguồn, xếp theo `uutien` nhỏ nhất trong loại; (3) `uutien` từng tài khoản. Tài khoản cùng loại đứng liền nhau:
+    Claude 1 (1), ChatGPT 1 (2), Claude 2 (3) → Claude 1 → Claude 2 → ChatGPT 1."""
+    nho: dict[str, int] = {}
+    for d in ds:
+        k = loai_nguon(d)
+        nho[k] = min(nho.get(k, 10 ** 9), d.get("uutien") or 0)
+    return sorted(ds, key=lambda d: (NHOM_PHI.get(d.get("loai"), 9), nho[loai_nguon(d)], loai_nguon(d),
+                                     d.get("uutien") or 0, d.get("ma") or ""))
 
 
 def _mohinh_gannhat(thumuc: Path | None = None) -> dict:
