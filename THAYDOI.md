@@ -5,6 +5,8 @@ Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử
 
 ## 0.7.6
 Tóm tắt: Chọn theo mô hình, tự xoay tài khoản
+- Sửa lỗi bản 0.7.5: bấm chọn mô hình ở khung trò chuyện không đổi được khi chưa đặt mô hình mặc định.
+- Chọn mô hình ở khung trò chuyện: dùng ngay cho cuộc đang mở và làm mặc định cho các cuộc trò chuyện mới.
 - Bảng chọn mô hình gộp theo hãng và công cụ (Claude · Code, ChatGPT · Codex…), không chia theo tài khoản.
 - Có nhiều tài khoản cùng loại: phần mềm dùng tài khoản đang chạy, hết hạn mức mới sang tài khoản dự phòng, dùng hết tài khoản cùng loại rồi mới sang loại khác.
 - Mô hình đã chọn hết hạn mức ở 01 tài khoản thì phần mềm thử tài khoản cùng loại còn lại trước khi về mô hình mặc định.

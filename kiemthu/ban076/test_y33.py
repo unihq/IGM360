@@ -173,5 +173,61 @@ class KiemGiaoDien076(unittest.TestCase):
         self.assertEqual(json.loads(r.stdout), ["Sonnet", "Sonnet 4.5", "Sonnet"])   # dòng nguồn: tên ngắn; bảng: số bản khi trùng
 
 
+class KiemY34(unittest.TestCase):
+    """Y34: lỗi máy chủ 0.7.5 "bấm mô hình không đổi được". Gốc lỗi: chọn mô hình ở khung chat khi loại việc "Trò chuyện AI"
+    chưa đặt mặc định thì đọc `md.m.id` với `md.m` trống (TypeError, app.js:528 bản b0f6328). Thêm: bảng đang mở chỉ vẽ
+    lại khi danh sách đổi; lượt tải về muộn thì bỏ. QĐ190: chọn ở khung chat đổi luôn mặc định "Trò chuyện AI"."""
+
+    def setUp(self):
+        self.js = (GD / "app.js").read_text(encoding="utf-8")
+
+    def test_u10_g1_g3(self):
+        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
+        html = (GD / "index.html").read_text(encoding="utf-8")
+        self.assertIn(".hm{display:grid;grid-template-columns:92px 1fr minmax(40px,max-content);", html)   # "chưa đo" không tràn
+
+    def test_khong_doc_md_m_khi_trong(self):
+        self.assertNotIn("md.m.id", self.js)
+        self.assertNotIn("!!md && md.m", self.js)
+        khoi = self.js[self.js.index("  if (d.mhchon) {"):self.js.index("  if (d.mhmd) {")]
+        self.assertNotIn("md.m", khoi)                                   # nhánh chọn mô hình không còn đọc mặc định
+        for chu in ("datGhim(x.m.khoa);", "api('/mohinh/macdinh', {loai_viec: 'trochuyen', khoa: x.m.khoa})"):   # QĐ190
+            self.assertIn(chu, khoi)
+        khoi2 = self.js[self.js.index("  if (d.mhmd) {"):self.js.index("  if (d.doimd) {")]
+        self.assertIn("api('/mohinh/macdinh', {loai_viec: 'trochuyen', khoa: g.khoa_md})", khoi2)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_chi_ve_lai_khi_doi_chay_that(self):
+        i = self.js.index("let luotDs = 0;")
+        ham = self.js[i:self.js.index("\n// Ghim tạm ở trình duyệt", i)]
+        ma = ("const D = {dsmh: null}; let tra = []; const api = async () => { const x = tra.shift(); await new Promise(r => setTimeout(r, x.cho)); return x.d; };\n"
+              + ham + "\n(async () => { const A = {nhom: [{nhom: 'goi_claude', dang_tai: false, mohinh: []}]};"
+              + " const B = {nhom: [{nhom: 'goi_claude', dang_tai: false, mohinh: [{khoa: 'goi_claude|opus'}]}]};"
+              + " const kq = [];"
+              + " tra = [{d: A, cho: 0}]; kq.push(await napDsMh());"          # lần đầu: đổi
+              + " tra = [{d: A, cho: 0}]; kq.push(await napDsMh());"          # giống hệt: không vẽ lại
+              + " tra = [{d: B, cho: 50}, {d: A, cho: 0}]; const p1 = napDsMh(), p2 = napDsMh(); kq.push(await p1, await p2);"   # lượt về muộn bị bỏ
+              + " kq.push(D.dsmh.nhom[0].mohinh.length); console.log(JSON.stringify(kq)); })();")
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "thu.js"
+            p.write_text(ma, encoding="utf-8")
+            r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), [True, False, False, False, 0])
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_md_chat_khi_chua_dat_chay_that(self):
+        lay = lambda ten: self.js[self.js.index("const " + ten + " "):self.js.index("\nconst ", self.js.index("const " + ten + " ") + 5)]
+        ham = "\n".join(lay(t) for t in ("nhomMh", "timMh", "nhomChinh", "mdLoai", "mdChat"))
+        ma = ("const D = {dsmh: {nhom: [{nhom: 'goi_claude', chinh: true, mohinh: [{khoa: 'goi_claude|opus', ma: 'opus'}]}], macdinh_ct: {}}};\n"
+              + ham + "\nconst md = mdChat(); console.log(JSON.stringify([md.g.nhom, md.m]));")
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "thu.js"
+            p.write_text(ma, encoding="utf-8")
+            r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), ["goi_claude", None])   # đúng trạng thái làm 0.7.5 lỗi: m trống
+
+
 if __name__ == "__main__":
     unittest.main()

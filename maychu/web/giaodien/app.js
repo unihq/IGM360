@@ -413,7 +413,7 @@ function veMoHinh() {
   ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
     + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API</div><div class="t12 phu">Phí theo lượt</div></div></div>'
-    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá · ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
+    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
         + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt hạn mức</span>') + '</div>').join('')
       : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở mục Két khoá (có ở bản sau).</div>')
     + '<div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
@@ -457,8 +457,14 @@ const MH = {noi: null, tim: '', mo: null, dich: null};   // noi: 'chat' (bảng 
 D.hong = {};   // {mã cuộc: {het, dung, nguon_id}}: mô hình ghim không dùng được ở lượt gần nhất (nút vàng tới khi dùng lại được)
 // Y31b S5: đổi màu nét mọi dạng mã màu, kể cả "#fff" của icon dấu cộng
 const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
-async function napDsMh() { try { D.dsmh = await api('/mohinh/danhsach'); } catch (e) { return; }
-  if (D.dsmh.nhom.some(g => g.dang_tai)) setTimeout(async () => { await napDsMh(); veLaiMh(); }, 2500); }
+// Y34: chỉ lượt tải mới nhất được ghi (lượt mạng về muộn thì bỏ); trả true khi danh sách đổi. Bảng đang mở chỉ vẽ lại khi
+// danh sách đổi thật, để lượt bấm của anh không rơi vào lúc bảng đang được vẽ lại (nguồn học: tailieu/Songuongoc.md).
+let luotDs = 0;
+async function napDsMh() { const luot = ++luotDs; let moi; try { moi = await api('/mohinh/danhsach'); } catch (e) { return false; }
+  if (luot !== luotDs) return false;
+  const doi = JSON.stringify(moi) !== JSON.stringify(D.dsmh); D.dsmh = moi;
+  if (moi.nhom.some(g => g.dang_tai)) setTimeout(async () => { if (await napDsMh()) veLaiMh(); }, 2500);
+  return doi; }
 // Ghim tạm ở trình duyệt theo mã cuộc trò chuyện (QĐ180; lược đồ bản 4 chuyển về cột H07 `mohinh_ghim_id`)
 const KHO_GHIM = 'igm360.ghim_mohinh';
 const docGhim = () => { try { return JSON.parse(localStorage.getItem(KHO_GHIM) || '{}') || {}; } catch (e) { return {}; } };
@@ -524,7 +530,7 @@ function dsMhHtml(noi) { const q = MH.tim.trim().toLowerCase(), nh = D.dsmh ? D.
 const bangMhHtml = noi => '<div class="mh-bang" data-mhbang="' + noi + '"><label class="mh-tim">' + icoMau(ICON.search, '#646A73', 15)
   + '<input data-mhtim placeholder="Tìm nguồn, mô hình…" value="' + esc(MH.tim) + '"></label><div class="mh-ghi" title="'
   + 'Nhiều tài khoản cùng loại: dùng tài khoản đang chạy, hết hạn mức mới sang tài khoản dự phòng">'
-  + (noi === 'chat' ? 'Chọn ở đây chỉ áp cho cuộc trò chuyện này' : 'Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối') + '</div>'
+  + (noi === 'chat' ? 'Dùng ngay cho cuộc này và các cuộc trò chuyện mới' : 'Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối') + '</div>'
   + '<div class="mh-ds">' + dsMhHtml(noi) + '</div><div class="mh-chan"><button type="button" class="mh-nhom" data-trang="13" data-mhdong>'
   + icoMau(ICON.plus, '#1456F0', 16) + '<span style="color:#1456F0">Thêm nguồn AI ở mục Mô hình AI</span></button></div></div>';
 function veNutMh() { const e = $('#mh-chat'); if (e) e.innerHTML = nutMh() + (MH.noi === 'chat' ? bangMhHtml('chat') : ''); }
@@ -539,25 +545,30 @@ document.addEventListener('click', async ev => {
   const d = b.dataset;
   if ('mhdong' in d) { dongMh(); return; }   // không chặn: nút còn mở mục Mô hình AI
   ev.stopImmediatePropagation();
-  if ('mhnut' in d) { MH.noi = MH.noi === 'chat' ? null : 'chat'; MH.tim = ''; MH.mo = null; veNutMh(); if (MH.noi) { await napDsMh(); veLaiMh(); } return; }
+  if ('mhnut' in d) { MH.noi = MH.noi === 'chat' ? null : 'chat'; MH.tim = ''; MH.mo = null; veNutMh(); if (MH.noi && await napDsMh()) veLaiMh(); return; }
   if (d.mhnhom) { MH.mo = nhomDangMo(MH.noi) === d.mhnhom ? '' : d.mhnhom; veLaiMh(); return; }
   if (d.mhchon) { const x = timMh(d.mhchon); if (!x) return; const ten = tenMh(x.m.ma, x.g.nhom, x.g), tn = tenNguon(x.g).replace(/\u00a0/g, ' ');
     if (MH.noi === 'md') { const lv = MH.dich;
       try { await api('/mohinh/macdinh', {loai_viec: lv, khoa: x.m.khoa}); } catch (e) { bao(e.message + '.'); return; }
       MH.noi = null; MH.dich = null; MH.tim = ''; MH.mo = null; dongHop(); await napDsMh(); if (D.md) veMoHinh(); veNutMh();
       bao('Đã đổi mô hình cho "' + D.dsmh.loai_viec[lv] + '": ' + ten + ' · ' + tn + '.'); return; }
-    const md = mdChat(), laMd = !!md.m && md.m.khoa === x.m.khoa;
-    datGhim(laMd ? null : x.m.khoa);
-    delete D.hong[D.htId]; dongMh();
-    bao(laMd ? 'Cuộc trò chuyện này trở lại mặc định: ' + ten + '.' : 'Đã chọn ' + ten + ' (' + tn + ') cho cuộc trò chuyện này. Cuộc khác vẫn theo mặc định.'); return; }
+    // QĐ190: chọn ở khung chat = cuộc đang mở dùng ngay (ghim) + đổi luôn mặc định "Trò chuyện AI"
+    datGhim(x.m.khoa); delete D.hong[D.htId]; dongMh();
+    try { await api('/mohinh/macdinh', {loai_viec: 'trochuyen', khoa: x.m.khoa}); }
+    catch (e) { bao('Đã chọn ' + ten + ' (' + tn + ') cho cuộc trò chuyện này; chưa đổi được mặc định: ' + e.message + '.'); return; }
+    await napDsMh(); if (D.md) veMoHinh(); veNutMh();
+    bao('Đã chọn ' + ten + ' (' + tn + '): dùng ngay cho cuộc trò chuyện này và các cuộc trò chuyện mới.'); return; }
   if (d.mhmd) { const g = nhomMh(d.mhmd); if (!g) return; const tn = tenNguon(g).replace(/\u00a0/g, ' ');
     if (MH.noi === 'md') { const lv = MH.dich;   // S6: loại việc về "mặc định của nguồn" này
       try { await api('/mohinh/macdinh', {loai_viec: lv, khoa: g.khoa_md}); } catch (e) { bao(e.message + '.'); return; }
       MH.noi = null; MH.dich = null; MH.tim = ''; MH.mo = null; dongHop(); await napDsMh(); if (D.md) veMoHinh(); veNutMh();
       bao('Đã đặt "' + D.dsmh.loai_viec[lv] + '" về mặc định của nguồn ' + tn + '.'); return; }
-    datGhim(null);   // S6: khung chat = bỏ ghim
-    delete D.hong[D.htId]; dongMh(); const md = mdChat();
-    bao('Đã bỏ ghim: cuộc trò chuyện này theo mặc định chung (' + (md.m ? tenMh(md.m.ma, md.g.nhom, md.g) : 'Mặc định') + ').'); return; }
+    // QĐ190: khung chat chọn dòng này = bỏ ghim cuộc này + mặc định "Trò chuyện AI" về mặc định của nguồn đó
+    datGhim(null); delete D.hong[D.htId]; dongMh();
+    try { await api('/mohinh/macdinh', {loai_viec: 'trochuyen', khoa: g.khoa_md}); }
+    catch (e) { bao('Đã bỏ ghim cuộc trò chuyện này; chưa đổi được mặc định: ' + e.message + '.'); return; }
+    await napDsMh(); if (D.md) veMoHinh(); veNutMh();
+    bao('Đã bỏ ghim: cuộc trò chuyện này và các cuộc trò chuyện mới theo mặc định của nguồn ' + tn + '.'); return; }
   if (d.doimd) { await napDsMh(); if (!D.dsmh) { bao('Chưa tải được danh sách mô hình, anh thử lại.'); return; }
     MH.dich = d.doimd; MH.noi = 'md'; MH.tim = ''; MH.mo = null;
     $('#mh-tieu').textContent = 'Chọn mô hình · ' + D.dsmh.loai_viec[d.doimd]; $('#mh-than13').innerHTML = bangMhHtml('md'); mo('h-chonmh'); }
