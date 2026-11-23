@@ -11,6 +11,10 @@ mức thì chuyển sang nguồn kế tiếp và đánh dấu `da_het_luc`.
   `turn.completed` (lượng chữ); % hạn mức đọc từ dòng `rate_limits` cuối cùng trong tệp phiên của Codex.
 - Khoá API: Anthropic hoặc OpenAI qua httpx (thư viện đã duyệt); tiền thật = lượng chữ × giá G08.
 Số việc AI chạy cùng lúc ≤ thông số `so_viec_ai_songsong` (QĐ71).
+Bản 0.7.5 (QĐ178–QĐ183, PTD-08, Y31): `goi()` nhận `loai_viec` (mô hình mặc định theo loại việc, màn 13) và
+`mohinh_id` (mô hình anh ghim cho cuộc trò chuyện; chỉ trò chuyện gửi, việc tự chạy và bot không đọc ghim). Mô hình
+ghim vẫn qua đủ kiểm (đã kết nối, hạn mức, trần tiền, có giá); không dùng được thì tự dùng mặc định, trả `ghim_hong`
+để ghi 01 dòng dưới câu trả lời; không tự chọn khoá API thay cho mô hình ghim (QĐ183).
 Tiền ghi số nguyên theo phần triệu đơn vị tiền ở `tien_ma` (1 USD = 1.000.000); giá G08 là phần triệu USD
 cho 1.000.000 chữ (token).
 """
@@ -30,7 +34,7 @@ from maychu.dulieu import ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
-from maychu.hethong.mohinh import dangnhap_goi
+from maychu.hethong.mohinh import dangnhap_goi, danhmuc_mohinh
 
 TRIEU = 1_000_000
 GIAY_TOIDA = 600
@@ -135,6 +139,29 @@ def _doc_han_muc_codex(thu_muc: Path | None) -> dict:
     return {}
 
 
+def _mohinh_codex(thu_muc: Path | None) -> str | None:
+    """Y31c S4: mô hình Codex thực dùng = trường `model` của dòng `turn_context` cuối trong tệp phiên mới nhất
+    (`codex-rs/protocol/src/protocol.rs` `TurnContextItem.model`; chưa thấy trên máy thật). Không đọc được thì None."""
+    goc = (thu_muc or Path(os.environ.get("CODEX_HOME", "/home/igm/.codex"))) / "sessions"
+    tep = sorted(goc.rglob("rollout-*.jsonl"), key=lambda p: p.stat().st_mtime) if goc.exists() else []
+    if not tep:
+        return None
+    with open(tep[-1], "rb") as f:
+        f.seek(max(0, f.seek(0, 2) - 256_000))
+        dong = f.read().decode("utf-8", "replace").splitlines()
+    for d in reversed(dong):
+        if '"turn_context"' not in d:
+            continue
+        try:
+            o = json.loads(d)
+        except ValueError:
+            continue
+        p = o.get("payload") if isinstance(o, dict) else None
+        if o.get("type") == "turn_context" and isinstance(p, dict) and isinstance(p.get("model"), str) and p["model"].strip():
+            return p["model"].strip()[:80]
+    return None
+
+
 def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None) -> None:
     if not hm:
         return
@@ -155,7 +182,16 @@ def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None) -> None:
 
 
 # ---------------- Nguồn ----------------
-def _nguon(thumuc=None) -> list[dict]:
+_COT_MH = ("id", "ma", "gia_vao", "gia_ra", "tien_ma")
+
+
+def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
+    """Nguồn đang dùng theo ưu tiên, mỗi nguồn kèm mô hình sẽ gọi:
+    - loại việc có mô hình mặc định (màn 13) → nguồn của mô hình đó đứng đầu, gọi đúng mô hình đó;
+    - gói khác: mô hình mặc định của CLI (không truyền --model);
+    - khoá API khác: dòng G08 đầu tiên đã có giá (cũ: dòng đầu tiên)."""
+    mid = danhmuc_mohinh.macdinh(thumuc).get(loai_viec) if loai_viec else None
+    md = danhmuc_mohinh.mot(mid, thumuc) if mid else None
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cot = ["id", "ma", "ten", "loai", "uutien", "tran_tien_thang", "tyle_5gio", "tyle_tuan", "datlai_5gio_luc",
@@ -163,10 +199,18 @@ def _nguon(thumuc=None) -> list[dict]:
         ds = dangnhap_goi.thu_tu([dict(zip(cot, r)) for r in cn.execute(
             f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'")])   # QĐ160: gói trước Khoá API
         for d in ds:
-            m = cn.execute("SELECT id, ma_mohinh, gia_vao, gia_ra, tien_ma FROM mohinh_ai WHERE nguon_ai_id = ?"
-                           " AND coalesce(trangthai, 'dung') = 'dung' ORDER BY rowid LIMIT 1", (d["id"],)).fetchone()
-            d["mohinh"] = dict(zip(("id", "ma", "gia_vao", "gia_ra", "tien_ma"), m)) if m else None
-        return ds
+            if md and md["nguon_ai_id"] == d["id"] and md["ma"]:
+                d["mohinh"], d["macdinh_loai"] = {k: md[k] for k in _COT_MH}, True
+            elif d["loai"] == "goi":   # gói: mô hình mặc định của CLI; "mặc định của nguồn" (Z10c) cũng vậy
+                d["mohinh"], d["macdinh_loai"] = None, bool(md and md["nguon_ai_id"] == d["id"])
+            else:
+                m = cn.execute("SELECT id, ma_mohinh, gia_vao, gia_ra, tien_ma FROM mohinh_ai WHERE nguon_ai_id = ?"
+                               " AND coalesce(trangthai, 'dung') = 'dung' AND ma_mohinh IS NOT NULL"
+                               " ORDER BY (gia_vao IS NULL), rowid LIMIT 1",
+                               (d["id"],)).fetchone()
+                d["mohinh"] = dict(zip(_COT_MH, m)) if m else None
+                d["macdinh_loai"] = bool(md and md["nguon_ai_id"] == d["id"])
+        return sorted(ds, key=lambda d: not d.get("macdinh_loai"))
     finally:
         cn.close()
 
@@ -230,13 +274,15 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
     if mohinh:
         lenh += ["--model", mohinh]
     r = _chay(lenh, dangnhap_goi._env("claude", taikhoan), vao=cau)
-    kq, hm = None, {}
+    kq, hm, bao = None, {}, None
     for dong in r.stdout.splitlines():
         try:
             o = json.loads(dong)
         except ValueError:
             continue
-        if o.get("type") == "rate_limit_event":
+        if o.get("type") == "system" and o.get("subtype") == "init" and isinstance(o.get("model"), str):
+            bao = o["model"].strip()[:80] or None   # Y31c S4: mô hình CLI thực dùng (dòng khởi đầu stream-json)
+        elif o.get("type") == "rate_limit_event":
             hm.update(han_muc_claude(o.get("rate_limit_info") or {}))
         elif o.get("type") == "result":
             kq = o
@@ -249,7 +295,8 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
     vao = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     tk = kq.get("total_cost_usd")
     return {"chu": kq.get("result") or "", "vao": vao, "ra": int(u.get("output_tokens") or 0), "sotien": None,
-            "sotien_thamkhao": round(float(tk) * TRIEU) if tk is not None else None, "tien_ma": "USD", "hanmuc": hm}
+            "sotien_thamkhao": round(float(tk) * TRIEU) if tk is not None else None, "tien_ma": "USD", "hanmuc": hm,
+            "mohinh_bao": bao}
 
 
 def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None) -> dict:
@@ -282,7 +329,7 @@ def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None) -> dict:
             raise HetHanMuc(str(loi)[:300], hm)
         raise RuntimeError(f"ChatGPT không trả lời được: {str(loi)[:300]}")
     return {"chu": "\n".join(chu), "vao": vao, "ra": ra, "sotien": None, "sotien_thamkhao": None, "tien_ma": "USD",
-            "hanmuc": hm}
+            "hanmuc": hm, "mohinh_bao": _mohinh_codex(tm)}
 
 
 def _goi_khoa(d: dict, cau: str, thumuc=None, client=None) -> dict:
@@ -310,8 +357,9 @@ def _goi_khoa(d: dict, cau: str, thumuc=None, client=None) -> dict:
     else:
         raise RuntimeError("Khoá API chưa rõ của hãng nào (mã nguồn phải bắt đầu bằng khoa_anthropic hoặc khoa_openai)")
     tien = round((vao * m["gia_vao"] + ra * m["gia_ra"]) / TRIEU)
+    bao = o.get("model") if isinstance(o.get("model"), str) else None   # Y31c S4: hãng trả mô hình thực dùng
     return {"chu": chu, "vao": vao, "ra": ra, "sotien": tien, "sotien_thamkhao": None, "tien_ma": m["tien_ma"] or "USD",
-            "hanmuc": {}}
+            "hanmuc": {}, "mohinh_bao": bao}
 
 
 # ---------------- Gọi ----------------
@@ -329,46 +377,80 @@ def _ghi_g04(d: dict, kq: dict | None, ketqua: str, ms: int, viecnen_id=None, th
     return ma
 
 
-def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, thumuc=None, client=None) -> dict:
-    """Gọi AI 01 lần theo thứ tự ưu tiên (hoặc chỉ 01 nguồn khi bấm Gọi thử). Trả {chu, nguon, nhatky_ai_id, bo_qua}
-    hoặc {loi, bo_qua}."""
-    bo_qua = []
+def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=None, ghim: bool = False):
+    """Gọi 01 nguồn với mô hình `d["mohinh"]`. Được thì trả kết quả gọi; không được thì ghi `bo_qua`, trả lý do.
+    `ghim`: lượt thử mô hình anh ghim; hết hạn mức thì chỉ ghi % hạn mức hãng báo, không đánh dấu cả nguồn hết
+    (hạn mức riêng của 01 mô hình, ví dụ Opus, không chặn mô hình mặc định cùng gói)."""
+    ten = d["ten"] + (" (mô hình đã chọn)" if ghim else "")
+    ok, lydo = dung_duoc(d, thumuc)
+    if not ok:
+        bo_qua.append({"nguon": ten, "lydo": lydo})
+        return lydo
+    m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", d["ma"] or "")
+    t0 = time.monotonic()
+    try:
+        if m and m.group(1) == "claude":
+            kq = _goi_claude(int(m.group(2)), cau, (d["mohinh"] or {}).get("ma"))
+        elif m:
+            kq = _goi_chatgpt(int(m.group(2)), cau, (d["mohinh"] or {}).get("ma"))
+        else:
+            kq = _goi_khoa(d, cau, thumuc, client)
+    except HetHanMuc as e:
+        _ghi_g04(d, None, "het_hanmuc", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
+        ghi_han_muc(d["id"], e.hanmuc if ghim else {**e.hanmuc, "het": True}, thumuc)
+        bo_qua.append({"nguon": ten, "lydo": f"hết hạn mức: {e}"[:200]})
+        return "hết hạn mức"
+    except subprocess.TimeoutExpired:
+        _ghi_g04(d, None, "quagio", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
+        bo_qua.append({"nguon": ten, "lydo": "quá giờ"})
+        return "quá giờ"
+    except Exception as e:  # noqa: BLE001 - lỗi 01 nguồn thì thử nguồn sau
+        _ghi_g04(d, None, "loi", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
+        bo_qua.append({"nguon": ten, "lydo": str(e)[:200]})
+        return "lỗi"
+    ms = int((time.monotonic() - t0) * 1000)
+    ghi_han_muc(d["id"], kq.get("hanmuc") or {}, thumuc)
+    kq["nhatky_ai_id"] = _ghi_g04(d, kq, "xong", ms, viecnen_id, thumuc)
+    return kq
+
+
+def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_id=None, thumuc=None,
+        client=None) -> dict:
+    """Gọi AI 01 lần theo thứ tự ưu tiên (hoặc chỉ 01 nguồn khi bấm Gọi thử). Trả {chu, nguon, nguon_id,
+    nhatky_ai_id, mohinh_id, mohinh, ghim_hong, bo_qua} hoặc {loi, bo_qua}. `mohinh_id` (G08): mô hình ghim, thử trước;
+    không dùng được thì `ghim_hong` = {mohinh_id, ma, het_hanmuc, lydo} và gọi theo mặc định."""
+    bo_qua, ghim_hong = [], None
     sem = _cho_phep()
     with sem:
-        for d in _nguon(thumuc):
+        ds = _nguon(thumuc, loai_viec)
+        if mohinh_id and not chi_nguon_id:
+            mh = danhmuc_mohinh.mot(mohinh_id, thumuc)
+            mh = mh if mh and mh["ma"] else None
+            d = next((x for x in ds if mh and x["id"] == mh["nguon_ai_id"]), None)
+            if d is None:   # mô hình ngừng, nguồn đã gỡ hoặc ngừng (Đ1, Đ2)
+                lydo = "không còn dùng được"
+                bo_qua.append({"nguon": "Mô hình đã chọn", "lydo": lydo})
+            else:
+                dg = {**d, "mohinh": {k: mh[k] for k in _COT_MH}}
+                kq = _thu(dg, cau, bo_qua, viecnen_id, thumuc, client, ghim=True)
+                if isinstance(kq, dict):
+                    return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
+                            "mohinh_id": mh["id"], "mohinh": mh["ma"], "mohinh_bao": kq.get("mohinh_bao"), "ghim_hong": None,
+                            "bo_qua": bo_qua}
+                lydo = kq
+            ghim_hong = {"mohinh_id": mohinh_id, "ma": mh["ma"] if mh else None,
+                         "het_hanmuc": str(lydo).startswith("hết hạn mức"), "lydo": lydo}
+        for d in ds:
             if chi_nguon_id and d["id"] != chi_nguon_id:
                 continue
-            ok, lydo = dung_duoc(d, thumuc)
-            if not ok:
-                bo_qua.append({"nguon": d["ten"], "lydo": lydo})
-                continue
-            m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", d["ma"] or "")
-            t0 = time.monotonic()
-            try:
-                if m and m.group(1) == "claude":
-                    kq = _goi_claude(int(m.group(2)), cau, (d["mohinh"] or {}).get("ma"))
-                elif m:
-                    kq = _goi_chatgpt(int(m.group(2)), cau, (d["mohinh"] or {}).get("ma"))
-                else:
-                    kq = _goi_khoa(d, cau, thumuc, client)
-            except HetHanMuc as e:
-                _ghi_g04(d, None, "het_hanmuc", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-                ghi_han_muc(d["id"], {**e.hanmuc, "het": True}, thumuc)
-                bo_qua.append({"nguon": d["ten"], "lydo": f"hết hạn mức: {e}"[:200]})
-                continue
-            except subprocess.TimeoutExpired:
-                _ghi_g04(d, None, "quagio", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-                bo_qua.append({"nguon": d["ten"], "lydo": "quá giờ"})
-                continue
-            except Exception as e:  # noqa: BLE001 - lỗi 01 nguồn thì thử nguồn sau
-                _ghi_g04(d, None, "loi", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-                bo_qua.append({"nguon": d["ten"], "lydo": str(e)[:200]})
-                continue
-            ms = int((time.monotonic() - t0) * 1000)
-            ghi_han_muc(d["id"], kq.get("hanmuc") or {}, thumuc)
-            ma = _ghi_g04(d, kq, "xong", ms, viecnen_id, thumuc)
-            return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": ma, "bo_qua": bo_qua}
-    return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua}
+            kq = _thu(d, cau, bo_qua, viecnen_id, thumuc, client)
+            if isinstance(kq, dict):
+                mh = d["mohinh"] or {}
+                return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
+                        "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "mohinh_bao": kq.get("mohinh_bao"),
+                        "ghim_hong": ghim_hong, "bo_qua": bo_qua}
+    return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua,
+            "ghim_hong": ghim_hong}
 
 
 def tom_tat_thang(thumuc=None) -> dict:

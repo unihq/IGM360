@@ -3,6 +3,14 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.5
+Tóm tắt: Chọn mô hình AI ngay dưới khung trò chuyện
+- Nút chọn mô hình dưới khung trò chuyện: tìm theo tên, xem theo từng nguồn đã kết nối; chọn khác mặc định thì chỉ áp cho cuộc trò chuyện đó.
+- Tên mô hình ghi ngắn: Haiku, Sonnet, Opus; rê chuột thấy bản cụ thể.
+- Mô hình đã chọn đang hết hạn mức thì phần mềm tự dùng mô hình mặc định và ghi 01 dòng dưới câu trả lời.
+- Mục Mô hình AI: nút "Đổi" chọn mô hình mặc định cho từng loại việc.
+- Máy khác hoặc trình duyệt khác chưa nhớ mô hình đã chọn của cuộc trò chuyện (bản sau lưu trên máy chủ).
+
 ## 0.7.4
 Tóm tắt: Giữ tên tài khoản Claude sau mỗi lần cập nhật
 - Tên tài khoản và tên gói Claude được lưu trong ổ lưu của máy chủ, không mất khi bấm "Cập nhật ngay".

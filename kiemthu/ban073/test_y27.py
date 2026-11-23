@@ -129,7 +129,7 @@ class KiemHoSo(unittest.TestCase):
         html = (GOC / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
         ico = (GOC / "maychu/web/giaodien/icon.js").read_text(encoding="utf-8")
         self.assertIn("<b>' + tenTk(x) + '</b>'", js)
-        self.assertIn("(x.ten_hien ? esc(x.ten_hien) : tk) + (x.goi_ten ? ' · <span class=\"nw\">' + esc(x.goi_ten)", js)
+        self.assertIn("(x.ten_hien ? esc(x.ten_hien) : tk) + (x.goi_ten ? '&nbsp;·&nbsp;<span class=\"nw\">' + esc(x.goi_ten)", js)   # Y31 G3
         self.assertIn("ICON.logo_chatgpt", js)
         self.assertNotIn("Logo ChatGPT: chờ file chính thức", js + html)
         tep = (GOC / "maychu/web/giaodien/logo/chatgpt.svg").read_bytes()

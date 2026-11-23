@@ -286,7 +286,8 @@ const NB = '\u00a0';   // dấu "·" nối không ngắt 02 bên
 const TEN_NGUON_GOI = {claude: 'Claude' + NB + '·' + NB + 'Code', chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'};
 const TEN_NGUON_HANG = {anthropic: 'Claude · API', openai: 'OpenAI · API', google: 'Gemini · API', openrouter: 'OpenRouter · API',
   groq: 'Groq · API', deepseek: 'DeepSeek · API', ollama: 'Ollama · Cloud'};
-const tenNguon = n => !n ? '' : n.goi ? TEN_NGUON_GOI[n.goi]
+// Y31c S3 (QĐ186): tài khoản 02 trở đi ghi thêm "· Tài khoản N"; tài khoản 01 giữ "Claude · Code"
+const tenNguon = n => !n ? '' : n.goi ? TEN_NGUON_GOI[n.goi] + (n.taikhoan > 1 ? NB + '·' + NB + 'Tài' + NB + 'khoản' + NB + n.taikhoan : '')
   : (n.loai === 'khoa_api' && TEN_NGUON_HANG[n.hang] ? TEN_NGUON_HANG[n.hang].replace(' · ', NB + '·' + NB) : n.ten);
 const GOI_TEN = TEN_NGUON_GOI;   // tiêu đề thẻ gói
 const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'};   // chỉ còn lấy tên hãng ("Thêm tài khoản Claude khác")
@@ -296,15 +297,35 @@ const tenMoHinh = ma => { if (!ma) return 'mô hình mặc định'; const p = S
   const chu = p.filter(x => !/^\d+(\.\d+)*$/.test(x)).map(x => /^gpt$/i.test(x) ? 'GPT' : x.charAt(0).toUpperCase() + x.slice(1));
   const so = p.filter(x => /^\d+(\.\d+)*$/.test(x) && x.length < 6).join('.');
   return chu.join(' ') + (so ? ' ' + so : ''); };
-// QĐ178: "Hãng · Công cụ · Mô hình" bỏ chữ trùng tên hãng ở đầu tên mô hình ("Claude · Code · Sonnet 4.6").
-// 01 hàm rút gọn dùng chung cho mọi chỗ ghi tên mô hình sau tên nguồn.
-const moHinhDong = (ma, n) => { const mh = tenMoHinh(ma); if (!ma) return mh;
-  const hang = tenNguon(n).split(NB + '·')[0].split(' · ')[0].trim();
-  return hang && mh.toLowerCase().startsWith(hang.toLowerCase() + ' ') ? mh.slice(hang.length + 1) : mh; };
+// QĐ178, QĐ179, QĐ181 (Z10b): tên mô hình ngắn, viết hoa, bỏ tên hãng khi chỗ đó đã ghi nguồn ("Claude · Code · Sonnet");
+// số bản chỉ thêm khi 01 nguồn có 02 bản cùng tên ("Opus 4.1", "Opus 4"); tên có "/" (hãng trung gian đặt, ví dụ
+// "Claude 3.5 Haiku") giữ nguyên thứ tự. 01 hàm `tenMh` dùng chung mọi chỗ ghi tên mô hình.
+const chuHoa = x => /^gpt$/i.test(x) ? 'GPT' : x.charAt(0).toUpperCase() + x.slice(1);
+const laSo = x => /^\d+(\.\d+)*$/.test(x);
+const phanMh = ma => { const p = String(ma).split(/[-_\s]+/).filter(Boolean);
+  return {chu: p.filter(x => !laSo(x)).map(chuHoa), so: p.filter(x => laSo(x) && x.length < 6).join('.')}; };
+const hangCua = n => (tenNguon(n) || '').split(NB + '·')[0].split(' · ')[0].trim().toLowerCase();
+const gocMh = (ma, hang) => { const {chu} = phanMh(ma); return (chu.length > 1 && hang && chu[0].toLowerCase() === hang ? chu.slice(1) : chu).join(' '); };
+const nhomMh = id => D.dsmh && id ? D.dsmh.nhom.find(g => g.nguon_id === id) : null;
+// Tên hãng khác Claude: giữ nguyên thứ tự và số ("gpt-5-codex" → "GPT-5 Codex", "gpt-4.1" → "GPT-4.1", "o3" → "o3").
+const tenHang = s => { const p = String(s).split(/[-_\s]+/).filter(Boolean), gpt = /^gpt$/i.test(p[0]) && p.length > 1;
+  const chu = x => laSo(x) || /^o\d/i.test(x) || /^\d/.test(x) ? x : chuHoa(x);
+  return [...(gpt ? ['GPT-' + p[1]] : [chu(p[0])]), ...p.slice(gpt ? 2 : 1).map(chu)].join(' '); };
+const tenMh = (ma, nguonId, n) => { if (!ma) return 'mô hình mặc định';
+  if (String(ma).includes('/')) return String(ma).split('/').pop().split(/[-_\s]+/).filter(Boolean).map(chuHoa).join(' ');
+  const g = nhomMh(nguonId), hang = hangCua(n || g || timNguon(nguonId));
+  if (hang !== 'claude') return tenHang(ma);   // Y31b S2: quy tắc bỏ hãng, bỏ số chỉ áp cho Claude (QĐ179, QĐ181)
+  const goc = gocMh(ma, hang), {so} = phanMh(ma);
+  const trung = g && g.mohinh.some(m => m.ma !== ma && gocMh(m.ma, hang) === goc);
+  return goc + (trung && so ? ' ' + so : ''); };
+const moHinhDong = (ma, n) => tenMh(ma, n && (n.id || n.nguon_id), n);
 const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);
 // Dòng dưới câu trả lời màn 08 (Z10a): "Claude · Code · Sonnet 4.5" theo mã nguồn; không tìm được nguồn thì giữ chữ máy chủ trả
 const timNguon = id => id && D.md ? D.md.nguon.find(n => n.id === id) : null;
-const nhanTraLoi = x => { const n = timNguon(x.nguon_id); return n ? dongNguon(n) : (x.nguon || 'Trợ lý AI'); };
+// Y31c S4 (QĐ186): mô hình công cụ báo về; không có thì mô hình đã gửi; không có nữa thì "Mặc định" (như nút), không lấy mô hình cũ
+const mhThucDung = x => x.mohinh_bao || x.mohinh || null;
+const nhanTraLoi = x => { const n = timNguon(x.nguon_id), mh = mhThucDung(x);
+  return n ? tenNguon(n) + ' · ' + (mh ? moHinhDong(mh, n) : 'Mặc định') : (x.nguon || 'Trợ lý AI'); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
   : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
@@ -313,7 +334,7 @@ const usd = v => Number(v || 0).toFixed(2).replace('.', ',') + '&nbsp;USD';
 const vnd = (v, tg) => tg ? '≈&nbsp;' + soVN(Math.round(Number(v || 0) * tg / 1000) * 1000) + '&nbsp;đ tham&nbsp;khảo' : 'chưa có tỷ&nbsp;giá';
 // N09: dòng dưới "Tài khoản 1": lúc đăng nhập gói (F04); chưa có dòng nào là đăng nhập lúc cài máy.
 const dnLuc = x => !x.dangnhap_luc ? 'Đăng nhập lúc cài&nbsp;máy'
-  : Date.now() - Date.parse(x.dangnhap_luc) < 10 * 60e3 ? 'Vừa đăng nhập' : 'Đăng nhập lúc ' + esc(luc(x.dangnhap_luc));
+  : Date.now() - Date.parse(x.dangnhap_luc) < 10 * 60e3 ? 'Vừa đăng nhập' : 'Đăng nhập lúc&nbsp;' + esc(luc(x.dangnhap_luc));
 const pct = v => v == null ? null : Math.max(0, Math.min(100, Number(v)));
 function thanhHm(ten, v) { const p = pct(v); return '<div class="hm"><span class="t12 phu nw">' + ten + '</span><div class="td" style="height:8px"><div class="tdf" style="width:'
   + (p ?? 0) + '%;background:' + (p >= 90 ? '#E22E28' : '#1456F0') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : hai(Math.round(p)) + '%') + '</b></div>'; }
@@ -359,7 +380,7 @@ function theGoi(g, ds, nguon, uu) {
 // QĐ169 đợt 1 (Z8): "Tên · gói" đọc sống; thiếu tên thì "Tài khoản N"; thiếu cả 02 thì "Tài khoản N" như cũ
 const tenTk = x => { const tk = 'Tài&nbsp;khoản&nbsp;' + x.taikhoan;
   if (!x.da_noi || (!x.ten_hien && !x.goi_ten)) return tk;
-  return (x.ten_hien ? esc(x.ten_hien) : tk) + (x.goi_ten ? ' · <span class="nw">' + esc(x.goi_ten) + '</span>' : ''); };
+  return (x.ten_hien ? esc(x.ten_hien) : tk) + (x.goi_ten ? '&nbsp;·&nbsp;<span class="nw">' + esc(x.goi_ten) + '</span>' : ''); };
 // Số ô tài khoản còn trống đầu tiên (giữ số theo tài khoản: gỡ Tài khoản 1 thì Tài khoản 2 giữ tên)
 const oTrong = ds => [1, 2].find(n => !ds.some(x => x.taikhoan === n));
 // QĐ164 (Z6-TK): thêm tài khoản khác luôn qua 01 hộp hỏi lại; gói chưa có tài khoản thì vào đăng nhập luôn
@@ -382,19 +403,23 @@ function veMoHinh() {
   ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
     + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API</div><div class="t12 phu">Phí theo lượt</div></div></div>'
-    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
+    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá · ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
         + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt hạn mức</span>') + '</div>').join('')
       : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở mục Két khoá (có ở bản sau).</div>')
     + '<div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
       + '</b><span class="so-tk">' + vnd(d.thang.tien_that_usd, d.ty_gia_usd) + '</span></span></div>'
     + '</div>';
-  const VIEC = ['Trò chuyện AI', 'Trích văn bản (đường D)', 'Đề xuất ở mục Chờ duyệt', 'Viết báo cáo sáng'], dau = d.nguon.find(n => n.trangthai === 'dung');
-  const cot = 'grid-template-columns:1.4fr 1fr 1fr';
-  $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span></div>'
-    + VIEC.map(v => '<div class="hang" style="' + cot + '"><b class="rong-mb">' + v + '</b><span data-l="Mô hình">Mặc định của nguồn</span><span data-l="Nguồn">'
-      + (dau ? cum(tenNguon(dau)) : 'Chưa có nguồn') + '</span></div>').join('');
+  const dau = d.nguon.find(n => n.trangthai === 'dung');
+  // QĐ178 (Z10): nút "Đổi" mở hộp chọn dùng chung danh sách với màn 08; mặc định lưu ở G08 theo loại việc
+  const LV = (D.dsmh && D.dsmh.loai_viec) || {trochuyen: 'Trò chuyện AI', trichvanban: 'Trích văn bản (đường D)', dexuat: 'Đề xuất ở mục Chờ duyệt', baocaosang: 'Viết báo cáo sáng'};
+  const cot = 'grid-template-columns:1.4fr 1fr 1fr 70px';
+  $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span><span></span></div>'
+    + Object.entries(LV).map(([k, v]) => { const x = mdLoai(k);   // Z10c: x.m trống = "Mặc định của nguồn" x.g
+      return '<div class="hang" style="' + cot + '"><b class="rong-mb">' + esc(v) + '</b><span data-l="Mô hình"' + (x && x.m ? ' title="Bản cụ thể: ' + esc(x.m.ma) + '"' : '') + '>'
+        + (x && x.m ? esc(tenMh(x.m.ma, x.g.nguon_id, x.g)) : 'Mặc định của nguồn') + '</span><span data-l="Nguồn">'
+        + (x ? cum(tenNguon(x.g)) : (dau ? cum(tenNguon(dau)) : 'Chưa có nguồn')) + '</span><button class="btn-chu" data-doimd="' + k + '">' + ICON.pencil + 'Đổi</button></div>'; }).join('');
 }
-async function napMoHinh() { try { D.md = await api('/mohinh'); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
+async function napMoHinh() { try { D.md = await api('/mohinh'); await napDsMh(); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
 async function batDauDn(g, tk) {
   D.trung[g] = 0;
   try { const kq = await api('/mohinh/goi/' + g + '/batdau', {taikhoan: tk}); D.dn[g] = {tk, url: kq.url, ma: kq.ma_thietbi, loi: ''}; veMoHinh();
@@ -415,6 +440,109 @@ async function danMaClaude() {
   catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
 }
 
+// ---- Ô chọn mô hình màn 08 + hộp "Đổi" màn 13 (QĐ178–QĐ183, PTD-08, bản vẽ Z10, Z10b): 01 danh sách G08 dùng chung
+const MH = {noi: null, tim: '', mo: null, dich: null};   // noi: 'chat' (bảng xổ màn 08) | 'md' (hộp màn 13); dich: loại việc
+D.hong = {};   // {mã cuộc: {het, dung, nguon_id}}: mô hình ghim không dùng được ở lượt gần nhất (nút vàng tới khi dùng lại được)
+// Y31b S5: đổi màu nét mọi dạng mã màu, kể cả "#fff" của icon dấu cộng
+const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
+async function napDsMh() { try { D.dsmh = await api('/mohinh/danhsach'); } catch (e) { return; }
+  if (D.dsmh.nhom.some(g => g.dang_tai)) setTimeout(async () => { await napDsMh(); veLaiMh(); }, 2500); }
+// Ghim tạm ở trình duyệt theo mã cuộc trò chuyện (QĐ180; lược đồ bản 4 chuyển về cột H07 `mohinh_ghim_id`)
+const KHO_GHIM = 'igm360.ghim_mohinh';
+const docGhim = () => { try { return JSON.parse(localStorage.getItem(KHO_GHIM) || '{}') || {}; } catch (e) { return {}; } };
+const luuGhim = (ht, id) => { try { const g = docGhim(); if (id) g[ht] = id; else delete g[ht]; localStorage.setItem(KHO_GHIM, JSON.stringify(g)); }
+  catch (e) { /* trình duyệt chặn lưu: ghim chỉ còn tới khi tải lại trang */ } };
+const ghimId = () => (D.htId ? docGhim()[D.htId] : D.ghimMoi) || null;
+const timMh = id => { for (const g of (D.dsmh ? D.dsmh.nhom : [])) { const m = g.mohinh.find(x => x.id === id); if (m) return {g, m}; } return null; };
+// Mặc định của 01 loại việc: {g, m}; m trống = "mặc định của nguồn" g (Z10c); chưa đặt = nguồn chính, m trống
+const mdLoai = lv => { const c = D.dsmh && (D.dsmh.macdinh_ct || {})[lv]; if (!c) return null;
+  return c.ma ? timMh(c.mohinh_id) : (nhomMh(c.nguon_id) ? {g: nhomMh(c.nguon_id), m: null} : null); };
+const mdChat = () => mdLoai('trochuyen') || (D.dsmh ? {g: D.dsmh.nhom.find(n => n.chinh), m: null} : null);
+function dangChonChat() { const x = ghimId() && timMh(ghimId());
+  return x ? {...x, ghim: true} : {...(mdChat() || {g: null, m: null}), ghim: false}; }
+function ghiHong(tl, gh) { const k = D.htId; if (!tl || !gh) return;
+  if (tl.ghim_hong) D.hong[k] = {het: tl.ghim_hong.het_hanmuc, dung: mhThucDung(tl), nguon_id: tl.nguon_id};
+  else if (tl.mohinh_id === gh) delete D.hong[k]; }
+const nbsp = s => String(s).replace(/ /g, NB);
+function chuGhimHong(x) { const g = x.ghim_hong, a = g.mohinh_id && timMh(g.mohinh_id), n = timNguon(x.nguon_id);
+  const ten = a ? tenMh(a.m.ma, a.g.nguon_id, a.g) : g.ma ? tenMh(g.ma) : 'Mô hình đã chọn';
+  const dung = mhThucDung(x) ? tenMh(mhThucDung(x), x.nguon_id, n) : 'mô hình';
+  return esc(ten) + ' ' + (g.het_hanmuc ? nbsp('đang hết hạn mức') : 'chưa dùng được') + ', đã dùng ' + esc(nbsp(dung + ' (mặc định)')); }
+const logoNhom = g => { const l = g.goi === 'claude' || g.hang === 'anthropic' ? ICON.logo_claude : g.goi === 'chatgpt' || g.hang === 'openai' ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16);
+  return '<span class="logo-n">' + l.replace(/width="\d+"/, 'width="18"').replace(/height="\d+"/, 'height="18"') + '</span>'; };
+function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 phu">Chưa có nguồn AI đã kết nối</span>';
+  const ten = c.m ? tenMh(c.m.ma, c.g.nguon_id, c.g) : 'Mặc định', hong = c.ghim && D.hong[D.htId];
+  const tieu = hong ? ten + (hong.het ? ' đang hết hạn mức' : ' chưa dùng được') + ' · tạm dùng ' + (hong.dung ? tenMh(hong.dung, hong.nguon_id) : 'mô hình') + ' (mặc định) cho tới khi đặt lại'
+    : tenNguon(c.g).replace(/\u00a0/g, ' ') + ' · ' + ten + (c.m ? ' · Bản cụ thể: ' + c.m.ma : '') + (c.ghim ? ' · đã ghim cho cuộc trò chuyện này' : ' · theo mặc định chung');
+  return '<button type="button" class="mh-nut' + (MH.noi === 'chat' ? ' mo' : '') + '" data-mhnut title="' + esc(tieu) + '"><span class="mh-cham"' + (hong ? ' style="background:#8F5F00"' : '') + '></span>' + esc(ten)
+    + (c.ghim ? '<span aria-label="' + (hong ? 'ghim chưa dùng được' : 'đã ghim') + '">' + icoMau(ICON.pin, hong ? '#8F5F00' : '#646A73', 13) + '</span>' : '')
+    + icoMau(ICON['chevron-down'], '#646A73', 14) + '</button>'; }
+const chonDang = noi => noi === 'chat' ? dangChonChat() : (MH.dich && mdLoai(MH.dich)) || {};
+const CHU_MD = 'Mặc định của nguồn';
+const nhomDangMo = noi => { const c = chonDang(noi); return MH.mo !== null ? MH.mo : c.g ? c.g.nguon_id : ((D.dsmh && D.dsmh.nhom.find(g => g.chinh)) || {}).nguon_id; };
+function dsMhHtml(noi) { const q = MH.tim.trim().toLowerCase(), nh = D.dsmh ? D.dsmh.nhom : [], dang = chonDang(noi), moId = nhomDangMo(noi);
+  let h = '', co = 0;
+  for (const g of nh) { const tg = tenNguon(g), tenKhop = q && tg.toLowerCase().replace(/\u00a0/g, ' ').includes(q), ten = m => tenMh(m.ma, g.nguon_id, g);
+    const hien = q && !tenKhop ? g.mohinh.filter(m => ten(m).toLowerCase().includes(q) || m.ma.toLowerCase().includes(q)) : g.mohinh;
+    const coMd = !q || tenKhop || CHU_MD.toLowerCase().includes(q);   // Z10c: tìm "mặc" cũng ra dòng mặc định
+    if (q && !tenKhop && !hien.length && !coMd) continue;
+    co++; const mo = q ? true : moId === g.nguon_id;
+    h += '<button type="button" class="mh-nhom" data-mhnhom="' + esc(g.nguon_id) + '">' + logoNhom(g) + '<span>' + esc(tg) + '</span>'
+      + (g.chinh ? '<span title="Nguồn chính · ưu tiên 1">' + icoMau(ICON.check, '#258832', 14) + '</span>' : '') + '<span class="f1"></span>'
+      + icoMau(ICON[mo ? 'chevron-down' : 'chevron-right'], '#646A73', 16) + '</button>';
+    if (!mo) continue;
+    if (coMd) { const onMd = !dang.ghim && !dang.m && dang.g && dang.g.nguon_id === g.nguon_id;   // S6: chưa ghim thì ✓ ở đây
+      h += '<button type="button" class="mh-dong' + (onMd ? ' on' : '') + '" data-mhmd="' + esc(g.nguon_id) + '"><span class="f1">' + CHU_MD + '</span>'
+        + (onMd ? icoMau(ICON.check, '#1456F0', 16) : '') + '</button>'; }
+    if (g.dang_tai) { h += '<div class="mh-tai">' + icoMau(ICON.loader, '#1456F0', 14) + 'Đang tải danh sách mô hình…</div>'; continue; }
+    if (!hien.length) { h += '<div class="mh-tai">Chưa có danh sách: dùng mô hình mặc định của nguồn</div>'; continue; }
+    for (const m of hien) { const on = !!dang.m && dang.m.id === m.id && (noi !== 'chat' || dang.ghim);   // chưa ghim: mô hình cùng tên không ✓
+      h += '<button type="button" class="mh-dong' + (on ? ' on' : '') + '" data-mhchon="' + esc(m.id) + '" title="Bản cụ thể: ' + esc(m.ma) + '"><span class="f1">' + esc(ten(m)) + '</span>'
+        + (on ? icoMau(ICON.check, '#1456F0', 16) : '') + '</button>'; } }
+  if (!co) h += q ? '<div class="mh-rong">Không có nguồn hoặc mô hình khớp "' + esc(MH.tim) + '"</div>' : '<div class="mh-rong">Chưa có nguồn AI nào đã kết nối</div>';
+  return h; }
+const bangMhHtml = noi => '<div class="mh-bang" data-mhbang="' + noi + '"><label class="mh-tim">' + icoMau(ICON.search, '#646A73', 15)
+  + '<input data-mhtim placeholder="Tìm nguồn, mô hình…" value="' + esc(MH.tim) + '"></label><div class="mh-ghi">'
+  + (noi === 'chat' ? 'Chọn ở đây chỉ áp cho cuộc trò chuyện này' : 'Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối') + '</div>'
+  + '<div class="mh-ds">' + dsMhHtml(noi) + '</div><div class="mh-chan"><button type="button" class="mh-nhom" data-trang="13" data-mhdong>'
+  + icoMau(ICON.plus, '#1456F0', 16) + '<span style="color:#1456F0">Thêm nguồn AI ở mục Mô hình AI</span></button></div></div>';
+function veNutMh() { const e = $('#mh-chat'); if (e) e.innerHTML = nutMh() + (MH.noi === 'chat' ? bangMhHtml('chat') : ''); }
+function veLaiMh() { const b = MH.noi === 'md' ? $('#h-chonmh .mh-ds') : MH.noi === 'chat' ? $('#mh-chat .mh-ds') : null;
+  if (b) b.innerHTML = dsMhHtml(MH.noi); if (MH.noi !== 'md') { const n = $('#mh-chat .mh-nut'); if (n) n.outerHTML = nutMh(); else veNutMh(); } }
+function dongMh() { MH.noi = null; MH.tim = ''; MH.mo = null; veNutMh(); }
+$('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-chonmh" hidden><div class="hop mh-hop"><div class="hop-dau">' + icoMau(ICON['brain-circuit'], '#1456F0', 20)
+  + '<b class="f1 t16" id="mh-tieu">Chọn mô hình</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div><div class="hop-than" id="mh-than13"></div></div></div>');
+document.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-mhnut],[data-mhnhom],[data-mhchon],[data-mhmd],[data-doimd],[data-mhdong]');
+  if (!b) { if (MH.noi === 'chat' && !ev.target.closest('#mh-chat')) dongMh(); return; }
+  const d = b.dataset;
+  if ('mhdong' in d) { dongMh(); return; }   // không chặn: nút còn mở mục Mô hình AI
+  ev.stopImmediatePropagation();
+  if ('mhnut' in d) { MH.noi = MH.noi === 'chat' ? null : 'chat'; MH.tim = ''; MH.mo = null; veNutMh(); if (MH.noi) { await napDsMh(); veLaiMh(); } return; }
+  if (d.mhnhom) { MH.mo = nhomDangMo(MH.noi) === d.mhnhom ? '' : d.mhnhom; veLaiMh(); return; }
+  if (d.mhchon) { const x = timMh(d.mhchon); if (!x) return; const ten = tenMh(x.m.ma, x.g.nguon_id, x.g), tn = tenNguon(x.g).replace(/\u00a0/g, ' ');
+    if (MH.noi === 'md') { const lv = MH.dich;
+      try { await api('/mohinh/macdinh', {loai_viec: lv, mohinh_id: x.m.id}); } catch (e) { bao(e.message + '.'); return; }
+      MH.noi = null; MH.dich = null; MH.tim = ''; MH.mo = null; dongHop(); await napDsMh(); if (D.md) veMoHinh(); veNutMh();
+      bao('Đã đổi mô hình cho "' + D.dsmh.loai_viec[lv] + '": ' + ten + ' · ' + tn + '.'); return; }
+    const md = mdChat(), laMd = !!md && md.m.id === x.m.id;
+    if (D.htId) luuGhim(D.htId, laMd ? null : x.m.id); else D.ghimMoi = laMd ? null : x.m.id;
+    delete D.hong[D.htId]; dongMh();
+    bao(laMd ? 'Cuộc trò chuyện này trở lại mặc định: ' + ten + '.' : 'Đã chọn ' + ten + ' (' + tn + ') cho cuộc trò chuyện này. Cuộc khác vẫn theo mặc định.'); return; }
+  if (d.mhmd) { const g = nhomMh(d.mhmd); if (!g) return; const tn = tenNguon(g).replace(/\u00a0/g, ' ');
+    if (MH.noi === 'md') { const lv = MH.dich;   // S6: loại việc về "mặc định của nguồn" này
+      try { await api('/mohinh/macdinh', {loai_viec: lv, mohinh_id: null, nguon_id: g.nguon_id}); } catch (e) { bao(e.message + '.'); return; }
+      MH.noi = null; MH.dich = null; MH.tim = ''; MH.mo = null; dongHop(); await napDsMh(); if (D.md) veMoHinh(); veNutMh();
+      bao('Đã đặt "' + D.dsmh.loai_viec[lv] + '" về mặc định của nguồn ' + tn + '.'); return; }
+    if (D.htId) luuGhim(D.htId, null); else D.ghimMoi = null;   // S6: khung chat = bỏ ghim
+    delete D.hong[D.htId]; dongMh(); const md = mdChat();
+    bao('Đã bỏ ghim: cuộc trò chuyện này theo mặc định chung (' + (md && md.m ? tenMh(md.m.ma, md.g.nguon_id, md.g) : 'Mặc định') + ').'); return; }
+  if (d.doimd) { await napDsMh(); if (!D.dsmh) { bao('Chưa tải được danh sách mô hình, anh thử lại.'); return; }
+    MH.dich = d.doimd; MH.noi = 'md'; MH.tim = ''; MH.mo = null;
+    $('#mh-tieu').textContent = 'Chọn mô hình · ' + D.dsmh.loai_viec[d.doimd]; $('#mh-than13').innerHTML = bangMhHtml('md'); mo('h-chonmh'); }
+}, true);
+document.addEventListener('input', ev => { if (!ev.target.matches || !ev.target.matches('[data-mhtim]')) return; MH.tim = ev.target.value; veLaiMh(); });
+
 // ---- Màn 08 Trò chuyện AI
 function nhomNgay(iso) { const d = (iso || '').slice(0, 10), h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10);
   return d === h ? 'Hôm nay' : d === q ? 'Hôm qua' : 'Trước đó'; }
@@ -429,6 +557,7 @@ function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
+    + (x.ghim_hong ? '<div class="tn-meta mh-vang">' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta">' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
@@ -436,18 +565,19 @@ function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join('
 async function napTroChuyen() {
   try { D.ht = (await api('/trochuyen')).hoithoai; veDsHt();
     const md = D.md || await api('/mohinh').catch(() => null); if (md) D.md = md;
-    const dau = D.md && D.md.nguon.find(n => n.trangthai === 'dung');
-    $('#tc-nguon').innerHTML = dau ? cum(dongNguon(dau)) : 'Chưa có nguồn AI';   // N15: gói · mô hình
+    await napDsMh(); veNutMh();   // QĐ178 (Z10): bỏ ô chọn nguồn đầu cuộc, nút chọn mô hình dưới khung nhập
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
 }
-async function moHt(id) { const d = await api('/trochuyen/' + encodeURIComponent(id)); D.htId = id; $('#tc-tieude').textContent = d.tieude; veTin(d.tinnhan); veDsHt(); }
+async function moHt(id) { const d = await api('/trochuyen/' + encodeURIComponent(id)); D.htId = id; $('#tc-tieude').textContent = d.tieude; veTin(d.tinnhan); veDsHt(); dongMh(); }
 async function guiTin(chu) {
   const o = $('#tc-o'), nd = (chu ?? o.value).trim(); if (!nd || S.tc === 'dang') return;
   o.value = ''; const cu = D.tin && D.htId ? D.tin : [];
   $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + tinHtml({vai: 'nguoi', noidung: nd}); S.tc = 'dang'; ve();
-  try { const kq = await api('/trochuyen', {hoithoai_id: D.htId, noidung: nd});
+  try { const ht0 = D.htId, gh = ghimId();   // QĐ180: mỗi tin gửi kèm mã mô hình ghim (trình duyệt nhớ)
+    const kq = await api('/trochuyen', {hoithoai_id: D.htId, noidung: nd, mohinh_id: gh});
     if (!D.htId) $('#tc-tieude').textContent = nd.slice(0, 80);
-    D.htId = kq.hoithoai_id; veTin([...cu, kq.hoi, kq.tra_loi]); D.ht = (await api('/trochuyen')).hoithoai; veDsHt(); }
+    D.htId = kq.hoithoai_id; if (!ht0 && D.ghimMoi) { luuGhim(D.htId, D.ghimMoi); D.ghimMoi = null; }
+    ghiHong(kq.tra_loi, gh); veTin([...cu, kq.hoi, kq.tra_loi]); veNutMh(); D.ht = (await api('/trochuyen')).hoithoai; veDsHt(); }
   catch (e) { S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.'); }
 }
 
@@ -513,7 +643,7 @@ document.addEventListener('click', async ev => {
     catch (e) { bao('Gọi thử chưa đạt: ' + e.message + '.'); } t.disabled = false; await napMoHinh(); return; }
   else if (d.chep) { try { await navigator.clipboard.writeText(d.chep); bao('Đã chép mã thiết bị.'); } catch (e) { bao('Anh chép tay mã ' + d.chep + '.'); } }
   else if (d.chepTin) { const x = (D.tin || []).find(y => y.id === d.chepTin); if (x) { try { await navigator.clipboard.writeText(x.noidung); bao('Đã chép câu trả lời.'); } catch (e) { /* */ } } }
-  else if ('tcMoi' in d) { D.htId = null; D.tin = []; $('#ds-tin').innerHTML = ''; $('#tc-tieude').textContent = 'Trò chuyện mới'; S.tc = 'rong'; veDsHt(); $('#tc-o').focus(); }
+  else if ('tcMoi' in d) { D.htId = null; D.ghimMoi = null; dongMh(); D.tin = []; $('#ds-tin').innerHTML = ''; $('#tc-tieude').textContent = 'Trò chuyện mới'; S.tc = 'rong'; veDsHt(); $('#tc-o').focus(); }
   else if (d.ht) { await moHt(d.ht); return; }
   else if ('tcMau' in d) { await guiTin(t.textContent); return; }
   else if ('tcGui' in d) { await guiTin(); return; }

@@ -14,7 +14,7 @@ from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.giamsat import thongbao
-from maychu.hethong.mohinh import congai, dangnhap_goi, trochuyen
+from maychu.hethong.mohinh import congai, dangnhap_goi, danhmuc_mohinh, trochuyen
 from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
 from maychu.ketnoi import drive
@@ -443,6 +443,29 @@ def goi_go(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     return kq
 
 
+@router.get("/mohinh/danhsach")
+def ds_mohinh(p: dict = Depends(can_dang_nhap)):
+    """Ô chọn mô hình màn 08 và hộp "Đổi" màn 13 dùng chung 01 danh sách (QĐ178, Z10)."""
+    return danhmuc_mohinh.danh_sach()
+
+
+class MacDinh(BaseModel):
+    loai_viec: str
+    mohinh_id: str | None = None
+    nguon_id: str | None = None   # Z10c: mohinh_id trống + nguon_id = "mặc định của nguồn" đó
+
+
+@router.post("/mohinh/macdinh")
+def dat_macdinh(body: MacDinh, p: dict = Depends(can_dang_nhap)):
+    try:
+        kq = danhmuc_mohinh.dat_macdinh(body.loai_viec, body.mohinh_id, nguon_id=body.nguon_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    ghi_f04("mohinh", "doi_macdinh", f"{body.loai_viec}: {body.mohinh_id or ('mặc định của nguồn ' + body.nguon_id if body.nguon_id else 'theo ưu tiên')}",
+            nguoi_id=p["nguoidung_id"])
+    return {"macdinh": kq}
+
+
 @router.post("/mohinh/{nguon_id}/goithu")
 def goi_thu(nguon_id: str, p: dict = Depends(can_dang_nhap)):
     kq = congai.goi("Trả lời đúng 01 câu ngắn bằng tiếng Việt: IGM360 gọi thử nguồn AI.", chi_nguon_id=nguon_id)
@@ -455,6 +478,7 @@ def goi_thu(nguon_id: str, p: dict = Depends(can_dang_nhap)):
 class TinMoi(BaseModel):
     hoithoai_id: str | None = None
     noidung: str
+    mohinh_id: str | None = None   # QĐ180: mô hình ghim cho cuộc này (trình duyệt nhớ)
 
 
 @router.get("/trochuyen")
@@ -473,7 +497,7 @@ def xem_trochuyen(ma: str, p: dict = Depends(can_dang_nhap)):
 @router.post("/trochuyen")
 def gui_tin(body: TinMoi, p: dict = Depends(can_dang_nhap)):
     try:
-        return trochuyen.gui(body.hoithoai_id, p["nguoidung_id"], body.noidung)
+        return trochuyen.gui(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     except PermissionError as e:
