@@ -464,6 +464,10 @@ class KiemY36e(Nen):
     Gọi thử, việc nền giữ 01 lượt; lỗi ghi đúng loại (`subtype` + `errors`). Giả đầu ra CLI qua `_chay`."""
     def setUp(self):
         super().setUp()
+        # tài khoản 02 trở lên tạo thư mục riêng: đặt trong thư mục tạm (Linux không ghi được /home/igm/.claude)
+        bien = mock.patch.dict(os.environ, {"IGM360_THUMUC_CLAUDE": str(self.g / "claude")})
+        bien.start()
+        self.addCleanup(bien.stop)
         self.c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
         dm.danh_sach()
         self.lenh, self.dau_ra = [], None
