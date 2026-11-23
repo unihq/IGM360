@@ -2,6 +2,7 @@
 dòng "Việc nền · toàn hệ thống". Dữ liệu giả, không gọi CLI thật."""
 import json
 import os
+import subprocess
 import time
 import unittest
 from datetime import datetime, timedelta
@@ -172,6 +173,84 @@ class KiemGiaoDien077(unittest.TestCase):
         cg = (GOC / "maychu/hethong/mohinh/congai.py").read_text(encoding="utf-8")
         self.assertNotIn("credentials", cg)                             # không đọc khoá đăng nhập
         self.assertNotIn("oauth/usage", cg)
+
+
+class KiemP1(Nen):
+    """Y36b P1: hãng từ chối riêng khung 01 mô hình (CLI Claude: rateLimitType seven_day_opus) thì chỉ ghi dấu mô hình,
+    tài khoản vẫn dùng mô hình khác. Giả dòng stream-json của CLI (không chạy CLI thật)."""
+    def setUp(self):
+        super().setUp()
+        self.c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        dm.danh_sach()
+        self.goi, self.khung, self.dat = [], "seven_day_opus", int(time.time()) + 7200
+
+    def chay(self, lenh, env, vao=None, giay=None):
+        ma = lenh[lenh.index("--model") + 1] if "--model" in lenh else None
+        self.goi.append(ma)
+        dong = [{"type": "system", "subtype": "init", "model": "claude-" + (ma or "sonnet") + "-9"}]
+        if ma == "opus" or (self.khung == "five_hour"):
+            dong += [{"type": "rate_limit_event", "rate_limit_info": {"status": "rejected", "rateLimitType": self.khung, "resetsAt": self.dat}},
+                     {"type": "result", "subtype": "success", "is_error": True, "result": "limit reached"}]
+        else:
+            dong += [{"type": "rate_limit_event", "rate_limit_info": {"status": "allowed", "rateLimitType": "five_hour", "utilization": 0.3, "resetsAt": self.dat}},
+                     {"type": "result", "subtype": "success", "result": "ok", "usage": {"input_tokens": 1, "output_tokens": 1}}]
+        return subprocess.CompletedProcess(lenh, 0, "\n".join(json.dumps(x) for x in dong), "")
+
+    def het_tk(self):
+        cn = ketnoi.mo("Viecnen")
+        try:
+            return cn.execute("SELECT da_het_luc FROM nguon_ai WHERE id = ?", (self.c1,)).fetchone()[0]
+        finally:
+            cn.close()
+
+    def test_doc_khung_tu_cli(self):
+        h = congai.han_muc_claude
+        self.assertEqual(h({"status": "rejected", "rateLimitType": "seven_day_opus", "resetsAt": 4102444800}),
+                         {"het_mh": {"loai": "seven_day_opus", "datlai": 4102444800}})
+        self.assertTrue(h({"status": "rejected", "rateLimitType": "five_hour", "utilization": 1.0, "resetsAt": 4102444800})["het"])
+        self.assertEqual(h({"status": "rejected"}), {"het_khongro": True})
+
+    def test_opus_het_sonnet_van_dung(self):
+        with mock.patch.object(congai, "_chay", side_effect=self.chay):
+            kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|opus")
+            self.assertEqual(self.goi, ["opus", None])                  # Opus từ chối → mặc định cùng tài khoản trả lời
+            self.assertTrue(kq["ghim_hong"]["het_hanmuc"])
+            self.assertFalse(self.het_tk())                             # KHÔNG đánh dấu cả tài khoản
+            self.assertEqual(congai.het_mo_hinh(self.c1, "opus"), self.dat)   # giờ đặt lại của khung Opus
+            ds = congai.ds_het_mo_hinh(self.c1)
+            self.assertEqual([(x["ma"], x["ten_khung"]) for x in ds], [("opus", "Opus")])
+            self.goi.clear()
+            kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|sonnet")
+            self.assertEqual((self.goi, kq["chu"]), (["sonnet"], "ok"))   # Sonnet cùng tài khoản dùng được
+
+    def test_mac_dinh_la_opus_het(self):
+        self.khung = "seven_day_opus"
+        with mock.patch.object(congai, "_chay", side_effect=lambda lenh, env, vao=None, giay=None: self.chay(lenh + ["--model", "opus"], env)):
+            kq = congai.goi("hỏi", loai_viec="trochuyen")
+            self.assertFalse(kq.get("chu"))   # 01 tài khoản, mô hình mặc định đang hết: không có câu trả lời
+        self.assertFalse(self.het_tk())
+        self.assertGreater(congai.het_mo_hinh(self.c1, None), time.time())   # "mặc định của nguồn" ghi khoá rỗng
+        self.assertEqual(congai.ds_het_mo_hinh(self.c1)[0]["ma"], None)
+
+    def test_ca_tai_khoan_het_van_danh_dau(self):
+        self.khung = "five_hour"
+        with mock.patch.object(congai, "_chay", side_effect=self.chay):
+            kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|opus")
+            self.assertFalse(kq.get("chu"))
+        self.assertEqual(self.goi, ["opus"])          # khung 05 giờ của cả tài khoản: không thử tiếp mặc định cùng tài khoản
+        self.assertEqual(self.het_tk(), 1)
+
+    def test_giao_dien(self):
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        html = (GD / "index.html").read_text(encoding="utf-8")
+        self.assertIn("(p == null ? 'chưa&nbsp;đo' : Math.round(p) + '%')", js)        # N1: "8%", không "08%"
+        self.assertNotIn("hai(Math.round(p)) + '%'", js)
+        self.assertIn(".ten-i{display:flex;align-items:center;gap:4px}", html)        # N2: (i) cùng dòng với tên
+        self.assertIn("const CUM = ['toàn hệ thống', 'Việc nền',", js)
+        self.assertIn("' của tài khoản ' + tk + ' hết hạn mức đến ' + gio(m.den)", js)
+        self.assertIn("'<div class=\"tk-dong\"' + tieuHetMh(n, x.taikhoan) + '>", js)
+        api = (GOC / "maychu/web/api.py").read_text(encoding="utf-8")
+        self.assertIn('n["het_mh"] = congai.ds_het_mo_hinh(n["id"])', api)
 
 
 class KiemZ12(unittest.TestCase):

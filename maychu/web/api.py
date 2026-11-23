@@ -377,7 +377,10 @@ def _goi(goi: str, taikhoan: int):
 @router.get("/mohinh")
 def xem_mohinh(p: dict = Depends(can_dang_nhap)):
     goi = dangnhap_goi.tinh_hinh_goi()
-    return {"goi": goi, "nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
+    nguon = dangnhap_goi.danh_sach()
+    for n in nguon:
+        n["het_mh"] = congai.ds_het_mo_hinh(n["id"])   # Y36b: "Opus của tài khoản 1 hết hạn mức đến …"
+    return {"goi": goi, "nguon": nguon, "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
             "tuan": congai.tom_tat_tuan(), "thang": congai.tom_tat_thang(),
             "ty_gia_usd": None}   # QĐ122: lấy tỷ giá USD làm ở ngày 18; tới đó giao diện ghi "chưa có tỷ giá"
 

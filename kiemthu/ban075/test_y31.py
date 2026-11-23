@@ -32,6 +32,7 @@ class Nen(unittest.TestCase):
         dm._DANG_TAI.clear()
         dg._NHO_TRANGTHAI.clear()
         congai._HET_MH.clear()   # 0.7.7: nhớ "hết" theo mô hình nằm trong bộ nhớ, mỗi bài bắt đầu sạch
+        congai._KHUNG_HET.clear()
         congai._DA_QUET.clear()
         self.vas = [mock.patch.object(dg, "trang_thai", return_value={"da_noi": True, "goi_dang_dung": "max"})]
         for v in self.vas:
