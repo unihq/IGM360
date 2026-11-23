@@ -35,12 +35,12 @@ class KiemTheoMoHinh(Nen):
         self.c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
         self.g1 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
         self.c2 = self.nguon("goi_claude_02", "goi", 3, "anthropic")
-        self.goi, self.het = [], set()
+        self.goi, self.het, self.hm_het = [], set(), {}
 
         def claude(tk, cau, mohinh):
             self.goi.append((tk, mohinh))
             if (tk, mohinh) in self.het or (tk, "*") in self.het:
-                raise congai.HetHanMuc("limit reached", {})
+                raise congai.HetHanMuc("limit reached", self.hm_het)
             return {"chu": "ok", "vao": 1, "ra": 1, "sotien": None, "sotien_thamkhao": None, "tien_ma": "USD", "hanmuc": {},
                     "mohinh_bao": None}
         self.vas2 = [mock.patch.object(congai, "_goi_claude", side_effect=claude),
@@ -95,6 +95,18 @@ class KiemTheoMoHinh(Nen):
         self.assertEqual(self.goi, [(1, None), (2, None)])                  # Claude 1 hết → Claude 2, chưa sang ChatGPT
         self.assertEqual(kq["nguon_id"], self.c2)
 
+    def test_tai_khoan_thuc_chay_QD189(self):
+        kq = congai.goi("hỏi", loai_viec="trochuyen")
+        self.assertEqual((kq["chay_tk"], kq["du_phong"]), (1, None))
+        self.het.add((1, "*"))
+        self.hm_het = {"5gio": {"pct": 100, "datlai": 4102444800}}       # 01/01/2100 00:00 UTC
+        kq = congai.goi("hỏi", loai_viec="trochuyen")
+        self.assertEqual(kq["chay_tk"], 2)
+        self.assertEqual(kq["du_phong"]["tk"], 1)
+        self.assertTrue(kq["du_phong"]["den"].startswith("2100-01-01T07:00"))   # giờ Việt Nam
+        tl = trochuyen.gui(None, "nguoi_gia", "Chào")["tra_loi"]
+        self.assertEqual((tl["chay_tk"], tl["du_phong"]["tk"]), (2, 1))
+
     def test_ghim_thu_moi_tai_khoan_cung_loai_D1(self):
         dm.danh_sach()
         self.het.add((1, "opus"))
@@ -133,7 +145,12 @@ class KiemGiaoDien076(unittest.TestCase):
                     "(MH.dich && mdLoai(MH.dich)) || {g: nhomChinh(), m: null}",                     # N1
                     "(noi === 'chat' ? !dang.ghim : !dang.m)",                                       # N2
                     "(mh ? tenMh(mh, n.id, n, true) : 'Mặc định')", "tenMh(mhThucDung(x), x.nguon_id, n, true)",   # N3
-                    "' title=\"Bản cụ thể: ' + esc(mhThucDung(x))"):
+                    "' title=\"' + esc(tieuTraLoi(x)) + '\"'",
+                    "const tenLoai = n => n && n.goi ? TEN_NGUON_GOI[n.goi] : tenNguon(n);",      # QĐ189: không ghi tài khoản
+                    "'chạy bằng tài khoản ' + x.chay_tk", "' (dự phòng, tài khoản ' + dp.tk + ' hết hạn mức'",
+                    "trên cùng phần mềm, hãng có thể khoá tài&nbsp;khoản.",                         # Z11b
+                    "khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.' + canhTk(ten)",
+                    "(dn.tk >= 2 ? canhTk(ten) : '')"):
             self.assertIn(chu, self.js, chu)
         self.assertNotIn("g.nguon_id === g.nguon_id", self.js)
         self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.6")

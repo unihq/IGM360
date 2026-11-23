@@ -412,7 +412,7 @@ class KiemTenNguonTaiKhoan(unittest.TestCase):
         js = (GD / "app.js").read_text(encoding="utf-8")
         lay = lambda ten: js[js.index("const " + ten + " "):js.index("\nconst ", js.index("const " + ten + " ") + 5)]
         ham = "\n".join(lay(t) for t in ("NB", "TEN_NGUON_GOI", "TEN_NGUON_HANG", "tenNguon", "chuHoa", "laSo", "phanMh", "hangCua",
-                                          "gocMh", "nhomMh", "tenHang", "tenMh", "moHinhDong", "timNguon", "mhThucDung", "nhanTraLoi"))
+                                          "gocMh", "nhomMh", "tenHang", "tenMh", "moHinhDong", "timNguon", "mhThucDung", "tenLoai", "nhanTraLoi"))
         nguon = [{"id": "c1", "goi": "claude", "taikhoan": 1, "mohinh_gannhat": "opus"}, {"id": "c2", "goi": "claude", "taikhoan": 2}]
         ma = ("const esc = s => s; const D = {md: {nguon: " + json.dumps(nguon) + "}, dsmh: null};\n" + ham
               + "\nconst ra = [tenNguon(D.md.nguon[0]), tenNguon(D.md.nguon[1]), nhanTraLoi({nguon_id: 'c1'}),"
@@ -424,7 +424,7 @@ class KiemTenNguonTaiKhoan(unittest.TestCase):
             r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout), ["Claude · Code", "Claude · Code · Tài khoản 2", "Claude · Code · Mặc định",
-                                                "Claude · Code · Opus", "Claude · Code · Tài khoản 2 · Sonnet"])
+                                                "Claude · Code · Opus", "Claude · Code · Sonnet"])   # 0.7.6 QĐ189: dòng nguồn không ghi tài khoản
 
 
 if __name__ == "__main__":

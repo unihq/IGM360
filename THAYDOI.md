@@ -8,7 +8,8 @@ Tóm tắt: Chọn theo mô hình, tự xoay tài khoản
 - Bảng chọn mô hình gộp theo hãng và công cụ (Claude · Code, ChatGPT · Codex…), không chia theo tài khoản.
 - Có nhiều tài khoản cùng loại: phần mềm dùng tài khoản đang chạy, hết hạn mức mới sang tài khoản dự phòng, dùng hết tài khoản cùng loại rồi mới sang loại khác.
 - Mô hình đã chọn hết hạn mức ở 01 tài khoản thì phần mềm thử tài khoản cùng loại còn lại trước khi về mô hình mặc định.
-- Dòng dưới câu trả lời ghi tên mô hình ngắn; rê chuột thấy bản cụ thể.
+- Dòng dưới câu trả lời ghi hãng, công cụ và tên mô hình ngắn, không ghi tài khoản; rê chuột thấy bản cụ thể và tài khoản thực chạy.
+- Thêm tài khoản thứ 02 cho cùng 01 gói: phần mềm nhắc hãng có thể khoá tài khoản khi dùng nhiều tài khoản.
 
 ## 0.7.5
 Tóm tắt: Chọn mô hình AI ngay dưới khung trò chuyện

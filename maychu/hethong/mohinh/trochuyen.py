@@ -63,6 +63,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
             tl["mohinh_id"], tl["mohinh"], tl["ghim_hong"] = kq.get("mohinh_id"), kq.get("mohinh"), kq.get("ghim_hong")
             tl["mohinh_bao"] = kq.get("mohinh_bao")   # Y31c S4: mô hình công cụ báo về
             tl["ghim_khoa"] = kq.get("ghim_khoa")     # 0.7.6: khoá ghim chuẩn, giao diện lưu lại thay dạng cũ
+            tl["chay_tk"], tl["du_phong"] = kq.get("chay_tk"), kq.get("du_phong")   # QĐ189: chỉ hiện khi rê chuột
     finally:
         cn.close()
     return {"hoithoai_id": hoithoai_id, "hoi": hoi, "tra_loi": tl}

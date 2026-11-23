@@ -325,8 +325,17 @@ const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);
 const timNguon = id => id && D.md ? D.md.nguon.find(n => n.id === id) : null;
 // Y31c S4 (QĐ186): mô hình công cụ báo về; không có thì mô hình đã gửi; không có nữa thì "Mặc định" (như nút), không lấy mô hình cũ
 const mhThucDung = x => x.mohinh_bao || x.mohinh || null;
+// QĐ189 (Z11): dòng nguồn ghi "Hãng · Công cụ · Mô hình", không ghi tài khoản; tài khoản thực chạy chỉ hiện khi rê chuột
+// Z11b (QĐ189): cảnh báo khi thêm tài khoản thứ 02 cho cùng 01 gói; chữ IGM360 tự viết
+const canhTk = ten => '<div class="canh-tk">' + icoMau(ICON['circle-alert'], '#8F5F00', 14) + '<span>Lưu ý: dùng nhiều tài khoản ' + ten
+  + ' trên cùng phần mềm, hãng có thể khoá tài&nbsp;khoản.</span></div>';
+const tenLoai = n => n && n.goi ? TEN_NGUON_GOI[n.goi] : tenNguon(n);
 const nhanTraLoi = x => { const n = timNguon(x.nguon_id), mh = mhThucDung(x);
-  return n ? tenNguon(n) + ' · ' + (mh ? tenMh(mh, n.id, n, true) : 'Mặc định') : (x.nguon || 'Trợ lý AI'); };   // N3: tên ngắn
+  return n ? tenLoai(n) + ' · ' + (mh ? tenMh(mh, n.id, n, true) : 'Mặc định') : (x.nguon || 'Trợ lý AI'); };   // N3: tên ngắn
+const tieuTraLoi = x => { const p = [], mh = mhThucDung(x), dp = x.du_phong;
+  if (mh) p.push('Bản cụ thể: ' + mh);
+  if (x.chay_tk) p.push('chạy bằng tài khoản ' + x.chay_tk + (dp && dp.tk ? ' (dự phòng, tài khoản ' + dp.tk + ' hết hạn mức' + (dp.den ? ' đến ' + gio(dp.den) : '') + ')' : ''));
+  return p.join(' · '); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
   : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
@@ -360,7 +369,7 @@ function theGoi(g, ds, nguon, uu) {
   // QĐ164 ý 1 (Z6-TK): đăng nhập trùng thì không tạo ô, dải xanh dưới ô đang có; số là số của ô đang giữ tài khoản đó
   if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.</span></div>';
   if (dn.url) {
-    h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + '</div>'
+    h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + '</div>' + (dn.tk >= 2 ? canhTk(ten) : '')
       + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài&nbsp;khoản&nbsp;Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
       + '<div class="dong lk"><span class="t12 phu f1 cat">' + esc(dn.url.replace(/^https?:\/\//, '')) + '</span><a class="btn btn-phu nho" href="' + esc(dn.url) + '" target="_blank" rel="noopener noreferrer">' + ICON['external-link'] + 'Mở trang</a></div>';
     if (g === 'claude') h += '<div class="buoc-dn"><span class="so-b">2</span><span class="f1">Trang sẽ hiện 01 mã. Chép mã, dán vào ô dưới.</span></div>'
@@ -391,7 +400,7 @@ async function themTk(g) {
   const o = oTrong(ds);
   if (so >= 2 || !o) { const c = ds.find(x => !x.da_noi); if (c && so < 2) { await batDauDn(g, c.taikhoan); return; }
     bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.'); return; }
-  xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi anh có 02 gói riêng, mỗi gói 01 tài khoản ' + ten + ' khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.',
+  xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi anh có 02 gói riêng, mỗi gói 01 tài khoản ' + ten + ' khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.' + canhTk(ten),
     'Tiếp tục', () => batDauDn(g, o));
 }
 function veMoHinh() {
@@ -570,7 +579,7 @@ function tinHtml(x) {
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
     + (x.ghim_hong ? '<div class="tn-meta mh-vang">' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
-    + '<div class="tn-meta"' + (mhThucDung(x) ? ' title="Bản cụ thể: ' + esc(mhThucDung(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
+    + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
   const c = $('.tc-than'); if (c) c.scrollTop = c.scrollHeight; }
