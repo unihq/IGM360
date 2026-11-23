@@ -235,7 +235,7 @@ class KiemCongAI(Nen):
         kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id=self.ids["opus"])
         self.assertEqual(self.goi, [("claude", "opus"), ("claude", "sonnet")])   # không chuyển sang khoá API
         self.assertEqual((kq["mohinh"], kq["nguon_id"]), ("sonnet", self.claude))
-        self.assertEqual(kq["ghim_hong"], {"mohinh_id": self.ids["opus"], "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})
+        self.assertEqual(kq["ghim_hong"], {"khoa": "goi_claude|opus", "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})   # 0.7.6: khoá loại|mã
         self.assertEqual([r[2] for r in self.g04()], ["het_hanmuc", "xong"])
 
     def test_ghim_khoa_chua_co_gia_khong_goi(self):
@@ -358,7 +358,7 @@ class KiemGiaoDien(unittest.TestCase):
     def test_y31c_s3_s4(self):
         self.assertIn("'Tài' + NB + 'khoản' + NB + n.taikhoan", self.js)
         self.assertIn("const mhThucDung = x => x.mohinh_bao || x.mohinh || null;", self.js)
-        self.assertIn("(mh ? moHinhDong(mh, n) : 'Mặc định')", self.js)
+        self.assertIn("(mh ? tenMh(mh, n.id, n, true) : 'Mặc định')", self.js)   # 0.7.6 N3: tên ngắn
         self.assertNotIn("x.mohinh || n.mohinh_gannhat", self.js)   # không lấy mô hình gần nhất cũ
         tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
         self.assertIn('tl["mohinh_bao"] = kq.get("mohinh_bao")', tc)
@@ -366,13 +366,13 @@ class KiemGiaoDien(unittest.TestCase):
     def test_y31c_s6(self):
         for chu in ("const CHU_MD = 'Mặc định của nguồn';", "data-mhmd=", "CHU_MD.toLowerCase().includes(q)",
                     "'Đã bỏ ghim: cuộc trò chuyện này theo mặc định chung ('",
-                    "'\" về mặc định của nguồn ' + tn + '.'", "{loai_viec: lv, mohinh_id: null, nguon_id: g.nguon_id}",
-                    "const onMd = !dang.ghim && !dang.m && dang.g && dang.g.nguon_id === g.nguon_id;",
-                    "(noi !== 'chat' || dang.ghim)", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nguon_id, x.g)) : 'Mặc định của nguồn')"):
+                    "'\" về mặc định của nguồn ' + tn + '.'", "{loai_viec: lv, khoa: g.khoa_md}",
+                    "const onMd = dang.g && dang.g.nhom === g.nhom && (noi === 'chat' ? !dang.ghim : !dang.m);",
+                    "(noi !== 'chat' || dang.ghim)", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nhom, x.g)) : 'Mặc định của nguồn')"):
             self.assertIn(chu, self.js, chu)
 
     def test_ban(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.5")
+        self.assertGreaterEqual(tuple(map(int, (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 7, 5))
         muc = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.5", 1)[1].split("\n## ", 1)[0]
         tt = re.search(r"Tóm tắt:(.*)", muc).group(1).strip()
         self.assertLess(len(tt), 50)
@@ -387,9 +387,9 @@ class KiemTenMoHinh(unittest.TestCase):
         lay = lambda ten: js[js.index("const " + ten + " "):js.index("\nconst ", js.index("const " + ten + " ") + 5)]
         ham = "\n".join(lay(t) for t in ("NB", "TEN_NGUON_GOI", "TEN_NGUON_HANG", "tenNguon", "chuHoa", "laSo", "phanMh",
                                           "hangCua", "gocMh", "nhomMh", "tenHang", "tenMh", "timNguon"))
-        nhom = [{"nguon_id": "k", "loai": "khoa_api", "hang": "anthropic", "mohinh": [{"ma": "claude-opus-4-1"}, {"ma": "claude-opus-4"}, {"ma": "claude-sonnet-4-5"}]},
-                {"nguon_id": "c", "goi": "claude", "mohinh": [{"ma": "sonnet"}, {"ma": "opus"}]},
-                {"nguon_id": "g", "goi": "chatgpt", "mohinh": [{"ma": "gpt-5.5"}, {"ma": "gpt-5"}, {"ma": "gpt-5-codex"}, {"ma": "gpt-4.1"}]}]
+        nhom = [{"nhom": "k", "nguon_id": "k", "loai": "khoa_api", "hang": "anthropic", "mohinh": [{"ma": "claude-opus-4-1"}, {"ma": "claude-opus-4"}, {"ma": "claude-sonnet-4-5"}]},
+                {"nhom": "c", "nguon_id": "c", "goi": "claude", "mohinh": [{"ma": "sonnet"}, {"ma": "opus"}]},
+                {"nhom": "g", "nguon_id": "g", "goi": "chatgpt", "mohinh": [{"ma": "gpt-5.5"}, {"ma": "gpt-5"}, {"ma": "gpt-5-codex"}, {"ma": "gpt-4.1"}]}]
         thu = [["opus", "c"], ["claude-opus-4-1", "k"], ["claude-opus-4", "k"], ["claude-sonnet-4-5", "k"],
                ["gpt-5.5", "g"], ["anthropic/claude-3.5-haiku", "k"], [None, "c"],
                ["gpt-5", "g"], ["gpt-5-codex", "g"], ["gpt-4.1", "g"], ["gpt-4o", "g"], ["o3-mini", "g"]]   # Y31b S2

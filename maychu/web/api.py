@@ -453,15 +453,16 @@ class MacDinh(BaseModel):
     loai_viec: str
     mohinh_id: str | None = None
     nguon_id: str | None = None   # Z10c: mohinh_id trống + nguon_id = "mặc định của nguồn" đó
+    khoa: str | None = None       # 0.7.6 (QĐ187): "loại nguồn|mã mô hình"; "loại|" = mặc định của loại nguồn
 
 
 @router.post("/mohinh/macdinh")
 def dat_macdinh(body: MacDinh, p: dict = Depends(can_dang_nhap)):
     try:
-        kq = danhmuc_mohinh.dat_macdinh(body.loai_viec, body.mohinh_id, nguon_id=body.nguon_id)
+        kq = danhmuc_mohinh.dat_macdinh(body.loai_viec, body.mohinh_id, nguon_id=body.nguon_id, khoa=body.khoa)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    ghi_f04("mohinh", "doi_macdinh", f"{body.loai_viec}: {body.mohinh_id or ('mặc định của nguồn ' + body.nguon_id if body.nguon_id else 'theo ưu tiên')}",
+    ghi_f04("mohinh", "doi_macdinh", f"{body.loai_viec}: {body.khoa or body.mohinh_id or ('mặc định của nguồn ' + body.nguon_id if body.nguon_id else 'theo ưu tiên')}",
             nguoi_id=p["nguoidung_id"])
     return {"macdinh": kq}
 

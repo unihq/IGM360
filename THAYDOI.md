@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.6
+Tóm tắt: Chọn theo mô hình, tự xoay tài khoản
+- Bảng chọn mô hình gộp theo hãng và công cụ (Claude · Code, ChatGPT · Codex…), không chia theo tài khoản.
+- Có nhiều tài khoản cùng loại: phần mềm dùng tài khoản đang chạy, hết hạn mức mới sang tài khoản dự phòng, dùng hết tài khoản cùng loại rồi mới sang loại khác.
+- Mô hình đã chọn hết hạn mức ở 01 tài khoản thì phần mềm thử tài khoản cùng loại còn lại trước khi về mô hình mặc định.
+- Dòng dưới câu trả lời ghi tên mô hình ngắn; rê chuột thấy bản cụ thể.
+
 ## 0.7.5
 Tóm tắt: Chọn mô hình AI ngay dưới khung trò chuyện
 - Nút chọn mô hình dưới khung trò chuyện: tìm theo tên, xem theo từng nguồn đã kết nối; chọn khác mặc định thì chỉ áp cho cuộc trò chuyện đó.

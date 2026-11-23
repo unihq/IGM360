@@ -10,6 +10,9 @@ Ghi vào G08 `mohinh_ai` (bảng có sẵn, 0 đổi cấu trúc): mỗi mô hì
 Mô hình mặc định theo loại việc (màn 13, nút "Đổi") ghi ở G08 `macdinh_cho_json` (danh sách mã loại việc).
 "Mặc định của nguồn" (Z10c, S6): 01 dòng G08 của nguồn có `ma_mohinh` trống, chỉ để giữ nguồn mặc định của loại việc;
 không hiện trong danh sách mô hình; cổng AI gặp dòng này thì dùng mô hình mặc định của nguồn đó.
+Bản 0.7.6 (QĐ187, PTD-08 Đ5, Đ6, CDA K-MH5): chọn theo mô hình, không chia tài khoản. Danh sách gộp theo loại nguồn
+(`dangnhap_goi.loai_nguon`); mỗi mô hình có khoá "mã loại nguồn|mã mô hình" (`khoa_mh`, 01 hàm duy nhất; "loại|" =
+mặc định của loại nguồn). Ghim, mặc định dùng khoá này; dòng G08 mang dấu mặc định chỉ là đại diện của loại + mã.
 """
 import json
 import os
@@ -137,6 +140,50 @@ def _da_ket_noi(d: dict, thumuc=None) -> bool:
     return True
 
 
+def khoa_mh(loai: str, ma: str | None) -> str:
+    """Khoá "mã loại nguồn|mã mô hình" (PTD-08 mục 0.1): giao diện chỉ dùng lại, không tự ghép; bản 4 chép nguyên văn."""
+    return f"{loai}|{ma or ''}"
+
+
+def tach_khoa(khoa: str) -> tuple[str, str | None]:
+    loai, _, ma = (khoa or "").partition("|")
+    return loai, (ma or None)
+
+
+def _nguon_dung(cn) -> list[dict]:
+    cot = ("id", "ma", "loai", "uutien")
+    return dangnhap_goi.thu_tu([dict(zip(cot, r)) for r in cn.execute(
+        "SELECT id, ma, loai, uutien FROM nguon_ai WHERE trangthai = 'dung'")])
+
+
+def dong_cua(nguon_id: str, ma: str, thumuc=None) -> dict | None:
+    """Dòng G08 đang dùng của 01 tài khoản theo mã mô hình."""
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        r = cn.execute("SELECT id, ma_mohinh, gia_vao, gia_ra, tien_ma FROM mohinh_ai WHERE nguon_ai_id = ? AND ma_mohinh = ?"
+                       " AND coalesce(trangthai, 'dung') = 'dung' ORDER BY rowid LIMIT 1", (nguon_id, ma)).fetchone()
+    finally:
+        cn.close()
+    return dict(zip(("id", "ma", "gia_vao", "gia_ra", "tien_ma"), r)) if r else None
+
+
+def chuan_khoa(gia_tri: str | None, thumuc=None) -> str | None:
+    """Ghim gửi lên: khoá "loại|mã" giữ nguyên; dạng cũ (id G08 của 0.7.5) đổi sang khoá; dòng trống mã hoặc không có thì None."""
+    if not gia_tri:
+        return None
+    if "|" in gia_tri:
+        return gia_tri if tach_khoa(gia_tri)[1] else None
+    m = mot(gia_tri, thumuc)
+    if not m or not m["ma"]:
+        return None
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        r = cn.execute("SELECT ma FROM nguon_ai WHERE id = ?", (m["nguon_ai_id"],)).fetchone()
+    finally:
+        cn.close()
+    return khoa_mh(dangnhap_goi.loai_nguon({"ma": r[0]}), m["ma"]) if r else None
+
+
 def _dong_macdinh(cn, nguon_id: str) -> str:
     """Dòng "mặc định của nguồn" (ma_mohinh trống) của 01 nguồn; chưa có thì thêm."""
     r = cn.execute("SELECT id FROM mohinh_ai WHERE nguon_ai_id = ? AND ma_mohinh IS NULL ORDER BY rowid LIMIT 1", (nguon_id,)).fetchone()
@@ -149,13 +196,29 @@ def _dong_macdinh(cn, nguon_id: str) -> str:
 
 
 def macdinh_chi_tiet(thumuc=None) -> dict:
-    """{mã loại việc: {mohinh_id, nguon_id, ma}}; `ma` trống = mặc định của nguồn đó."""
+    """{mã loại việc: {khoa, nhom, ma, mat, mohinh_id, nguon_id}} (Đ6): đọc theo loại nguồn + mã mô hình, không theo tài
+    khoản đang giữ dấu; `ma` trống = mặc định của loại nguồn; `mat` = cả nhóm không còn tài khoản nào đang dùng (về nguồn
+    ưu tiên 1, giao diện báo)."""
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        ma_nguon = dict(cn.execute("SELECT id, ma FROM nguon_ai"))
+        con = {dangnhap_goi.loai_nguon(d) for d in _nguon_dung(cn)}
+    finally:
+        cn.close()
     kq = {}
     for lv, mid in macdinh(thumuc).items():
         m = mot(mid, thumuc)
-        if m:
-            kq[lv] = {"mohinh_id": m["id"], "nguon_id": m["nguon_ai_id"], "ma": m["ma"]}
+        if m and m["nguon_ai_id"] in ma_nguon:
+            k = dangnhap_goi.loai_nguon({"ma": ma_nguon[m["nguon_ai_id"]]})
+            kq[lv] = {"khoa": khoa_mh(k, m["ma"]), "nhom": k, "ma": m["ma"], "mat": k not in con,
+                      "mohinh_id": m["id"], "nguon_id": m["nguon_ai_id"]}
     return kq
+
+
+def macdinh_khoa(loai_viec: str, thumuc=None) -> tuple[str, str | None] | None:
+    """(loại nguồn, mã mô hình hoặc None) mặc định của 01 loại việc; chưa đặt hoặc cả nhóm đã mất thì None."""
+    c = macdinh_chi_tiet(thumuc).get(loai_viec)
+    return (c["nhom"], c["ma"]) if c and not c["mat"] else None
 
 
 def macdinh(thumuc=None) -> dict:
@@ -193,13 +256,22 @@ def danh_sach(thumuc=None, nap_nen: bool = True) -> dict:
             nap(d, thumuc)
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
-        nhom = []
-        for i, d in enumerate(nguon):
-            ds = [{"id": r[0], "ma": r[1]} for r in cn.execute(
-                "SELECT id, ma_mohinh FROM mohinh_ai WHERE nguon_ai_id = ? AND coalesce(trangthai, 'dung') = 'dung'"
-                " AND ma_mohinh IS NOT NULL ORDER BY rowid", (d["id"],))]
-            nhom.append({"nguon_id": d["id"], "ma": d["ma"], "ten": d["ten"], "loai": d["loai"], "hang": d.get("hang"),
-                         "goi": d.get("goi"), "taikhoan": d.get("taikhoan"), "chinh": i == 0, "dang_tai": d["id"] in _DANG_TAI and not ds, "mohinh": ds})
+        nhom: dict[str, dict] = {}   # QĐ187: 01 nhóm mỗi loại nguồn, gộp mô hình mọi tài khoản cùng loại (theo thứ tự Đ5)
+        for d in nguon:
+            k = dangnhap_goi.loai_nguon(d)
+            g = nhom.setdefault(k, {"nhom": k, "khoa_md": khoa_mh(k, None), "nguon_id": d["id"], "nguon_ids": [], "ma": d["ma"],
+                                    "ten": d["ten"], "loai": d["loai"], "hang": d.get("hang"), "goi": d.get("goi"),
+                                    "chinh": not nhom, "dang_tai": False, "mohinh": [], "_ma": {}})
+            g["nguon_ids"].append(d["id"])
+            for i, ma in cn.execute("SELECT id, ma_mohinh FROM mohinh_ai WHERE nguon_ai_id = ? AND coalesce(trangthai, 'dung') = 'dung'"
+                                    " AND ma_mohinh IS NOT NULL ORDER BY rowid", (d["id"],)):
+                if ma in g["_ma"]:
+                    g["_ma"][ma]["ids"].append(i)
+                else:
+                    g["_ma"][ma] = {"khoa": khoa_mh(k, ma), "ma": ma, "id": i, "ids": [i]}
+                    g["mohinh"].append(g["_ma"][ma])
+            g["dang_tai"] = g["dang_tai"] or d["id"] in _DANG_TAI
+        nhom = [{**{k: v for k, v in g.items() if k != "_ma"}, "dang_tai": g["dang_tai"] and not g["mohinh"]} for g in nhom.values()]
     finally:
         cn.close()
     return {"nhom": nhom, "macdinh": macdinh(thumuc), "macdinh_ct": macdinh_chi_tiet(thumuc), "loai_viec": LOAI_VIEC}
@@ -216,11 +288,29 @@ def mot(mohinh_id: str, thumuc=None) -> dict | None:
     return dict(zip(("id", "nguon_ai_id", "ma", "gia_vao", "gia_ra", "tien_ma"), r)) if r else None
 
 
-def dat_macdinh(loai_viec: str, mohinh_id: str | None, thumuc=None, nguon_id: str | None = None) -> dict:
-    """Màn 13 nút "Đổi": 01 loại việc chỉ có 01 mô hình mặc định. `mohinh_id` trống + `nguon_id`: về "mặc định của
-    nguồn" đó (Z10c, S6); cả 02 trống: bỏ đặt (theo nguồn ưu tiên 1)."""
+def dat_macdinh(loai_viec: str, mohinh_id: str | None = None, thumuc=None, nguon_id: str | None = None,
+                khoa: str | None = None) -> dict:
+    """Màn 13 nút "Đổi": 01 loại việc chỉ có 01 mô hình mặc định. `khoa` "loại|mã" (0.7.6): dấu đặt lên dòng G08 của
+    tài khoản đầu tiên cùng loại có mô hình đó; "loại|" = mặc định của loại nguồn. Dạng cũ: `mohinh_id`, hoặc trống +
+    `nguon_id` (S6); tất cả trống: bỏ đặt (theo nguồn ưu tiên 1)."""
     if loai_viec not in LOAI_VIEC:
         raise ValueError("Loại việc không có")
+    if khoa:
+        loai, ma = tach_khoa(khoa)
+        cn = ketnoi.mo("Viecnen", thumuc)
+        try:
+            cung = [d for d in _nguon_dung(cn) if dangnhap_goi.loai_nguon(d) == loai]
+        finally:
+            cn.close()
+        if not cung:
+            raise ValueError("Nguồn không còn dùng được")
+        if ma:
+            dong = next((r for r in (dong_cua(d["id"], ma, thumuc) for d in cung) if r), None)
+            if not dong:
+                raise ValueError("Mô hình không còn dùng được")
+            mohinh_id = dong["id"]
+        else:
+            nguon_id = cung[0]["id"]
     if mohinh_id is not None and not mot(mohinh_id, thumuc):
         raise ValueError("Mô hình không còn dùng được")
     cn = ketnoi.mo("Viecnen", thumuc)
