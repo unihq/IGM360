@@ -142,6 +142,10 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
         self.assertIn("ten = 'tài khoản ' + tk + ' của ' + tenNguon({goi: g});", js)
         self.assertIn("const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);", js)
         self.assertIn("const moHinhDong = (ma, n) => {", js)                   # QĐ178: 01 hàm rút gọn dùng chung
+        self.assertIn("'<div class=\"tn-meta\">' + cum(nhanTraLoi(x))", js)     # Z10a: dòng dưới câu trả lời
+        self.assertIn("(tenNguon(timNguon(d.goithu)) || k.nguon)", js)
+        tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
+        self.assertIn('tl["nguon"], tl["nguon_id"] = kq["nguon"], kq.get("nguon_id")', tc)
         self.assertNotIn("'Đã kết nối Gói", js)
         # Giữ: tên lưu (F04, chuông) và câu văn về gói
         self.assertEqual(dg.GOI["claude"]["ten"], "Gói Claude")

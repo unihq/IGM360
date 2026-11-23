@@ -58,7 +58,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None) -
             tl = _ghi_tin(cn, hoithoai_id, "hethong", kq["loi"] + (f" ({ly})" if ly else "") + ". Mở mục Mô hình AI để kiểm nguồn AI.")
         else:
             tl = _ghi_tin(cn, hoithoai_id, "ai", kq["chu"], kq["nhatky_ai_id"])
-            tl["nguon"] = kq["nguon"]
+            tl["nguon"], tl["nguon_id"] = kq["nguon"], kq.get("nguon_id")   # Z10a: giao diện đặt chữ theo mã nguồn
     finally:
         cn.close()
     return {"hoithoai_id": hoithoai_id, "hoi": hoi, "tra_loi": tl}

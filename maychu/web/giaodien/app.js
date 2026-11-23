@@ -302,6 +302,9 @@ const moHinhDong = (ma, n) => { const mh = tenMoHinh(ma); if (!ma) return mh;
   const hang = tenNguon(n).split(NB + '·')[0].split(' · ')[0].trim();
   return hang && mh.toLowerCase().startsWith(hang.toLowerCase() + ' ') ? mh.slice(hang.length + 1) : mh; };
 const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);
+// Dòng dưới câu trả lời màn 08 (Z10a): "Claude · Code · Sonnet 4.5" theo mã nguồn; không tìm được nguồn thì giữ chữ máy chủ trả
+const timNguon = id => id && D.md ? D.md.nguon.find(n => n.id === id) : null;
+const nhanTraLoi = x => { const n = timNguon(x.nguon_id); return n ? dongNguon(n) : (x.nguon || 'Trợ lý AI'); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
   : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
@@ -426,7 +429,7 @@ function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
-    + '<div class="tn-meta">' + cum(x.nguon || 'Trợ lý AI') + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
+    + '<div class="tn-meta">' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
   const c = $('.tc-than'); if (c) c.scrollTop = c.scrollHeight; }
@@ -506,7 +509,7 @@ document.addEventListener('click', async ev => {
       await napMoHinh(); }); }
   else if (d.dnHuy) { try { await api('/mohinh/goi/' + d.dnHuy + '/huy', {taikhoan: (D.dn[d.dnHuy] || {}).tk || 1}); } catch (e) { /* */ } D.dn[d.dnHuy] = {}; veMoHinh(); }
   else if (d.goithu) { t.disabled = true; const t0 = Date.now();
-    try { const k = await api('/mohinh/' + encodeURIComponent(d.goithu) + '/goithu', {}); bao('Gọi thử đạt: ' + k.nguon + ' trả lời sau ' + soVN(Math.round((Date.now() - t0) / 100) / 10) + ' giây.'); }
+    try { const k = await api('/mohinh/' + encodeURIComponent(d.goithu) + '/goithu', {}); bao('Gọi thử đạt: ' + (tenNguon(timNguon(d.goithu)) || k.nguon) + ' trả lời sau ' + soVN(Math.round((Date.now() - t0) / 100) / 10) + ' giây.'); }
     catch (e) { bao('Gọi thử chưa đạt: ' + e.message + '.'); } t.disabled = false; await napMoHinh(); return; }
   else if (d.chep) { try { await navigator.clipboard.writeText(d.chep); bao('Đã chép mã thiết bị.'); } catch (e) { bao('Anh chép tay mã ' + d.chep + '.'); } }
   else if (d.chepTin) { const x = (D.tin || []).find(y => y.id === d.chepTin); if (x) { try { await navigator.clipboard.writeText(x.noidung); bao('Đã chép câu trả lời.'); } catch (e) { /* */ } } }
