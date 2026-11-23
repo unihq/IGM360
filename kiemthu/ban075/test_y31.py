@@ -247,6 +247,29 @@ class KiemGiaoDien(unittest.TestCase):
         ico = (GD / "icon.js").read_text(encoding="utf-8")
         self.assertIn("lucide-pin", ico)
 
+    def test_y31b_s1_s5(self):
+        self.assertIn("""$('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-chonmh" hidden>""", self.js)   # S1
+        self.assertNotIn("document.body.insertAdjacentHTML", self.js)
+        self.assertIn('id="h-them"', self.html)
+        dong = next(x for x in self.js.splitlines() if x.startswith("const icoMau"))                       # S5
+        self.assertEqual(dong, """const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');""")
+        self.assertIn("icoMau(ICON.plus, '#1456F0', 16)", self.js)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_y31b_s5_chay_that(self):
+        ico = (GD / "icon.js").read_text(encoding="utf-8")
+        dong = next(x for x in self.js.splitlines() if x.startswith("const icoMau"))
+        ma = ico + "\n" + dong + "\nconsole.log(JSON.stringify(icoMau(ICON.plus, '#1456F0', 16)));"
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "thu.js"
+            p.write_text(ma, encoding="utf-8")
+            r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        svg = json.loads(r.stdout)
+        self.assertIn('stroke="#1456F0"', svg)
+        self.assertNotIn('stroke="#fff"', svg)
+        self.assertIn('width="16"', svg)
+
     def test_ghim_o_trinh_duyet_gui_kem_moi_tin(self):
         self.assertIn("const KHO_GHIM = 'igm360.ghim_mohinh';", self.js)
         self.assertIn("api('/trochuyen', {hoithoai_id: D.htId, noidung: nd, mohinh_id: gh})", self.js)
@@ -272,12 +295,13 @@ class KiemTenMoHinh(unittest.TestCase):
         js = (GD / "app.js").read_text(encoding="utf-8")
         lay = lambda ten: js[js.index("const " + ten + " "):js.index("\nconst ", js.index("const " + ten + " ") + 5)]
         ham = "\n".join(lay(t) for t in ("NB", "TEN_NGUON_GOI", "TEN_NGUON_HANG", "tenNguon", "chuHoa", "laSo", "phanMh",
-                                          "hangCua", "gocMh", "nhomMh", "tenMh", "timNguon"))
+                                          "hangCua", "gocMh", "nhomMh", "tenHang", "tenMh", "timNguon"))
         nhom = [{"nguon_id": "k", "loai": "khoa_api", "hang": "anthropic", "mohinh": [{"ma": "claude-opus-4-1"}, {"ma": "claude-opus-4"}, {"ma": "claude-sonnet-4-5"}]},
                 {"nguon_id": "c", "goi": "claude", "mohinh": [{"ma": "sonnet"}, {"ma": "opus"}]},
-                {"nguon_id": "g", "goi": "chatgpt", "mohinh": [{"ma": "gpt-5.5"}]}]
+                {"nguon_id": "g", "goi": "chatgpt", "mohinh": [{"ma": "gpt-5.5"}, {"ma": "gpt-5"}, {"ma": "gpt-5-codex"}, {"ma": "gpt-4.1"}]}]
         thu = [["opus", "c"], ["claude-opus-4-1", "k"], ["claude-opus-4", "k"], ["claude-sonnet-4-5", "k"],
-               ["gpt-5.5", "g"], ["anthropic/claude-3.5-haiku", "k"], [None, "c"]]
+               ["gpt-5.5", "g"], ["anthropic/claude-3.5-haiku", "k"], [None, "c"],
+               ["gpt-5", "g"], ["gpt-5-codex", "g"], ["gpt-4.1", "g"], ["gpt-4o", "g"], ["o3-mini", "g"]]   # Y31b S2
         ma = ("const esc = s => s; const D = {md: null, dsmh: {nhom: " + json.dumps(nhom) + "}};\n" + ham
               + "\nconsole.log(JSON.stringify(" + json.dumps(thu) + ".map(([m, n]) => tenMh(m, n))));")
         with tempfile.TemporaryDirectory() as t:
@@ -285,7 +309,8 @@ class KiemTenMoHinh(unittest.TestCase):
             p.write_text(ma, encoding="utf-8")
             r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout), ["Opus", "Opus 4.1", "Opus 4", "Sonnet", "GPT", "Claude 3.5 Haiku", "mô hình mặc định"])
+        self.assertEqual(json.loads(r.stdout), ["Opus", "Opus 4.1", "Opus 4", "Sonnet", "GPT-5.5", "Claude 3.5 Haiku", "mô hình mặc định",
+                                                "GPT-5", "GPT-5 Codex", "GPT-4.1", "GPT-4o", "o3 Mini"])
 
 
 if __name__ == "__main__":

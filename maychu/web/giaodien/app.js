@@ -306,9 +306,15 @@ const phanMh = ma => { const p = String(ma).split(/[-_\s]+/).filter(Boolean);
 const hangCua = n => (tenNguon(n) || '').split(NB + '·')[0].split(' · ')[0].trim().toLowerCase();
 const gocMh = (ma, hang) => { const {chu} = phanMh(ma); return (chu.length > 1 && hang && chu[0].toLowerCase() === hang ? chu.slice(1) : chu).join(' '); };
 const nhomMh = id => D.dsmh && id ? D.dsmh.nhom.find(g => g.nguon_id === id) : null;
+// Tên hãng khác Claude: giữ nguyên thứ tự và số ("gpt-5-codex" → "GPT-5 Codex", "gpt-4.1" → "GPT-4.1", "o3" → "o3").
+const tenHang = s => { const p = String(s).split(/[-_\s]+/).filter(Boolean), gpt = /^gpt$/i.test(p[0]) && p.length > 1;
+  const chu = x => laSo(x) || /^o\d/i.test(x) || /^\d/.test(x) ? x : chuHoa(x);
+  return [...(gpt ? ['GPT-' + p[1]] : [chu(p[0])]), ...p.slice(gpt ? 2 : 1).map(chu)].join(' '); };
 const tenMh = (ma, nguonId, n) => { if (!ma) return 'mô hình mặc định';
   if (String(ma).includes('/')) return String(ma).split('/').pop().split(/[-_\s]+/).filter(Boolean).map(chuHoa).join(' ');
-  const g = nhomMh(nguonId), hang = hangCua(n || g || timNguon(nguonId)), goc = gocMh(ma, hang), {so} = phanMh(ma);
+  const g = nhomMh(nguonId), hang = hangCua(n || g || timNguon(nguonId));
+  if (hang !== 'claude') return tenHang(ma);   // Y31b S2: quy tắc bỏ hãng, bỏ số chỉ áp cho Claude (QĐ179, QĐ181)
+  const goc = gocMh(ma, hang), {so} = phanMh(ma);
   const trung = g && g.mohinh.some(m => m.ma !== ma && gocMh(m.ma, hang) === goc);
   return goc + (trung && so ? ' ' + so : ''); };
 const moHinhDong = (ma, n) => tenMh(ma, n && (n.id || n.nguon_id), n);
@@ -434,7 +440,8 @@ async function danMaClaude() {
 // ---- Ô chọn mô hình màn 08 + hộp "Đổi" màn 13 (QĐ178–QĐ183, PTD-08, bản vẽ Z10, Z10b): 01 danh sách G08 dùng chung
 const MH = {noi: null, tim: '', mo: null, dich: null};   // noi: 'chat' (bảng xổ màn 08) | 'md' (hộp màn 13); dich: loại việc
 D.hong = {};   // {mã cuộc: {het, dung, nguon_id}}: mô hình ghim không dùng được ở lượt gần nhất (nút vàng tới khi dùng lại được)
-const icoMau = (svg, mau, co) => svg.replace(/stroke="#[0-9A-Fa-f]{6}"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
+// Y31b S5: đổi màu nét mọi dạng mã màu, kể cả "#fff" của icon dấu cộng
+const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
 async function napDsMh() { try { D.dsmh = await api('/mohinh/danhsach'); } catch (e) { return; }
   if (D.dsmh.nhom.some(g => g.dang_tai)) setTimeout(async () => { await napDsMh(); veLaiMh(); }, 2500); }
 // Ghim tạm ở trình duyệt theo mã cuộc trò chuyện (QĐ180; lược đồ bản 4 chuyển về cột H07 `mohinh_ghim_id`)
@@ -492,7 +499,7 @@ function veNutMh() { const e = $('#mh-chat'); if (e) e.innerHTML = nutMh() + (MH
 function veLaiMh() { const b = MH.noi === 'md' ? $('#h-chonmh .mh-ds') : MH.noi === 'chat' ? $('#mh-chat .mh-ds') : null;
   if (b) b.innerHTML = dsMhHtml(MH.noi); if (MH.noi !== 'md') { const n = $('#mh-chat .mh-nut'); if (n) n.outerHTML = nutMh(); else veNutMh(); } }
 function dongMh() { MH.noi = null; MH.tim = ''; MH.mo = null; veNutMh(); }
-document.body.insertAdjacentHTML('beforeend', '<div class="lop" id="h-chonmh" hidden><div class="hop mh-hop"><div class="hop-dau">' + icoMau(ICON['brain-circuit'], '#1456F0', 20)
+$('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-chonmh" hidden><div class="hop mh-hop"><div class="hop-dau">' + icoMau(ICON['brain-circuit'], '#1456F0', 20)
   + '<b class="f1 t16" id="mh-tieu">Chọn mô hình</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div><div class="hop-than" id="mh-than13"></div></div></div>');
 document.addEventListener('click', async ev => {
   const b = ev.target.closest('[data-mhnut],[data-mhnhom],[data-mhchon],[data-doimd],[data-mhdong]');
