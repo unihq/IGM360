@@ -280,7 +280,7 @@ class KiemGiaoDien(unittest.TestCase):
         for chu in ("const CHU_MDH = 'Mã dài hạn';", "'Kết nối Claude</button>", "data-md-dan=\"' + chua.taikhoan + '\">'",   # N21
                     "'<span class=\"nhan n-canh\"><i></i>Mã hết hạn</span>'",                                                # N13
                     ">Xác nhận mã</button>", "'Lấy link mới</button>",                                                       # N16
-                    "'<div class=\"bao-xanh t13\">' + ICON.info",                                                            # N18
+                    "'<div class=\"bao-xanh t13\">' + ICON['info']",                                                            # N18
                     "if (kq.khong_ho_tro) { D.mdh[tk] = null; veMoHinh(); moMdDan(tk, kq.loi); return; }",
                     "(k.ct ? ' title=\"' + esc(k.ct) + '\"' : '')",                                                          # N17
                     'type="password"', "if (o) o.value = '';", "tenMh(hong.dung, hong.nguon_id, null, true)",

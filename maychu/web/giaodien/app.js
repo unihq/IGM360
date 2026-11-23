@@ -410,7 +410,7 @@ function moMdDan(tk, tin) {
   D.mdDan = {tk, loi: '', tin: tin || ''}; veMdDan(); mo('h-mdh'); const o = $('#md-ma-dan'); if (o) o.focus(); }
 function veMdDan() { const k = D.mdDan; if (!k) return;
   $('#mdh-tieu').textContent = 'Dán ' + CHU_MDH.toLowerCase() + ' · Claude tài khoản ' + k.tk; $('#mdh-luu').dataset.mdLuu = k.tk;
-  $('#mdh-than').innerHTML = (k.tin ? '<div class="bao-xanh t13">' + ICON.info + '<span>' + cum(cau(k.tin)) + '</span></div>' : '')
+  $('#mdh-than').innerHTML = (k.tin ? '<div class="bao-xanh t13">' + ICON['info'] + '<span>' + cum(cau(k.tin)) + '</span></div>' : '')
     + '<div class="t13 phu">Dùng khi anh đã tạo ' + CHU_MDH.toLowerCase() + ' ở máy khác. Mã bắt đầu bằng <b class="nw">sk-ant-oat01-</b>, dùng 365&nbsp;ngày.</div>'
     + '<div class="b6 t13">' + CHU_MDH + '</div><div class="o-nhap' + (k.loi ? ' loi' : '') + '">' + ICON['key-round'] + '<input id="md-ma-dan" type="password" placeholder="sk-ant-oat01-…" autocomplete="off"></div>'
     + (k.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(cau(k.loi)) + '</span></div>' : '')
