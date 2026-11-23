@@ -19,6 +19,7 @@ ghim vẫn qua đủ kiểm (đã kết nối, hạn mức, trần tiền, có g
 Tiền ghi số nguyên theo phần triệu đơn vị tiền ở `tien_ma` (1 USD = 1.000.000); giá G08 là phần triệu USD
 cho 1.000.000 chữ (token).
 """
+import contextvars
 import json
 import os
 import re
@@ -288,6 +289,13 @@ def ghi_het_tai_khoan(nguon_id: str, datlai: float | None, hm: dict | None = Non
     return datlai
 
 
+def tk_nghi_den(d: dict) -> str | None:
+    """N5 (Y36e): màn 13 – cả tài khoản gói đang tạm nghỉ (mốc nghỉ riêng hoặc cửa sổ đã đầy) thì trả giờ dùng lại."""
+    if d.get("loai") != "goi":
+        return None
+    return _den_luc(d["id"]) if het_tai_khoan(d["id"]) or _het_luc_dat_lai(d) else None
+
+
 def mo_ta_het(nguon_id: str, ma: str | None) -> dict:
     """Mô hình đang hết của 01 nguồn để giao diện ghi tên: {ma (None = mặc định), ten_khung (Opus…), bao (mã CLI báo)}."""
     k = (nguon_id, ma or "")
@@ -431,8 +439,42 @@ def _chay(lenh: list, env: dict, vao: str | None = None, giay: int = GIAY_TOIDA)
                               timeout=giay, env=env, cwd=cho_lam)
 
 
+# QĐ195 (Y36e, lỗi H17): trò chuyện của anh không đặt trần lượt, được tra web; vẫn cấm lệnh máy, cấm ghi/sửa tệp
+# (giống Codex `--sandbox read-only`). Phanh kẹt vòng: 600 giây/câu (GIAY_TOIDA). Việc khác (Gọi thử, việc nền) giữ 01 lượt.
+_TRA_WEB: contextvars.ContextVar = contextvars.ContextVar("igm360_tra_web", default=False)
+CONGCU_TRA_WEB = "WebSearch,WebFetch"                      # công cụ duy nhất có mặt và được phép
+CONGCU_CAM = "Bash,PowerShell,Write,Edit,MultiEdit,NotebookEdit"   # chặn thêm 01 lớp, phòng cài đặt máy bật lại
+LOI_CLAUDE = {"error_max_turns": "chạm trần số lượt", "error_during_execution": "lỗi khi chạy",
+              "error_max_budget_usd": "chạm trần chi phí", "error_max_structured_output_retries": "lỗi định dạng trả lời"}
+
+
+class LoiAI(RuntimeError):
+    """Lỗi 01 lượt gọi AI: `ngan` (chữ ngắn cho anh), `ct` (loại lỗi và câu hãng báo, để rê chuột)."""
+    def __init__(self, hang: str, ngan: str, ct: str = ""):
+        super().__init__(f"{hang} {ngan}" + (f" ({ct})" if ct else ""))
+        self.ngan, self.ct = ngan, ct
+
+
+def _loi_claude(kq: dict | None, r) -> tuple[str, str]:
+    """Y36e: đọc đúng loại lỗi Claude từ dòng `result` (`subtype` + `errors`), không lấy đuôi chữ JSON."""
+    if kq:
+        sub = str(kq.get("subtype") or "")
+        loi = [str(x) for x in (kq.get("errors") or []) if x]
+        if isinstance(kq.get("result"), str) and kq["result"].strip():
+            loi.append(kq["result"].strip())
+        ct = (sub + (": " if sub and loi else "") + "; ".join(loi))[:200]
+        return LOI_CLAUDE.get(sub, "báo lỗi"), ct
+    dong = [d.strip() for d in (r.stderr or "").splitlines() if d.strip() and not d.strip().startswith("{")]
+    return "không trả kết quả", (dong[-1][:200] if dong else "")
+
+
 def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
-    lenh = [dangnhap_goi._cli("claude"), "-p", "--output-format", "stream-json", "--verbose", "--max-turns", "1"]
+    lenh = [dangnhap_goi._cli("claude"), "-p", "--output-format", "stream-json", "--verbose"]
+    if _TRA_WEB.get():
+        lenh += ["--tools", CONGCU_TRA_WEB, "--allowedTools", CONGCU_TRA_WEB, "--disallowedTools", CONGCU_CAM,
+                 "--strict-mcp-config"]
+    else:
+        lenh += ["--max-turns", "1"]
     if mohinh:
         lenh += ["--model", mohinh]
     r = _chay(lenh, dangnhap_goi._env("claude", taikhoan), vao=cau)
@@ -449,12 +491,12 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
         elif o.get("type") == "result":
             kq = o
     if not kq or kq.get("is_error") or kq.get("subtype") not in (None, "success"):
-        loi = (kq or {}).get("result") or (r.stderr or r.stdout)[-300:]
-        if hm.get("het") or hm.get("het_mh") or hm.get("het_khongro") or any(x in str(loi).lower() for x in HET_HANMUC):
+        ngan, ct = _loi_claude(kq, r)
+        if hm.get("het") or hm.get("het_mh") or hm.get("het_khongro") or any(x in ct.lower() for x in HET_HANMUC):
             if bao:
                 hm["mh_bao"] = bao
-            raise HetHanMuc(str(loi)[:300], hm)
-        raise RuntimeError(f"Claude không trả lời được: {str(loi)[:300]}")
+            raise HetHanMuc(ct[:300] or "hết hạn mức", hm)
+        raise LoiAI("Claude", ngan, ct)
     u = kq.get("usage") or {}
     vao = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     tk = kq.get("total_cost_usd")
@@ -590,7 +632,7 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
         return "quá giờ"
     except Exception as e:  # noqa: BLE001 - lỗi 01 nguồn thì thử nguồn sau
         _ghi_g04(d, None, "loi", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-        bo_qua.append({"nguon": ten, "lydo": str(e)[:200]})
+        bo_qua.append({"nguon": ten, "lydo": str(e)[:200], **({"loi": e.ngan, "loi_ct": e.ct} if isinstance(e, LoiAI) else {})})
         return "lỗi"
     ms = int((time.monotonic() - t0) * 1000)
     bo_het_mo_hinh(d["id"], ma_mh)
@@ -649,6 +691,15 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
     không dùng được thì `ghim_hong` = {mohinh_id, ma, het_hanmuc, lydo} và gọi theo mặc định."""
     bo_qua, ghim_hong, nghi, nghi_mh, het_dau = [], None, {}, {}, None
     sem = _cho_phep()
+    tra_web = _TRA_WEB.set(loai_viec == "trochuyen" and not chi_nguon_id)   # QĐ195: chỉ trò chuyện của anh
+    try:
+        return _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client)
+    finally:
+        _TRA_WEB.reset(tra_web)
+
+
+def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client) -> dict:
+    ghim_hong, nghi, nghi_mh, het_dau = None, {}, {}, None
     with sem:
         ds = _nguon(thumuc, loai_viec)
         if danhmuc_mohinh.la_viec_nen(loai_viec) or viecnen_id is not None:
@@ -658,7 +709,7 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
             # hình đó, mỗi tài khoản qua đủ kiểm giá, hạn mức; hết mới về mặc định (QĐ183)
             khoa = danhmuc_mohinh.chuan_khoa(mohinh_id, thumuc)
             loai, ma = danhmuc_mohinh.tach_khoa(khoa) if khoa else (None, None)
-            lydo, het, da_thu, ly_tk = "không còn dùng được", False, 0, []
+            lydo, het, da_thu, ly_tk, loi_ghim = "không còn dùng được", False, 0, [], {}
             for d in (x for x in ds if ma and dangnhap_goi.loai_nguon(x) == loai):
                 dong = danhmuc_mohinh.dong_cua(d["id"], ma, thumuc)
                 if not dong:
@@ -672,12 +723,15 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
                 nghi[d["id"]], nghi_mh[d["id"]] = kq, ma
                 het = het or str(kq).startswith("hết hạn mức")
                 ly_tk.append(_ly_do_nghi(d, ma, kq) if str(kq).startswith("hết hạn mức") else {})
+                loi_ghim = {k: bo_qua[-1][k] for k in ("loi", "loi_ct") if kq == "lỗi" and bo_qua and k in bo_qua[-1]}
                 lydo = kq
             if not da_thu:   # mô hình ngừng, cả nhóm đã gỡ hoặc ngừng (Đ1, Đ2)
                 bo_qua.append({"nguon": "Mô hình đã chọn", "lydo": lydo})
             ghim_hong = {"khoa": khoa or mohinh_id, "ma": ma, "het_hanmuc": het, "lydo": "hết hạn mức" if het else lydo}
             if ly_tk and all(ly_tk):   # P3b: chỉ vì tài khoản đang tạm nghỉ
                 ghim_hong.update(min(ly_tk, key=lambda x: x["den"] or "9"))
+            elif not het and loi_ghim:   # Y36e: dòng vàng ghi đúng loại lỗi (ví dụ "chạm trần số lượt")
+                ghim_hong.update(loi_ghim)
         for d in ds:
             if chi_nguon_id and d["id"] != chi_nguon_id:
                 continue

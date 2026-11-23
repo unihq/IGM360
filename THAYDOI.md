@@ -11,6 +11,7 @@ Tóm tắt: Tự cập nhật hạn mức, mô hình việc nền
 - Mô hình hoặc tài khoản bị hãng báo hết hạn mức thì phần mềm tạm không gọi tới giờ đặt lại; hãng không báo giờ thì nghỉ 01 giờ. Các mô hình khác vẫn dùng.
 - Bảng mô hình mặc định có thêm dòng "Việc nền chung": việc chạy nền chưa đặt riêng thì dùng mô hình của dòng này.
 - Trên điện thoại, ô báo rộng hết màn và nằm trên thanh dưới.
+- Trò chuyện AI qua Claude được tra web và dùng nhiều bước trong 01 câu trả lời, không còn bị cắt ở bước đầu; vẫn không chạy lệnh máy, không ghi, sửa tệp. Dòng chữ vàng ghi rõ loại lỗi.
 
 ## 0.7.6
 Tóm tắt: Chọn theo mô hình, tự xoay tài khoản

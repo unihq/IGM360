@@ -365,7 +365,9 @@ function thanhHm(ten, v, k) { const p = pct(v), cu = k && k in D.hmCu ? D.hmCu[k
 const denLuc = iso => !iso ? '' : gio(iso) + (String(iso).slice(0, 10) !== homNay() ? ' ngày ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');
 const tenHet = (m, n) => m.ma ? tenMh(m.ma, n && n.id, n, true) : m.ten_khung || (m.bao ? tenMh(m.bao, n && n.id, n, true) : '');
 const chuHetMh = (m, n, tk) => chuHoa(tenHet(m, n) || 'mô hình mặc định') + ' của tài khoản ' + tk + ' hết hạn mức' + (m.den ? ' đến ' + denLuc(m.den) : '');
-const tieuHetMh = (n, tk) => !(n.het_mh || []).length ? '' : ' title="' + esc(n.het_mh.map(m => chuHetMh(m, n, tk)).join('; ')) + '"';
+// N5: cả tài khoản đang tạm nghỉ thì ghi lý do tài khoản (như dòng vàng P3b); chỉ 01 mô hình hết riêng thì ghi tên mô hình
+const tieuHetMh = (n, tk) => n.tk_nghi_den ? ' title="' + esc('Tài khoản ' + tk + ' đang tạm nghỉ đến ' + denLuc(n.tk_nghi_den)) + '"'
+  : !(n.het_mh || []).length ? '' : ' title="' + esc(n.het_mh.map(m => chuHetMh(m, n, tk)).join('; ')) + '"';
 function theGoi(g, ds, nguon, uu) {
   const dn = D.dn[g] || {}, ten = GOI_NGAN[g].replace('Gói ', '');
   const coTk = ds.some(x => x.da_noi), coDong = x => nguon.some(y => y.ma === x.ma && y.trangthai === 'dung');
@@ -521,7 +523,7 @@ function chuGhimHong(x) { const g = x.ghim_hong || x.md_hong, a = x.ghim_hong &&
   const ten = x.md_hong ? chuHoa(tenHet(g, n0) || (n0 ? tenLoai(n0).replace(/ /g, ' ') : 'Mô hình mặc định'))
     : a ? tenMh(a.m.ma, a.g.nhom, a.g, true) : g.ma ? tenMh(g.ma, null, null, true) : 'Mô hình đã chọn';   // N3
   const dung = mhThucDung(x) ? tenMh(mhThucDung(x), x.nguon_id, n, true) : (n ? tenLoai(n).replace(/ /g, ' ') : 'mô hình');   // U10b F2
-  return esc(ten) + ' ' + (g.het_hanmuc ? nbsp('đang hết hạn mức') : 'chưa dùng được') + ', đã dùng ' + esc(nbsp(dung + ' (mặc định)')); }
+  return esc(ten) + ' ' + (g.het_hanmuc ? nbsp('đang hết hạn mức') : 'chưa dùng được' + (g.loi ? ' (' + esc(nbsp(g.loi)) + ')' : '')) + ', đã dùng ' + esc(nbsp(dung + ' (mặc định)')); }
 const logoNhom = g => { const l = g.goi === 'claude' || g.hang === 'anthropic' ? ICON.logo_claude : g.goi === 'chatgpt' || g.hang === 'openai' ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16);
   return '<span class="logo-n">' + l.replace(/width="\d+"/, 'width="18"').replace(/height="\d+"/, 'height="18"') + '</span>'; };
 function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 phu">Chưa có nguồn AI đã kết nối</span>';
@@ -623,7 +625,7 @@ function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
-    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang">' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
+    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || {}).loi_ct ? ' title="' + esc(x.ghim_hong.loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();

@@ -357,7 +357,7 @@ class KiemY36c(Nen):
         for chu in ("const denLuc = iso => !iso ? '' : gio(iso) + (String(iso).slice(0, 10) !== homNay() ? ' ngày ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');",
                     "' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)",
                     "const g = x.ghim_hong || x.md_hong,",
-                    "+ (x.ghim_hong || x.md_hong ? '<div class=\"tn-meta mh-vang\">'",
+                    "+ (x.ghim_hong || x.md_hong ? '<div class=\"tn-meta mh-vang\"'",
                     "theo dòng \"' + nbsp(LV.viecnen_chung) + '\"'",
                     "'Chọn mô hình · ' + nbsp(D.dsmh.loai_viec[d.doimd])"):
             self.assertIn(chu, js, chu)
@@ -457,6 +457,84 @@ class KiemY36d(KiemY36c):
                     "const tieu = hong && hong.nghi ? chuNghi(hong.nghi, timNguon(hong.nghi.nguon_id)) + ' · tạm dùng '",
                     "nghi: tl.ghim_hong.tk_nghi ? {den: tl.ghim_hong.den, nguon_id: tl.ghim_hong.nguon_id} : null};"):
             self.assertIn(chu, js, chu)
+
+
+class KiemY36e(Nen):
+    """Y36e (QĐ195, lỗi H17): trò chuyện của anh gọi Claude không trần lượt, được tra web, cấm lệnh máy và ghi/sửa tệp;
+    Gọi thử, việc nền giữ 01 lượt; lỗi ghi đúng loại (`subtype` + `errors`). Giả đầu ra CLI qua `_chay`."""
+    def setUp(self):
+        super().setUp()
+        self.c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        dm.danh_sach()
+        self.lenh, self.dau_ra = [], None
+
+    def chay(self, lenh, env, vao=None, giay=None):
+        self.lenh.append(lenh)
+        dong = self.dau_ra or [{"type": "result", "subtype": "success", "result": "ok", "usage": {"input_tokens": 1, "output_tokens": 1}}]
+        return subprocess.CompletedProcess(lenh, 0, "\n".join(json.dumps(x) for x in dong), "")
+
+    def kiem_tra_web(self, l):
+        self.assertNotIn("--max-turns", l)
+        self.assertEqual(l[l.index("--tools") + 1], "WebSearch,WebFetch")
+        self.assertEqual(l[l.index("--allowedTools") + 1], "WebSearch,WebFetch")
+        cam = l[l.index("--disallowedTools") + 1].split(",")
+        for x in ("Bash", "Write", "Edit", "MultiEdit", "NotebookEdit"):
+            self.assertIn(x, cam)
+        self.assertIn("--strict-mcp-config", l)
+
+    def test_a_lenh_tro_chuyen_va_viec_khac(self):
+        with mock.patch.object(congai, "_chay", side_effect=self.chay):
+            self.assertEqual(congai.goi("tỷ giá MYR tuần này", loai_viec="trochuyen")["chu"], "ok")
+            self.kiem_tra_web(self.lenh[-1])
+            for kw in ({"chi_nguon_id": self.c1}, {"loai_viec": "dexuat"}, {"loai_viec": "baocaosang"}, {}):   # Gọi thử, việc nền
+                congai.goi("x", **kw)
+                l = self.lenh[-1]
+                self.assertEqual(l[l.index("--max-turns") + 1], "1", kw)
+                self.assertNotIn("--tools", l, kw)
+        self.assertFalse(congai._TRA_WEB.get())     # trả lại như cũ sau lượt gọi
+
+    def test_b_loi_dung_loai(self):
+        self.dau_ra = [{"type": "result", "subtype": "error_max_turns", "is_error": True, "num_turns": 2,
+                        "errors": ["Reached maximum number of turns (1)"]}]
+        with mock.patch.object(congai, "_chay", side_effect=self.chay):
+            kq = congai.goi("x", loai_viec="dexuat")
+        b = kq["bo_qua"][0]
+        self.assertEqual(b["lydo"], "Claude chạm trần số lượt (error_max_turns: Reached maximum number of turns (1))")
+        self.assertEqual((b["loi"], b["loi_ct"]), ("chạm trần số lượt", "error_max_turns: Reached maximum number of turns (1)"))
+        self.assertEqual(congai._loi_claude(None, subprocess.CompletedProcess([], 1, '{"type":"x"}', '{"a":1}\nclaude: lỗi mạng\n')),
+                         ("không trả kết quả", "claude: lỗi mạng"))   # không lấy chữ JSON
+
+    def test_c_ghim_va_mac_dinh_deu_ap(self):
+        self.dau_ra = [{"type": "result", "subtype": "error_during_execution", "is_error": True, "errors": ["boom"]}]
+        c2 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
+        with mock.patch.object(congai, "_chay", side_effect=self.chay), \
+                mock.patch.object(congai, "_goi_chatgpt", return_value=dict(TRA, mohinh_bao="gpt-6-luna")):
+            kq = congai.goi("tỷ giá", loai_viec="trochuyen", mohinh_id="goi_claude|sonnet")
+        self.assertEqual(kq["nguon_id"], c2)
+        self.assertEqual(len(self.lenh), 2)                       # lượt ghim Sonnet rồi lượt mặc định Claude
+        self.assertIn("sonnet", self.lenh[0])
+        for l in self.lenh:
+            self.kiem_tra_web(l)
+        g = kq["ghim_hong"]
+        self.assertEqual((g["het_hanmuc"], g["loi"], g["loi_ct"]), (False, "lỗi khi chạy", "error_during_execution: boom"))
+
+    def test_n5_man13_tai_khoan_tam_nghi(self):
+        n = lambda: next(x for x in dg.danh_sach() if x["id"] == self.c1)
+        congai.ghi_het_mo_hinh(self.c1, "opus", {})
+        self.assertIsNone(congai.tk_nghi_den(n()))                  # chỉ 01 mô hình hết riêng: giữ chữ "Opus … hết hạn mức"
+        den = congai.ghi_het_tai_khoan(self.c1, time.time() + 1800)
+        self.assertEqual(congai.tk_nghi_den(n()), datetime.fromtimestamp(den, MUIGIO_VN).isoformat(timespec="seconds"))
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("const tieuHetMh = (n, tk) => n.tk_nghi_den ? ' title=\"' + esc('Tài khoản ' + tk + ' đang tạm nghỉ đến ' + denLuc(n.tk_nghi_den)) + '\"'", js)
+        api = (GOC / "maychu/web/api.py").read_text(encoding="utf-8")
+        self.assertIn('n["tk_nghi_den"] = congai.tk_nghi_den(n)', api)
+
+    def test_giao_dien_va_thaydoi(self):
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("'chưa dùng được' + (g.loi ? ' (' + esc(nbsp(g.loi)) + ')' : '')", js)
+        self.assertIn("((x.ghim_hong || {}).loi_ct ? ' title=\"' + esc(x.ghim_hong.loi_ct) + '\"' : '')", js)
+        td = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.6")[0]
+        self.assertIn("- Trò chuyện AI qua Claude được tra web", td)
 
 
 class KiemZ12(unittest.TestCase):
