@@ -9,7 +9,7 @@ Tóm tắt: Tự cập nhật hạn mức, mô hình việc nền
 - Qua giờ đặt lại, hạn mức hiện 0% ngay.
 - Gói ChatGPT: phần mềm tự đọc số hạn mức mỗi 10 phút, không tốn lượt hỏi AI.
 - Mô hình hoặc tài khoản bị hãng báo hết hạn mức thì phần mềm tạm không gọi tới giờ đặt lại; hãng không báo giờ thì nghỉ 01 giờ. Các mô hình khác vẫn dùng.
-- Bảng mô hình mặc định có thêm dòng "Việc nền · toàn hệ thống": việc chạy nền chưa đặt riêng thì dùng mô hình của dòng này.
+- Bảng mô hình mặc định có thêm dòng "Việc nền chung": việc chạy nền chưa đặt riêng thì dùng mô hình của dòng này.
 - Trên điện thoại, ô báo rộng hết màn và nằm trên thanh dưới.
 
 ## 0.7.6

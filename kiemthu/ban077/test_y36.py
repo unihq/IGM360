@@ -1,5 +1,5 @@
 """Bài kiểm bản 0.7.7 (QĐ192, Y36; CDA K-VN Đ1–Đ3): đo hạn mức bị động (0 lượt gọi thêm, không đọc khoá đăng nhập) và
-dòng "Việc nền · toàn hệ thống". Dữ liệu giả, không gọi CLI thật."""
+dòng "Việc nền chung" (QĐ194). Dữ liệu giả, không gọi CLI thật."""
 import json
 import os
 import subprocess
@@ -127,7 +127,7 @@ class KiemViecNen(Nen):
 
     def test_03_bac(self):
         dm.dat_macdinh("viecnen_chung", khoa="goi_chatgpt|")
-        self.assertEqual(dm.macdinh_khoa("dexuat"), ("goi_chatgpt", None))       # bậc (b): theo việc nền toàn hệ thống
+        self.assertEqual(dm.macdinh_khoa("dexuat"), ("goi_chatgpt", None))       # bậc (b): theo "Việc nền chung"
         self.assertEqual(dm.macdinh_khoa("baocaosang"), ("goi_chatgpt", None))
         self.assertIsNone(dm.macdinh_khoa("trochuyen"))                          # trò chuyện không theo
         dm.dat_macdinh("dexuat", khoa="goi_claude|opus")
@@ -247,7 +247,7 @@ class KiemP1(Nen):
         self.assertIn("(p == null ? 'chưa&nbsp;đo' : Math.round(p) + '%')", js)        # N1: "8%", không "08%"
         self.assertNotIn("hai(Math.round(p)) + '%'", js)
         self.assertIn(".ten-i{display:flex;align-items:center;gap:4px}", html)        # N2: (i) cùng dòng với tên
-        self.assertIn("const CUM = ['toàn hệ thống', 'Việc nền',", js)
+        self.assertIn("const CUM = ['Việc nền',", js)
         self.assertIn("' của tài khoản ' + tk + ' hết hạn mức' + (m.den ? ' đến ' + denLuc(m.den) : '')", js)
         self.assertIn("'<div class=\"tk-dong\"' + tieuHetMh(n, x.taikhoan) + '>", js)
         api = (GOC / "maychu/web/api.py").read_text(encoding="utf-8")
@@ -380,6 +380,85 @@ class KiemY36c(Nen):
         self.assertEqual(json.loads(r.stdout), ["20:45", "20:45 ngày 26/11"])
 
 
+class KiemY36d(KiemY36c):
+    """Y36d (CDO U11c): giờ nghỉ do 01 chỗ quyết. Lượt bị từ chối → mốc nghỉ riêng (`resetsAt`, không có thì 01 giờ);
+    giờ đặt lại đã lưu của cửa sổ CHƯA đầy không còn đè mốc đó; cửa sổ đã đầy theo số đo vẫn chặn. P3b: tài khoản
+    đang tạm nghỉ thì dòng vàng ghi lý do tài khoản."""
+    test_p2_khong_bao_khung_nghi_01_gio = test_p3_co_resetsat_thi_dung = test_khoa_api_429_khong_nghi_01_gio = None
+    test_n4_du_phong_ghi_ten_mo_hinh = test_luot_thuong_sang_hang_khac_co_dong_vang = test_giao_dien = test_den_luc_khac_ngay = None
+
+    def dat_g06(self, **cot):
+        cn = ketnoi.mo("Viecnen")
+        try:
+            cn.execute(f"UPDATE nguon_ai SET {', '.join(k + ' = ?' for k in cot)} WHERE id = ?", (*cot.values(), self.c1))
+        finally:
+            cn.close()
+
+    def dung(self, sau=0):
+        d = next(x for x in congai._nguon() if x["id"] == self.c1)
+        with mock.patch.object(congai.time, "time", return_value=time.time() + sau):
+            return congai.dung_duoc(d)[0]
+
+    def tu_choi(self, info):
+        with mock.patch.object(congai, "_goi_claude", side_effect=self.claude({(1, None): info})):
+            congai.goi("hỏi", loai_viec="trochuyen")
+
+    def test_resetsat_60_giay_khung_chua_day_gio_xa(self):
+        self.dat_g06(tyle_5gio=40, datlai_5gio_luc=_luc(hours=3), do_luc=_luc(minutes=-5))   # khung chưa đầy, giờ đặt lại xa
+        self.tu_choi({"status": "rejected", "resetsAt": int(time.time()) + 60})
+        self.assertAlmostEqual(congai.het_tai_khoan(self.c1), time.time() + 60, delta=3)
+        self.assertFalse(self.dung())
+        self.assertTrue(self.dung(120))                 # hãng mở lại sau 60 giây: 02 phút sau dùng được, không chặn tới 03 giờ
+        cn = ketnoi.mo("Viecnen")
+        try:
+            self.assertEqual(cn.execute("SELECT da_het_luc FROM nguon_ai WHERE id = ?", (self.c1,)).fetchone()[0], 1)   # vẫn ghi lại
+        finally:
+            cn.close()
+
+    def test_gio_dat_lai_cu_da_qua(self):            # ca U11b: dấu không bị bỏ qua
+        self.dat_g06(tyle_5gio=40, datlai_5gio_luc=_luc(hours=-3), do_luc=_luc(hours=-4))
+        self.tu_choi({"status": "rejected"})
+        self.assertFalse(self.dung())
+        self.assertFalse(self.dung(3500))
+        self.assertTrue(self.dung(3700))                # không báo giờ: nghỉ 01 giờ
+
+    def test_khung_chua_day_gio_xa_khong_bao_gio(self):
+        self.dat_g06(tyle_tuan=70, datlai_tuan_luc=_luc(days=4), do_luc=_luc(minutes=-1))
+        self.tu_choi({"status": "rejected"})
+        self.assertTrue(self.dung(3700))                # 01 giờ, không phải 04 ngày theo giờ đặt lại của khung tuần chưa đầy
+
+    def test_khung_da_day_van_chan(self):
+        self.dat_g06(tyle_5gio=100, datlai_5gio_luc=_luc(hours=2), do_luc=_luc(minutes=-1))
+        self.assertFalse(self.dung())                   # số đo cửa sổ đầy: chặn tới giờ đặt lại
+        self.dat_g06(tyle_5gio=100, datlai_5gio_luc=None, do_luc=_luc(minutes=-30))
+        self.assertFalse(self.dung())                   # đầy mà không có giờ đặt lại: 60 phút từ lần đo
+        self.dat_g06(do_luc=_luc(minutes=-61))
+        self.assertTrue(self.dung())
+        self.dat_g06(tyle_5gio=40, datlai_5gio_luc=_luc(hours=2), da_het_luc=1)
+        self.assertTrue(self.dung())                    # cờ cũ da_het_luc không còn chặn
+
+    def test_p3b_tai_khoan_tam_nghi(self):
+        c2 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
+        den = congai.ghi_het_tai_khoan(self.c1, time.time() + 1800)
+        with mock.patch.object(congai, "_goi_claude", side_effect=AssertionError("tài khoản đang nghỉ, không gọi")), \
+                mock.patch.object(congai, "_goi_chatgpt", return_value=dict(TRA, mohinh_bao="gpt-5-codex")):
+            kq = congai.goi("hỏi", loai_viec="trochuyen")
+            self.assertEqual(kq["nguon_id"], c2)
+            g = kq["md_hong"]
+            self.assertEqual((g["tk_nghi"], g["nguon_id"], g["den"]), (True, self.c1, datetime.fromtimestamp(den, MUIGIO_VN).isoformat(timespec="seconds")))
+            dm.danh_sach()
+            kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|sonnet")   # Sonnet chưa bị từ chối
+            self.assertEqual(kq["nguon_id"], c2)
+            self.assertTrue(kq["ghim_hong"]["tk_nghi"])
+            self.assertEqual(kq["ghim_hong"]["nguon_id"], self.c1)
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        for chu in ("const chuNghi = (g, n0) => 'Tài khoản ' + (n0 && n0.goi ? GOI_NGAN[n0.goi].replace('Gói ', '') : n0 ? tenNguon(n0) : '') + ' đang tạm nghỉ' + (g.den ? ' đến ' + denLuc(g.den) : '');",
+                    "if (g.tk_nghi) return esc(chuNghi(g, n0)) + ', đã dùng '",
+                    "const tieu = hong && hong.nghi ? chuNghi(hong.nghi, timNguon(hong.nghi.nguon_id)) + ' · tạm dùng '",
+                    "nghi: tl.ghim_hong.tk_nghi ? {den: tl.ghim_hong.den, nguon_id: tl.ghim_hong.nguon_id} : null};"):
+            self.assertIn(chu, js, chu)
+
+
 class KiemZ12(unittest.TestCase):
     def setUp(self):
         self.js = (GD / "app.js").read_text(encoding="utf-8")
@@ -387,6 +466,7 @@ class KiemZ12(unittest.TestCase):
 
     def test_dong_viec_nen_va_ghi_chu(self):
         self.assertEqual(list(dm.LOAI_VIEC)[-1], "viecnen_chung")                       # dòng cuối bảng
+        self.assertEqual(dm.LOAI_VIEC["viecnen_chung"], "Việc nền chung")   # QĐ194
         self.assertEqual(self.js.count("Việc nền · toàn hệ thống") + self.js.count("Việc nền chung"), 0)   # tên dòng chỉ ở máy chủ (01 chỗ)
         for chu in ("const CHU_VN = 'Việc nền chưa đặt riêng và bot nền sau này dùng dòng này. Trò chuyện AI không theo.';",
                     "k === 'viecnen_chung' ? ' <button class=\"nut-ico nho\" data-ivn title=\"' + CHU_VN",

@@ -29,8 +29,8 @@ from maychu.hethong.mohinh import dangnhap_goi
 
 LOAI_VIEC = {"trochuyen": "Trò chuyện AI", "trichvanban": "Trích văn bản (đường D)",
              "dexuat": "Đề xuất ở mục Chờ duyệt", "baocaosang": "Viết báo cáo sáng",
-             "viecnen_chung": "Việc nền · toàn hệ thống"}   # QĐ192, K-VN Đ3: mã tránh trùng bảng G02 `viecnen`; nhãn tạm, chờ anh chốt
-# Loại việc chạy nền (không phải trò chuyện): chưa đặt riêng thì theo "Việc nền · toàn hệ thống"; không đọc ghim (K-VN Đ2)
+             "viecnen_chung": "Việc nền chung"}   # QĐ192, K-VN Đ3: mã tránh trùng bảng G02 `viecnen`; tên QĐ194 (từ điển dòng 63)
+# Loại việc chạy nền (không phải trò chuyện): chưa đặt riêng thì theo "Việc nền chung"; không đọc ghim (K-VN Đ2)
 VIEC_NEN = ("trichvanban", "dexuat", "baocaosang")
 VIEC_NEN_CHUNG = "viecnen_chung"
 BI_DANH_CLAUDE = ("haiku", "sonnet", "opus", "fable")
@@ -225,7 +225,7 @@ def la_viec_nen(loai_viec: str | None) -> bool:
 
 def macdinh_khoa(loai_viec: str, thumuc=None) -> tuple[str, str | None] | None:
     """(loại nguồn, mã mô hình hoặc None) mặc định của 01 loại việc. Thứ tự tìm 03 bậc, chỉ ở hàm này (K-VN Đ1, thiết kế G08
-    quy tắc 6): (a) loại việc đặt riêng; (b) "Việc nền · toàn hệ thống", chỉ cho việc nền, trò chuyện bỏ qua; (c) không có
+    quy tắc 6): (a) loại việc đặt riêng; (b) "Việc nền chung", chỉ cho việc nền, trò chuyện bỏ qua; (c) không có
     thì None: cổng AI theo thứ tự nguồn Đ5. Bậc nào cả nhóm nguồn đã mất (`mat`) thì xuống bậc sau."""
     ct = macdinh_chi_tiet(thumuc)
     bac = [loai_viec] + ([VIEC_NEN_CHUNG] if loai_viec in VIEC_NEN else [])

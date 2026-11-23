@@ -2,7 +2,8 @@
 
 Chọn nguồn theo ưu tiên ở G06 (màn 13): bỏ nguồn ngừng, gói đang báo hết hạn mức (chưa tới giờ đặt lại),
 tài khoản gói chưa đăng nhập, khoá API chưa đặt trần tiền hoặc tháng này đã chạm trần. Nguồn đầu báo hết hạn
-mức thì chuyển sang nguồn kế tiếp và đánh dấu `da_het_luc`.
+mức thì chuyển sang nguồn kế tiếp. Giờ nghỉ do 01 chỗ quyết (Y36d): lượt bị từ chối → mốc nghỉ riêng `_HET_TK`
+(`ghi_het_tai_khoan`); số đo → cửa sổ đã đầy (`_het_luc_dat_lai`). Cột `da_het_luc` chỉ còn ghi lại, không dùng để chặn.
 
 - Gói Claude: Claude Code CLI chế độ không tương tác `claude -p --output-format stream-json --verbose`;
   đọc dòng `result` (chữ trả lời, lượng chữ, `total_cost_usd` = tiền quy đổi tham khảo, không phải tiền chi
@@ -370,19 +371,26 @@ def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
 
 
 def _het_luc_dat_lai(d: dict) -> bool:
-    """Gói đang báo hết: còn chặn tới giờ đặt lại của cửa sổ đang đầy."""
+    """Số đo cho thấy cửa sổ đã đầy (≥ 100%): chặn tới giờ đặt lại của cửa sổ đó; cửa sổ đầy mà không có giờ đặt lại
+    thì chặn 60 phút từ lần đo. Y36d P3: KHÔNG xét cờ `da_het_luc` nữa: lượt bị từ chối do mốc nghỉ riêng `_HET_TK`
+    quyết (đúng `resetsAt` hãng báo), để giờ đặt lại đã lưu của cửa sổ chưa đầy không đè mốc đó."""
     bay = _bay_gio()
+    moc = datetime.fromtimestamp(time.time() - 3600, MUIGIO_VN).isoformat(timespec="seconds")
     for tl, dl in (("tyle_5gio", "datlai_5gio_luc"), ("tyle_tuan", "datlai_tuan_luc")):
-        if (d[tl] or 0) >= 100 and (not d[dl] or d[dl] > bay):
+        if (d[tl] or 0) >= 100 and (d[dl] > bay if d[dl] else (d.get("do_luc") or "") > moc):
             return True
-    if not d["da_het_luc"]:
-        return False
-    if any(d[dl] and d[dl] <= bay for dl in ("datlai_5gio_luc", "datlai_tuan_luc")):
-        return False
-    if not (d["datlai_5gio_luc"] or d["datlai_tuan_luc"]):   # gói báo hết mà không kèm giờ đặt lại: thử lại sau 60 phút
-        moc = datetime.fromtimestamp(time.time() - 3600, MUIGIO_VN).isoformat(timespec="seconds")
-        return (d.get("do_luc") or "") > moc
-    return True
+    return False
+
+
+def _ly_do_nghi(d: dict, ma: str | None, kq) -> dict:
+    """Y36d P3b: nguồn bỏ qua vì CẢ tài khoản đang tạm nghỉ (mô hình được chọn chưa bị từ chối riêng) thì trả
+    {tk_nghi, den, nguon_id} để giao diện ghi "Tài khoản Claude đang tạm nghỉ đến …", không ghi "<mô hình> hết hạn mức"."""
+    if d.get("loai") != "goi":
+        return {}
+    nghi = bool(het_tai_khoan(d["id"])) or _het_luc_dat_lai(d)
+    if not nghi or (het_mo_hinh(d["id"], ma) and kq != HET_CA_TK):
+        return {}
+    return {"tk_nghi": True, "den": _den_luc(d["id"]), "nguon_id": d["id"]}
 
 
 def tien_thang(nguon_id: str, thumuc=None) -> int:
@@ -650,7 +658,7 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
             # hình đó, mỗi tài khoản qua đủ kiểm giá, hạn mức; hết mới về mặc định (QĐ183)
             khoa = danhmuc_mohinh.chuan_khoa(mohinh_id, thumuc)
             loai, ma = danhmuc_mohinh.tach_khoa(khoa) if khoa else (None, None)
-            lydo, het, da_thu = "không còn dùng được", False, 0
+            lydo, het, da_thu, ly_tk = "không còn dùng được", False, 0, []
             for d in (x for x in ds if ma and dangnhap_goi.loai_nguon(x) == loai):
                 dong = danhmuc_mohinh.dong_cua(d["id"], ma, thumuc)
                 if not dong:
@@ -663,10 +671,13 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
                             "ghim_khoa": khoa, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc, nghi_mh)}
                 nghi[d["id"]], nghi_mh[d["id"]] = kq, ma
                 het = het or str(kq).startswith("hết hạn mức")
+                ly_tk.append(_ly_do_nghi(d, ma, kq) if str(kq).startswith("hết hạn mức") else {})
                 lydo = kq
             if not da_thu:   # mô hình ngừng, cả nhóm đã gỡ hoặc ngừng (Đ1, Đ2)
                 bo_qua.append({"nguon": "Mô hình đã chọn", "lydo": lydo})
             ghim_hong = {"khoa": khoa or mohinh_id, "ma": ma, "het_hanmuc": het, "lydo": "hết hạn mức" if het else lydo}
+            if ly_tk and all(ly_tk):   # P3b: chỉ vì tài khoản đang tạm nghỉ
+                ghim_hong.update(min(ly_tk, key=lambda x: x["den"] or "9"))
         for d in ds:
             if chi_nguon_id and d["id"] != chi_nguon_id:
                 continue
@@ -676,8 +687,11 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
             if isinstance(kq, dict):
                 mh = d["mohinh"] or {}
                 # Y36c: lượt thường (chưa ghim), mô hình mặc định của nguồn đứng trước hết hạn mức, đã sang hãng khác
-                md_hong = ({**mo_ta_het(het_dau["id"], (het_dau["mohinh"] or {}).get("ma")), "nguon_id": het_dau["id"], "het_hanmuc": True}
-                           if not ghim_hong and het_dau and dangnhap_goi.loai_nguon(het_dau) != dangnhap_goi.loai_nguon(d) else None)
+                md_hong = None
+                if not ghim_hong and het_dau and dangnhap_goi.loai_nguon(het_dau) != dangnhap_goi.loai_nguon(d):
+                    ma0 = (het_dau["mohinh"] or {}).get("ma")
+                    md_hong = {**mo_ta_het(het_dau["id"], ma0), "nguon_id": het_dau["id"], "het_hanmuc": True,
+                               **_ly_do_nghi(het_dau, ma0, nghi.get(het_dau["id"]))}   # P3b
                 return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
                         "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "mohinh_bao": kq.get("mohinh_bao"),
                         "ghim_hong": ghim_hong, "md_hong": md_hong, "ghim_khoa": None, "bo_qua": bo_qua,
