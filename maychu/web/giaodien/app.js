@@ -513,7 +513,6 @@ document.addEventListener('keydown', ev => { const e = ev.target;
   if (ev.key === 'Enter' && e.id === 'ma-claude') danMaClaude();
   if (ev.key === 'Escape') { dongHop(); dongTha(); ve(); } });
 document.addEventListener('input', ev => { if (ev.target.closest && ev.target.closest('#tc-tim')) veDsHt(); });
-setInterval(() => { if (S.g !== '01') demSo(); }, 60000);
 setInterval(() => {   // phiên 30 ngày (QĐ90): báo trước 05 phút; khoá đăng nhập hết thì bật lại nút
   if (S.g !== '01' && D.hetLuc) { const con = Date.parse(D.hetLuc) - Date.now();
     if (con <= 0) { S.g = '01'; S.dn = 'hethan'; S.k = 'binhthuong'; ve(); } else if (con <= 5 * 60e3 && S.k === 'binhthuong') { S.k = 'saphethan'; ve(); } }

@@ -140,6 +140,16 @@ class KiemChuong(unittest.TestCase):
         self.assertEqual(self._mo(), [])
         self.assertEqual(self._sql("Dulieu_Chinh", "SELECT lydo_dong FROM canhbao")[0][0], "Sao lưu đã xong lúc 02:02")
 
+    def test_sao_luu_loi_tu_hom_truoc(self):   # U6 S3 (K-TB3)
+        hom_qua = (datetime.now(MUIGIO_VN) - timedelta(days=1)).replace(hour=2, minute=0, second=5, microsecond=0)
+        self._saoluu(hom_qua.isoformat(timespec="seconds"), loi=True)
+        tb.quet_saoluu(self.t)
+        self.assertEqual(tb.danh_sach(thumuc=self.t)["ds"][0]["chu"],
+                         f"Sao lưu không xong từ 02:00 ngày{NB}{hom_qua:%d}/{hom_qua:%m}")
+        self._saoluu(_luc(), loi=True)   # hôm nay vẫn lỗi: giữ 01 dòng, giờ lượt lỗi đầu
+        tb.quet_saoluu(self.t)
+        self.assertEqual(len(tb.danh_sach(thumuc=self.t)["ds"]), 1)
+
     def test_o_cung_va_tep_hoan_doi(self):
         self._sql("Dulieu_Chinh", "INSERT INTO canhbao (id, loai, nguong, giatri, khoa_chongtrung, trangthai, tao_luc)"
                                   " VALUES (?, 'sukien', 100, 240, 'swap_vuot_nguong', 'moi', ?)", (maso.tao(), _luc()))
@@ -205,6 +215,7 @@ class KiemChuong(unittest.TestCase):
         self.assertEqual((x["ocung_vuot"]["di"], x["ocung_vuot"]["cuon"], x["ocung_vuot"]["noi"]), ("03", "o-maychu", "Bảng điều hành › Máy chủ"))
         self.assertEqual((x["banmoi"]["di"], x["banmoi"]["noi"], x["banmoi"]["icon"]), ("capnhat", "Cài đặt › Cập nhật", "cloud-download"))
         self.assertIn("Tài" + NB + "khoản" + NB + "1", x["goi_hetphien"]["chu"])   # nối không ngắt (Z7b)
+        self.assertTrue(x["goi_hetphien"]["chu"].endswith("đăng" + NB + "nhập"))   # U6 S2
         self.assertIn("05" + NB + "ngày", x["khoa_saphethan"]["chu"])
         self.assertEqual(tb._chu("swap_vuot_nguong", "swap_vuot_nguong", {"giatri": 240, "nguong": 100}, {}, {}).replace(NB, " "),
                          "Máy chủ dùng tệp hoán đổi 240 MB, quá 100 MB")
@@ -252,6 +263,9 @@ class KiemChuong(unittest.TestCase):
                   ".mb #tha-chuong{width:auto;max-height:70vh}", ".tin-n{border-color:#A9C1F7}"):
             self.assertIn(c, html)
         self.assertNotIn("Cảnh báo mới", html)
+        self.assertNotIn(".mb .vi-tri .tha{", html)   # U6 S1: điện thoại dùng .mb .tha (fixed, cách 02 mép 08) như 0.7.1
+        self.assertIn(".mb .tha{position:fixed;left:8px;right:8px;width:auto;top:120px}", html)
+        self.assertEqual(js.count("demSo(); }, 60"), 1)   # 01 vòng 60 giây
         lich = (GOC / "maychu/hethong/giamsat/lich.py").read_text(encoding="utf-8")
         for c in ("thongbao.quet)", "thongbao.quet_maychu)", "thongbao.quet_saoluu)", "NHIP_THONGBAO_GIAY = 600"):
             self.assertIn(c, lich)

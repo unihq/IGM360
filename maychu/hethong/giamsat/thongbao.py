@@ -265,7 +265,7 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
     sau = khoa.split(":", 1)[1] if ":" in khoa else ""
     gt, ng = d["giatri"], d["nguong"]
     if loai == "goi_hetphien":
-        return f"{_ten_goi(sau)} hết phiên đăng nhập"
+        return f"{_ten_goi(sau)} hết phiên {_nb('đăng nhập')}"
     if loai == "hanmuc_tuan":
         return f"{_ten_goi(sau)} đã dùng {gt}% {_nb('hạn mức tuần')}"
     if loai in ("khoa_hethan", "khoa_saphethan"):
@@ -275,7 +275,9 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"{ten} {_nb('hết hạn')} hôm nay" if not gt else f"{ten} còn {_nb(f'{gt:02d} ngày')} {_nb('hết hạn')}"
     if loai == "saoluu_loi":
         luc = gio_sl.get(d["dong_nguon_id"]) or d["tao_luc"] or ""
-        return f"Sao lưu lúc {luc[11:16]} không xong"
+        if luc[:10] == datetime.now(MUIGIO_VN).date().isoformat():
+            return f"Sao lưu lúc {luc[11:16]} không xong"
+        return f"Sao lưu không xong từ {luc[11:16]} {_nb(f'ngày {luc[8:10]}/{luc[5:7]}')}"   # S3 (K-TB3): lỗi từ hôm trước
     if loai == "ocung_vuot":
         return f"Ổ cứng máy chủ dùng {gt}%, quá {_nb(f'ngưỡng {ng}%')}"
     if loai == "swap_vuot_nguong":
