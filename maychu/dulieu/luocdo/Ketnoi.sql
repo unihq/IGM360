@@ -18,13 +18,14 @@ CREATE TABLE IF NOT EXISTS hoptin (
   lonap_id TEXT,
   trung INTEGER,
   trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('moi', 'dangxuly', 'xong', 'loi')),
-  so_lan_thu INTEGER
+  so_lan_thu INTEGER,
+  UNIQUE (nguon, ma_sukien)
 );
 
 -- K01 Kết nối: 01 dòng = 01 tài khoản kết nối
 CREATE TABLE IF NOT EXISTS ketnoi (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -68,7 +69,7 @@ CREATE TABLE IF NOT EXISTS lenh_day (
 -- K04 Webhook: 01 dòng = 01 webhook × phiên bản
 CREATE TABLE IF NOT EXISTS webhook (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
@@ -88,7 +89,7 @@ CREATE TABLE IF NOT EXISTS webhook (
 -- K05 Theo dõi trang: 01 dòng = 01 trang được theo dõi
 CREATE TABLE IF NOT EXISTS theodoi_trang (
   id TEXT PRIMARY KEY NOT NULL,
-  ma TEXT,
+  ma TEXT NOT NULL,
   ten TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,

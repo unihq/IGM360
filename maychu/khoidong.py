@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from maychu.dulieu import khoitao
@@ -75,12 +75,21 @@ async def dau_bao_ve(request, call_next):
     res.headers["X-Frame-Options"] = "DENY"
     res.headers["X-Content-Type-Options"] = "nosniff"
     res.headers["Referrer-Policy"] = "no-referrer"
+    if request.url.path.startswith("/tainguyen/"):
+        # Y17 (b): trình duyệt luôn hỏi lại máy chủ (không đổi thì trả 304), không tự giữ app.js cũ sau khi cập nhật
+        res.headers["Cache-Control"] = "no-cache"
     res.headers["Content-Security-Policy"] = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
                                               "img-src 'self' data:; font-src 'self' data:; frame-ancestors 'none'")
     return res
 
 
+# Y17 (b): đường tệp mã giao diện gắn số bản (`?v=`), cập nhật xong trình duyệt buộc tải tệp mới ngay lần mở đầu.
+TRANG_CHINH = (GIAODIEN / "index.html").read_text(encoding="utf-8").replace(
+    'src="/tainguyen/icon.js"', f'src="/tainguyen/icon.js?v={PHIENBAN}"').replace(
+    'src="/tainguyen/app.js"', f'src="/tainguyen/app.js?v={PHIENBAN}"')
+
+
 @app.get("/")
-def trang_chinh() -> FileResponse:
-    return FileResponse(GIAODIEN / "index.html", headers={"Cache-Control": "no-store"})
+def trang_chinh() -> HTMLResponse:
+    return HTMLResponse(TRANG_CHINH, headers={"Cache-Control": "no-store"})
 

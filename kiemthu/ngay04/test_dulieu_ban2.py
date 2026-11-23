@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 04 (phần dữ liệu): lược đồ bản 2, nâng cấp file bản 1, cảnh báo tệp hoán đổi."""
+"""Bài kiểm ngày 04 (phần dữ liệu): lược đồ bản 2, nâng cấp file bản 1 (nay nâng thẳng lên bản hiện hành), cảnh báo tệp hoán đổi."""
 import sqlite3
 import tempfile
 import unittest
@@ -52,7 +52,7 @@ def dung_ban1(thumuc: Path) -> None:
         cn = ketnoi.mo(ten, thumuc)
         try:
             cn.execute("PRAGMA foreign_keys=OFF")
-            cn.execute(f"DROP TABLE {bang}")
+            cn.execute(f"DROP TABLE {khoitao.DOI_TEN.get(3, {}).get((ten, bang), bang)}")  # bảng đổi tên ở bản 3
             cn.execute(ddl)
             cn.execute("PRAGMA user_version=1")
         finally:
@@ -77,26 +77,26 @@ class KiemBan2(unittest.TestCase):
         return ketnoi.mo(ten, self.thumuc)
 
     def test_file_moi_ban_2_va_cot_bat_buoc(self):
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 104)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
         for ten in ketnoi.CAC_FILE:
             cn = self.mo(ten)
             try:
-                self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], 2)
+                self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)
             finally:
                 cn.close()
         cn = self.mo("Bot")
         try:
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh (id) VALUES (?)", (maso.tao(),))
+                cn.execute("INSERT INTO kenh_nhan (id, ma) VALUES (?, 'KN01')", (maso.tao(),))
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, 'cahai')", (maso.tao(),))
-            cn.execute("INSERT INTO kenh (id, vai) VALUES (?, 'bot_giaoviec')", (maso.tao(),))
+                cn.execute("INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, 'KN01', 'cahai')", (maso.tao(),))
+            cn.execute("INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, 'KN01', 'bot_giaoviec')", (maso.tao(),))
         finally:
             cn.close()
         cn = self.mo("Dulieu_Chinh")
         try:
             ma = maso.tao()
-            cn.execute("INSERT INTO taikhoan (id, loai) VALUES (?, 'nganhang')", (ma,))
+            cn.execute("INSERT INTO taikhoan (id, ma, loai) VALUES (?, 'TK01', 'nganhang')", (ma,))
             self.assertEqual(cn.execute("SELECT trangthai FROM taikhoan WHERE id = ?", (ma,)).fetchone()[0], "dung")
             for bang in ("barcode", "combo_thanhphan", "ghep_mangoai"):
                 with self.assertRaises(sqlite3.IntegrityError):
@@ -113,10 +113,10 @@ class KiemBan2(unittest.TestCase):
         try:
             self.assertIn("thietbi", {r[1] for r in cn.execute("PRAGMA table_info(phien_truycap)")})
             ma = maso.tao()
-            cn.execute("INSERT INTO nguoidung (id, ma) VALUES (?, 'chu')", (ma,))
+            cn.execute("INSERT INTO nguoidung (id, ma, nguoi_id) VALUES (?, 'chu', 'n1')", (ma,))
             self.assertEqual(cn.execute("SELECT trangthai FROM nguoidung WHERE id = ?", (ma,)).fetchone()[0], "dung")
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO nguoidung (id, trangthai) VALUES (?, NULL)", (maso.tao(),))
+                cn.execute("INSERT INTO nguoidung (id, ma, nguoi_id, trangthai) VALUES (?, 'chu2', 'n2', NULL)", (maso.tao(),))
         finally:
             cn.close()
 
@@ -125,13 +125,13 @@ class KiemBan2(unittest.TestCase):
         ma_kenh, ma_tk, ma_n02 = maso.tao(), maso.tao(), maso.tao()
         cn = self.mo("Bot")
         try:
-            cn.execute("INSERT INTO kenh (id, ten, vai) VALUES (?, 'Kênh báo anh', 'anh_nhan_baocao')", (ma_kenh,))
-            cn.execute("INSERT INTO lich_baocao (id, kenhnhan_id) VALUES (?, ?)", (maso.tao(), ma_kenh))
+            cn.execute("INSERT INTO kenh (id, ma, ten, vai) VALUES (?, 'KN01', 'Kênh báo anh', 'anh_nhan_baocao')", (ma_kenh,))
+            cn.execute("INSERT INTO lich_baocao (id, ma, kenhnhan_id) VALUES (?, 'LICH01', ?)", (maso.tao(), ma_kenh))
         finally:
             cn.close()
         cn = self.mo("Dulieu_Chinh")
         try:
-            cn.execute("INSERT INTO taikhoan (id, loai, sotk_4socuoi) VALUES (?, 'banhang', '1234')", (ma_tk,))
+            cn.execute("INSERT INTO taikhoan (id, ma, loai, sotk_4socuoi) VALUES (?, 'TK01', 'banhang', '1234')", (ma_tk,))
         finally:
             cn.close()
         cn = self.mo("Nhatky")
@@ -139,15 +139,15 @@ class KiemBan2(unittest.TestCase):
             cn.execute("INSERT INTO theodoi_maychu (id, ram_dung) VALUES (?, 639)", (ma_n02,))
         finally:
             cn.close()
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 104)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
         cn = self.mo("Bot")
         try:
-            self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], 2)
-            self.assertEqual(cn.execute("SELECT ten, vai FROM kenh WHERE id = ?", (ma_kenh,)).fetchone(),
+            self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)
+            self.assertEqual(cn.execute("SELECT ten, vai FROM kenh_nhan WHERE id = ?", (ma_kenh,)).fetchone(),
                              ("Kênh báo anh", "anh_nhan_baocao"))
             self.assertEqual(cn.execute("PRAGMA foreign_key_check").fetchall(), [])
             with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại tới bảng dựng lại vẫn chạy
-                cn.execute("INSERT INTO lich_baocao (id, kenhnhan_id) VALUES (?, 'khongco')", (maso.tao(),))
+                cn.execute("INSERT INTO lich_baocao (id, ma, kenhnhan_id) VALUES (?, 'LICH02', 'khongco')", (maso.tao(),))
         finally:
             cn.close()
         cn = self.mo("Dulieu_Chinh")
@@ -163,14 +163,14 @@ class KiemBan2(unittest.TestCase):
         finally:
             cn.close()
         for ten in ketnoi.CAC_FILE:
-            self.assertTrue((self.thumuc / "saoluu" / "truoc_nangcap_v02" / f"{ten}.sqlite3").exists())
+            self.assertTrue((self.thumuc / "saoluu" / "truoc_nangcap_v03" / f"{ten}.sqlite3").exists())
 
     def test_nang_cap_loi_thi_tra_nguyen_trang(self):
         dung_ban1(self.thumuc)
         ma = maso.tao()
         cn = self.mo("Bot")
         try:
-            cn.execute("INSERT INTO kenh (id, ten) VALUES (?, 'Kênh chưa có vai')", (ma,))
+            cn.execute("INSERT INTO kenh (id, ma, ten) VALUES (?, 'KN01', 'Kênh chưa có vai')", (ma,))
         finally:
             cn.close()
         with self.assertRaises(sqlite3.IntegrityError):

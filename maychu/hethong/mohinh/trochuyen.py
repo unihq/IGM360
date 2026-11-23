@@ -55,7 +55,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None) -
     try:
         if "loi" in kq:
             ly = "; ".join(f"{b['nguon']}: {b['lydo']}" for b in kq["bo_qua"])
-            tl = _ghi_tin(cn, hoithoai_id, "hethong", kq["loi"] + (f" ({ly})" if ly else "") + ". Mở màn Model để kiểm nguồn AI.")
+            tl = _ghi_tin(cn, hoithoai_id, "hethong", kq["loi"] + (f" ({ly})" if ly else "") + ". Mở mục Mô hình AI để kiểm nguồn AI.")
         else:
             tl = _ghi_tin(cn, hoithoai_id, "ai", kq["chu"], kq["nhatky_ai_id"])
             tl["nguon"] = kq["nguon"]

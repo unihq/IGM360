@@ -1,4 +1,4 @@
-// IGM360 giao diện: màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt, 13 Model, 08 Trò chuyện AI (bản vẽ đã duyệt
+// IGM360 giao diện: màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt, 13 Mô hình AI, 08 Trò chuyện AI (bản vẽ đã duyệt
 // QĐ88, QĐ94; icon theo từ điển QĐ91; chặn đoán mật khẩu, phiên 30 ngày QĐ90).
 // Cách bật tắt khối theo trạng thái (data-s) giữ như bản vẽ; số liệu lấy từ máy chủ.
 'use strict';
@@ -19,10 +19,12 @@ const homNay = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10
 const luc = iso => !iso ? '' : (iso.slice(0, 10) === homNay() ? gio(iso) + ' hôm nay' : ngay(iso) + ' · ' + gio(iso));
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 // Không tách cụm từ khi xuống dòng (chữ do máy chủ gửi): nối các cụm thường gặp bằng dấu cách không ngắt
-const CUM = ['giai đoạn', 'giá trị', 'ứng dụng', 'gấp đôi', 'tài khoản', 'mật khẩu', 'phần mềm', 'sao lưu', 'trò chuyện',
+// U4 (S1, S3): cụm "mục + tên màn" dài hơn đặt trước để nối trước khi cụm ngắn hơn được nối.
+const CUM = ['mục Chờ duyệt', 'mục Két khoá', 'mục Bộ mã chung', 'mục Nguồn dữ liệu', 'mục Mô hình AI', 'giai đoạn', 'giá trị', 'ứng dụng', 'gấp đôi', 'tài khoản', 'mật khẩu', 'phần mềm', 'sao lưu', 'trò chuyện',
   'đăng nhập', 'cập nhật', 'khoá API', 'Google Drive', 'tỷ giá', 'hạn mức', 'nguồn AI', 'việc AI', 'thông số', 'mỗi ngày',
-  'bản mới', 'máy chủ', 'Cửa chờ', 'Két khoá', 'đề xuất', 'chờ anh', 'tự áp dụng', 'thao tác', 'hằng ngày', 'quy đổi',
-  'tham khảo', 'ưu tiên', 'gì mới', 'Cài đặt', 'Thông số', 'dự phòng', 'cài máy'];
+  'bản mới', 'máy chủ', 'Chờ duyệt', 'Két khoá', 'đề xuất', 'chờ anh', 'tự áp dụng', 'thao tác', 'hằng ngày', 'quy đổi',
+  'tham khảo', 'ưu tiên', 'gì mới', 'Cài đặt', 'Thông số', 'dự phòng', 'cài máy',
+  'Mở trang', 'TikTok Shop', 'mã sàn'];   // N12, T1
 // Số luôn đi liền chữ đứng sau (04 dòng, 1.240 dòng); "tài khoản 01", "ưu tiên 2", "bản 0.5.0", "02 lớp" không tách.
 const cum = s => { let r = esc(s).replace(/(?<![\p{L}\d])(\d+(?:[.,]\d+)*) (?=\p{L})/gu, '$1&nbsp;');
   CUM.forEach(c => { r = r.split(c).join(c.replace(/ /g, '&nbsp;')); });
@@ -129,7 +131,7 @@ async function demSo() {
 }
 
 // ---- Màn 09 ngăn Thông số
-const NHOM_ICO = {'Tiền và giá': 'nhom0', 'Máy chủ và bảo mật': 'nhom1', 'AI': 'nhom2', 'Báo cáo và lấy dữ liệu': 'nhom3'};
+const NHOM_ICO = {'Tài chính': 'nhom0', 'Máy chủ và bảo mật': 'nhom1', 'AI': 'nhom2', 'Báo cáo, dữ liệu': 'nhom3'};
 const giaiDoanSau = t => /^Từ GĐ \d/.test(t.khong_sua || '');
 const hienGt = t => t.giatri_chu === null || t.giatri_chu === '' ? null
   : ((t.kieu === 'so' ? soVN(t.giatri_chu) : t.giatri_chu) + (t.donvi && t.kieu === 'so' ? ' ' + t.donvi : ''));
@@ -231,6 +233,7 @@ function veCapNhat(d) {
   $('#ban-hien').textContent = d.ban_dang; $$('.cn-dang').forEach(e => e.textContent = d.ban_dang);
   $$('.cn-moi').forEach(e => e.textContent = d.ban_moi || '');
   $('#cn-luc').textContent = d.luc_kiem ? luc(d.luc_kiem) : 'chưa kiểm';
+  $('#cn-loi').textContent = d.loi ? ' · ' + d.loi + '.' : '';   // Y17 (d): lỗi kiểm bản mới hiện cố định cạnh giờ kiểm
   const moi = d.thaydoi.find(m => m.ban === d.ban_moi) || d.thaydoi[0] || {dong: []};
   $('#cn-thaydoi').innerHTML = moi.dong.slice(0, 5).map(x => '<div class="dong t13">' + ICON.check + '<span>' + cum(x) + '</span></div>').join('');
   const tomTat = ban => (d.tomtat || {})[ban] || (ban === d.ban_dang ? 'Bản đang dùng' : 'Bản đã dùng');   // dòng "Tóm tắt:" ở THAYDOI.md (N07)
@@ -238,7 +241,7 @@ function veCapNhat(d) {
   $('#ls-capnhat').innerHTML = d.lichsu.map(x => '<div class="hang" style="' + cot + '"><b class="so">' + esc(x.ban)
     + '</b><span data-l="Nội dung">' + cum(tomTat(x.ban)) + '</span><span data-l="Ngày cài" class="so">' + ngay(x.luc) + '</span></div>').join('');
   $('.tab[data-tab="capnhat"] .cham-xanh').hidden = !d.co_ban_moi;
-  if (d.loi) bao(d.loi + '.'); ve();
+  ve();
 }
 function moCapNhat() {
   const viec = D.capnhat.so_viec_ai;
@@ -260,8 +263,16 @@ async function capNhat(cheDo) {
   setTimeout(cho, 5000);
 }
 
-// ---- Màn 13 Model: thẻ gói Claude, gói ChatGPT, khoá API; bảng mô hình mặc định
-const GOI_TEN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT · qua Codex'};
+// ---- Màn 13 Mô hình AI: thẻ gói Claude, gói ChatGPT, khoá API; bảng mô hình mặc định
+const GOI_TEN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT · qua&nbsp;Codex'};   // T2
+const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'};
+// N15: tên mô hình đọc được từ mã mô hình (claude-sonnet-4-6 → Claude Sonnet 4.6); chưa có lần gọi nào ghi mô hình
+// thì ghi "mô hình mặc định" (gói chạy mô hình mặc định của gói).
+const tenMoHinh = ma => { if (!ma) return 'mô hình mặc định'; const p = String(ma).split(/[-_\s]+/);
+  const chu = p.filter(x => !/^\d+(\.\d+)*$/.test(x)).map(x => /^gpt$/i.test(x) ? 'GPT' : x.charAt(0).toUpperCase() + x.slice(1));
+  const so = p.filter(x => /^\d+(\.\d+)*$/.test(x) && x.length < 6).join('.');
+  return chu.join(' ') + (so ? ' ' + so : ''); };
+const dongNguon = n => (n.goi ? GOI_NGAN[n.goi] : n.ten) + ' · ' + tenMoHinh(n.mohinh_gannhat);
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
   : '<span class="logo-cho" data-hang="ChatGPT" title="Logo ChatGPT: chờ file chính thức" style="width:40px;height:40px;border-radius:10px"><span>LOGO</span></span>';
@@ -277,19 +288,19 @@ function thanhHm(ten, v) { const p = pct(v); return '<div class="hm"><span class
 function theGoi(g, ds, nguon, uu) {
   const dn = D.dn[g] || {};
   const coTk = ds.some(x => x.da_noi);
-  let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + GOI_TEN[g] + '</div><div class="t12 phu">Trả cố định theo tháng'
+  let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + GOI_TEN[g] + '</div><div class="t12 phu">Phí cố định tháng'
     + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>';
   ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
     const chuaCo = g === 'chatgpt' && !coTk && !x.khong_ro && ds.length === 1;   // N10: bản vẽ "Chưa có tài khoản"
     h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>'
-      + (chuaCo ? 'Chưa có tài khoản' : 'Tài khoản ' + x.taikhoan) + '</b><div class="t12 phu">'
+      + (chuaCo ? 'Chưa có tài&nbsp;khoản' : 'Tài khoản ' + x.taikhoan) + '</b><div class="t12 phu">'
       + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : chuaCo ? 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng' : 'Chưa đăng nhập') + '</div></div>'
       + (x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>' : '<span class="nhan n-xem"><i></i>Chưa đăng nhập</span>') + '</div>';
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio) + thanhHm('Tuần này', n.tyle_tuan)
       + '<div class="t12 phu">' + (n.do_luc ? 'Đo lúc ' + esc(luc(n.do_luc)) + (n.datlai_5gio_luc ? ' · đặt lại 05 giờ lúc ' + esc(gio(n.datlai_5gio_luc)) : '') : 'Chưa đo: số hiện sau lần gọi AI đầu tiên') + '</div></div>'; });
   if (dn.url) {
     h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + ' · ' + GOI_TEN[g] + '</div>'
-      + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài khoản Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
+      + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài&nbsp;khoản&nbsp;Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
       + '<div class="dong lk"><span class="t12 phu f1 cat">' + esc(dn.url.replace(/^https?:\/\//, '')) + '</span><a class="btn btn-phu nho" href="' + esc(dn.url) + '" target="_blank" rel="noopener noreferrer">' + ICON['external-link'] + 'Mở trang</a></div>';
     if (g === 'claude') h += '<div class="buoc-dn"><span class="so-b">2</span><span class="f1">Trang sẽ hiện 01 mã. Chép mã, dán vào ô dưới.</span></div>'
       + '<div class="dong"><div class="o-nhap f1' + (dn.loi ? ' loi' : '') + '">' + ICON.hash + '<input id="ma-claude" placeholder="Dán mã ở đây" autocomplete="off"></div><button class="btn btn-chinh" data-mc-xacnhan>Xác nhận</button></div>'
@@ -308,18 +319,20 @@ function theGoi(g, ds, nguon, uu) {
 function veMoHinh() {
   const d = D.md; $('#md-songsong').textContent = hai(Number(d.so_viec_ai_songsong || 3));
   const khoa = d.nguon.filter(n => n.loai === 'khoa_api');
-  // Gói chưa có dòng G06 (chưa đăng nhập): hiện ưu tiên sẽ nhận khi đăng nhập (sau nguồn cuối, theo thứ tự Claude, ChatGPT)
-  let cuoi = Math.max(0, ...d.nguon.map(n => n.uutien || 0)); const uu = {};
-  ['claude', 'chatgpt'].forEach(g => { uu[g] = d.nguon.filter(n => n.goi === g).map(n => n.uutien).sort((a, b) => a - b)[0] || ++cuoi; });
+  // N10 b, QĐ160: số ưu tiên = thứ tự dùng thật (máy chủ đã xếp gói trước Khoá API). Gói chưa đăng nhập (chưa có dòng
+  // G06) hiện số sẽ nhận: ngay sau các gói đã có, vẫn trước mọi Khoá API.
+  let k = 0; const uu = {};
+  d.nguon.filter(n => n.loai !== 'khoa_api').forEach(n => { ++k; if (n.goi && !(n.goi in uu)) uu[n.goi] = k; });
+  ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
-    + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API AI</div><div class="t12 phu">Trả tiền thật theo lượt</div></div></div>'
-    + (khoa.length ? khoa.map(n => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(n.ten) + '</b><div class="t12 phu">Cất ở Két&nbsp;khoá · ưu&nbsp;tiên&nbsp;' + n.uutien + '</div></div>'
-        + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt trần tiền</span>') + '</div>').join('')
-      : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở Két khoá (có ở bản sau).</div>')
-    + '<div class="kv"><span>Tiền thật tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
+    + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API AI</div><div class="t12 phu">Phí theo lượt</div></div></div>'
+    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(n.ten) + '</b><div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
+        + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt hạn mức</span>') + '</div>').join('')
+      : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở mục Két khoá (có ở bản sau).</div>')
+    + '<div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
       + '</b><span class="so-tk">' + vnd(d.thang.tien_that_usd, d.ty_gia_usd) + '</span></span></div>'
     + '</div>';
-  const VIEC = ['Trò chuyện AI', 'Trích văn bản (đường D)', 'Đề xuất ở Cửa chờ', 'Viết báo cáo sáng'], dau = d.nguon.find(n => n.trangthai === 'dung');
+  const VIEC = ['Trò chuyện AI', 'Trích văn bản (đường D)', 'Đề xuất ở mục Chờ duyệt', 'Viết báo cáo sáng'], dau = d.nguon.find(n => n.trangthai === 'dung');
   const cot = 'grid-template-columns:1.4fr 1fr 1fr';
   $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span></div>'
     + VIEC.map(v => '<div class="hang" style="' + cot + '"><b class="rong-mb">' + v + '</b><span data-l="Mô hình">Mặc định của nguồn</span><span data-l="Nguồn">'
@@ -357,7 +370,7 @@ function veDsHt() {
 }
 function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
-  if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Model</button></div>';
+  if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
     + '<div class="tn-meta">' + cum(x.nguon || 'Trợ lý AI') + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
@@ -367,7 +380,7 @@ async function napTroChuyen() {
   try { D.ht = (await api('/trochuyen')).hoithoai; veDsHt();
     const md = D.md || await api('/mohinh').catch(() => null); if (md) D.md = md;
     const dau = D.md && D.md.nguon.find(n => n.trangthai === 'dung');
-    $('#tc-nguon').innerHTML = dau ? esc(dau.ten) : 'Chưa có nguồn AI';
+    $('#tc-nguon').innerHTML = dau ? cum(dongNguon(dau)) : 'Chưa có nguồn AI';   // N15: gói · mô hình
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
 }
 async function moHt(id) { const d = await api('/trochuyen/' + encodeURIComponent(id)); D.htId = id; $('#tc-tieude').textContent = d.tieude; veTin(d.tinnhan); veDsHt(); }
@@ -415,7 +428,8 @@ document.addEventListener('click', async ev => {
   else if ('locChua' in d) { $('#ds-thongso').classList.toggle('chi-chua'); t.classList.toggle('on'); }
   else if (d.thuhoi) xacnhan('Thu hồi phiên này?', 'Máy đó phải đăng nhập lại mới dùng tiếp được.', 'Thu hồi', async () => {
     try { await api('/phien/' + encodeURIComponent(d.thuhoi) + '/thuhoi', {}); bao('Đã thu hồi phiên.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
-  else if ('kiemtra' in d) { try { const k = await api('/capnhat/kiemtra', {}); veCapNhat(k); if (!k.loi) bao(k.co_ban_moi ? 'Có bản mới ' + k.ban_moi + '.' : 'Đã kiểm tra: chưa có bản mới.'); } catch (e) { /* */ } }
+  else if ('kiemtra' in d) { try { const k = await api('/capnhat/kiemtra', {}); veCapNhat(k); if (!k.loi) bao(k.co_ban_moi ? 'Có bản mới ' + k.ban_moi + '.' : 'Đã kiểm tra: chưa có bản mới.'); }
+    catch (e) { bao('Kiểm tra lại chưa được: ' + (e.status ? e.message : 'mất kết nối máy chủ') + '.'); } }   // Y17 (c)
   else if ('capnhat' in d) moCapNhat();
   else if ('cnngay' in d) { await capNhat('ngay'); }
   else if ('cncho' in d) { await capNhat('cho'); }

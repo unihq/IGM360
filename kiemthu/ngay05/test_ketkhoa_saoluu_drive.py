@@ -145,7 +145,7 @@ class KiemNgay05(unittest.TestCase):
     # ---- Google Drive ----
     def noi_drive(self, gia):
         drive.luu_ungdung(ID_UD, "bimat-ungdung", self.thumuc)
-        url = drive.bat_dau("https://igm.vidu.vn/api/ketnoi/drive/vetrang", "nguoi-1", self.thumuc)
+        url = drive.bat_dau("https://igm.vidu.vn/api/ketnoi/drive/vetrang", "01JDRVTEST0000000000000000", self.thumuc)
         q = parse_qs(urlparse(url).query)
         self.assertEqual(q["scope"], [drive.PHAMVI])
         self.assertEqual(q["access_type"], ["offline"])
@@ -156,7 +156,7 @@ class KiemNgay05(unittest.TestCase):
         with self.assertRaises(ValueError):
             drive.luu_ungdung("sai", "x", self.thumuc)
         with self.assertRaises(LookupError):
-            drive.bat_dau("https://igm.vidu.vn/v", "nguoi-1", self.thumuc)
+            drive.bat_dau("https://igm.vidu.vn/v", "01JDRVTEST0000000000000000", self.thumuc)
         gia = GoogleGia()
         st = self.noi_drive(gia)
         self.assertTrue(drive.dang_noi(self.thumuc))
@@ -172,7 +172,7 @@ class KiemNgay05(unittest.TestCase):
 
     def test_tu_choi_khi_google_cap_sai_quyen(self):
         drive.luu_ungdung(ID_UD, "bimat-ungdung", self.thumuc)
-        url = drive.bat_dau("https://igm.vidu.vn/v", "nguoi-1", self.thumuc)
+        url = drive.bat_dau("https://igm.vidu.vn/v", "01JDRVTEST0000000000000000", self.thumuc)
         st = parse_qs(urlparse(url).query)["state"][0]
         with self.assertRaises(RuntimeError):
             drive.ve_trang("ma-tu-google", st, self.thumuc,

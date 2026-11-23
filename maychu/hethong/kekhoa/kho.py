@@ -6,14 +6,16 @@ Màn 09 ngăn Két khoá (ngày 05) chỉ đọc danh sách không có bản mã
 from datetime import date, datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import aibam, ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import khoachu
 
 
 def cat(dichvu: str, giatri: str, thumuc: Path | None = None, *, ketnoi_id=None, han=None,
-        nguoi_nhap: str = "anh", cn=None) -> str:
-    """Cất 01 khoá; trả về id dòng F03. Truyền `cn` để ghi trong giao dịch của người gọi."""
+        nguoi_nhap: str = "hethong", cn=None) -> str:
+    """Cất 01 khoá; trả về id dòng F03. Truyền `cn` để ghi trong giao dịch của người gọi.
+    `nguoi_nhap`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
+    aibam.kiem(nguoi_nhap)
     ma = maso.tao()
     dong = (ma, dichvu, ketnoi_id, khoachu.ma_hoa(giatri.encode(), thumuc), giatri[-4:], han, nguoi_nhap, "dung")
     sql = ("INSERT INTO kekhoa (id, dichvu, ketnoi_id, banma, kytu_cuoi, han, nguoi_nhap, trangthai)"

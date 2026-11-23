@@ -154,7 +154,7 @@ def lichsu_thongso(ten: str, p: dict = Depends(can_dang_nhap)):
 
 @router.post("/thongso/{ten}")
 def sua_thongso(ten: str, body: SuaThongSo, p: dict = Depends(can_dang_nhap)):
-    kq = thongso.dat(ten, body.giatri, body.hieuluc_tu, body.ghichu, nguoi=p["ten_dangnhap"])
+    kq = thongso.dat(ten, body.giatri, body.hieuluc_tu, body.ghichu, nguoi=p["nguoidung_id"])
     if "loi" in kq:
         raise HTTPException(400, kq)
     return kq
@@ -256,7 +256,7 @@ def xem_kekhoa(p: dict = Depends(can_dang_nhap)):
 def them_khoa(body: KhoaMoi, p: dict = Depends(can_dang_nhap)):
     if not body.giatri.strip() or not body.dichvu.strip() or body.dichvu in kho.NOIBO:
         raise HTTPException(400, "Thiếu tên dịch vụ hoặc giá trị khoá")
-    ma = kho.cat(body.dichvu.strip(), body.giatri.strip(), han=_kiem_han(body.han), nguoi_nhap=p["ten_dangnhap"])
+    ma = kho.cat(body.dichvu.strip(), body.giatri.strip(), han=_kiem_han(body.han), nguoi_nhap=p["nguoidung_id"])
     ghi_f04("kekhoa", "them", f"dịch vụ {body.dichvu.strip()}", nguoi_id=p["nguoidung_id"])
     return {"id": ma}
 
@@ -387,7 +387,7 @@ def goi_bat_dau(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
 @router.post("/mohinh/goi/claude/ma")
 def goi_dan_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
     _goi("claude", body.taikhoan)
-    kq = dangnhap_goi.dan_ma("claude", body.taikhoan, body.ma)
+    kq = dangnhap_goi.dan_ma("claude", body.taikhoan, body.ma, nguoi=p["nguoidung_id"])
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("claude", body.taikhoan), nguoi_id=p["nguoidung_id"])
@@ -397,7 +397,7 @@ def goi_dan_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
 @router.post("/mohinh/goi/chatgpt/hoi")
 def goi_hoi(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi("chatgpt", body.taikhoan)
-    kq = dangnhap_goi.hoi("chatgpt", body.taikhoan)
+    kq = dangnhap_goi.hoi("chatgpt", body.taikhoan, nguoi=p["nguoidung_id"])
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     if kq.get("xong"):

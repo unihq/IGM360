@@ -6,10 +6,10 @@ Thông số trống: không chặn lưu, phần mềm làm cách an toàn nhất
 from datetime import date, datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import aibam, ketnoi, maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 
-NHOM = ("Tiền và giá", "Máy chủ và bảo mật", "AI", "Báo cáo và lấy dữ liệu")
+NHOM = ("Tài chính", "Máy chủ và bảo mật", "AI", "Báo cáo, dữ liệu")   # QĐ139 (từ điển dòng 44)
 
 # ten, nhóm, nhãn, kiểu, đơn vị, mặc định, lựa chọn {giá trị: chữ}, câu khi trống
 DANHMUC = [
@@ -18,8 +18,8 @@ DANHMUC = [
     ("thue_quangcao_khautru", 0, "Khấu trừ thuế trên tiền nạp quảng cáo", "codong", "", "0", {"1": "Có", "0": "Không"}, ""),
     ("loai_gia_tygia", 0, "Loại tỷ giá dùng để quy đổi", "chu", "", "mua_chuyenkhoan",
      {"mua_chuyenkhoan": "Mua chuyển khoản", "ban": "Bán"}, ""),
-    ("cach_phanbo_chiphimua", 0, "Cách chia chi phí mua hàng", "chu", "", "theo_sochiec",
-     {"theo_sochiec": "Theo số chiếc", "theo_giatri": "Theo giá trị"}, ""),
+    ("cach_phanbo_chiphimua", 0, "Tiêu thức phân bổ", "chu", "", "theo_sochiec",
+     {"theo_sochiec": "Theo số lượng", "theo_giatri": "Theo giá trị"}, ""),
     ("nguong_ocung", 1, "Báo khi ổ cứng máy chủ dùng quá", "so", "%", "70", None, ""),
     ("nguong_cho_day_drive", 1, "Dữ liệu chờ đẩy lên Drive tối đa", "so", "GB", "5", None, ""),
     ("songay_giu_banghigoc_vps", 1, "Số ngày giữ bản ghi gốc trên máy chủ", "so", "ngày", None, None,
@@ -27,17 +27,17 @@ DANHMUC = [
     ("songay_baotruoc_khoa_hethan", 1, "Báo trước khi khoá kết nối hết hạn", "so", "ngày", "5", None, ""),
     ("so_viec_ai_songsong", 2, "Số việc AI chạy cùng lúc", "so", "việc", "3", None, ""),
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
-    ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tiền để AI được tự áp dụng", "so", "đ", None, None,
+    ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tự duyệt", "so", "đ", None, None,
      "GĐ 1: AI chỉ đề xuất, mọi việc chờ anh bấm."),
-    ("tran_tien_thang_khoa_api", 2, "Trần tiền mỗi tháng của khoá API", "so", "USD", None, None,
+    ("tran_tien_thang_khoa_api", 2, "Hạn mức chi tháng", "so", "USD", None, None,
      "Không gọi AI bằng khoá API, chỉ dùng gói"),
     ("nhip_gui_baocao", 3, "Nhịp gửi báo cáo định kỳ", "chu", "", None, {"hangngay": "Mỗi ngày", "hangtuan": "Mỗi tuần"},
      "Không gửi báo cáo định kỳ, tin báo sự kiện vẫn gửi"),
     ("nhip_lay_dulieu", 3, "Nhịp lấy dữ liệu", "danhsach", "", None, None,
-     "Không tự lấy, chỉ Lấy ngay ở Nguồn dữ liệu"),
+     "Không tự lấy, chỉ Lấy ngay ở mục Nguồn dữ liệu"),
 ]
 # Không sửa ở ngăn Thông số: giá xuất kho chưa cho đổi ở GĐ 1 (bản vẽ đợt 1); nhịp lấy đặt từng loại ở màn 11.
-KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulieu": "Đặt ở Nguồn dữ liệu",
+KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulieu": "Đặt ở mục Nguồn dữ liệu",
              "nguong_tien_ai_tuapdung": "Từ GĐ 2"}
 # Thông số của phần làm ở giai đoạn sau: hiện mờ, không tính vào số đã đặt / tổng (GĐ 1 AI chỉ đề xuất, thẻ duyệt
 # gửi cho mọi việc chờ; luồng Giám đốc sản phẩm quyết 20:55 ngày 21/11/2026).
@@ -134,8 +134,10 @@ def kiem_giatri(ten: str, giatri: str) -> str | None:
     return None
 
 
-def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "anh", thumuc: Path | None = None) -> dict:
-    """Thêm 01 phiên bản thông số. Ngày áp dụng phải sau ngày bắt đầu của dòng mới nhất (không chồng lấn)."""
+def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "hethong", thumuc: Path | None = None) -> dict:
+    """Thêm 01 phiên bản thông số. Ngày áp dụng phải sau ngày bắt đầu của dòng mới nhất (không chồng lấn).
+    `nguoi`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
+    aibam.kiem(nguoi)
     giatri = (giatri or "").strip()
     if ten in KHONG_SUA:
         return {"loi": KHONG_SUA[ten], "o": "giatri"}

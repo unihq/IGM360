@@ -3,6 +3,14 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.0
+Tóm tắt: Nền dữ liệu mới, tên gọi chuẩn, sửa lỗi nhỏ
+- Dữ liệu chuyển sang cấu trúc mới: sổ người chung, mã cố định cho danh mục, sẵn chỗ cho phân quyền tài khoản và thêm nguồn AI. Dữ liệu đang có được giữ nguyên, tự chuyển khi cập nhật.
+- Tên màn và nhãn đổi theo từ điển thuật ngữ: Chờ duyệt, Mô hình AI, Phí theo lượt, Phí cố định tháng, Hạn mức chi tháng.
+- Gói AI (phí cố định tháng) luôn được dùng trước Khoá API (phí theo lượt); số ưu tiên hiện đúng thứ tự dùng.
+- Cập nhật xong, trình duyệt tự tải giao diện mới, không cần xoá dữ liệu trang; nút Kiểm tra lại báo rõ khi có lỗi.
+- Chữ không còn bị tách cụm khi xuống dòng ở màn Mô hình AI, Trò chuyện AI; đầu khung trò chuyện ghi gói và mô hình đang dùng.
+
 ## 0.6.0
 Tóm tắt: Giao diện mới, tiền AI ra đồng Việt
 - Màn Đăng nhập, menu, Cài đặt, Model và Trò chuyện AI dựng lại đúng bản vẽ đã duyệt.

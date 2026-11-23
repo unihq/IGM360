@@ -37,11 +37,15 @@ def _hoi_ghcr() -> str | None:
     return so[-1] if so else None
 
 
-def _tai_thaydoi() -> list[dict]:
-    """Đọc THAYDOI.md trên kho mã (tệp không nằm trong ảnh máy chủ)."""
+def _tai_thaydoi_kq() -> tuple[list[dict], int]:
+    """Đọc THAYDOI.md trên kho mã (tệp không nằm trong ảnh máy chủ). Trả (các mục, mã trả về)."""
     with httpx.Client(timeout=10, follow_redirects=True) as c:
         r = c.get(f"https://raw.githubusercontent.com/{KHO_MA}/main/THAYDOI.md")
-    return phan_tich_thaydoi(r.text) if r.status_code == 200 else []
+    return (phan_tich_thaydoi(r.text) if r.status_code == 200 else []), r.status_code
+
+
+def _tai_thaydoi() -> list[dict]:
+    return _tai_thaydoi_kq()[0]
 
 
 def _doc_thaydoi(tu_ban: str, het: list[dict] | None = None) -> list[dict]:
@@ -69,10 +73,12 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
     if bat_buoc or bay - _NHO["luc"] > NHIP_KIEM_GIAY:
         try:
             _NHO["ban_moi"] = _hoi_ghcr()
-            het = _tai_thaydoi()
+            het, ma_tra = _tai_thaydoi_kq()
             _NHO["thaydoi"] = _doc_thaydoi(ban_dang_chay(), het) if _NHO["ban_moi"] else []
             _NHO["tomtat"] = {m["ban"]: m["tomtat"] for m in het if m["tomtat"]}
-            _NHO["loi"] = None
+            # Y17 (e): không im lặng khi tải tệp thay đổi không được; số bản mới vẫn đúng
+            _NHO["loi"] = None if ma_tra == 200 else (f"Chưa tải được nội dung thay đổi (mã trả về {ma_tra}),"
+                                                      " số bản mới vẫn đúng")
         except (httpx.HTTPError, KeyError, ValueError) as loi:
             _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, anh bấm Kiểm tra lại sau"
         _NHO["luc"] = bay

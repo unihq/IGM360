@@ -98,8 +98,9 @@ class NenCongAI(unittest.TestCase):
         cn = ketnoi.mo("Viecnen")
         try:
             nid = maso.tao()
-            cn.execute("INSERT INTO nguon_ai (id, ma, ten, loai, uutien, tran_tien_thang) VALUES (?, ?, ?, 'khoa_api', ?, ?)",
-                       (nid, ma, "Khoá API AI", uu, tran))
+            hang = "anthropic" if "anthropic" in ma else "openai"   # Y22a: G06 bắt buộc hang, cach_goi (QĐ161)
+            cn.execute("INSERT INTO nguon_ai (id, ma, ten, loai, uutien, tran_tien_thang, hang, cach_goi)"
+                       " VALUES (?, ?, ?, 'khoa_api', ?, ?, ?, ?)", (nid, ma, "Khoá API AI", uu, tran, hang, hang))
             cn.execute("INSERT INTO mohinh_ai (id, nguon_ai_id, ma_mohinh, gia_vao, gia_ra, tien_ma, trangthai)"
                        " VALUES (?, ?, 'mo-hinh-x', ?, ?, 'USD', 'dung')", (maso.tao(), nid, *gia))
         finally:
@@ -143,7 +144,7 @@ class KiemCongAI(NenCongAI):
 
     def test_khoa_api_tran_tien_va_tien_that(self):
         nid = self.them_khoa("khoa_anthropic_01", 1, None)
-        self.assertEqual(congai.goi("x")["bo_qua"][0]["lydo"], "chưa đặt trần tiền")
+        self.assertEqual(congai.goi("x")["bo_qua"][0]["lydo"], "chưa đặt hạn mức")
         cn = ketnoi.mo("Viecnen")
         cn.execute("UPDATE nguon_ai SET tran_tien_thang = 1 WHERE id = ?", (nid,))
         cn.close()
@@ -162,7 +163,7 @@ class KiemCongAI(NenCongAI):
         cn.execute("UPDATE nhatky_ai SET sotien = 1000000")              # tháng này đã tiêu 01 USD = chạm trần 01 USD
         cn.close()
         self.assertEqual(congai.goi("x", client=httpx.Client(transport=httpx.MockTransport(gia)))["bo_qua"][0]["lydo"],
-                         "chạm trần tiền tháng")
+                         "chạm hạn mức chi tháng")
         self.assertEqual(len(goi_den), 1)
 
     def test_khong_co_nguon(self):

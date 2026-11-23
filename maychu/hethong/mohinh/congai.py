@@ -160,8 +160,8 @@ def _nguon(thumuc=None) -> list[dict]:
     try:
         cot = ["id", "ma", "ten", "loai", "uutien", "tran_tien_thang", "tyle_5gio", "tyle_tuan", "datlai_5gio_luc",
                "datlai_tuan_luc", "do_luc", "da_het_luc"]
-        ds = [dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'"
-                                                     " ORDER BY uutien, ma")]
+        ds = dangnhap_goi.thu_tu([dict(zip(cot, r)) for r in cn.execute(
+            f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'")])   # QĐ160: gói trước Khoá API
         for d in ds:
             m = cn.execute("SELECT id, ma_mohinh, gia_vao, gia_ra, tien_ma FROM mohinh_ai WHERE nguon_ai_id = ?"
                            " AND coalesce(trangthai, 'dung') = 'dung' ORDER BY rowid LIMIT 1", (d["id"],)).fetchone()
@@ -208,13 +208,13 @@ def dung_duoc(d: dict, thumuc=None) -> tuple[bool, str]:
             return False, "chưa đăng nhập"
         return True, ""
     if not d["tran_tien_thang"]:
-        return False, "chưa đặt trần tiền"
+        return False, "chưa đặt hạn mức"
     if not kho.tim(d["ma"], thumuc):
         return False, "chưa có khoá"
     if not d["mohinh"] or d["mohinh"]["gia_vao"] is None or d["mohinh"]["gia_ra"] is None:
         return False, "chưa có giá mô hình"
     if tien_thang(d["id"], thumuc) >= d["tran_tien_thang"] * TRIEU:
-        return False, "chạm trần tiền tháng"
+        return False, "chạm hạn mức chi tháng"
     return True, ""
 
 

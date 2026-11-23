@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import ketnoi, phienban
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 
@@ -98,7 +98,7 @@ def ve_trang(code: str, state: str, thumuc: Path | None = None, client=None) -> 
         kho.doi(cu, kq["refresh_token"], thumuc)
         khoa_id = cu
     else:
-        khoa_id = kho.cat(DV_LAMMOI, kq["refresh_token"], thumuc, nguoi_nhap="anh")
+        khoa_id = kho.cat(DV_LAMMOI, kq["refresh_token"], thumuc, nguoi_nhap=v["nguoi_id"])
     cn = ketnoi.mo("Ketnoi", thumuc)
     try:
         bay = _bay_gio()
@@ -108,11 +108,10 @@ def ve_trang(code: str, state: str, thumuc: Path | None = None, client=None) -> 
                        " loi_cuoi = NULL WHERE id = ?", (khoa_id, bay, d[0]))
             ma = d[0]
         else:
-            ma = maso.tao()
-            cn.execute("INSERT INTO ketnoi (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, mau_ketnoi, cach_noi,"
-                       " khoa_id, trangthai_phien, lan_battay_cuoi) VALUES (?, ?, 'Google Drive', ?, 1, ?, ?,"
-                       " 'google_drive.json', 'ketnoi_chinhthuc', ?, 'dang_noi', ?)",
-                       (ma, MA_KETNOI, bay[:10], v["nguoi_id"], bay, khoa_id, bay))
+            ma = phienban.them(cn, "ketnoi", {"ma": MA_KETNOI, "ten": "Google Drive", "hieuluc_tu": bay[:10], "phienban": 1,
+                                              "nguoi_khai": v["nguoi_id"], "tao_luc": bay, "mau_ketnoi": "google_drive.json",
+                                              "cach_noi": "ketnoi_chinhthuc", "khoa_id": khoa_id,
+                                              "trangthai_phien": "dang_noi", "lan_battay_cuoi": bay})
     finally:
         cn.close()
     return {"ketnoi_id": ma}

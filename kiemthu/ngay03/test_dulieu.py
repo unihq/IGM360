@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 03: 07 file dữ liệu, 104 bảng, cài đặt file, cột chung, sao lưu, đo máy."""
+"""Bài kiểm ngày 03: 07 file dữ liệu, 105 bảng (104 ở ngày 03; A18 thêm ở lược đồ bản 3, QĐ108), cài đặt file, cột chung, sao lưu, đo máy."""
 import json
 import os
 import sqlite3
@@ -20,10 +20,10 @@ class KiemTaoFile(unittest.TestCase):
     def tearDown(self):
         self.tam.cleanup()
 
-    def test_du_07_file_104_bang(self):
+    def test_du_07_file_105_bang(self):
         kq = khoitao.tao_het(self.thumuc)
         self.assertEqual(kq, ketnoi.SO_BANG)
-        self.assertEqual(sum(kq.values()), 104)
+        self.assertEqual(sum(kq.values()), 108)
         for ten in ketnoi.CAC_FILE:
             duong = ketnoi.duongdan(ten, self.thumuc)
             self.assertTrue(duong.exists())
@@ -31,7 +31,7 @@ class KiemTaoFile(unittest.TestCase):
 
     def test_chay_lai_khong_sao(self):
         khoitao.tao_het(self.thumuc)
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 104)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
 
     def test_cai_dat_file(self):
         khoitao.tao_het(self.thumuc)
@@ -87,7 +87,7 @@ class KiemTaoFile(unittest.TestCase):
         ghep = {"id", "hieuluc_tu", "hieuluc_den", "nguoi_khai", "tao_luc"}
         mong = {("Dulieu_Chinh", "taikhoan"): danhmuc, ("Dulieu_Chinh", "barcode"): ghep,
                 ("Dulieu_Chinh", "combo_thanhphan"): ghep, ("Dulieu_Chinh", "ghep_mangoai"): ghep,
-                ("Bot", "kenh"): {"vai"}}
+                ("Bot", "kenh_nhan"): {"vai"}}
         for (ten, bang), cot in mong.items():
             cn = ketnoi.mo(ten, self.thumuc)
             try:
@@ -98,9 +98,9 @@ class KiemTaoFile(unittest.TestCase):
         cn = ketnoi.mo("Bot", self.thumuc)
         try:
             for vai in ("anh_nhan_baocao", "bot_giaoviec"):
-                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, ?)", (maso.tao(), vai))
+                cn.execute("INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, ?, ?)", (maso.tao(), "KN_" + vai, vai))
             with self.assertRaises(sqlite3.IntegrityError):
-                cn.execute("INSERT INTO kenh (id, vai) VALUES (?, ?)", (maso.tao(), "cahai"))
+                cn.execute("INSERT INTO kenh_nhan (id, ma, vai) VALUES (?, 'KN_X', ?)", (maso.tao(), "cahai"))
         finally:
             cn.close()
 

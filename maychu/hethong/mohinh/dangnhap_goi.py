@@ -19,13 +19,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import aibam, ketnoi, phienban
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 GOI = {
-    "claude": {"ten": "Gói Claude", "cli_bien": "IGM360_CLAUDE_CLI", "cli": "claude", "bien_thumuc": "CLAUDE_CONFIG_DIR",
+    "claude": {"ten": "Gói Claude", "hang": "anthropic", "cli_bien": "IGM360_CLAUDE_CLI", "cli": "claude", "bien_thumuc": "CLAUDE_CONFIG_DIR",
                "thumuc": "/home/igm/.claude", "lenh": ["auth", "login", "--claudeai"]},
-    "chatgpt": {"ten": "Gói ChatGPT", "cli_bien": "IGM360_CODEX_CLI", "cli": "codex", "bien_thumuc": "CODEX_HOME",
+    "chatgpt": {"ten": "Gói ChatGPT", "hang": "openai", "cli_bien": "IGM360_CODEX_CLI", "cli": "codex", "bien_thumuc": "CODEX_HOME",
                 "thumuc": "/home/igm/.codex", "lenh": ["login", "--device-auth"]},
 }
 SO_TAIKHOAN_TOIDA = 2
@@ -143,7 +143,7 @@ def _duoi(p: dict, n: int = 2) -> str:
     return " ".join(x for x in p["dong"][-n - 2:] if not URL_RE.search(x))[-300:]
 
 
-def dan_ma(goi: str, taikhoan: int, ma: str) -> dict:
+def dan_ma(goi: str, taikhoan: int, ma: str, nguoi: str = "hethong") -> dict:
     """Gói Claude: ghi mã anh dán vào CLI, chờ tối đa khoảng 24 giây."""
     _kiem(goi, taikhoan)
     p = _PHIEN.get((goi, taikhoan))
@@ -161,24 +161,24 @@ def dan_ma(goi: str, taikhoan: int, ma: str) -> dict:
             return {"loi": "Lượt đăng nhập đã kết thúc: bấm Mở trang lấy mã mới"}
     for _ in range(120):
         if p["xong"]:
-            return _ket_thuc(goi, taikhoan)
+            return _ket_thuc(goi, taikhoan, nguoi)
         if p["loi"]:
-            return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm \"Mở trang\" lấy mã mới rồi dán lại"}
+            return {"loi": "Mã chưa đúng hoặc đã hết hạn. Bấm \"Mở trang\" lấy mã mới rồi dán lại."}   # N12
         if pr.poll() is not None:
             time.sleep(0.3)
-            return _ket_thuc(goi, taikhoan) if p["xong"] else {"loi": "Đăng nhập chưa xong" + (f" ({_duoi(p)})" if _duoi(p) else "")}
+            return _ket_thuc(goi, taikhoan, nguoi) if p["xong"] else {"loi": "Đăng nhập chưa xong" + (f" ({_duoi(p)})" if _duoi(p) else "")}
         time.sleep(0.2)
     return {"loi": "Claude chưa trả lời sau 24 giây: bấm Kiểm tra lại hoặc lấy mã mới"}
 
 
-def hoi(goi: str, taikhoan: int) -> dict:
+def hoi(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     """Gói ChatGPT: giao diện hỏi lại mỗi vài giây tới khi xong."""
     _kiem(goi, taikhoan)
     p = _PHIEN.get((goi, taikhoan))
     if not p:
         return {"loi": "Chưa bắt đầu đăng nhập"}
     if p["xong"]:
-        return _ket_thuc(goi, taikhoan)
+        return _ket_thuc(goi, taikhoan, nguoi)
     if time.time() - p["bat_luc"] > HAN_PHIEN_GIAY:
         huy(goi, taikhoan)
         return {"loi": "Mã thiết bị đã hết hạn: bấm Đăng nhập để lấy mã mới"}
@@ -196,7 +196,7 @@ def huy(goi: str, taikhoan: int) -> None:
         _dung(p)
 
 
-def _ket_thuc(goi: str, taikhoan: int) -> dict:
+def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     p = _PHIEN.pop((goi, taikhoan), None)
     if p:
         _dung(p)
@@ -204,7 +204,7 @@ def _ket_thuc(goi: str, taikhoan: int) -> dict:
     tt = trang_thai(goi, taikhoan, bo_nho=True)
     if not tt["da_noi"]:
         return {"loi": "CLI báo xong nhưng kiểm lại vẫn chưa đăng nhập: bấm Đăng nhập lại"}
-    ghi_nguon(goi, taikhoan)
+    ghi_nguon(goi, taikhoan, nguoi=nguoi)
     return {"xong": True, **tt}
 
 
@@ -252,8 +252,10 @@ def ma_nguon(goi: str, taikhoan: int) -> str:
     return f"goi_{goi}_{taikhoan:02d}"
 
 
-def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None) -> str:
-    """Thêm hoặc bật lại dòng G06 của tài khoản gói; ưu tiên mới = sau nguồn cuối cùng."""
+def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = "hethong") -> str:
+    """Thêm hoặc bật lại dòng G06 của tài khoản gói; ưu tiên mới = sau nguồn cuối cùng.
+    `nguoi`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
+    aibam.kiem(nguoi)
     ma = ma_nguon(goi, taikhoan)
     bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
     cn = ketnoi.mo("Viecnen", thumuc)
@@ -263,13 +265,40 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None) -> str:
             cn.execute("UPDATE nguon_ai SET trangthai = 'dung', da_het_luc = NULL WHERE id = ?", (d[0],))
             return d[0]
         uu = (cn.execute("SELECT coalesce(max(uutien), 0) FROM nguon_ai").fetchone()[0] or 0) + 1
-        moi = maso.tao()
-        cn.execute("INSERT INTO nguon_ai (id, ma, ten, hieuluc_tu, phienban, nguoi_khai, tao_luc, loai, dungchung, uutien)"
-                   " VALUES (?, ?, ?, ?, 1, 'anh', ?, 'goi', 1, ?)",
-                   (moi, ma, f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}", bay[:10], bay, uu))
-        return moi
+        return phienban.them(cn, "nguon_ai", {"ma": ma, "ten": f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}",
+                                              "hieuluc_tu": bay[:10], "phienban": 1, "nguoi_khai": nguoi, "tao_luc": bay,
+                                              "loai": "goi", "dungchung": 1, "uutien": uu,
+                                              "hang": GOI[goi]["hang"], "cach_goi": "cli"})
     finally:
         cn.close()
+
+
+# QĐ160 (N10 b): thứ tự dùng nguồn theo cách tính phí trước, `uutien` sau: gói (phí cố định tháng) luôn đứng trước
+# mô hình chạy trên máy, rồi tới Khoá API (phí theo lượt); thêm gói thì tự đứng trước Khoá API (PTD-05 mục 3).
+NHOM_PHI = {"goi": 0, "tuchay": 1, "khoa_api": 2}
+
+
+def thu_tu(ds: list[dict]) -> list[dict]:
+    return sorted(ds, key=lambda d: (NHOM_PHI.get(d.get("loai"), 9), d.get("uutien") or 0, d.get("ma") or ""))
+
+
+def _mohinh_gannhat(thumuc: Path | None = None) -> dict:
+    """N15: {nguon_ai_id: mã mô hình} của lần gọi AI gần nhất có ghi mô hình (G04 `mohinh_id` → G08 `ma_mohinh`)."""
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        cap = cn.execute("SELECT nguon_ai_id, mohinh_id FROM nhatky_ai WHERE mohinh_id IS NOT NULL ORDER BY luc").fetchall()
+    finally:
+        cn.close()
+    if not cap:
+        return {}
+    gan = dict(cap)   # dòng sau đè dòng trước: còn lại lần gần nhất của mỗi nguồn
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        ten = dict(cn.execute(f"SELECT id, ma_mohinh FROM mohinh_ai WHERE id IN ({','.join('?' * len(gan))})",
+                              list(gan.values())).fetchall())
+    finally:
+        cn.close()
+    return {n: ten[m] for n, m in gan.items() if m in ten}
 
 
 def danh_sach(thumuc: Path | None = None) -> list[dict]:
@@ -278,9 +307,12 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
     try:
         cot = ["id", "ma", "ten", "loai", "uutien", "trangthai", "tran_tien_thang", "tyle_5gio", "tyle_tuan",
                "datlai_5gio_luc", "datlai_tuan_luc", "do_luc", "da_het_luc"]
-        dong = [dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai ORDER BY uutien, ma")]
+        dong = thu_tu([dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai")])
     finally:
         cn.close()
+    gan = _mohinh_gannhat(thumuc)
+    for d in dong:
+        d["mohinh_gannhat"] = gan.get(d["id"])
     for d in dong:
         m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", d["ma"] or "")
         if m:

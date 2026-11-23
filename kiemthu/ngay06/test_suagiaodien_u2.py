@@ -78,7 +78,7 @@ class KiemChuGiaoDien(unittest.TestCase):
     def test_cac_cho_lech_u2(self):
         self.assertIn("ICON.hash + '<input id=\"ma-claude\"", self.js)                   # P01
         self.assertNotIn("quy đổi tham khảo 07 ngày", self.js)                          # N13
-        self.assertIn("Tiền thật tháng", self.js)
+        self.assertIn("Chi phí AI tháng", self.js)
         self.assertIn("chưa có tỷ&nbsp;giá", self.js)                                   # P02 trước ngày 18
         self.assertIn("<span>LOGO</span>", self.js)                                     # N11
         self.assertIn("Chưa có tài khoản", self.js)                                     # N10
