@@ -369,8 +369,10 @@ def _goi(goi: str, taikhoan: int):
 
 @router.get("/mohinh")
 def xem_mohinh(p: dict = Depends(can_dang_nhap)):
-    return {"nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
-            "tuan": congai.tom_tat_tuan()}
+    goi = dangnhap_goi.tinh_hinh_goi()
+    return {"goi": goi, "nguon": dangnhap_goi.danh_sach(), "so_viec_ai_songsong": thongso.doc_mot("so_viec_ai_songsong"),
+            "tuan": congai.tom_tat_tuan(), "thang": congai.tom_tat_thang(),
+            "ty_gia_usd": None}   # QĐ122: lấy tỷ giá USD làm ở ngày 18; tới đó giao diện ghi "chưa có tỷ giá"
 
 
 @router.post("/mohinh/goi/{goi}/batdau")
@@ -388,7 +390,7 @@ def goi_dan_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
     kq = dangnhap_goi.dan_ma("claude", body.taikhoan, body.ma, nguoi=p["nguoidung_id"])
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
-    ghi_f04("mohinh", "dangnhap_goi", f"gói Claude tài khoản {body.taikhoan:02d}", nguoi_id=p["nguoidung_id"])
+    ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("claude", body.taikhoan), nguoi_id=p["nguoidung_id"])
     return kq
 
 
@@ -399,7 +401,7 @@ def goi_hoi(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     if kq.get("xong"):
-        ghi_f04("mohinh", "dangnhap_goi", f"gói ChatGPT tài khoản {body.taikhoan:02d}", nguoi_id=p["nguoidung_id"])
+        ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("chatgpt", body.taikhoan), nguoi_id=p["nguoidung_id"])
     return kq
 
 

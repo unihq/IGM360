@@ -31,13 +31,15 @@ def _bam(ma: str) -> str:
 
 
 def thietbi_tu(user_agent: str | None) -> str:
-    """Rút gọn chuỗi trình duyệt thành dạng "Chrome · Windows" (cột `thietbi`)."""
+    """Rút gọn chuỗi trình duyệt thành dạng "Máy tính · Chrome trên Windows" (cột `thietbi`, bản vẽ màn 09)."""
     ua = user_agent or ""
     trinh = next((t for k, t in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"),
                                  ("Safari/", "Safari")) if k in ua), "Trình duyệt khác")
     may = next((t for k, t in (("iPhone", "iPhone"), ("iPad", "iPad"), ("Android", "Android"), ("Windows", "Windows"),
                                ("Mac OS X", "macOS"), ("Linux", "Linux")) if k in ua), "máy khác")
-    return f"{trinh} · {may}"
+    loai = "Điện thoại" if may in ("iPhone", "Android") and "Mobile" in ua or may == "iPhone" else (
+        "Máy tính bảng" if may == "iPad" else "Máy tính")
+    return f"{loai} · {trinh} trên {may}"
 
 
 def tao(nguoidung_id: str, thietbi: str, thumuc: Path | None = None) -> str:

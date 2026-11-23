@@ -14,7 +14,7 @@ from maychu.dulieu.saoluu import MUIGIO_VN
 ANH = os.environ.get("IGM360_IMAGE", "unihq/igm360")
 KHO_MA = os.environ.get("IGM360_KHO_MA", "unihq/IGM360")
 NHIP_KIEM_GIAY = 6 * 3600
-_NHO = {"luc": 0.0, "ban_moi": None, "thaydoi": [], "loi": None}
+_NHO = {"luc": 0.0, "ban_moi": None, "thaydoi": [], "tomtat": {}, "loi": None}
 _SO = re.compile(r"^\d+\.\d+\.\d+$")
 
 
@@ -37,22 +37,28 @@ def _hoi_ghcr() -> str | None:
     return so[-1] if so else None
 
 
-def _doc_thaydoi(tu_ban: str) -> list[dict]:
-    """Đọc THAYDOI.md trên kho mã: mỗi bản 01 mục '## x.y.z', các dòng '- ...' là nội dung."""
+def _tai_thaydoi() -> list[dict]:
+    """Đọc THAYDOI.md trên kho mã (tệp không nằm trong ảnh máy chủ)."""
     with httpx.Client(timeout=10, follow_redirects=True) as c:
         r = c.get(f"https://raw.githubusercontent.com/{KHO_MA}/main/THAYDOI.md")
-    if r.status_code != 200:
-        return []
-    return [m for m in phan_tich_thaydoi(r.text) if _khoa_so(m["ban"]) > _khoa_so(tu_ban)]
+    return phan_tich_thaydoi(r.text) if r.status_code == 200 else []
+
+
+def _doc_thaydoi(tu_ban: str, het: list[dict] | None = None) -> list[dict]:
+    return [m for m in (_tai_thaydoi() if het is None else het) if _khoa_so(m["ban"]) > _khoa_so(tu_ban)]
 
 
 def phan_tich_thaydoi(chu: str) -> list[dict]:
+    """Mỗi bản 01 mục '## x.y.z'; dòng 'Tóm tắt: ...' là chữ ngắn cho lịch sử cập nhật (N07);
+    các dòng '- ...' là nội dung có gì mới."""
     muc, ds = None, []
     for dong in chu.splitlines():
         m = re.match(r"^##\s+(\d+\.\d+\.\d+)", dong)
         if m:
-            muc = {"ban": m.group(1), "dong": []}
+            muc = {"ban": m.group(1), "tomtat": None, "dong": []}
             ds.append(muc)
+        elif muc and dong.strip().startswith("Tóm tắt:"):
+            muc["tomtat"] = dong.strip()[len("Tóm tắt:"):].strip() or None
         elif muc and dong.strip().startswith("- "):
             muc["dong"].append(dong.strip()[2:])
     return ds
@@ -63,7 +69,9 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
     if bat_buoc or bay - _NHO["luc"] > NHIP_KIEM_GIAY:
         try:
             _NHO["ban_moi"] = _hoi_ghcr()
-            _NHO["thaydoi"] = _doc_thaydoi(ban_dang_chay()) if _NHO["ban_moi"] else []
+            het = _tai_thaydoi()
+            _NHO["thaydoi"] = _doc_thaydoi(ban_dang_chay(), het) if _NHO["ban_moi"] else []
+            _NHO["tomtat"] = {m["ban"]: m["tomtat"] for m in het if m["tomtat"]}
             _NHO["loi"] = None
         except (httpx.HTTPError, KeyError, ValueError) as loi:
             _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, anh bấm Kiểm tra lại sau"
@@ -72,7 +80,7 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
     moi = _NHO["ban_moi"]
     return {"ban_dang": dang, "ban_moi": moi, "co_ban_moi": bool(moi and _khoa_so(moi) > _khoa_so(dang)),
             "luc_kiem": datetime.fromtimestamp(_NHO["luc"], MUIGIO_VN).isoformat(timespec="seconds") if _NHO["luc"] else None,
-            "thaydoi": _NHO["thaydoi"], "loi": _NHO["loi"]}
+            "thaydoi": _NHO["thaydoi"], "tomtat": _NHO["tomtat"], "loi": _NHO["loi"]}
 
 
 def _ghi_f04(lenhcon: str, tomtat: str, ketqua: str, lydo: str | None = None, nguoi_id=None, thumuc=None) -> None:

@@ -1,26 +1,39 @@
 # Thay đổi của IGM360
 
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
+Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
+
+## 0.6.0
+Tóm tắt: Giao diện mới, tiền AI ra đồng Việt
+- Màn Đăng nhập, menu, Cài đặt, Model và Trò chuyện AI dựng lại đúng bản vẽ đã duyệt.
+- Thẻ Khoá API tính tiền theo tháng, kèm số tiền quy ra đồng Việt để tham khảo; chưa có tỷ giá thì ghi rõ "chưa có tỷ giá".
+- Bảng lịch sử cập nhật có dòng tóm tắt ngắn cho mỗi bản; chữ không bị ngắt giữa cụm từ khi xuống dòng.
+- Mỗi lần sửa mã đều được kiểm tự động trên máy chủ Linux trước khi đóng bản; các thư viện phần mềm dùng đã ghim đúng bản đã kiểm.
 
 ## 0.5.0
+Tóm tắt: Đăng nhập gói AI, gọi AI qua 03 nguồn
 - Đăng nhập gói Claude, gói ChatGPT ngay trên phần mềm, thêm được tài khoản thứ 02.
 - Phần mềm gọi được AI qua gói Claude, gói ChatGPT, khoá API; ghi lại mỗi lần dùng AI và mức đã dùng của gói.
 - Có sẵn phần trò chuyện với trợ lý AI (màn hình có ở bản sau).
 - Ngưỡng tiền để AI tự áp dụng chuyển sang giai đoạn 2; giai đoạn 1 mọi đề xuất chờ anh bấm.
 
 ## 0.4.0
+Tóm tắt: Sao lưu mã hoá, Két khoá, sẵn Google Drive
 - Bản sao lưu hằng ngày được mã hoá, chờ đẩy lên Google Drive khi anh kết nối Drive.
 - Két khoá cất được khoá kết nối, báo trước khi khoá sắp hết hạn.
 - Có sẵn phần kết nối Google Drive (màn kết nối có ở bản sau).
 
 ## 0.3.0
+Tóm tắt: Đăng nhập 02 lớp, menu, Cài đặt
 - Có màn Đăng nhập, bật đăng nhập 02 lớp.
 - Có menu, ngăn Thông số, ngăn Tài khoản và 02 lớp, ngăn Cập nhật ở Cài đặt.
 - Dữ liệu tự nâng lên bản mới khi cập nhật, có chụp bản sao trước khi nâng.
 - Báo khi máy chủ dùng tệp hoán đổi quá 100 MB.
 
 ## 0.2.0
+Tóm tắt: Dữ liệu 104 bảng, sao lưu, đo máy
 - Tạo 07 file dữ liệu, sao lưu hằng ngày trên máy chủ, đo máy mỗi giờ.
 
 ## 0.1.0
+Tóm tắt: Bản đầu tiên của GĐ 1
 - Bản đầu tiên: phần mềm chạy trên máy chủ, kiểm được qua HTTPS.

@@ -28,7 +28,7 @@ DANHMUC = [
     ("so_viec_ai_songsong", 2, "Số việc AI chạy cùng lúc", "so", "việc", "3", None, ""),
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
     ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tiền để AI được tự áp dụng", "so", "đ", None, None,
-     "GĐ 1: AI chỉ đề xuất, mọi việc chờ anh bấm"),
+     "GĐ 1: AI chỉ đề xuất, mọi việc chờ anh bấm."),
     ("tran_tien_thang_khoa_api", 2, "Trần tiền mỗi tháng của khoá API", "so", "USD", None, None,
      "Không gọi AI bằng khoá API, chỉ dùng gói"),
     ("nhip_gui_baocao", 3, "Nhịp gửi báo cáo định kỳ", "chu", "", None, {"hangngay": "Mỗi ngày", "hangtuan": "Mỗi tuần"},
