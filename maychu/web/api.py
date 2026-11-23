@@ -125,9 +125,15 @@ def thu_hoi_khac(p: dict = Depends(can_dang_nhap)):
 
 
 @router.get("/demso")
-def dem_so(p: dict = Depends(can_dang_nhap)):
+def dem_so(p: dict = Depends(can_dang_nhap), mo: int = 0):
     """Số trên menu và chuông (màn 02). Chuông bước 1 (QĐ165, Z7b): dòng D03 còn mở qua 01 hàm lọc quyền,
-    số = dòng tạo sau mốc đọc. Giao diện hỏi lại mỗi 60 giây."""
+    số = dòng tạo sau mốc đọc. Giao diện hỏi lại mỗi 60 giây (không hỏi kho). `mo=1` (anh mở chuông, QĐ174):
+    dò bản mới trước, kết quả còn mới (dưới 05 phút) thì không hỏi kho."""
+    if mo:
+        try:
+            thongbao.quet_banmoi()
+        except Exception:   # lỗi dò bản mới không được làm hỏng chuông
+            pass
     cn = ketnoi.mo("Dulieu_Chinh")
     try:
         cuacho = cn.execute("SELECT count(*) FROM cuacho WHERE trangthai IN ('moi', 'choduyet')").fetchone()[0]

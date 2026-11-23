@@ -135,9 +135,9 @@ function veChuong(d) {
 }
 // Tự cập nhật số mỗi 60 giây khi phần mềm đang mở (hỏi lại máy chủ, 0 thư viện)
 setInterval(() => { if (S.g !== '01' && document.visibilityState === 'visible') demSo(); }, 60e3);
-async function demSo() {
+async function demSo(mo) {
   try {
-    const d = await api('/demso');
+    const d = await api('/demso' + (mo ? '?mo=1' : ''));   // QĐ174: mở chuông thì dò bản mới nếu kết quả đã cũ
     $$('[data-trang="05"] .bao').forEach(b => { b.textContent = d.cuacho ? soVN(d.cuacho) : ''; b.hidden = !d.cuacho; });
     $$('[data-trang="10"] .bao, [data-them] .bao').forEach(g => { g.textContent = d.ket_ai ? soVN(d.ket_ai) : ''; g.hidden = !d.ket_ai; });
     D.soLuc = new Date(Date.now() + 7 * 3600e3).toISOString().slice(11, 16);
@@ -248,6 +248,7 @@ function veCapNhat(d) {
   $('#ban-hien').textContent = d.ban_dang; $$('.cn-dang').forEach(e => e.textContent = d.ban_dang);
   $$('.cn-moi').forEach(e => e.textContent = d.ban_moi || '');
   $('#cn-luc').textContent = d.luc_kiem ? luc(d.luc_kiem) : 'chưa kiểm';
+  if (d.nhip_phut) $('#cn-nhip').innerHTML = hai(d.nhip_phut) + '&nbsp;phút';   // QĐ174: nhịp lấy từ máy chủ (01 chỗ)
   $('#cn-loi').textContent = d.loi ? ' · ' + d.loi + '.' : '';   // Y17 (d): lỗi kiểm bản mới hiện cố định cạnh giờ kiểm
   const moi = d.thaydoi.find(m => m.ban === d.ban_moi) || d.thaydoi[0] || {dong: []};
   $('#cn-thaydoi').innerHTML = moi.dong.slice(0, 5).map(x => '<div class="dong t13">' + ICON.check + '<span>' + cum(x) + '</span></div>').join('');
@@ -457,7 +458,7 @@ document.addEventListener('click', async ev => {
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
     S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.'); }
-  else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; if (v) demSo(); }
+  else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; if (v) demSo(true); }
   else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); e.hidden = !v; }
   else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.'); } await demSo(); return; }
   else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }

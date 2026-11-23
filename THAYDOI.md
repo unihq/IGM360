@@ -7,6 +7,7 @@ Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử
 Tóm tắt: Giữ tên tài khoản Claude sau mỗi lần cập nhật
 - Tên tài khoản và tên gói Claude được lưu trong ổ lưu của máy chủ, không mất khi bấm "Cập nhật ngay".
 - Thẻ gói và hộp Thêm nguồn AI ghi tên theo hãng và công cụ: "Claude · Code", "ChatGPT · Codex".
+- Phần mềm tự dò bản mới mỗi 05 phút; có bản mới thì báo ở chuông, không phải bấm "Kiểm tra lại".
 - Sau lần cập nhật này: anh gỡ rồi đăng nhập lại tài khoản Claude 1 một lần để thẻ ghi đúng tên và tên gói; làm tương tự với tài khoản ChatGPT 1 nếu thẻ ghi sai gói.
 
 ## 0.7.3

@@ -65,15 +65,20 @@ class KiemChanBanCu(unittest.TestCase):
 class KiemBaoLoiKiemTra(unittest.TestCase):
     """(e) tải tệp thay đổi không được thì báo rõ kèm mã trả về; (c), (d) giao diện không nuốt lỗi."""
 
+    def setUp(self):
+        capnhat._NHO.update(luc=0.0, luc_dat=0.0, ban_moi=None, thaydoi=[], tomtat={}, loi=None, nhan_thaydoi=None)
+
+    tearDown = setUp
+
     def kiem(self, ma_tra):
         het = [{"ban": "0.7.0", "tomtat": "Bản thử", "dong": ["Dòng thử"]}] if ma_tra == 200 else []
-        with mock.patch.object(capnhat, "_hoi_ghcr", return_value="0.7.0"), \
+        with mock.patch.object(capnhat, "_hoi_ghcr", return_value=("0.7.0", "0.7.0")), \
                 mock.patch.object(capnhat, "_tai_thaydoi_kq", return_value=(het, ma_tra)):
             return capnhat.kiem_tra(bat_buoc=True)
 
     def test_loi_tai_tep_thay_doi(self):
         kq = self.kiem(404)
-        self.assertIn("mã trả về 404", kq["loi"])
+        self.assertIn("mã trả về 404", kq["loi"])    # chưa có nội dung cũ: nói rõ (QĐ174 giữ, chỉ im khi đã có bản cũ)
         self.assertEqual(kq["ban_moi"], "0.7.0")      # số bản mới vẫn đúng
         kq = self.kiem(200)
         self.assertIsNone(kq["loi"])

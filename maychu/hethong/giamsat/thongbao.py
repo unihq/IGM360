@@ -189,10 +189,12 @@ def quet_maychu(thumuc: Path | None = None) -> None:
             _dong(w, "swap_vuot_nguong", "Tệp hoán đổi đã dưới ngưỡng")
 
 
-def quet_banmoi(thumuc: Path | None = None) -> None:
-    """Có bản phần mềm mới (xanh); bản đó đã cài hoặc có bản mới hơn thì đóng."""
+def quet_banmoi(thumuc: Path | None = None, hoi_kho: bool = False) -> None:
+    """Có bản phần mềm mới (xanh); bản đó đã cài hoặc có bản mới hơn thì đóng.
+    `hoi_kho` (lịch nền, mỗi 05 phút, QĐ174): hỏi kho ngay, tránh lệch mốc với bộ nhớ 05 phút (lệch thì thực tế
+    thành 10 phút); mở chuông thì dùng kết quả nhớ, đã quá 05 phút mới hỏi."""
     from maychu.hethong import capnhat
-    kq = capnhat.kiem_tra()   # nhớ 06 giờ; không kết nối được thì giữ nguyên
+    kq = capnhat.kiem_tra(bat_buoc=hoi_kho)   # không kết nối được thì giữ nguyên
     if kq.get("loi") and not kq.get("ban_moi"):
         return
     dang, moi = kq["ban_dang"], kq.get("ban_moi")
