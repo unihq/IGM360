@@ -31,6 +31,8 @@ class Nen(unittest.TestCase):
         dm._NHO.clear()
         dm._DANG_TAI.clear()
         dg._NHO_TRANGTHAI.clear()
+        congai._HET_MH.clear()   # 0.7.7: nhớ "hết" theo mô hình nằm trong bộ nhớ, mỗi bài bắt đầu sạch
+        congai._DA_QUET.clear()
         self.vas = [mock.patch.object(dg, "trang_thai", return_value={"da_noi": True, "goi_dang_dung": "max"})]
         for v in self.vas:
             v.start()
@@ -351,7 +353,7 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("try { const g = docGhim();", self.js)               # trình duyệt chặn lưu: không lỗi
 
     def test_g2_g3_g5(self):
-        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
         self.assertIn("'&nbsp;·&nbsp;<span class=\"nw\">' + esc(x.goi_ten)", self.js)
         self.assertIn("'Đăng nhập lúc&nbsp;' + esc(luc(x.dangnhap_luc))", self.js)
 

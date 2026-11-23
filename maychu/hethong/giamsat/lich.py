@@ -4,7 +4,8 @@
 - cập nhật đang chờ việc AI chạy xong (tối đa 30 phút);
 - đẩy bản sao lưu đã mã hoá lên Google Drive theo hàng chờ M01 (ngày 05), mỗi 05 phút;
 - quét nguồn thông báo ở chuông mỗi 10 phút (QĐ165); đo máy, sao lưu xong thì quét ngay phần của mình;
-- tin "có bản mới" quét riêng theo nhịp dò bản mới (QĐ174: 05 phút, `capnhat.nhip_kiem_giay`).
+- tin "có bản mới" quét riêng theo nhịp dò bản mới (QĐ174: 05 phút, `capnhat.nhip_kiem_giay`);
+- đọc tệp phiên Codex mới nhất mỗi 10 phút để cập nhật % hạn mức gói ChatGPT, không gọi AI (QĐ192, bản 0.7.7).
 Việc nặng chạy ở luồng phụ để không chặn máy chủ web.
 """
 import asyncio
@@ -14,6 +15,7 @@ from datetime import datetime
 from maychu.dulieu import saoluu
 from maychu.hethong import capnhat
 from maychu.hethong.giamsat import domay, thongbao
+from maychu.hethong.mohinh import congai
 from maychu.ketnoi import drive
 
 GIO_SAOLUU = 2
@@ -41,6 +43,7 @@ async def chay_mai() -> None:
                 await asyncio.to_thread(thongbao.quet_saoluu)
             if lan_tb_cuoi is None or asyncio.get_running_loop().time() - lan_tb_cuoi >= NHIP_THONGBAO_GIAY:
                 lan_tb_cuoi = asyncio.get_running_loop().time()
+                await asyncio.to_thread(congai.quet_codex)   # 0.7.7: đọc tệp phiên Codex, không gọi AI
                 kq = await asyncio.to_thread(thongbao.quet)
                 if any(v != "dat" for v in kq.values()):
                     log.info("quét thông báo: %s", kq)

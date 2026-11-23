@@ -162,10 +162,91 @@ def _mohinh_codex(thu_muc: Path | None) -> str | None:
     return None
 
 
-def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None) -> None:
+# ---------------- Đo hạn mức bị động (QĐ192, bản 0.7.7) ----------------
+# Không gọi thêm lượt AI nào, không đọc khoá đăng nhập. Số đo đến từ (1) mỗi lượt gọi thật (rate_limit_event của Claude,
+# tệp phiên Codex) và (2) lịch nền 10 phút đọc tệp phiên Codex mới nhất (`quet_codex`; tệp không đổi thì không đọc lại).
+_DA_QUET: dict[str, float] = {}   # đường dẫn tệp phiên → mtime đã đọc
+_HET_MH: dict[tuple, float] = {}  # (nguồn, mã mô hình) → giờ dùng lại được (epoch); mất khi khởi động lại
+_KHOA_HET = threading.Lock()
+HET_MACDINH_GIAY = 3600           # hãng không báo giờ đặt lại thì coi hết 01 giờ
+
+
+def _tep_phien_moi(thu_muc: Path | None) -> Path | None:
+    goc = (thu_muc or Path(os.environ.get("CODEX_HOME", "/home/igm/.codex"))) / "sessions"
+    if not goc.exists():
+        return None
+    tep = sorted(goc.rglob("rollout-*.jsonl"), key=lambda p: p.stat().st_mtime)
+    return tep[-1] if tep else None
+
+
+def quet_codex(thumuc=None) -> dict:
+    """Lịch nền (10 phút): mỗi tài khoản gói ChatGPT đang dùng, đọc tệp phiên Codex mới nhất; tệp mới hơn lần đọc trước
+    thì ghi % hạn mức với giờ đo = giờ của tệp. Trả {mã nguồn: "ghi" | "khong_doi" | "khong_co"}."""
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        ds = cn.execute("SELECT id, ma FROM nguon_ai WHERE trangthai = 'dung' AND ma LIKE 'goi_chatgpt_%'").fetchall()
+    finally:
+        cn.close()
+    kq = {}
+    for nid, ma in ds:
+        m = re.fullmatch(r"goi_chatgpt_(\d\d)", ma or "")
+        if not m:
+            continue
+        tk = int(m.group(1))
+        tm = dangnhap_goi.thu_muc("chatgpt", tk)
+        if tm is None:
+            tm = Path(os.environ.get("CODEX_HOME") or os.environ.get("IGM360_THUMUC_CHATGPT", dangnhap_goi.GOI["chatgpt"]["thumuc"]))
+        tep = _tep_phien_moi(tm)
+        if tep is None:
+            kq[ma] = "khong_co"
+            continue
+        mt = tep.stat().st_mtime
+        if _DA_QUET.get(str(tep)) == mt:
+            kq[ma] = "khong_doi"
+            continue
+        _DA_QUET[str(tep)] = mt
+        hm = _doc_han_muc_codex(tm)
+        if hm:
+            ghi_han_muc(nid, hm, thumuc, luc=datetime.fromtimestamp(mt, MUIGIO_VN).isoformat(timespec="seconds"))
+        kq[ma] = "ghi" if hm else "khong_co"
+    return kq
+
+
+def _gio_dung_lai(hm: dict) -> float:
+    sau = [w.get("datlai") for w in (hm or {}).values() if isinstance(w, dict) and w.get("datlai")]
+    sau = [x for x in sau if x and x > time.time()]
+    return max(sau) if sau else time.time() + HET_MACDINH_GIAY
+
+
+def het_mo_hinh(nguon_id: str, ma: str | None) -> float:
+    """Mô hình này của nguồn này đang bị hãng từ chối vì hết hạn mức: trả giờ dùng lại được (epoch), không thì 0."""
+    if not ma:
+        return 0
+    with _KHOA_HET:
+        tg = _HET_MH.get((nguon_id, ma), 0)
+        if tg and tg <= time.time():
+            _HET_MH.pop((nguon_id, ma), None)
+            tg = 0
+    return tg
+
+
+def ghi_het_mo_hinh(nguon_id: str, ma: str | None, hm: dict | None) -> None:
+    if ma:
+        with _KHOA_HET:
+            _HET_MH[(nguon_id, ma)] = _gio_dung_lai(hm or {})
+
+
+def bo_het_mo_hinh(nguon_id: str, ma: str | None) -> None:
+    if ma:
+        with _KHOA_HET:
+            _HET_MH.pop((nguon_id, ma), None)
+
+
+def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None, luc: str | None = None) -> None:
+    """`luc`: giờ số đo (mặc định: bây giờ); quét tệp phiên Codex ghi giờ của tệp (0.7.7)."""
     if not hm:
         return
-    bay = _bay_gio()
+    bay = luc or _bay_gio()
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cot, gt = ["do_luc = ?"], [bay]
@@ -382,7 +463,10 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
     `ghim`: lượt thử mô hình anh ghim; hết hạn mức thì chỉ ghi % hạn mức hãng báo, không đánh dấu cả nguồn hết
     (hạn mức riêng của 01 mô hình, ví dụ Opus, không chặn mô hình mặc định cùng gói)."""
     ten = d["ten"] + (" (mô hình đã chọn)" if ghim else "")
+    ma_mh = (d.get("mohinh") or {}).get("ma")
     ok, lydo = dung_duoc(d, thumuc)
+    if ok and het_mo_hinh(d["id"], ma_mh):   # 0.7.7: mô hình vừa bị từ chối vì hết hạn mức thì không gọi lại tới giờ dùng lại
+        ok, lydo = False, "hết hạn mức (mô hình)"
     if not ok:
         bo_qua.append({"nguon": ten, "lydo": lydo})
         return lydo
@@ -397,6 +481,7 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
             kq = _goi_khoa(d, cau, thumuc, client)
     except HetHanMuc as e:
         _ghi_g04(d, None, "het_hanmuc", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
+        ghi_het_mo_hinh(d["id"], ma_mh, e.hanmuc)   # 0.7.7: lượt bị từ chối ghi "hết" theo từng mô hình
         ghi_han_muc(d["id"], e.hanmuc if ghim else {**e.hanmuc, "het": True}, thumuc)
         bo_qua.append({"nguon": ten, "lydo": f"hết hạn mức: {e}"[:200]})
         return "hết hạn mức"
@@ -409,6 +494,7 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
         bo_qua.append({"nguon": ten, "lydo": str(e)[:200]})
         return "lỗi"
     ms = int((time.monotonic() - t0) * 1000)
+    bo_het_mo_hinh(d["id"], ma_mh)
     ghi_han_muc(d["id"], kq.get("hanmuc") or {}, thumuc)
     kq["nhatky_ai_id"] = _ghi_g04(d, kq, "xong", ms, viecnen_id, thumuc)
     return kq
@@ -455,6 +541,8 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
     sem = _cho_phep()
     with sem:
         ds = _nguon(thumuc, loai_viec)
+        if danhmuc_mohinh.la_viec_nen(loai_viec) or viecnen_id is not None:
+            mohinh_id = None   # K-VN Đ2: lượt gọi từ việc nền hoặc bot không đọc ghim, chặn ở cổng (không trông vào nơi gọi)
         if mohinh_id and not chi_nguon_id:
             # 0.7.6 (QĐ187, Đ1, Đ5): ghim "loại|mã" (dạng cũ id G08 đổi sang); thử lần lượt mọi tài khoản cùng loại có mô
             # hình đó, mỗi tài khoản qua đủ kiểm giá, hạn mức; hết mới về mặc định (QĐ183)

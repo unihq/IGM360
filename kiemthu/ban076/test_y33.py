@@ -122,7 +122,7 @@ class KiemTheoMoHinh(Nen):
         self.goi.clear()
         self.het.add((2, "opus"))
         kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id="goi_claude|opus")
-        self.assertEqual(self.goi, [(1, "opus"), (2, "opus"), (1, None)])  # hết mọi tài khoản cùng loại mới về mặc định (QĐ183)
+        self.assertEqual(self.goi, [(2, "opus"), (1, None)])  # 0.7.7: Opus tài khoản 1 vừa bị từ chối thì không gọi lại; hết mọi tài khoản mới về mặc định
         self.assertEqual(kq["ghim_hong"], {"khoa": "goi_claude|opus", "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})
 
     def test_ghim_dang_cu_doi_sang_khoa(self):
@@ -153,7 +153,7 @@ class KiemGiaoDien076(unittest.TestCase):
                     "(dn.tk >= 2 ? canhTk(ten) : '')"):
             self.assertIn(chu, self.js, chu)
         self.assertNotIn("g.nguon_id === g.nguon_id", self.js)
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.6")
+        self.assertGreaterEqual(tuple(map(int, (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 7, 6))
 
     @unittest.skipUnless(shutil.which("node"), "máy không có node")
     def test_n3_ten_ngan_chay_that(self):
@@ -182,7 +182,7 @@ class KiemY34(unittest.TestCase):
         self.js = (GD / "app.js").read_text(encoding="utf-8")
 
     def test_u10_g1_g3(self):
-        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
         html = (GD / "index.html").read_text(encoding="utf-8")
         self.assertIn(".hm{display:grid;grid-template-columns:92px 1fr minmax(40px,max-content);", html)   # "chưa đo" không tràn
 

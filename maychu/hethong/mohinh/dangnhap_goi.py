@@ -505,8 +505,15 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
     finally:
         cn.close()
     gan = _mohinh_gannhat(thumuc)
+    bay = datetime.now(MUIGIO_VN)
     for d in dong:
         d["mohinh_gannhat"] = gan.get(d["id"])
+        for tl, dl in (("tyle_5gio", "datlai_5gio_luc"), ("tyle_tuan", "datlai_tuan_luc")):   # 0.7.7: qua giờ đặt lại = 0%
+            try:
+                if d.get(dl) and datetime.fromisoformat(d[dl]) <= bay:
+                    d[tl], d[dl] = 0, None
+            except ValueError:
+                pass
     for d in dong:
         m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", d["ma"] or "")
         if m:

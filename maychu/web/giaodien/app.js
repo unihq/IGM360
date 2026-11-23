@@ -134,7 +134,16 @@ function veChuong(d) {
       + (cu.length ? '<div class="tb-nhom2">Đã xem, còn mở · ' + soVN(cu.length) + '</div>' + cu.map(dongTb).join('') : '');
 }
 // Tự cập nhật số mỗi 60 giây khi phần mềm đang mở (hỏi lại máy chủ, 0 thư viện)
-setInterval(() => { if (S.g !== '01' && document.visibilityState === 'visible') demSo(); }, 60e3);
+setInterval(() => { if (S.g !== '01' && document.visibilityState === 'visible') lamMoi13(), demSo(); }, 60e3);   // 01 vòng 60 giây
+// QĐ192 (0.7.7): màn Mô hình AI tự làm mới số hạn mức mỗi 60 giây; không làm mới khi anh đang đăng nhập dở, đang mở hộp,
+// hoặc đang gõ trong màn (để không mất chữ đang gõ)
+function lamMoi13() {
+  if (S.trang !== '13' || !D.md) return;
+  if (Object.values(D.dn || {}).some(x => x && x.url)) return;
+  if ($$('.lop').some(e => !e.hidden)) return;
+  const a = document.activeElement; if (a && a.closest && a.closest('#p13') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  napMoHinh();
+}
 async function demSo(mo) {
   try {
     const d = await api('/demso' + (mo ? '?mo=1' : ''));   // QĐ174: mở chuông thì dò bản mới nếu kết quả đã cũ
@@ -413,7 +422,7 @@ function veMoHinh() {
   ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
     + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API</div><div class="t12 phu">Phí theo lượt</div></div></div>'
-    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class="t12 phu">Ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
+    + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khoá</div><div class="t12 phu">Ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
         + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt hạn mức</span>') + '</div>').join('')
       : '<div class="t13 phu">Chưa có khoá API. Chưa có khoá thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khoá ở mục Két khoá (có ở bản sau).</div>')
     + '<div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
