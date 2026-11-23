@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.2
+Tóm tắt: Chuông báo tin mới, tự cập nhật
+- Chuông ở thanh trên báo thêm: gói AI hết phiên đăng nhập hoặc dùng gần hết hạn mức tuần, khoá kết nối sắp hết hạn hoặc đã hết hạn, sao lưu không xong, ổ cứng máy chủ đầy, có bản phần mềm mới.
+- Mỗi dòng ghi rõ việc gì, có số; bấm vào thì mở đúng màn cần xử lý. Số trên chuông tự cập nhật mỗi phút.
+- Nút "Đọc hết" đưa số về 0; việc chưa xử lý xong vẫn nằm ở nhóm "Đã xem, còn mở" để không bị sót.
+- Ngưỡng báo hạn mức tuần của gói AI đặt ở Cài đặt › Thông số, mặc định 80%.
+
 ## 0.7.1
 Tóm tắt: Sửa lỗi trùng tài khoản gói AI
 - Đăng nhập lại đúng tài khoản gói AI đã kết nối thì phần mềm báo "Tài khoản Claude này đã kết nối ở Tài khoản 1", không thêm ô mới.
