@@ -253,7 +253,7 @@ def bat_dau_lay(tk: int, env: dict) -> dict:
     """Chạy `claude setup-token`, chờ đường link đăng nhập. {url} hoặc {loi, khong_ho_tro?}. `env`: môi trường của đúng
     tài khoản (thư mục cấu hình), đã bỏ khoá API và mã cũ: lệnh cấp mã cho gói nó đăng nhập, không dùng mã sẵn có."""
     if not ho_tro():
-        return {"loi": "Máy chủ này không chạy được bước lấy mã tự động: dùng nút Dán mã", "khong_ho_tro": True}
+        return {"loi": "Máy chủ này không chạy được bước lấy mã tự động", "khong_ho_tro": True}   # N18b: câu hiện trong hộp Dán mã
     huy_lay(tk)
     import fcntl
     import pty

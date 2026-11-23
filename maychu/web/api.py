@@ -440,6 +440,8 @@ def goi_go(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     """QĐ164 ý 2: gỡ tài khoản gói (giao diện đã hỏi lại 01 lần)."""
     _goi(goi, body.taikhoan)
     kq = dangnhap_goi.go(goi, body.taikhoan)
+    if goi == "claude" and "loi" not in kq:
+        thongbao.quet_madaihan()   # N24: mã đã xoá thì đóng ngay tin "hết hạn", không chờ lần quét kế tiếp
     ghi_f04("mohinh", "go_goi", dangnhap_goi.nhan_dangnhap(goi, body.taikhoan), ketqua="loi" if "loi" in kq else "dat",
             nguoi_id=p["nguoidung_id"])
     if "loi" in kq:
@@ -460,6 +462,7 @@ def _md_xong(tk: int, ma: str, p: dict) -> dict:
     finally:
         madaihan.huy_lay(tk)   # Đ3: quên đầu ra của lệnh lấy mã
     ghi_f04("mohinh", "luu_madaihan", _md_nhan(tk), nguoi_id=p["nguoidung_id"])
+    thongbao.quet_madaihan()   # mã mới: đóng ngay tin "hết hạn", "sắp hết hạn" cũ
     if kq.get("goi_thu"):
         ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("claude", tk), nguoi_id=p["nguoidung_id"])   # "Đăng nhập lúc"
     return kq

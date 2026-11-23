@@ -225,6 +225,51 @@ class KiemKetNoi(NenMa):
         self.assertEqual((d["chi_tiet"], "invalid" in d["loi"]), ("Error: invalid code", False))
 
 
+class KiemY37c(NenMa):
+    """Y37c (CDO U12b): N23 cổng AI chạy đúng như câu ô báo hết hạn; N24 gỡ tài khoản đóng ngay tin chuông."""
+    def test_n23_het_han_dung_tai_khoan_2_roi_nguon_ke(self):
+        c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        c2 = self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        c3 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
+        madaihan.luu(1, MA_GIA)
+        self.han(minutes=-1)                                     # tài khoản 1: mã hết hạn
+        goi = []
+        tra = {"chu": "ok", "vao": 1, "ra": 1, "sotien": None, "sotien_thamkhao": None, "tien_ma": "USD", "hanmuc": {}, "mohinh_bao": None}
+
+        def claude(tk, cau, mohinh):
+            goi.append(("claude", tk))
+            if tk == 2 and getattr(self, "tk2_loi", False):
+                raise congai.LoiAI("Claude", "lỗi khi chạy", "x")
+            return dict(tra)
+        with mock.patch.object(congai, "_goi_claude", side_effect=claude), \
+                mock.patch.object(congai, "_goi_chatgpt", side_effect=lambda tk, cau, mh: goi.append(("chatgpt", tk)) or dict(tra)):
+            kq = congai.goi("x", loai_viec="trochuyen")
+            self.assertEqual((goi, kq["nguon_id"]), ([("claude", 2)], c2))            # bỏ tài khoản 1, dùng tài khoản 2
+            self.assertIn({"nguon": "Tên lưu goi_claude_01", "lydo": "mã dài hạn hết hạn"}, kq["bo_qua"])
+            goi.clear()
+            self.tk2_loi = True
+            kq = congai.goi("x", loai_viec="trochuyen")
+            self.assertEqual((goi, kq["nguon_id"]), ([("claude", 2), ("chatgpt", 1)], c3))   # rồi tới nguồn kế tiếp
+        self.assertTrue(c1)
+
+    def test_n24_go_dong_chuong_ngay(self):
+        from maychu.web import api
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        madaihan.luu(1, MA_GIA)
+        self.han(minutes=-1)
+        thongbao.quet_madaihan()
+        mo = lambda: [d["loai"] for d in thongbao.danh_sach()["ds"]]   # noqa: E731
+        self.assertIn("madaihan_hethan", mo())
+        with mock.patch.object(dg, "_dang_xuat", return_value=True):
+            api.goi_go("claude", api.TaiKhoanGoi(taikhoan=1), {"nguoidung_id": maso.tao()})
+        self.assertNotIn("madaihan_hethan", mo())                       # không chờ lần quét kế tiếp
+
+    def test_n18b_cau_khong_ho_tro(self):
+        with mock.patch.object(madaihan, "ho_tro", return_value=False):
+            kq = madaihan.bat_dau_lay(1, {})
+        self.assertEqual(kq, {"loi": "Máy chủ này không chạy được bước lấy mã tự động", "khong_ho_tro": True})
+
+
 CLI_GIA = r'''
 import sys, os
 if sys.argv[1:2] != ["setup-token"]:
@@ -284,7 +329,11 @@ class KiemGiaoDien(unittest.TestCase):
                     "if (kq.khong_ho_tro) { D.mdh[tk] = null; veMoHinh(); moMdDan(tk, kq.loi); return; }",
                     "(k.ct ? ' title=\"' + esc(k.ct) + '\"' : '')",                                                          # N17
                     'type="password"', "if (o) o.value = '';", "tenMh(hong.dung, hong.nguon_id, null, true)",
-                    " bị xoá khỏi Két&nbsp;khoá; mã vẫn còn hiệu lực ở Claude"):                                                                           # N14 + Đ5
+                    " bị xoá khỏi Két&nbsp;khoá; mã vẫn còn hiệu lực ở Claude",
+                    "(cl ? '<div class=\"md-khoi\">' + theMd(x, nutGo) + '</div>' : '')",                                    # N11b
+                    "nbsp('Dán ' + CHU_MDH.toLowerCase()) + ' · ' + nbsp('Claude tài khoản ' + k.tk)",                         # N25
+                    "'Đang tải nguồn AI…</div>'",                                                                              # N26
+                    "h += theMdHet(x, ds);"):                                                                           # N14 + Đ5
             self.assertIn(chu, js, chu)
         self.assertNotIn("data-md-ngat", js)                                                                                  # N14
         self.assertNotIn("setup-token", js)                                                                                   # N20, QĐ135
@@ -292,7 +341,7 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertNotIn("token", doan)
         for chu in (".mb .lop{position:fixed!important}", ".mb #h-xacnhan,.mb #h-mdh{align-items:center;padding:16px}",      # N22
                     ".md-chip.canh{border-color:#F2A7A5;color:var(--canh)}", ".md-han.canh{color:var(--canh);font-weight:600}",  # N12
-                    ".md-nut{display:flex;flex-direction:column;"):                                                          # N11
+                    ".md-nut{display:flex;flex-direction:column;", ".md-khoi{padding:0 0 6px 40px}", ".md-chip{white-space:nowrap;"):                                                          # N11
             self.assertIn(chu, self.html, chu)
 
     @unittest.skipUnless(__import__("shutil").which("node"), "máy không có node")
@@ -307,7 +356,7 @@ class KiemGiaoDien(unittest.TestCase):
               + "\nconst a2 = theMd({taikhoan: 1, da_noi: true, ma_daihan: {kytu_cuoi: 'ab12', han, con_ngay: 200, het: false, vang: false}}, go);"
               + "\nconst b = theMd({taikhoan: 2, da_noi: true, ma_daihan: null}, go);"
               + "\nconst x = {taikhoan: 1, da_noi: false, ma_daihan: {kytu_cuoi: 'ab12', han, con_ngay: -1, het: true, vang: true}};"
-              + "\nconst c = theMd(x, go), c2 = theMdHet(x);"
+              + "\nconst c = theMd(x, go), c2 = theMdHet(x), c3 = theMdHet(x, [x, {taikhoan: 2, da_noi: true, ma_daihan: null}]);"
               + "\nconst k = theMdKetNoi(1, {url: 'https://claude.ai/oauth/authorize?x=1', loi: 'Mã chưa đúng', ct: 'Error: invalid code'});"
               + "\nconsole.log(JSON.stringify(["
               + " a.includes('md-chip canh'), a.includes('[#E22E28]'), a.includes('••••ab12'), a.includes('hết hạn 23/11/2027'), a.includes('còn 05&nbsp;ngày'),"
@@ -315,13 +364,14 @@ class KiemGiaoDien(unittest.TestCase):
               + " !a2.includes('canh'), a2.includes('[#258832]'),"
               + " b.includes('Đăng nhập kiểu&nbsp;cũ'), b.includes('Chuyển sang'),"
               + " c.includes('Mã dài hạn hết hạn 23/11/2027'), c.includes('ngừng&nbsp;chạy'), c2.includes('md-het'), c2.includes('data-md-lay=\"1\"'),"
-              + " k.includes('Xác nhận mã'), k.includes('Lấy link mới'), k.includes('title=\"Error: invalid code\"'), !k.includes('>Error')]));")
+              + " k.includes('Xác nhận mã'), k.includes('Lấy link mới'), k.includes('title=\"Error: invalid code\"'), !k.includes('>Error'),"
+              + " c2.includes('Claude ngừng chạy; phần mềm dùng nguồn kế&nbsp;tiếp.'), c3.includes('phần mềm dùng tài&nbsp;khoản&nbsp;2 rồi tới nguồn kế&nbsp;tiếp.')]));")
         with tempfile.TemporaryDirectory() as tm:
             p = Path(tm) / "the.js"
             p.write_text(ma, encoding="utf-8")
             r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout), [True] * 20)
+        self.assertEqual(json.loads(r.stdout), [True] * 22)
 
 
 if __name__ == "__main__":

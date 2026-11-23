@@ -389,9 +389,11 @@ function theMd(x, go) {
   return h + go + '</div>';
 }
 // Z13 trạng thái 4c: ô báo viền đỏ dưới ô tài khoản có mã hết hạn
-const theMdHet = x => '<div class="md-het"><div class="dong t13 b6">' + icoMau(ICON['clock'], '#E22E28', 16) + '<span>' + CHU_MDH + ' tài khoản ' + x.taikhoan + ' hết hạn '
-  + esc(ngay(x.ma_daihan.han)) + '</span></div><div class="t12 phu">Claude ngừng chạy; phần mềm dùng nguồn kế&nbsp;tiếp.</div>'
-  + '<button class="btn btn-chinh nho" data-md-lay="' + x.taikhoan + '">' + ICON['refresh-cw'] + 'Lấy mã&nbsp;mới</button></div>';
+const theMdHet = (x, ds) => { const con = (ds || []).find(y => y.taikhoan !== x.taikhoan && y.da_noi && !(y.ma_daihan && y.ma_daihan.het));
+  return '<div class="md-het"><div class="dong t13 b6">' + icoMau(ICON['clock'], '#E22E28', 16) + '<span>' + CHU_MDH + ' tài khoản ' + x.taikhoan + ' hết hạn '
+  + esc(ngay(x.ma_daihan.han)) + '</span></div><div class="t12 phu">' + (con ? 'Tài&nbsp;khoản&nbsp;' + x.taikhoan + ' ngừng chạy; phần mềm dùng tài&nbsp;khoản&nbsp;' + con.taikhoan
+    + ' rồi tới nguồn kế&nbsp;tiếp.' : 'Claude ngừng chạy; phần mềm dùng nguồn kế&nbsp;tiếp.') + '</div>'
+  + '<button class="btn btn-chinh nho" data-md-lay="' + x.taikhoan + '">' + ICON['refresh-cw'] + 'Lấy mã&nbsp;mới</button></div>'; };
 // Z13 trạng thái 2: hộp "Đang kết nối" (N15, N16); câu lỗi chỉ tiếng Việt, câu gốc của Claude ở rê chuột (N17)
 const theMdKetNoi = (tk, k) => '<div class="md-hop"><div class="b6 t13">Kết nối tài khoản ' + tk + ' bằng ' + CHU_MDH.toLowerCase() + '</div>'
   + '<div class="t12 phu">Dùng 365&nbsp;ngày, không tự hết phiên giữa&nbsp;chừng; vẫn tính vào gói Claude của&nbsp;anh.</div>'
@@ -409,7 +411,7 @@ function moMdDan(tk, tin) {
     + '<div class="hop-chan"><button class="btn btn-phu" data-dong>Huỷ</button><button class="btn btn-chinh" id="mdh-luu" data-md-luu="1">Lưu mã</button></div></div></div>');
   D.mdDan = {tk, loi: '', tin: tin || ''}; veMdDan(); mo('h-mdh'); const o = $('#md-ma-dan'); if (o) o.focus(); }
 function veMdDan() { const k = D.mdDan; if (!k) return;
-  $('#mdh-tieu').textContent = 'Dán ' + CHU_MDH.toLowerCase() + ' · Claude tài khoản ' + k.tk; $('#mdh-luu').dataset.mdLuu = k.tk;
+  $('#mdh-tieu').textContent = nbsp('Dán ' + CHU_MDH.toLowerCase()) + ' · ' + nbsp('Claude tài khoản ' + k.tk);   // N25 $('#mdh-luu').dataset.mdLuu = k.tk;
   $('#mdh-than').innerHTML = (k.tin ? '<div class="bao-xanh t13">' + ICON['info'] + '<span>' + cum(cau(k.tin)) + '</span></div>' : '')
     + '<div class="t13 phu">Dùng khi anh đã tạo ' + CHU_MDH.toLowerCase() + ' ở máy khác. Mã bắt đầu bằng <b class="nw">sk-ant-oat01-</b>, dùng 365&nbsp;ngày.</div>'
     + '<div class="b6 t13">' + CHU_MDH + '</div><div class="o-nhap' + (k.loi ? ' loi' : '') + '">' + ICON['key-round'] + '<input id="md-ma-dan" type="password" placeholder="sk-ant-oat01-…" autocomplete="off"></div>'
@@ -445,15 +447,16 @@ function theGoi(g, ds, nguon, uu) {
     h += '<div class="tk-dong"' + tieuHetMh(n, x.taikhoan) + '><span class="anh-dd mini' + (x.da_noi || mdHet ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>' + tenTk(x) + '</b>'
       + (x.da_noi && x.mota_goi ? '<div class="t12 phu">' + esc(x.mota_goi) + '</div>' : '')
       + (cl && x.ma_daihan ? '' : '<div class="t12 phu">' + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</div>')
-      + (cl ? theMd(x, nutGo) : nutGo) + '</div>'   // 0.7.8 (Z13): dòng mã + nút xếp dọc trong ô; "Gỡ tài khoản" xoá cả mã (N14, Đ5)
+      + (cl ? '' : nutGo) + '</div>'
       + (mdHet ? '<span class="nhan n-canh"><i></i>Mã hết hạn</span>' : x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>'
-        : '<span class="nhan n-xem"><i></i>' + (cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</span>') + '</div>';
+        : '<span class="nhan n-xem"><i></i>' + (cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</span>') + '</div>'
+      + (cl ? '<div class="md-khoi">' + theMd(x, nutGo) + '</div>' : '');   // 0.7.8 (Z13, N11b): hàng riêng rộng hết thẻ; "Gỡ tài khoản" xoá cả mã
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio, n.ma + '|5') + thanhHm('Tuần này', n.tyle_tuan, n.ma + '|t')
       + (n.da_datlai_luc   // Z12 (3): qua giờ đặt lại
         ? '<div class="t12 phu" title="Qua giờ đặt lại: khung 05 giờ mới bắt đầu, số dùng về 0%">Đã đặt lại lúc ' + esc(gio(n.da_datlai_luc)) + '&nbsp;· số mới có sau lượt gọi AI kế&nbsp;tiếp</div>'
         : '<div class="t12 phu" title="Số đo sau mỗi lượt gọi AI; màn này tự làm mới 01 phút/lần">' + (n.do_luc ? 'Đo lúc ' + esc(luc(n.do_luc))
           + (n.datlai_5gio_luc ? '&nbsp;· đặt lại 05&nbsp;giờ lúc ' + esc(gio(n.datlai_5gio_luc)) : '') : 'Chưa đo: số hiện sau lần gọi AI đầu tiên') + '</div>') + '</div>'; });
-  if (g === 'claude') { ds.filter(x => x.ma_daihan && x.ma_daihan.het).forEach(x => { h += theMdHet(x); });   // N13
+  if (g === 'claude') { ds.filter(x => x.ma_daihan && x.ma_daihan.het).forEach(x => { h += theMdHet(x, ds); });   // N13, N23
     mdMo.forEach(tk => { h += theMdKetNoi(tk, D.mdh[tk]); }); }
   // QĐ164 ý 1 (Z6-TK): đăng nhập trùng thì không tạo ô, dải xanh dưới ô đang có; số là số của ô đang giữ tài khoản đó
   if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.</span></div>';
@@ -526,7 +529,9 @@ function veMoHinh() {
         + (x && x.m ? esc(tenMh(x.m.ma, x.g.nhom, x.g)) : 'Mặc định của nguồn') + '</span><span data-l="Nguồn">'
         + (x ? cum(tenNguon(x.g)) : (dau ? cum(tenNguon(dau)) : 'Chưa có nguồn')) + '</span><button class="btn-chu" data-doimd="' + k + '">' + ICON.pencil + 'Đổi</button></div>'; }).join('');
 }
-async function napMoHinh() { try { D.md = await api('/mohinh'); await napDsMh(); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
+async function napMoHinh() { const o = $('#ds-nguonai');   // N26: máy chủ hỏi CLI từng tài khoản, có thể mất vài giây
+  if (!D.md && o && !o.innerHTML.trim()) o.innerHTML = '<div class="the t13 phu dong">' + ICON.loader + 'Đang tải nguồn AI…</div>';
+  try { D.md = await api('/mohinh'); await napDsMh(); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
 async function batDauDn(g, tk) {
   D.trung[g] = 0;
   try { const kq = await api('/mohinh/goi/' + g + '/batdau', {taikhoan: tk}); D.dn[g] = {tk, url: kq.url, ma: kq.ma_thietbi, loi: ''}; veMoHinh();
