@@ -61,6 +61,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
             tl = _ghi_tin(cn, hoithoai_id, "ai", kq["chu"], kq["nhatky_ai_id"])
             tl["nguon"], tl["nguon_id"] = kq["nguon"], kq.get("nguon_id")   # Z10a: giao diện đặt chữ theo mã nguồn
             tl["mohinh_id"], tl["mohinh"], tl["ghim_hong"] = kq.get("mohinh_id"), kq.get("mohinh"), kq.get("ghim_hong")
+            tl["mohinh_bao"] = kq.get("mohinh_bao")   # Y31c S4: mô hình công cụ báo về
     finally:
         cn.close()
     return {"hoithoai_id": hoithoai_id, "hoi": hoi, "tra_loi": tl}

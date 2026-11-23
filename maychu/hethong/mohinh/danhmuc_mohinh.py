@@ -176,7 +176,7 @@ def danh_sach(thumuc=None, nap_nen: bool = True) -> dict:
                 "SELECT id, ma_mohinh FROM mohinh_ai WHERE nguon_ai_id = ? AND coalesce(trangthai, 'dung') = 'dung'"
                 " AND ma_mohinh IS NOT NULL ORDER BY rowid", (d["id"],))]
             nhom.append({"nguon_id": d["id"], "ma": d["ma"], "ten": d["ten"], "loai": d["loai"], "hang": d.get("hang"),
-                         "goi": d.get("goi"), "chinh": i == 0, "dang_tai": d["id"] in _DANG_TAI and not ds, "mohinh": ds})
+                         "goi": d.get("goi"), "taikhoan": d.get("taikhoan"), "chinh": i == 0, "dang_tai": d["id"] in _DANG_TAI and not ds, "mohinh": ds})
     finally:
         cn.close()
     return {"nhom": nhom, "macdinh": macdinh(thumuc), "loai_viec": LOAI_VIEC}

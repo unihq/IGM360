@@ -139,6 +139,29 @@ def _doc_han_muc_codex(thu_muc: Path | None) -> dict:
     return {}
 
 
+def _mohinh_codex(thu_muc: Path | None) -> str | None:
+    """Y31c S4: mô hình Codex thực dùng = trường `model` của dòng `turn_context` cuối trong tệp phiên mới nhất
+    (`codex-rs/protocol/src/protocol.rs` `TurnContextItem.model`; chưa thấy trên máy thật). Không đọc được thì None."""
+    goc = (thu_muc or Path(os.environ.get("CODEX_HOME", "/home/igm/.codex"))) / "sessions"
+    tep = sorted(goc.rglob("rollout-*.jsonl"), key=lambda p: p.stat().st_mtime) if goc.exists() else []
+    if not tep:
+        return None
+    with open(tep[-1], "rb") as f:
+        f.seek(max(0, f.seek(0, 2) - 256_000))
+        dong = f.read().decode("utf-8", "replace").splitlines()
+    for d in reversed(dong):
+        if '"turn_context"' not in d:
+            continue
+        try:
+            o = json.loads(d)
+        except ValueError:
+            continue
+        p = o.get("payload") if isinstance(o, dict) else None
+        if o.get("type") == "turn_context" and isinstance(p, dict) and isinstance(p.get("model"), str) and p["model"].strip():
+            return p["model"].strip()[:80]
+    return None
+
+
 def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None) -> None:
     if not hm:
         return
@@ -249,13 +272,15 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
     if mohinh:
         lenh += ["--model", mohinh]
     r = _chay(lenh, dangnhap_goi._env("claude", taikhoan), vao=cau)
-    kq, hm = None, {}
+    kq, hm, bao = None, {}, None
     for dong in r.stdout.splitlines():
         try:
             o = json.loads(dong)
         except ValueError:
             continue
-        if o.get("type") == "rate_limit_event":
+        if o.get("type") == "system" and o.get("subtype") == "init" and isinstance(o.get("model"), str):
+            bao = o["model"].strip()[:80] or None   # Y31c S4: mô hình CLI thực dùng (dòng khởi đầu stream-json)
+        elif o.get("type") == "rate_limit_event":
             hm.update(han_muc_claude(o.get("rate_limit_info") or {}))
         elif o.get("type") == "result":
             kq = o
@@ -268,7 +293,8 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
     vao = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     tk = kq.get("total_cost_usd")
     return {"chu": kq.get("result") or "", "vao": vao, "ra": int(u.get("output_tokens") or 0), "sotien": None,
-            "sotien_thamkhao": round(float(tk) * TRIEU) if tk is not None else None, "tien_ma": "USD", "hanmuc": hm}
+            "sotien_thamkhao": round(float(tk) * TRIEU) if tk is not None else None, "tien_ma": "USD", "hanmuc": hm,
+            "mohinh_bao": bao}
 
 
 def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None) -> dict:
@@ -301,7 +327,7 @@ def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None) -> dict:
             raise HetHanMuc(str(loi)[:300], hm)
         raise RuntimeError(f"ChatGPT không trả lời được: {str(loi)[:300]}")
     return {"chu": "\n".join(chu), "vao": vao, "ra": ra, "sotien": None, "sotien_thamkhao": None, "tien_ma": "USD",
-            "hanmuc": hm}
+            "hanmuc": hm, "mohinh_bao": _mohinh_codex(tm)}
 
 
 def _goi_khoa(d: dict, cau: str, thumuc=None, client=None) -> dict:
@@ -329,8 +355,9 @@ def _goi_khoa(d: dict, cau: str, thumuc=None, client=None) -> dict:
     else:
         raise RuntimeError("Khoá API chưa rõ của hãng nào (mã nguồn phải bắt đầu bằng khoa_anthropic hoặc khoa_openai)")
     tien = round((vao * m["gia_vao"] + ra * m["gia_ra"]) / TRIEU)
+    bao = o.get("model") if isinstance(o.get("model"), str) else None   # Y31c S4: hãng trả mô hình thực dùng
     return {"chu": chu, "vao": vao, "ra": ra, "sotien": tien, "sotien_thamkhao": None, "tien_ma": m["tien_ma"] or "USD",
-            "hanmuc": {}}
+            "hanmuc": {}, "mohinh_bao": bao}
 
 
 # ---------------- Gọi ----------------
@@ -405,7 +432,8 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
                 kq = _thu(dg, cau, bo_qua, viecnen_id, thumuc, client, ghim=True)
                 if isinstance(kq, dict):
                     return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
-                            "mohinh_id": mh["id"], "mohinh": mh["ma"], "ghim_hong": None, "bo_qua": bo_qua}
+                            "mohinh_id": mh["id"], "mohinh": mh["ma"], "mohinh_bao": kq.get("mohinh_bao"), "ghim_hong": None,
+                            "bo_qua": bo_qua}
                 lydo = kq
             ghim_hong = {"mohinh_id": mohinh_id, "ma": mh["ma"] if mh else None,
                          "het_hanmuc": str(lydo).startswith("hết hạn mức"), "lydo": lydo}
@@ -416,7 +444,8 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
             if isinstance(kq, dict):
                 mh = d["mohinh"] or {}
                 return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
-                        "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "ghim_hong": ghim_hong, "bo_qua": bo_qua}
+                        "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "mohinh_bao": kq.get("mohinh_bao"),
+                        "ghim_hong": ghim_hong, "bo_qua": bo_qua}
     return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua,
             "ghim_hong": ghim_hong}
 

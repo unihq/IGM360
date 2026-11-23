@@ -286,7 +286,8 @@ const NB = '\u00a0';   // dấu "·" nối không ngắt 02 bên
 const TEN_NGUON_GOI = {claude: 'Claude' + NB + '·' + NB + 'Code', chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'};
 const TEN_NGUON_HANG = {anthropic: 'Claude · API', openai: 'OpenAI · API', google: 'Gemini · API', openrouter: 'OpenRouter · API',
   groq: 'Groq · API', deepseek: 'DeepSeek · API', ollama: 'Ollama · Cloud'};
-const tenNguon = n => !n ? '' : n.goi ? TEN_NGUON_GOI[n.goi]
+// Y31c S3 (QĐ186): tài khoản 02 trở đi ghi thêm "· Tài khoản N"; tài khoản 01 giữ "Claude · Code"
+const tenNguon = n => !n ? '' : n.goi ? TEN_NGUON_GOI[n.goi] + (n.taikhoan > 1 ? NB + '·' + NB + 'Tài' + NB + 'khoản' + NB + n.taikhoan : '')
   : (n.loai === 'khoa_api' && TEN_NGUON_HANG[n.hang] ? TEN_NGUON_HANG[n.hang].replace(' · ', NB + '·' + NB) : n.ten);
 const GOI_TEN = TEN_NGUON_GOI;   // tiêu đề thẻ gói
 const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'};   // chỉ còn lấy tên hãng ("Thêm tài khoản Claude khác")
@@ -321,8 +322,10 @@ const moHinhDong = (ma, n) => tenMh(ma, n && (n.id || n.nguon_id), n);
 const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);
 // Dòng dưới câu trả lời màn 08 (Z10a): "Claude · Code · Sonnet 4.5" theo mã nguồn; không tìm được nguồn thì giữ chữ máy chủ trả
 const timNguon = id => id && D.md ? D.md.nguon.find(n => n.id === id) : null;
-const nhanTraLoi = x => { const n = timNguon(x.nguon_id);
-  return n ? tenNguon(n) + ' · ' + moHinhDong(x.mohinh || n.mohinh_gannhat, n) : (x.nguon || 'Trợ lý AI'); };   // mô hình thực dùng
+// Y31c S4 (QĐ186): mô hình công cụ báo về; không có thì mô hình đã gửi; không có nữa thì "Mặc định" (như nút), không lấy mô hình cũ
+const mhThucDung = x => x.mohinh_bao || x.mohinh || null;
+const nhanTraLoi = x => { const n = timNguon(x.nguon_id), mh = mhThucDung(x);
+  return n ? tenNguon(n) + ' · ' + (mh ? moHinhDong(mh, n) : 'Mặc định') : (x.nguon || 'Trợ lý AI'); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
   : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
@@ -455,12 +458,12 @@ const mdChat = () => D.dsmh && D.dsmh.macdinh.trochuyen ? timMh(D.dsmh.macdinh.t
 function dangChonChat() { const x = ghimId() && timMh(ghimId());
   return x ? {...x, ghim: true} : {...(mdChat() || {g: D.dsmh && D.dsmh.nhom.find(n => n.chinh), m: null}), ghim: false}; }
 function ghiHong(tl, gh) { const k = D.htId; if (!tl || !gh) return;
-  if (tl.ghim_hong) D.hong[k] = {het: tl.ghim_hong.het_hanmuc, dung: tl.mohinh, nguon_id: tl.nguon_id};
+  if (tl.ghim_hong) D.hong[k] = {het: tl.ghim_hong.het_hanmuc, dung: mhThucDung(tl), nguon_id: tl.nguon_id};
   else if (tl.mohinh_id === gh) delete D.hong[k]; }
 const nbsp = s => String(s).replace(/ /g, NB);
 function chuGhimHong(x) { const g = x.ghim_hong, a = g.mohinh_id && timMh(g.mohinh_id), n = timNguon(x.nguon_id);
   const ten = a ? tenMh(a.m.ma, a.g.nguon_id, a.g) : g.ma ? tenMh(g.ma) : 'Mô hình đã chọn';
-  const dung = x.mohinh ? tenMh(x.mohinh, x.nguon_id, n) : 'mô hình';
+  const dung = mhThucDung(x) ? tenMh(mhThucDung(x), x.nguon_id, n) : 'mô hình';
   return esc(ten) + ' ' + (g.het_hanmuc ? nbsp('đang hết hạn mức') : 'chưa dùng được') + ', đã dùng ' + esc(nbsp(dung + ' (mặc định)')); }
 const logoNhom = g => { const l = g.goi === 'claude' || g.hang === 'anthropic' ? ICON.logo_claude : g.goi === 'chatgpt' || g.hang === 'openai' ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16);
   return '<span class="logo-n">' + l.replace(/width="\d+"/, 'width="18"').replace(/height="\d+"/, 'height="18"') + '</span>'; };
