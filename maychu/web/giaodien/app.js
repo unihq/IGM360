@@ -115,18 +115,33 @@ async function vaoPhanMem() {
   D.hetLuc = toi.het_luc; S.g = '02'; S.dn = 'matkhau'; ve(); demSo();
   if (S.trang === '09') napTab();
 }
+// ---- Chuông thông báo bước 1 (QĐ165, bản vẽ Z7b): số = dòng Mới (sau mốc đọc); nhóm Mới rồi Đã xem, còn mở
+const MAU_TB = {do: ['do-n', '#E22E28'], xem: ['xem-n', '#C97A00'], tin: ['tin-n', '#1456F0']};
+const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10), d = iso.slice(0, 10);
+  return d === h ? gio(iso) : d === q ? 'Hôm qua ' + gio(iso) : d.slice(8, 10) + '/' + d.slice(5, 7); };
+const icoTb = x => (ICON[x.icon] || ICON['circle-alert']).replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')
+  .replace(/stroke="#[0-9A-Fa-f]{6}"/, 'stroke="' + MAU_TB[x.muc][1] + '"');
+const dongTb = x => '<button class="tha-muc tb-dong" data-di="' + esc(x.di) + '"' + (x.cuon ? ' data-cuon="' + esc(x.cuon) + '"' : '') + '><span class="ico-tron nho '
+  + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + esc(x.chu) + '</span><span class="t12 phu">'
+  + esc(lucTb(x.luc)) + ' · ' + esc(x.noi) + '</span></span></button>';
+function veChuong(d) {
+  const ds = d.thongbao || [], moi = ds.filter(x => x.moi), cu = ds.filter(x => !x.moi);
+  const c = $('[data-chuong] .cham'); c.textContent = d.so_moi ? soVN(d.so_moi) : ''; c.hidden = !d.so_moi;
+  $('#tb-dochet').hidden = !moi.length; $('#tb-dadoc').hidden = !!moi.length || !ds.length;
+  $('#chuong-ds').innerHTML = !ds.length ? '<div class="tb-rong"><span class="ico-tron">' + ICON.bell.replace(/width="\d+"/, 'width="20"').replace(/height="\d+"/, 'height="20"')
+      + '</span><span class="t13 phu">Không có thông báo nào còn mở.</span></div>'
+    : (moi.length ? '<div class="tb-nhom2">Mới · ' + soVN(moi.length) + '</div>' + moi.map(dongTb).join('') : '')
+      + (cu.length ? '<div class="tb-nhom2">Đã xem, còn mở · ' + soVN(cu.length) + '</div>' + cu.map(dongTb).join('') : '');
+}
+// Tự cập nhật số mỗi 60 giây khi phần mềm đang mở (hỏi lại máy chủ, 0 thư viện)
+setInterval(() => { if (S.g !== '01' && document.visibilityState === 'visible') demSo(); }, 60e3);
 async function demSo() {
   try {
     const d = await api('/demso');
     $$('[data-trang="05"] .bao').forEach(b => { b.textContent = d.cuacho ? soVN(d.cuacho) : ''; b.hidden = !d.cuacho; });
     $$('[data-trang="10"] .bao, [data-them] .bao').forEach(g => { g.textContent = d.ket_ai ? soVN(d.ket_ai) : ''; g.hidden = !d.ket_ai; });
     D.soLuc = new Date(Date.now() + 7 * 3600e3).toISOString().slice(11, 16);
-    const c = $('[data-chuong] .cham'); c.textContent = d.canhbao.length ? soVN(d.canhbao.length) : ''; c.hidden = !d.canhbao.length;
-    $('#chuong-dem').textContent = d.canhbao.length ? soVN(d.canhbao.length) + ' mục' : 'Không có cảnh báo mới';
-    const icoCb = di => ICON[{ketkhoa: 'key-round', 11: 'unplug', 10: 'clock-alert', '07': 'tygia'}[di]] || ICON['circle-alert'];
-    $('#chuong-ds').innerHTML = d.canhbao.map(x => '<button class="tha-muc" data-di="' + esc(x.di) + '"><span class="ico-tron nho ' + (x.muc === 'xem' ? 'xem-n' : 'do-n') + '">'
-      + icoCb(x.di) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + esc(x.chu)
-      + '</span><span class="t12 phu">' + esc(luc(x.luc)) + '</span></span></button>').join('');
+    veChuong(d);
   } catch (e) { /* mất kết nối đã hiện dải báo */ }
 }
 
@@ -439,7 +454,9 @@ document.addEventListener('click', async ev => {
     S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.'); }
   else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; if (v) demSo(); }
   else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); e.hidden = !v; }
-  else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); } }
+  else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.'); } await demSo(); return; }
+  else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }
+    if (d.cuon) setTimeout(() => { const e = document.getElementById(d.cuon); if (e) e.scrollIntoView({block: 'start'}); }, 0); }
   else if ('noilai' in d) { try { await api('/demso'); S.k = 'binhthuong'; bao('Đã nối lại máy chủ.'); } catch (e) { /* vẫn mất */ } }
   else if (d.mo) { if (d.mo === 'h-2lop') datLaiDoiMay(); mo(d.mo); }
   else if ('dong' in d) dongHop();

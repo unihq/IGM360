@@ -27,6 +27,7 @@ DANHMUC = [
     ("songay_baotruoc_khoa_hethan", 1, "Báo trước khi khoá kết nối hết hạn", "so", "ngày", "5", None, ""),
     ("so_viec_ai_songsong", 2, "Số việc AI chạy cùng lúc", "so", "việc", "3", None, ""),
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
+    ("tyle_bao_hanmuc_tuan", 2, "Báo khi gói AI dùng quá hạn mức tuần", "so", "%", "80", None, ""),   # QĐ165, PTD-06 mục 10
     ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tự duyệt", "so", "đ", None, None,
      "GĐ 1: AI chỉ đề xuất, mọi việc chờ anh bấm."),
     ("tran_tien_thang_khoa_api", 2, "Hạn mức chi tháng", "so", "USD", None, None,
@@ -69,6 +70,44 @@ def khoi_tao(thumuc: Path | None = None) -> int:
     finally:
         cn.close()
     return them
+
+
+# Thông số hệ thống, không hiện ở màn Cài đặt (PTD-06 mục 10): mốc đọc chuông (QĐ165). 01 mốc cho cả hệ thống,
+# chỉ đúng khi có 01 người dùng; có nhân viên thì thay bằng bảng "Đã đọc" (bước 2, GĐ 2).
+MOC_DOC = "moc_doc_chuong"
+
+
+def doc_moc_doc(thumuc: Path | None = None) -> str | None:
+    """Thời điểm bấm "Đọc hết" gần nhất (giờ Việt Nam), chưa bấm lần nào thì None."""
+    cn = ketnoi.mo("Dulieu_Chinh", thumuc)
+    try:
+        d = cn.execute("SELECT giatri FROM thongso WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL"
+                       " ORDER BY tao_luc DESC, rowid DESC LIMIT 1", (MOC_DOC,)).fetchone()
+    finally:
+        cn.close()
+    return d[0] if d and d[0] else None
+
+
+def dat_moc_doc(nguoi: str = "hethong", thumuc: Path | None = None, luc: datetime | None = None) -> str:
+    """Bấm "Đọc hết": thêm 01 dòng P01 giá trị = lúc bấm, đóng `hieuluc_den` dòng đang dùng (thiết kế P01: không sửa
+    dòng cũ). Không đổi trạng thái cảnh báo D03 (QĐ165)."""
+    aibam.kiem(nguoi)
+    bay = (luc or datetime.now(MUIGIO_VN)).isoformat(timespec="seconds")
+    cn = ketnoi.mo("Dulieu_Chinh", thumuc)
+    try:
+        cn.execute("BEGIN IMMEDIATE")
+        cn.execute("UPDATE thongso SET hieuluc_den = ? WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL",
+                   (bay[:10], MOC_DOC))
+        cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
+                   " VALUES (?, ?, ?, 'chu', '', ?, ?, 'Bấm Đọc hết ở chuông', ?)",
+                   (maso.tao(), MOC_DOC, bay, bay[:10], nguoi, bay))
+        cn.execute("COMMIT")
+    except Exception:
+        cn.execute("ROLLBACK")
+        raise
+    finally:
+        cn.close()
+    return bay
 
 
 def _dong_dang_dung(cn, ten: str, ngay: str):

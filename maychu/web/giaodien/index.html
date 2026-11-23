@@ -82,6 +82,15 @@ select.o-nhap{appearance:auto}
 .loi-o{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--canh)}
 .loi-o svg{margin-top:2px}
 .bao-do{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--canh);border-radius:10px;padding:12px 14px;background:#fff}
+/* Chuông thông báo bước 1 (QĐ165, bản vẽ Z7b) */
+#tha-chuong{width:380px;max-height:min(560px,75vh);overflow:auto}
+.mb #tha-chuong{width:auto;max-height:70vh}
+.mb .vi-tri .tha{position:absolute;top:58px;left:8px;right:8px}
+.tb-dong .f1{flex:1;min-width:0}
+.tb-dong .f1>span{display:block}
+.tb-nhom2{font-size:12px;font-weight:600;color:var(--phu);padding:8px 10px 2px}
+.tb-rong{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 10px 22px;text-align:center}
+.tin-n{border-color:#A9C1F7}
 .tk-dong .go-tk{padding:2px 0;margin-top:2px;font-size:12px}
 .bao-xanh{display:flex;gap:10px;align-items:center;border:1px solid #A9C1F7;border-radius:10px;padding:10px 14px;font-size:13px}
 .o6-hang{display:flex;gap:8px}
@@ -981,7 +990,20 @@ button.o-bam:hover{border-color:var(--xanh)}
 >
   <path d="m6 9 6 6 6-6" />
 </svg></button>
-      <div class="tha" id="tha-chuong" hidden><div class="tha-dau"><b>Cảnh báo mới</b><span class="t12 phu" id="chuong-dem"></span></div><div id="chuong-ds"></div></div>
+      <div class="tha" id="tha-chuong" hidden><div class="tha-dau"><b>Thông báo</b><button class="btn-chu" id="tb-dochet" data-dochet hidden><svg
+  style="flex:none;vertical-align:middle" class="lucide lucide-check"
+  xmlns="http://www.w3.org/2000/svg"
+  width="14"
+  height="14"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M20 6 9 17l-5-5" />
+</svg>Đọc hết</button><span class="t12 phu" id="tb-dadoc" hidden>Đã đọc hết</span></div><div class="tb-ds" id="chuong-ds"></div></div>
       <div class="tha" id="tha-tk" hidden style="width:240px">
         <button class="tha-muc" data-di="taikhoan"><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-user-round"

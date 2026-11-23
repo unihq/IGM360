@@ -13,6 +13,7 @@ from maychu.dulieu import ketnoi
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
+from maychu.hethong.giamsat import thongbao
 from maychu.hethong.mohinh import congai, dangnhap_goi, trochuyen
 from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
@@ -125,21 +126,21 @@ def thu_hoi_khac(p: dict = Depends(can_dang_nhap)):
 
 @router.get("/demso")
 def dem_so(p: dict = Depends(can_dang_nhap)):
-    """Số trên menu và chuông (màn 02)."""
+    """Số trên menu và chuông (màn 02). Chuông bước 1 (QĐ165, Z7b): dòng D03 còn mở qua 01 hàm lọc quyền,
+    số = dòng tạo sau mốc đọc. Giao diện hỏi lại mỗi 60 giây."""
     cn = ketnoi.mo("Dulieu_Chinh")
     try:
         cuacho = cn.execute("SELECT count(*) FROM cuacho WHERE trangthai IN ('moi', 'choduyet')").fetchone()[0]
-        cb = cn.execute("SELECT id, khoa_chongtrung, nguong, giatri, tao_luc FROM canhbao WHERE trangthai = 'moi'"
-                        " ORDER BY tao_luc DESC LIMIT 20").fetchall()
     finally:
         cn.close()
-    ds = []
-    for ma, khoa, nguong, giatri, luc in cb:
-        if khoa == "swap_vuot_nguong":
-            ds.append({"id": ma, "chu": f"Máy chủ dùng tệp hoán đổi {giatri} MB, quá {nguong} MB", "luc": luc, "di": "09"})
-        else:
-            ds.append({"id": ma, "chu": "Có cảnh báo mới", "luc": luc, "di": "03"})
-    return {"cuacho": cuacho, "canhbao": ds, "ket_ai": 0}
+    tb = thongbao.danh_sach(p["nguoidung_id"])
+    return {"cuacho": cuacho, "thongbao": tb["ds"], "so_moi": tb["so_moi"], "ket_ai": 0}
+
+
+@router.post("/thongbao/dochet")
+def doc_het_thongbao(p: dict = Depends(can_dang_nhap)):
+    """Nút "Đọc hết": đặt mốc đọc = lúc bấm (QĐ165); không đổi trạng thái cảnh báo."""
+    return {"moc_doc": thongso.dat_moc_doc(nguoi=p["nguoidung_id"])}
 
 
 @router.get("/thongso")

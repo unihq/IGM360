@@ -2,7 +2,8 @@
 - đo máy mỗi giờ, ghi N02;
 - sao lưu hằng ngày từ 02:00 giờ Việt Nam, ghi N01;
 - cập nhật đang chờ việc AI chạy xong (tối đa 30 phút);
-- đẩy bản sao lưu đã mã hoá lên Google Drive theo hàng chờ M01 (ngày 05), mỗi 05 phút.
+- đẩy bản sao lưu đã mã hoá lên Google Drive theo hàng chờ M01 (ngày 05), mỗi 05 phút;
+- quét nguồn thông báo ở chuông mỗi 10 phút (QĐ165); đo máy, sao lưu xong thì quét ngay phần của mình.
 Việc nặng chạy ở luồng phụ để không chặn máy chủ web.
 """
 import asyncio
@@ -11,27 +12,36 @@ from datetime import datetime
 
 from maychu.dulieu import saoluu
 from maychu.hethong import capnhat
-from maychu.hethong.giamsat import domay
+from maychu.hethong.giamsat import domay, thongbao
 from maychu.ketnoi import drive
 
 GIO_SAOLUU = 2
+NHIP_THONGBAO_GIAY = 600   # ước lượng, chưa đo: gói AI hỏi CLI mỗi lần quét
 log = logging.getLogger("igm360.lich")
 
 
 async def chay_mai() -> None:
     gio_do_cuoi = None
     lan_day_cuoi = 0.0
+    lan_tb_cuoi = None
     while True:
         bay_gio = datetime.now(saoluu.MUIGIO_VN)
         try:
             moc = bay_gio.strftime("%Y-%m-%d %H")
             if moc != gio_do_cuoi:
                 await asyncio.to_thread(domay.ghi_n02)
+                await asyncio.to_thread(thongbao.quet_maychu)
                 gio_do_cuoi = moc
             capnhat.xu_ly_cho()
             if bay_gio.hour >= GIO_SAOLUU and not saoluu.da_co_hom_nay(bay_gio=bay_gio):
                 kq = await asyncio.to_thread(saoluu.chay)
                 log.info("sao lưu: %s", kq["ketqua"])
+                await asyncio.to_thread(thongbao.quet_saoluu)
+            if lan_tb_cuoi is None or asyncio.get_running_loop().time() - lan_tb_cuoi >= NHIP_THONGBAO_GIAY:
+                lan_tb_cuoi = asyncio.get_running_loop().time()
+                kq = await asyncio.to_thread(thongbao.quet)
+                if any(v != "dat" for v in kq.values()):
+                    log.info("quét thông báo: %s", kq)
             if asyncio.get_running_loop().time() - lan_day_cuoi >= 300:
                 lan_day_cuoi = asyncio.get_running_loop().time()
                 kq = await asyncio.to_thread(drive.day_hang_cho)
