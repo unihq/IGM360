@@ -699,7 +699,7 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
 
 
 def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client) -> dict:
-    ghim_hong, nghi, nghi_mh, het_dau, loi_dau = None, {}, {}, None, None
+    ghim_hong, nghi, nghi_mh, het_dau, loi_dau, da_ghim = None, {}, {}, None, None, {}
     with sem:
         ds = _nguon(thumuc, loai_viec)
         if danhmuc_mohinh.la_viec_nen(loai_viec) or viecnen_id is not None:
@@ -720,7 +720,7 @@ def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id,
                     return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
                             "mohinh_id": dong["id"], "mohinh": ma, "mohinh_bao": kq.get("mohinh_bao"), "ghim_hong": None,
                             "ghim_khoa": khoa, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc, nghi_mh)}
-                nghi[d["id"]], nghi_mh[d["id"]] = kq, ma
+                nghi[d["id"]], nghi_mh[d["id"]], da_ghim[d["id"]] = kq, ma, ma
                 het = het or str(kq).startswith("hết hạn mức")
                 ly_tk.append(_ly_do_nghi(d, ma, kq) if str(kq).startswith("hết hạn mức") else {})
                 loi_ghim = {k: bo_qua[-1][k] for k in ("loi", "loi_ct") if kq == "lỗi" and bo_qua and k in bo_qua[-1]}
@@ -737,6 +737,8 @@ def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id,
                 continue
             if nghi.get(d["id"]) == HET_CA_TK:   # Y36b: vừa bị từ chối cả tài khoản ở lượt ghim, không gọi lại
                 continue
+            if d["id"] in da_ghim and (d["mohinh"] or {}).get("ma") == da_ghim[d["id"]]:
+                continue   # Y36g N9: mô hình mặc định trùng mô hình ghim vừa thử ở nguồn này (mọi loại lỗi): không gọi lại
             kq = _thu(d, cau, bo_qua, viecnen_id, thumuc, client)
             if isinstance(kq, dict):
                 mh = d["mohinh"] or {}

@@ -583,6 +583,44 @@ class KiemY36f(KiemY36e):
         self.assertIn("'tài khoản ' + dp.tk + ' đang tạm nghỉ' + (dp.den ? ' đến ' + denLuc(dp.den) : '')", js)
 
 
+class KiemY36g(KiemY36e):
+    """Y36g N9 (CDO U11f): lượt ghim lỗi ở cả 02 tài khoản thì vòng mặc định không gọi lại đúng mô hình đó ở cùng tài
+    khoản (mọi loại lỗi); mô hình mặc định khác mô hình ghim thì vẫn gọi."""
+    test_a_lenh_tro_chuyen_va_viec_khac = test_b_loi_dung_loai = test_c_ghim_va_mac_dinh_deu_ap = None
+    test_n5_man13_tai_khoan_tam_nghi = test_giao_dien_va_thaydoi = None
+
+    def chay_loi(self, lenh, env, vao=None, giay=None):
+        self.lenh.append(lenh)
+        ma = lenh[lenh.index("--model") + 1] if "--model" in lenh else None
+        if ma == "sonnet":
+            dong = [{"type": "result", "subtype": "error_during_execution", "is_error": True, "errors": ["boom"]}]
+        else:
+            dong = [{"type": "result", "subtype": "success", "result": "ok", "usage": {"input_tokens": 1, "output_tokens": 1}}]
+        return subprocess.CompletedProcess(lenh, 0, "\n".join(json.dumps(x) for x in dong), "")
+
+    def mo_hinh_goi(self):
+        return [l[l.index("--model") + 1] if "--model" in l else None for l in self.lenh]
+
+    def test_trung_mo_hinh_khong_goi_lai(self):
+        self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        c3 = self.nguon("goi_chatgpt_01", "goi", 2, "openai")
+        dm.danh_sach()
+        dm.dat_macdinh("trochuyen", khoa="goi_claude|sonnet")   # QĐ190: chọn ở chat làm luôn mặc định Trò chuyện AI
+        with mock.patch.object(congai, "_chay", side_effect=self.chay_loi),                 mock.patch.object(congai, "_goi_chatgpt", return_value=dict(TRA)):
+            kq = congai.goi("x", loai_viec="trochuyen", mohinh_id="goi_claude|sonnet")
+        self.assertEqual(self.mo_hinh_goi(), ["sonnet", "sonnet"])   # mỗi tài khoản 01 lần, không gọi lại ở vòng mặc định
+        self.assertEqual(kq["nguon_id"], c3)                          # QĐ193: sang hãng khác
+
+    def test_khac_mo_hinh_van_goi(self):
+        self.nguon("goi_claude_02", "goi", 1, "anthropic")
+        dm.danh_sach()
+        dm.dat_macdinh("trochuyen", khoa="goi_claude|opus")
+        with mock.patch.object(congai, "_chay", side_effect=self.chay_loi):
+            kq = congai.goi("x", loai_viec="trochuyen", mohinh_id="goi_claude|sonnet")
+        self.assertEqual(self.mo_hinh_goi(), ["sonnet", "sonnet", "opus"])   # mặc định Opus khác Sonnet: vẫn gọi
+        self.assertEqual((kq["nguon_id"], kq["chu"]), (self.c1, "ok"))
+
+
 class KiemZ12(unittest.TestCase):
     def setUp(self):
         self.js = (GD / "app.js").read_text(encoding="utf-8")
