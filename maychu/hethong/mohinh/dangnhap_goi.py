@@ -23,6 +23,9 @@ mã viết mới).
   (`.claude.json`; trường nội bộ, không có trong tài liệu chính thức). ChatGPT: loại gói `chatgpt_plan_type` trong
   `tokens.id_token` của `auth.json`, đổi ra chữ theo Codex (`codex-rs/protocol/src/auth.rs`); tên `name` nếu có (chưa
   xác minh). Đọc không được (tệp mất, đổi tên trường) thì lùi về "Tài khoản N" và họ gói như cũ, không báo lỗi.
+- Bản 0.7.4 (QĐ173, Y29): bản 0.7.3 trên máy chủ ra "Tài khoản 1 · Max" vì `~/.claude.json` nằm ngoài ổ lưu, mất mỗi lần
+  dựng lại vùng chứa (Y28). Image đặt CLAUDE_CONFIG_DIR = ổ lưu; sau cập nhật đăng nhập lại tài khoản 01 một lần để CLI
+  ghi hồ sơ (tên, tên gói, email) vào ổ lưu. Email có lại thì chặn trùng tài khoản (Y24) so được với tài khoản 01.
 """
 import base64
 import json
@@ -372,8 +375,9 @@ def _chu_gon(v) -> str | None:
 
 
 def _tep_hoso_claude(taikhoan: int) -> Path:
-    """Tệp hồ sơ CLI Claude: tài khoản 01 ở `~/.claude.json` (hoặc trong CLAUDE_CONFIG_DIR nếu máy đặt sẵn);
-    tài khoản N > 1 trong thư mục `taikhoan_NN` (CLI đặt `.claude.json` trong CLAUDE_CONFIG_DIR: chưa thấy trên VPS)."""
+    """Tệp hồ sơ CLI Claude (CLI đặt `.claude.json` trong CLAUDE_CONFIG_DIR, không có biến thì ở `~`).
+    Tài khoản 01: image đặt CLAUDE_CONFIG_DIR = ổ lưu `/home/igm/.claude` (QĐ173, Y29) nên hồ sơ còn sau khi dựng lại
+    vùng chứa; máy không đặt biến thì `~/.claude.json`. Tài khoản N > 1: thư mục `taikhoan_NN` trong ổ lưu."""
     tm = thu_muc("claude", taikhoan)
     if tm is not None:
         return tm / ".claude.json"
@@ -478,7 +482,7 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
     """Thẻ màn 13: nguồn AI (G06) theo ưu tiên, kèm trạng thái đăng nhập của tài khoản gói."""
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
-        cot = ["id", "ma", "ten", "loai", "uutien", "trangthai", "tran_tien_thang", "tyle_5gio", "tyle_tuan",
+        cot = ["id", "ma", "ten", "loai", "hang", "uutien", "trangthai", "tran_tien_thang", "tyle_5gio", "tyle_tuan",
                "datlai_5gio_luc", "datlai_tuan_luc", "do_luc", "da_het_luc"]
         dong = thu_tu([dict(zip(cot, r)) for r in cn.execute(f"SELECT {', '.join(cot)} FROM nguon_ai")])
     finally:

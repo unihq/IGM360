@@ -146,7 +146,7 @@ class KiemHoSo(unittest.TestCase):
         self.assertIn(d["logo_chatgpt"], html)                          # hộp Thêm nguồn AI
         for f in ("tailieu/Giayphep_Benthuba.md", "tailieu/Songuongoc.md"):
             self.assertIn("75c1e9fffa5e", (GOC / f).read_text(encoding="utf-8"))
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.3")
+        self.assertGreaterEqual(tuple(map(int, (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 7, 3))
         muc = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.3", 1)[1].split("\n## ", 1)[0]
         self.assertIn("Tóm tắt:", muc)
 

@@ -3,7 +3,8 @@
 - sao lưu hằng ngày từ 02:00 giờ Việt Nam, ghi N01;
 - cập nhật đang chờ việc AI chạy xong (tối đa 30 phút);
 - đẩy bản sao lưu đã mã hoá lên Google Drive theo hàng chờ M01 (ngày 05), mỗi 05 phút;
-- quét nguồn thông báo ở chuông mỗi 10 phút (QĐ165); đo máy, sao lưu xong thì quét ngay phần của mình.
+- quét nguồn thông báo ở chuông mỗi 10 phút (QĐ165); đo máy, sao lưu xong thì quét ngay phần của mình;
+- tin "có bản mới" quét riêng theo nhịp dò bản mới (QĐ174: 05 phút, `capnhat.nhip_kiem_giay`).
 Việc nặng chạy ở luồng phụ để không chặn máy chủ web.
 """
 import asyncio
@@ -24,6 +25,7 @@ async def chay_mai() -> None:
     gio_do_cuoi = None
     lan_day_cuoi = 0.0
     lan_tb_cuoi = None
+    lan_bm_cuoi = None
     while True:
         bay_gio = datetime.now(saoluu.MUIGIO_VN)
         try:
@@ -42,6 +44,9 @@ async def chay_mai() -> None:
                 kq = await asyncio.to_thread(thongbao.quet)
                 if any(v != "dat" for v in kq.values()):
                     log.info("quét thông báo: %s", kq)
+            if lan_bm_cuoi is None or asyncio.get_running_loop().time() - lan_bm_cuoi >= capnhat.nhip_kiem_giay():
+                lan_bm_cuoi = asyncio.get_running_loop().time()
+                await asyncio.to_thread(thongbao.quet_banmoi, None, True)
             if asyncio.get_running_loop().time() - lan_day_cuoi >= 300:
                 lan_day_cuoi = asyncio.get_running_loop().time()
                 kq = await asyncio.to_thread(drive.day_hang_cho)

@@ -13,8 +13,14 @@ from maychu.dulieu.saoluu import MUIGIO_VN
 
 ANH = os.environ.get("IGM360_IMAGE", "unihq/igm360")
 KHO_MA = os.environ.get("IGM360_KHO_MA", "unihq/IGM360")
-NHIP_KIEM_GIAY = 6 * 3600
-_NHO = {"luc": 0.0, "ban_moi": None, "thaydoi": [], "tomtat": {}, "loi": None}
+# QĐ174, QĐ175 (Y29): dò bản mới cố định 05 phút, không làm thông số (nguồn học cách làm: tailieu/Songuongoc.md).
+# Nhịp chỉ viết ở 01 chỗ này; nơi khác đọc qua `nhip_kiem_giay()`.
+NHIP_KIEM_GIAY = 5 * 60
+_NHO = {"luc": 0.0, "luc_dat": 0.0, "ban_moi": None, "thaydoi": [], "tomtat": {}, "loi": None, "nhan_thaydoi": None}
+
+
+def nhip_kiem_giay() -> int:
+    return NHIP_KIEM_GIAY
 _SO = re.compile(r"^\d+\.\d+\.\d+$")
 
 
@@ -29,12 +35,28 @@ def ban_dang_chay() -> str:
         return "0.0.0"
 
 
-def _hoi_ghcr() -> str | None:
+_KIEU_GOI = ", ".join(("application/vnd.oci.image.index.v1+json", "application/vnd.oci.image.manifest.v1+json",
+                        "application/vnd.docker.distribution.manifest.list.v2+json",
+                        "application/vnd.docker.distribution.manifest.v2+json"))
+
+
+def _hoi_ghcr(dang: str | None = None) -> tuple[str | None, str | None]:
+    """(bản mới nhất DÙNG ĐƯỢC, nhãn số lớn nhất trên kho). 02 lượt hỏi: khoá đọc ẩn danh + danh sách nhãn. Nhãn lớn
+    hơn bản đang chạy thì hỏi thêm đúng nhãn đó (QĐ174 điểm 04): gói đóng xong (trả 200) mới tính là bản mới; đang đóng
+    thì lùi về nhãn trước, lần sau hỏi lại."""
     with httpx.Client(timeout=10, follow_redirects=True) as c:
         ve = c.get("https://ghcr.io/token", params={"scope": f"repository:{ANH}:pull"}).json()["token"]
         nhan = c.get(f"https://ghcr.io/v2/{ANH}/tags/list", headers={"Authorization": f"Bearer {ve}"}).json().get("tags") or []
-    so = sorted((t for t in nhan if _SO.match(t)), key=_khoa_so)
-    return so[-1] if so else None
+        so = sorted((t for t in nhan if _SO.match(t)), key=_khoa_so)
+        if not so:
+            return None, None
+        moi_hon = [t for t in so if dang is None or _khoa_so(t) > _khoa_so(dang)]
+        for t in reversed(moi_hon[-2:]):   # tối đa 02 nhãn mới nhất
+            r = c.head(f"https://ghcr.io/v2/{ANH}/manifests/{t}", headers={"Authorization": f"Bearer {ve}", "Accept": _KIEU_GOI})
+            if r.status_code == 200:
+                return t, so[-1]
+        cu = [t for t in so if t not in moi_hon]
+        return (cu[-1] if cu else None), so[-1]
 
 
 def _tai_thaydoi_kq() -> tuple[list[dict], int]:
@@ -69,24 +91,38 @@ def phan_tich_thaydoi(chu: str) -> list[dict]:
 
 
 def kiem_tra(bat_buoc: bool = False) -> dict:
+    """Kết quả nhớ `nhip_kiem_giay()` (QĐ174: 05 phút); `bat_buoc` (nút Kiểm tra lại) thì hỏi ngay.
+    Mỗi lần hỏi: 02 lượt ghcr.io; THAYDOI.md (raw.githubusercontent.com) chỉ tải khi kho có nhãn mới so với lần tải
+    trước, hoặc lần trước tải chưa được. Kho từ chối, lỗi mạng: giữ kết quả cũ, không báo lỗi, lượt sau hỏi lại;
+    chưa từng kiểm được lần nào thì mới báo."""
     bay = time.time()
-    if bat_buoc or bay - _NHO["luc"] > NHIP_KIEM_GIAY:
-        try:
-            _NHO["ban_moi"] = _hoi_ghcr()
-            het, ma_tra = _tai_thaydoi_kq()
-            _NHO["thaydoi"] = _doc_thaydoi(ban_dang_chay(), het) if _NHO["ban_moi"] else []
-            _NHO["tomtat"] = {m["ban"]: m["tomtat"] for m in het if m["tomtat"]}
-            # Y17 (e): không im lặng khi tải tệp thay đổi không được; số bản mới vẫn đúng
-            _NHO["loi"] = None if ma_tra == 200 else (f"Chưa tải được nội dung thay đổi (mã trả về {ma_tra}),"
-                                                      " số bản mới vẫn đúng")
-        except (httpx.HTTPError, KeyError, ValueError) as loi:
-            _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, anh bấm Kiểm tra lại sau"
-        _NHO["luc"] = bay
     dang = ban_dang_chay()
+    if bat_buoc or bay - _NHO["luc"] > nhip_kiem_giay():
+        _NHO["luc"] = bay
+        try:
+            moi, nhan_lon = _hoi_ghcr(dang)
+            _NHO["ban_moi"], _NHO["luc_dat"] = moi, bay
+            _NHO["loi"] = None
+        except (httpx.HTTPError, KeyError, ValueError, TypeError):
+            nhan_lon = None
+            if not _NHO["luc_dat"]:
+                _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, anh bấm Kiểm tra lại sau"
+        if nhan_lon and nhan_lon != _NHO["nhan_thaydoi"]:
+            try:
+                het, ma_tra = _tai_thaydoi_kq()
+            except httpx.HTTPError:
+                het, ma_tra = [], 0
+            if ma_tra == 200:
+                _NHO["thaydoi"] = _doc_thaydoi(dang, het)
+                _NHO["tomtat"] = {m["ban"]: m["tomtat"] for m in het if m["tomtat"]}
+                _NHO["nhan_thaydoi"] = nhan_lon
+            elif not _NHO["tomtat"]:   # Y17 (e): chưa có nội dung cũ thì nói rõ; có rồi thì giữ, lượt sau tải lại
+                _NHO["loi"] = f"Chưa tải được nội dung thay đổi (mã trả về {ma_tra}), số bản mới vẫn đúng"
     moi = _NHO["ban_moi"]
     return {"ban_dang": dang, "ban_moi": moi, "co_ban_moi": bool(moi and _khoa_so(moi) > _khoa_so(dang)),
-            "luc_kiem": datetime.fromtimestamp(_NHO["luc"], MUIGIO_VN).isoformat(timespec="seconds") if _NHO["luc"] else None,
-            "thaydoi": _NHO["thaydoi"], "tomtat": _NHO["tomtat"], "loi": _NHO["loi"]}
+            "luc_kiem": datetime.fromtimestamp(_NHO["luc_dat"], MUIGIO_VN).isoformat(timespec="seconds") if _NHO["luc_dat"] else None,
+            "nhip_phut": nhip_kiem_giay() // 60,
+            "thaydoi": _NHO["thaydoi"] if moi else [], "tomtat": _NHO["tomtat"], "loi": _NHO["loi"]}
 
 
 def _ghi_f04(lenhcon: str, tomtat: str, ketqua: str, lydo: str | None = None, nguoi_id=None, thumuc=None) -> None:
@@ -138,6 +174,8 @@ CHO_TOIDA_GIAY = 30 * 60
 def yeu_cau(nguoi_id: str, che_do: str, thumuc=None) -> dict:
     """che_do 'ngay': gửi lệnh luôn. 'cho': không có việc AI đang chạy thì gửi luôn; có thì chờ việc xong,
     tối đa 30 phút (lịch chạy nền gọi xu_ly_cho mỗi phút). Việc mới không nhận khi đang chờ: dang_cho()."""
+    if not kiem_tra()["co_ban_moi"]:   # QĐ174 điểm 04: chỉ cập nhật khi gói bản mới đã đóng xong trên kho
+        return {"loi": "Chưa có bản mới đóng gói xong, anh chờ vài phút rồi bấm Kiểm tra lại"}
     if che_do == "cho" and so_viec_ai_dangchay(thumuc):
         _CHO.update(tu=time.time(), nguoi=nguoi_id)
         return {"ok": True, "cho": True}

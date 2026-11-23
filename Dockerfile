@@ -51,9 +51,14 @@ RUN useradd -u 10001 -m -d /home/igm igm \
     && mkdir -p /dulieu /home/igm/.claude /home/igm/.codex \
     && chown -R igm:igm /dulieu /home/igm
 
+# QĐ173 (Y29): CLAUDE_CONFIG_DIR = ổ lưu /home/igm/.claude để tệp hồ sơ `.claude.json` của tài khoản Claude 01
+# (tên, tên gói, email) nằm trong ổ lưu, không mất khi dựng lại vùng chứa. Tệp mã đăng nhập `.credentials.json`
+# vẫn ở đúng chỗ cũ (CLI đặt trong thư mục này dù có biến hay không) nên đăng nhập hiện có dùng tiếp.
+# Tài khoản 02 trở đi: phần mềm tự đặt lại biến về thư mục `taikhoan_NN` của từng tài khoản.
 ENV IGM360_CONG=8360 \
     IGM360_THUMUC_DULIEU=/dulieu \
-    HOME=/home/igm
+    HOME=/home/igm \
+    CLAUDE_CONFIG_DIR=/home/igm/.claude
 
 USER igm
 

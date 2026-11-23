@@ -65,15 +65,20 @@ class KiemChanBanCu(unittest.TestCase):
 class KiemBaoLoiKiemTra(unittest.TestCase):
     """(e) tải tệp thay đổi không được thì báo rõ kèm mã trả về; (c), (d) giao diện không nuốt lỗi."""
 
+    def setUp(self):
+        capnhat._NHO.update(luc=0.0, luc_dat=0.0, ban_moi=None, thaydoi=[], tomtat={}, loi=None, nhan_thaydoi=None)
+
+    tearDown = setUp
+
     def kiem(self, ma_tra):
         het = [{"ban": "0.7.0", "tomtat": "Bản thử", "dong": ["Dòng thử"]}] if ma_tra == 200 else []
-        with mock.patch.object(capnhat, "_hoi_ghcr", return_value="0.7.0"), \
+        with mock.patch.object(capnhat, "_hoi_ghcr", return_value=("0.7.0", "0.7.0")), \
                 mock.patch.object(capnhat, "_tai_thaydoi_kq", return_value=(het, ma_tra)):
             return capnhat.kiem_tra(bat_buoc=True)
 
     def test_loi_tai_tep_thay_doi(self):
         kq = self.kiem(404)
-        self.assertIn("mã trả về 404", kq["loi"])
+        self.assertIn("mã trả về 404", kq["loi"])    # chưa có nội dung cũ: nói rõ (QĐ174 giữ, chỉ im khi đã có bản cũ)
         self.assertEqual(kq["ban_moi"], "0.7.0")      # số bản mới vẫn đúng
         kq = self.kiem(200)
         self.assertIsNone(kq["loi"])
@@ -176,12 +181,12 @@ class KiemChuGiaoDien(unittest.TestCase):
         self.assertIn("ưu&nbsp;tiên&nbsp;2", self.html)                                       # N14
         for c in ("'Mở trang'", "'TikTok Shop'", "'mã sàn'"):                                 # N12, T1
             self.assertIn(c, self.js)
-        self.assertIn("Gói ChatGPT · qua&nbsp;Codex", self.html)                              # T2
+        self.assertIn("ChatGPT&nbsp;·&nbsp;Codex", self.html)                                 # T2 → QĐ172 (Z9)
         # U4 (CDO, S1–S3): không tách cụm "mục Két khoá ·", "tài khoản Claude", "mục Bộ mã chung"
         self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá&nbsp;· ưu&nbsp;tiên&nbsp;", self.js)
         self.assertIn("tài&nbsp;khoản&nbsp;Claude của anh.", self.js)
         self.assertIn("mục&nbsp;Bộ&nbsp;mã&nbsp;chung", self.html)
         self.assertIn("'mục Chờ duyệt', 'mục Két khoá', 'mục Bộ mã chung'", self.js)
-        self.assertIn("'Gói ChatGPT · qua&nbsp;Codex'", self.js)
+        self.assertIn("chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'", self.js)               # QĐ172 (Z9)
         nguon = (GOC / "maychu" / "hethong" / "mohinh" / "dangnhap_goi.py").read_text(encoding="utf-8")
         self.assertIn('Bấm \\"Mở trang\\" lấy mã mới rồi dán lại."', nguon)                # N12: dấu chấm cuối

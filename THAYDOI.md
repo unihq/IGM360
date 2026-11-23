@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.4
+Tóm tắt: Giữ tên tài khoản Claude sau mỗi lần cập nhật
+- Tên tài khoản và tên gói Claude được lưu trong ổ lưu của máy chủ, không mất khi bấm "Cập nhật ngay".
+- Tên nguồn AI ghi theo hãng và công cụ: "Claude · Code", "ChatGPT · Codex" ở thẻ, hộp Thêm nguồn AI, cột Nguồn, câu báo kết nối, gỡ; thẻ khoá đổi tên "Khoá API", từng khoá ghi "Claude · API", "OpenAI · API"…
+- Phần mềm tự dò bản mới mỗi 05 phút; có bản mới thì báo ở chuông, không phải bấm "Kiểm tra lại".
+- Sau lần cập nhật này: anh gỡ rồi đăng nhập lại tài khoản Claude 1 một lần để thẻ ghi đúng tên và tên gói; làm tương tự với tài khoản ChatGPT 1 nếu thẻ ghi sai gói.
+
 ## 0.7.3
 Tóm tắt: Thẻ gói AI ghi tên và tên gói
 - Ô tài khoản gói Claude, gói ChatGPT ghi tên tài khoản và tên gói theo hãng (ví dụ "Tên · Ultra") thay cho "Tài khoản 1". Phần mềm đọc mỗi lần mở màn, không lưu lại.
