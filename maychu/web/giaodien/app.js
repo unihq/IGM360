@@ -518,7 +518,8 @@ function dsMhHtml(noi) { const q = MH.tim.trim().toLowerCase(), nh = D.dsmh ? D.
     if (!mo) continue;
     if (coMd) {   // N2: khung chat chưa ghim thì ✓ ở đây (kể cả khi loại việc đặt 01 mô hình); hộp "Đổi": khi đặt về mặc định của nguồn
       const onMd = !dang.m && dang.g && dang.g.nhom === g.nhom;   // U10b F1 (QĐ190)
-      h += '<button type="button" class="mh-dong' + (onMd ? ' on' : '') + '" data-mhmd="' + esc(g.nhom) + '"><span class="f1">' + CHU_MD + '</span>'
+      h += '<button type="button" class="mh-dong' + (onMd ? ' on' : '') + '" data-mhmd="' + esc(g.nhom) + '"'
+        + (noi === 'chat' ? ' title="Bỏ ghim · cuộc này và các cuộc mới dùng mô hình mặc định của nguồn"' : '') + '><span class="f1">' + CHU_MD + '</span>'
         + (onMd ? icoMau(ICON.check, '#1456F0', 16) : '') + '</button>'; }
     if (g.dang_tai) { h += '<div class="mh-tai">' + icoMau(ICON.loader, '#1456F0', 14) + 'Đang tải danh sách mô hình…</div>'; continue; }
     if (!hien.length) { h += '<div class="mh-tai">Chưa có danh sách: dùng mô hình mặc định của nguồn</div>'; continue; }

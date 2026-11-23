@@ -280,6 +280,11 @@ class KiemU10b(unittest.TestCase):
         sau = "luuGhim('h1', 'goi_claude|sonnet'); " + self.DEM
         self.assertEqual(self.chay(md, sau), ["goi_claude|sonnet"])             # ghim Sonnet: chỉ ✓ Sonnet
 
+    def test_z10d_chu(self):
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("' title=\"Bỏ ghim · cuộc này và các cuộc mới dùng mô hình mặc định của nguồn\"'", js)
+        self.assertIn("'Đã bỏ ghim: cuộc này và các cuộc mới theo mặc định của nguồn ' + tn + '.'", js)
+
     def test_f2_khong_bao_mo_hinh_ghi_ten_nguon(self):
         sau = ("console.log(JSON.stringify([chuGhimHong({nguon_id: 'g1', mohinh: null, mohinh_bao: null, "
                "ghim_hong: {khoa: 'goi_claude|opus', ma: 'opus', het_hanmuc: true}})].map(s => s.replace(/\u00a0/g, ' '))));")
