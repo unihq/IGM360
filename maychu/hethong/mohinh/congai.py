@@ -2,7 +2,8 @@
 
 Chọn nguồn theo ưu tiên ở G06 (màn 13): bỏ nguồn ngừng, gói đang báo hết hạn mức (chưa tới giờ đặt lại),
 tài khoản gói chưa đăng nhập, khoá API chưa đặt trần tiền hoặc tháng này đã chạm trần. Nguồn đầu báo hết hạn
-mức thì chuyển sang nguồn kế tiếp và đánh dấu `da_het_luc`.
+mức thì chuyển sang nguồn kế tiếp. Giờ nghỉ do 01 chỗ quyết (Y36d): lượt bị từ chối → mốc nghỉ riêng `_HET_TK`
+(`ghi_het_tai_khoan`); số đo → cửa sổ đã đầy (`_het_luc_dat_lai`). Cột `da_het_luc` chỉ còn ghi lại, không dùng để chặn.
 
 - Gói Claude: Claude Code CLI chế độ không tương tác `claude -p --output-format stream-json --verbose`;
   đọc dòng `result` (chữ trả lời, lượng chữ, `total_cost_usd` = tiền quy đổi tham khảo, không phải tiền chi
@@ -18,6 +19,7 @@ ghim vẫn qua đủ kiểm (đã kết nối, hạn mức, trần tiền, có g
 Tiền ghi số nguyên theo phần triệu đơn vị tiền ở `tien_ma` (1 USD = 1.000.000); giá G08 là phần triệu USD
 cho 1.000.000 chữ (token).
 """
+import contextvars
 import json
 import os
 import re
@@ -76,6 +78,12 @@ def _cua_so(ty_le, dat_lai):
     return {"pct": p, "datlai": r}
 
 
+# Khung hạn mức riêng của 01 mô hình trong `rateLimitType` của CLI Claude (đọc mã CLI 2.1.330; chưa gặp lượt từ chối thật):
+# five_hour, seven_day, overage = cả tài khoản; 03 khung dưới = riêng mô hình (Y36b P1, QĐ192 "hết theo từng mô hình").
+HET_CA_TK = "hết hạn mức · cả tài khoản"   # lượt ghim gặp khung cả tài khoản: lượt mặc định không gọi lại tài khoản đó
+KHUNG_MH = {"seven_day_opus": "Opus", "seven_day_sonnet": "Sonnet", "seven_day_overage_included": None}
+
+
 def han_muc_claude(info: dict) -> dict:
     """Dòng `rate_limit_event` của Claude Code → {5gio, tuan}; bản cũ chỉ gửi cửa sổ đang chặn."""
     info = info.get("raw", info) if isinstance(info, dict) else {}
@@ -93,7 +101,17 @@ def han_muc_claude(info: dict) -> dict:
         if cs:
             ra["5gio" if info["rateLimitType"] == "five_hour" else "tuan"] = cs
     if str(info.get("status", "")).lower() in ("rejected", "blocked"):
-        ra["het"] = True
+        loai = info.get("rateLimitType")
+        try:
+            dl = int(float(info["resetsAt"])) if info.get("resetsAt") else None
+        except (TypeError, ValueError):
+            dl = None
+        if loai in KHUNG_MH:   # riêng 01 mô hình: chỉ ghi dấu mô hình, không đánh dấu cả tài khoản
+            ra["het_mh"] = {"loai": loai, "datlai": dl}
+        elif loai in ("five_hour", "seven_day", "overage"):
+            ra["het"], ra["het_datlai"] = True, dl
+        else:
+            ra["het_khongro"] = {"datlai": dl}   # hãng không nói khung nào; Y36c P3: có resetsAt thì giữ
     return ra
 
 
@@ -162,10 +180,155 @@ def _mohinh_codex(thu_muc: Path | None) -> str | None:
     return None
 
 
-def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None) -> None:
+# ---------------- Đo hạn mức bị động (QĐ192, bản 0.7.7) ----------------
+# Không gọi thêm lượt AI nào, không đọc khoá đăng nhập. Số đo đến từ (1) mỗi lượt gọi thật (rate_limit_event của Claude,
+# tệp phiên Codex) và (2) lịch nền 10 phút đọc tệp phiên Codex mới nhất (`quet_codex`; tệp không đổi thì không đọc lại).
+_DA_QUET: dict[str, float] = {}   # đường dẫn tệp phiên → mtime đã đọc
+_HET_MH: dict[tuple, float] = {}  # (nguồn, mã mô hình; "" = mặc định của nguồn) → giờ dùng lại được (epoch); mất khi khởi động lại
+_KHUNG_HET: dict[tuple, str] = {}  # (nguồn, mã) → khung hãng báo (seven_day_opus…), để giao diện ghi tên mô hình
+_TEN_HET: dict[tuple, str] = {}    # (nguồn, mã) → mô hình CLI báo ở lượt bị từ chối (claude-opus-…)
+_HET_TK: dict[str, float] = {}     # Y36c P2: nguồn gói → giờ cả tài khoản dùng lại được (epoch); mất khi khởi động lại
+_KHOA_HET = threading.Lock()
+HET_MACDINH_GIAY = 3600           # hãng không báo giờ đặt lại thì coi hết 01 giờ
+
+
+def _tep_phien_moi(thu_muc: Path | None) -> Path | None:
+    goc = (thu_muc or Path(os.environ.get("CODEX_HOME", "/home/igm/.codex"))) / "sessions"
+    if not goc.exists():
+        return None
+    tep = sorted(goc.rglob("rollout-*.jsonl"), key=lambda p: p.stat().st_mtime)
+    return tep[-1] if tep else None
+
+
+def quet_codex(thumuc=None) -> dict:
+    """Lịch nền (10 phút): mỗi tài khoản gói ChatGPT đang dùng, đọc tệp phiên Codex mới nhất; tệp mới hơn lần đọc trước
+    thì ghi % hạn mức với giờ đo = giờ của tệp. Trả {mã nguồn: "ghi" | "khong_doi" | "khong_co"}."""
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        ds = cn.execute("SELECT id, ma FROM nguon_ai WHERE trangthai = 'dung' AND ma LIKE 'goi_chatgpt_%'").fetchall()
+    finally:
+        cn.close()
+    kq = {}
+    for nid, ma in ds:
+        m = re.fullmatch(r"goi_chatgpt_(\d\d)", ma or "")
+        if not m:
+            continue
+        tk = int(m.group(1))
+        tm = dangnhap_goi.thu_muc("chatgpt", tk)
+        if tm is None:
+            tm = Path(os.environ.get("CODEX_HOME") or os.environ.get("IGM360_THUMUC_CHATGPT", dangnhap_goi.GOI["chatgpt"]["thumuc"]))
+        tep = _tep_phien_moi(tm)
+        if tep is None:
+            kq[ma] = "khong_co"
+            continue
+        mt = tep.stat().st_mtime
+        if _DA_QUET.get(str(tep)) == mt:
+            kq[ma] = "khong_doi"
+            continue
+        _DA_QUET[str(tep)] = mt
+        hm = _doc_han_muc_codex(tm)
+        if hm:
+            ghi_han_muc(nid, hm, thumuc, luc=datetime.fromtimestamp(mt, MUIGIO_VN).isoformat(timespec="seconds"))
+        kq[ma] = "ghi" if hm else "khong_co"
+    return kq
+
+
+def _gio_dung_lai(hm: dict) -> float:
+    rieng = (hm or {}).get("het_mh") or {}
+    if rieng.get("datlai") and rieng["datlai"] > time.time():   # giờ đặt lại của khung riêng mô hình
+        return rieng["datlai"]
+    sau = [w.get("datlai") for k, w in (hm or {}).items() if k != "het_mh" and isinstance(w, dict) and w.get("datlai")]
+    sau = [x for x in sau if x and x > time.time()]
+    return max(sau) if sau else time.time() + HET_MACDINH_GIAY
+
+
+def het_mo_hinh(nguon_id: str, ma: str | None) -> float:
+    """Mô hình này của nguồn này đang bị hãng từ chối vì hết hạn mức: trả giờ dùng lại được (epoch), không thì 0."""
+    k = (nguon_id, ma or "")
+    with _KHOA_HET:
+        tg = _HET_MH.get(k, 0)
+        if tg and tg <= time.time():
+            _HET_MH.pop(k, None)
+            _KHUNG_HET.pop(k, None)
+            tg = 0
+    return tg
+
+
+def ghi_het_mo_hinh(nguon_id: str, ma: str | None, hm: dict | None, bao: str | None = None) -> None:
+    k = (nguon_id, ma or "")
+    with _KHOA_HET:
+        _HET_MH[k] = _gio_dung_lai(hm or {})
+        loai = ((hm or {}).get("het_mh") or {}).get("loai")
+        if loai:
+            _KHUNG_HET[k] = loai
+        if bao:
+            _TEN_HET[k] = bao
+
+
+def het_tai_khoan(nguon_id: str) -> float:
+    """Y36c P2: cả tài khoản gói đang nghỉ vì hãng từ chối: giờ dùng lại được (epoch), không thì 0."""
+    with _KHOA_HET:
+        tg = _HET_TK.get(nguon_id, 0)
+        if tg and tg <= time.time():
+            _HET_TK.pop(nguon_id, None)
+            tg = 0
+    return tg
+
+
+def ghi_het_tai_khoan(nguon_id: str, datlai: float | None, hm: dict | None = None) -> float:
+    """Y36c P2, P3: mốc nghỉ riêng của cả tài khoản tính từ lúc bị từ chối, không trông vào giờ đặt lại cũ đã lưu.
+    Giờ lấy theo thứ tự: resetsAt hãng báo ở lượt từ chối (P3) → giờ đặt lại của cửa sổ đã đầy (≥ 100%) → 01 giờ
+    (không báo giờ thì nghỉ 01 giờ; nguồn tham khảo ghi ở tailieu/Songuongoc.md)."""
+    bay = time.time()
+    if not (datlai and datlai > bay):
+        day = [w.get("datlai") for w in (hm or {}).values() if isinstance(w, dict) and (w.get("pct") or 0) >= 100]
+        day = [x for x in day if x and x > bay]
+        datlai = max(day) if day else bay + HET_MACDINH_GIAY
+    with _KHOA_HET:
+        _HET_TK[nguon_id] = datlai
+    return datlai
+
+
+def tk_nghi_den(d: dict) -> str | None:
+    """N5 (Y36e): màn 13 – cả tài khoản gói đang tạm nghỉ (mốc nghỉ riêng hoặc cửa sổ đã đầy) thì trả giờ dùng lại."""
+    if d.get("loai") != "goi":
+        return None
+    return _den_luc(d["id"]) if het_tai_khoan(d["id"]) or _het_luc_dat_lai(d) else None
+
+
+def mo_ta_het(nguon_id: str, ma: str | None) -> dict:
+    """Mô hình đang hết của 01 nguồn để giao diện ghi tên: {ma (None = mặc định), ten_khung (Opus…), bao (mã CLI báo)}."""
+    k = (nguon_id, ma or "")
+    with _KHOA_HET:
+        loai, bao = _KHUNG_HET.get(k), _TEN_HET.get(k)
+    return {"ma": ma or None, "ten_khung": KHUNG_MH.get(loai) if loai else None, "bao": bao}
+
+
+def bo_het_mo_hinh(nguon_id: str, ma: str | None) -> None:
+    with _KHOA_HET:
+        _HET_MH.pop((nguon_id, ma or ""), None)
+        _KHUNG_HET.pop((nguon_id, ma or ""), None)
+        _TEN_HET.pop((nguon_id, ma or ""), None)
+
+
+def ds_het_mo_hinh(nguon_id: str) -> list[dict]:
+    """Màn 13 (Y36b): mô hình của nguồn này đang hết hạn mức riêng: [{ma (None = mặc định), ten_khung, den}]."""
+    bay = time.time()
+    with _KHOA_HET:
+        ds = [(k[1], tg, _KHUNG_HET.get(k), _TEN_HET.get(k)) for k, tg in _HET_MH.items() if k[0] == nguon_id and tg > bay]
+    return [{"ma": ma or None, "ten_khung": KHUNG_MH.get(loai) if loai else None, "bao": bao,
+             "den": _iso(tg)} for ma, tg, loai, bao in sorted(ds, key=lambda x: x[0])]
+
+
+def _iso(tg: float) -> str:
+    return datetime.fromtimestamp(tg, MUIGIO_VN).isoformat(timespec="seconds")
+
+
+def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None, luc: str | None = None) -> None:
+    """`luc`: giờ số đo (mặc định: bây giờ); quét tệp phiên Codex ghi giờ của tệp (0.7.7)."""
     if not hm:
         return
-    bay = _bay_gio()
+    bay = luc or _bay_gio()
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cot, gt = ["do_luc = ?"], [bay]
@@ -216,19 +379,26 @@ def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
 
 
 def _het_luc_dat_lai(d: dict) -> bool:
-    """Gói đang báo hết: còn chặn tới giờ đặt lại của cửa sổ đang đầy."""
+    """Số đo cho thấy cửa sổ đã đầy (≥ 100%): chặn tới giờ đặt lại của cửa sổ đó; cửa sổ đầy mà không có giờ đặt lại
+    thì chặn 60 phút từ lần đo. Y36d P3: KHÔNG xét cờ `da_het_luc` nữa: lượt bị từ chối do mốc nghỉ riêng `_HET_TK`
+    quyết (đúng `resetsAt` hãng báo), để giờ đặt lại đã lưu của cửa sổ chưa đầy không đè mốc đó."""
     bay = _bay_gio()
+    moc = datetime.fromtimestamp(time.time() - 3600, MUIGIO_VN).isoformat(timespec="seconds")
     for tl, dl in (("tyle_5gio", "datlai_5gio_luc"), ("tyle_tuan", "datlai_tuan_luc")):
-        if (d[tl] or 0) >= 100 and (not d[dl] or d[dl] > bay):
+        if (d[tl] or 0) >= 100 and (d[dl] > bay if d[dl] else (d.get("do_luc") or "") > moc):
             return True
-    if not d["da_het_luc"]:
-        return False
-    if any(d[dl] and d[dl] <= bay for dl in ("datlai_5gio_luc", "datlai_tuan_luc")):
-        return False
-    if not (d["datlai_5gio_luc"] or d["datlai_tuan_luc"]):   # gói báo hết mà không kèm giờ đặt lại: thử lại sau 60 phút
-        moc = datetime.fromtimestamp(time.time() - 3600, MUIGIO_VN).isoformat(timespec="seconds")
-        return (d.get("do_luc") or "") > moc
-    return True
+    return False
+
+
+def _ly_do_nghi(d: dict, ma: str | None, kq) -> dict:
+    """Y36d P3b: nguồn bỏ qua vì CẢ tài khoản đang tạm nghỉ (mô hình được chọn chưa bị từ chối riêng) thì trả
+    {tk_nghi, den, nguon_id} để giao diện ghi "Tài khoản Claude đang tạm nghỉ đến …", không ghi "<mô hình> hết hạn mức"."""
+    if d.get("loai") != "goi":
+        return {}
+    nghi = bool(het_tai_khoan(d["id"])) or _het_luc_dat_lai(d)
+    if not nghi or (het_mo_hinh(d["id"], ma) and kq != HET_CA_TK):
+        return {}
+    return {"tk_nghi": True, "den": _den_luc(d["id"]), "nguon_id": d["id"]}
 
 
 def tien_thang(nguon_id: str, thumuc=None) -> int:
@@ -246,7 +416,7 @@ def dung_duoc(d: dict, thumuc=None) -> tuple[bool, str]:
     if d["loai"] == "goi":
         if not m:
             return False, "mã nguồn gói không đúng"
-        if _het_luc_dat_lai(d):
+        if _het_luc_dat_lai(d) or het_tai_khoan(d["id"]):   # Y36c P2: mốc nghỉ riêng, không bỏ qua vì giờ đặt lại cũ đã qua
             return False, "hết hạn mức"
         if not dangnhap_goi.trang_thai(m.group(1), int(m.group(2)))["da_noi"]:
             return False, "chưa đăng nhập"
@@ -269,8 +439,42 @@ def _chay(lenh: list, env: dict, vao: str | None = None, giay: int = GIAY_TOIDA)
                               timeout=giay, env=env, cwd=cho_lam)
 
 
+# QĐ195 (Y36e, lỗi H17): trò chuyện của anh không đặt trần lượt, được tra web; vẫn cấm lệnh máy, cấm ghi/sửa tệp
+# (giống Codex `--sandbox read-only`). Phanh kẹt vòng: 600 giây/câu (GIAY_TOIDA). Việc khác (Gọi thử, việc nền) giữ 01 lượt.
+_TRA_WEB: contextvars.ContextVar = contextvars.ContextVar("igm360_tra_web", default=False)
+CONGCU_TRA_WEB = "WebSearch,WebFetch"                      # công cụ duy nhất có mặt và được phép
+CONGCU_CAM = "Bash,PowerShell,Write,Edit,MultiEdit,NotebookEdit"   # chặn thêm 01 lớp, phòng cài đặt máy bật lại
+LOI_CLAUDE = {"error_max_turns": "chạm trần số lượt", "error_during_execution": "lỗi khi chạy",
+              "error_max_budget_usd": "chạm trần chi phí", "error_max_structured_output_retries": "lỗi định dạng trả lời"}
+
+
+class LoiAI(RuntimeError):
+    """Lỗi 01 lượt gọi AI: `ngan` (chữ ngắn cho anh), `ct` (loại lỗi và câu hãng báo, để rê chuột)."""
+    def __init__(self, hang: str, ngan: str, ct: str = ""):
+        super().__init__(f"{hang} {ngan}" + (f" ({ct})" if ct else ""))
+        self.ngan, self.ct = ngan, ct
+
+
+def _loi_claude(kq: dict | None, r) -> tuple[str, str]:
+    """Y36e: đọc đúng loại lỗi Claude từ dòng `result` (`subtype` + `errors`), không lấy đuôi chữ JSON."""
+    if kq:
+        sub = str(kq.get("subtype") or "")
+        loi = [str(x) for x in (kq.get("errors") or []) if x]
+        if isinstance(kq.get("result"), str) and kq["result"].strip():
+            loi.append(kq["result"].strip())
+        ct = (sub + (": " if sub and loi else "") + "; ".join(loi))[:200]
+        return LOI_CLAUDE.get(sub, "báo lỗi"), ct
+    dong = [d.strip() for d in (r.stderr or "").splitlines() if d.strip() and not d.strip().startswith("{")]
+    return "không trả kết quả", (dong[-1][:200] if dong else "")
+
+
 def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
-    lenh = [dangnhap_goi._cli("claude"), "-p", "--output-format", "stream-json", "--verbose", "--max-turns", "1"]
+    lenh = [dangnhap_goi._cli("claude"), "-p", "--output-format", "stream-json", "--verbose"]
+    if _TRA_WEB.get():
+        lenh += ["--tools", CONGCU_TRA_WEB, "--allowedTools", CONGCU_TRA_WEB, "--disallowedTools", CONGCU_CAM,
+                 "--strict-mcp-config"]
+    else:
+        lenh += ["--max-turns", "1"]
     if mohinh:
         lenh += ["--model", mohinh]
     r = _chay(lenh, dangnhap_goi._env("claude", taikhoan), vao=cau)
@@ -287,10 +491,12 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
         elif o.get("type") == "result":
             kq = o
     if not kq or kq.get("is_error") or kq.get("subtype") not in (None, "success"):
-        loi = (kq or {}).get("result") or (r.stderr or r.stdout)[-300:]
-        if hm.get("het") or any(x in str(loi).lower() for x in HET_HANMUC):
-            raise HetHanMuc(str(loi)[:300], hm)
-        raise RuntimeError(f"Claude không trả lời được: {str(loi)[:300]}")
+        ngan, ct = _loi_claude(kq, r)
+        if hm.get("het") or hm.get("het_mh") or hm.get("het_khongro") or any(x in ct.lower() for x in HET_HANMUC):
+            if bao:
+                hm["mh_bao"] = bao
+            raise HetHanMuc(ct[:300] or "hết hạn mức", hm)
+        raise LoiAI("Claude", ngan, ct)
     u = kq.get("usage") or {}
     vao = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     tk = kq.get("total_cost_usd")
@@ -379,10 +585,13 @@ def _ghi_g04(d: dict, kq: dict | None, ketqua: str, ms: int, viecnen_id=None, th
 
 def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=None, ghim: bool = False):
     """Gọi 01 nguồn với mô hình `d["mohinh"]`. Được thì trả kết quả gọi; không được thì ghi `bo_qua`, trả lý do.
-    `ghim`: lượt thử mô hình anh ghim; hết hạn mức thì chỉ ghi % hạn mức hãng báo, không đánh dấu cả nguồn hết
-    (hạn mức riêng của 01 mô hình, ví dụ Opus, không chặn mô hình mặc định cùng gói)."""
+    `ghim`: lượt thử mô hình anh ghim. Hết hạn mức riêng của 01 mô hình (ví dụ Opus) chỉ ghi dấu mô hình đó, không chặn
+    mô hình khác cùng tài khoản (Y36b P1)."""
     ten = d["ten"] + (" (mô hình đã chọn)" if ghim else "")
+    ma_mh = (d.get("mohinh") or {}).get("ma")
     ok, lydo = dung_duoc(d, thumuc)
+    if ok and het_mo_hinh(d["id"], ma_mh):   # 0.7.7: mô hình vừa bị từ chối vì hết hạn mức thì không gọi lại tới giờ dùng lại
+        ok, lydo = False, "hết hạn mức (mô hình)"
     if not ok:
         bo_qua.append({"nguon": ten, "lydo": lydo})
         return lydo
@@ -397,18 +606,36 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
             kq = _goi_khoa(d, cau, thumuc, client)
     except HetHanMuc as e:
         _ghi_g04(d, None, "het_hanmuc", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-        ghi_han_muc(d["id"], e.hanmuc if ghim else {**e.hanmuc, "het": True}, thumuc)
+        hm = dict(e.hanmuc or {})
+        rieng = hm.pop("het_mh", None)
+        khongro = hm.pop("het_khongro", None) or {}
+        dl_tk = hm.pop("het_datlai", None) or khongro.get("datlai")
+        bao = hm.pop("mh_bao", None)
+        # Y36b P1: hãng báo khung riêng 01 mô hình → chỉ ghi dấu mô hình đó, cả tài khoản vẫn dùng được (mô hình khác);
+        # hãng báo khung cả tài khoản (05 giờ, tuần) → đánh dấu cả tài khoản, kể cả lượt ghim;
+        # không rõ khung: lượt ghim chỉ ghi dấu mô hình, lượt thường đánh dấu cả tài khoản như cũ.
+        tk_het = bool(hm.get("het")) or (not ghim and not rieng)
+        if ma_mh or rieng:
+            ghi_het_mo_hinh(d["id"], ma_mh, {**hm, "het_mh": rieng or {"datlai": khongro.get("datlai")}}, bao)   # P3
+        elif bao:
+            with _KHOA_HET:
+                _TEN_HET[(d["id"], "")] = bao
+        if tk_het and d["loai"] == "goi":   # khoá API báo 429 thường là giới hạn theo phút: không nghỉ 01 giờ
+            ghi_het_tai_khoan(d["id"], dl_tk, hm)
+        hm["het"] = tk_het
+        ghi_han_muc(d["id"], hm, thumuc)
         bo_qua.append({"nguon": ten, "lydo": f"hết hạn mức: {e}"[:200]})
-        return "hết hạn mức"
+        return HET_CA_TK if tk_het else "hết hạn mức"
     except subprocess.TimeoutExpired:
         _ghi_g04(d, None, "quagio", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
         bo_qua.append({"nguon": ten, "lydo": "quá giờ"})
         return "quá giờ"
     except Exception as e:  # noqa: BLE001 - lỗi 01 nguồn thì thử nguồn sau
         _ghi_g04(d, None, "loi", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
-        bo_qua.append({"nguon": ten, "lydo": str(e)[:200]})
+        bo_qua.append({"nguon": ten, "lydo": str(e)[:200], **({"loi": e.ngan, "loi_ct": e.ct} if isinstance(e, LoiAI) else {})})
         return "lỗi"
     ms = int((time.monotonic() - t0) * 1000)
+    bo_het_mo_hinh(d["id"], ma_mh)
     ghi_han_muc(d["id"], kq.get("hanmuc") or {}, thumuc)
     kq["nhatky_ai_id"] = _ghi_g04(d, kq, "xong", ms, viecnen_id, thumuc)
     return kq
@@ -420,7 +647,11 @@ def _tk(d: dict) -> int | None:
 
 
 def _den_luc(nguon_id: str, thumuc=None) -> str | None:
-    """Giờ tài khoản đang nghỉ dùng lại được: giờ đặt lại của cửa sổ đã đầy; không rõ cửa sổ thì giờ đặt lại sớm nhất."""
+    """Giờ tài khoản đang nghỉ dùng lại được: mốc nghỉ riêng (Y36c P2); không có thì giờ đặt lại của cửa sổ đã đầy;
+    không rõ cửa sổ thì giờ đặt lại sớm nhất."""
+    tg = het_tai_khoan(nguon_id)
+    if tg:
+        return _iso(tg)
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         r = cn.execute("SELECT tyle_5gio, datlai_5gio_luc, tyle_tuan, datlai_tuan_luc FROM nguon_ai WHERE id = ?", (nguon_id,)).fetchone()
@@ -434,7 +665,7 @@ def _den_luc(nguon_id: str, thumuc=None) -> str | None:
     return max(day) if day else (sau[0] if sau else None)
 
 
-def _chay_bang(d: dict, ds: list, nghi: dict, thumuc=None) -> dict:
+def _chay_bang(d: dict, ds: list, nghi: dict, thumuc=None, nghi_mh: dict | None = None) -> dict:
     """QĐ189: tài khoản thực chạy; chạy dự phòng (tài khoản cùng loại đứng trước đang hết hạn mức) thì kèm tài khoản đó và
     giờ dùng lại được. Chỉ để giao diện hiện khi rê chuột."""
     tk = _tk(d)
@@ -443,7 +674,14 @@ def _chay_bang(d: dict, ds: list, nghi: dict, thumuc=None) -> dict:
     loai = dangnhap_goi.loai_nguon(d)
     truoc = next((x for x in ds if x["id"] != d["id"] and dangnhap_goi.loai_nguon(x) == loai and x["id"] in nghi
                   and str(nghi[x["id"]]).startswith("hết hạn mức")), None)
-    return {"chay_tk": tk, "du_phong": {"tk": _tk(truoc), "den": _den_luc(truoc["id"], thumuc)} if truoc else None}
+    if not truoc:
+        return {"chay_tk": tk, "du_phong": None}
+    ma = (nghi_mh or {}).get(truoc["id"])
+    tg = het_mo_hinh(truoc["id"], ma)
+    if tg and nghi[truoc["id"]] != HET_CA_TK and not het_tai_khoan(truoc["id"]) and not _het_luc_dat_lai(truoc):
+        # N4: riêng 01 mô hình hết → giao diện ghi "Opus của tài khoản 1 hết hạn mức đến …" như màn 13
+        return {"chay_tk": tk, "du_phong": {"tk": _tk(truoc), "den": _iso(tg), "rieng": True, **mo_ta_het(truoc["id"], ma)}}
+    return {"chay_tk": tk, "du_phong": {"tk": _tk(truoc), "den": _den_luc(truoc["id"], thumuc)}}
 
 
 def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_id=None, thumuc=None,
@@ -451,16 +689,27 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
     """Gọi AI 01 lần theo thứ tự ưu tiên (hoặc chỉ 01 nguồn khi bấm Gọi thử). Trả {chu, nguon, nguon_id,
     nhatky_ai_id, mohinh_id, mohinh, ghim_hong, bo_qua} hoặc {loi, bo_qua}. `mohinh_id` (G08): mô hình ghim, thử trước;
     không dùng được thì `ghim_hong` = {mohinh_id, ma, het_hanmuc, lydo} và gọi theo mặc định."""
-    bo_qua, ghim_hong, nghi = [], None, {}
+    bo_qua, ghim_hong, nghi, nghi_mh, het_dau = [], None, {}, {}, None
     sem = _cho_phep()
+    tra_web = _TRA_WEB.set(loai_viec == "trochuyen" and not chi_nguon_id)   # QĐ195: chỉ trò chuyện của anh
+    try:
+        return _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client)
+    finally:
+        _TRA_WEB.reset(tra_web)
+
+
+def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client) -> dict:
+    ghim_hong, nghi, nghi_mh, het_dau, loi_dau, da_ghim = None, {}, {}, None, None, {}
     with sem:
         ds = _nguon(thumuc, loai_viec)
+        if danhmuc_mohinh.la_viec_nen(loai_viec) or viecnen_id is not None:
+            mohinh_id = None   # K-VN Đ2: lượt gọi từ việc nền hoặc bot không đọc ghim, chặn ở cổng (không trông vào nơi gọi)
         if mohinh_id and not chi_nguon_id:
             # 0.7.6 (QĐ187, Đ1, Đ5): ghim "loại|mã" (dạng cũ id G08 đổi sang); thử lần lượt mọi tài khoản cùng loại có mô
             # hình đó, mỗi tài khoản qua đủ kiểm giá, hạn mức; hết mới về mặc định (QĐ183)
             khoa = danhmuc_mohinh.chuan_khoa(mohinh_id, thumuc)
             loai, ma = danhmuc_mohinh.tach_khoa(khoa) if khoa else (None, None)
-            lydo, het, da_thu = "không còn dùng được", False, 0
+            lydo, het, da_thu, ly_tk, loi_ghim = "không còn dùng được", False, 0, [], {}
             for d in (x for x in ds if ma and dangnhap_goi.loai_nguon(x) == loai):
                 dong = danhmuc_mohinh.dong_cua(d["id"], ma, thumuc)
                 if not dong:
@@ -470,23 +719,50 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
                 if isinstance(kq, dict):
                     return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
                             "mohinh_id": dong["id"], "mohinh": ma, "mohinh_bao": kq.get("mohinh_bao"), "ghim_hong": None,
-                            "ghim_khoa": khoa, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc)}
-                nghi[d["id"]] = kq
+                            "ghim_khoa": khoa, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc, nghi_mh)}
+                nghi[d["id"]], nghi_mh[d["id"]], da_ghim[d["id"]] = kq, ma, ma
                 het = het or str(kq).startswith("hết hạn mức")
+                ly_tk.append(_ly_do_nghi(d, ma, kq) if str(kq).startswith("hết hạn mức") else {})
+                loi_ghim = {k: bo_qua[-1][k] for k in ("loi", "loi_ct") if kq == "lỗi" and bo_qua and k in bo_qua[-1]}
                 lydo = kq
             if not da_thu:   # mô hình ngừng, cả nhóm đã gỡ hoặc ngừng (Đ1, Đ2)
                 bo_qua.append({"nguon": "Mô hình đã chọn", "lydo": lydo})
             ghim_hong = {"khoa": khoa or mohinh_id, "ma": ma, "het_hanmuc": het, "lydo": "hết hạn mức" if het else lydo}
+            if ly_tk and all(ly_tk):   # P3b: chỉ vì tài khoản đang tạm nghỉ
+                ghim_hong.update(min(ly_tk, key=lambda x: x["den"] or "9"))
+            elif not het and loi_ghim:   # Y36e: dòng vàng ghi đúng loại lỗi (ví dụ "chạm trần số lượt")
+                ghim_hong.update(loi_ghim)
         for d in ds:
             if chi_nguon_id and d["id"] != chi_nguon_id:
                 continue
+            if nghi.get(d["id"]) == HET_CA_TK:   # Y36b: vừa bị từ chối cả tài khoản ở lượt ghim, không gọi lại
+                continue
+            if d["id"] in da_ghim and (d["mohinh"] or {}).get("ma") == da_ghim[d["id"]]:
+                continue   # Y36g N9: mô hình mặc định trùng mô hình ghim vừa thử ở nguồn này (mọi loại lỗi): không gọi lại
             kq = _thu(d, cau, bo_qua, viecnen_id, thumuc, client)
             if isinstance(kq, dict):
                 mh = d["mohinh"] or {}
+                # Y36c: lượt thường (chưa ghim), mô hình mặc định của nguồn đứng trước hết hạn mức, đã sang hãng khác
+                md_hong = None
+                if not ghim_hong and het_dau and dangnhap_goi.loai_nguon(het_dau) != dangnhap_goi.loai_nguon(d):
+                    ma0 = (het_dau["mohinh"] or {}).get("ma")
+                    if loi_dau is not None:   # Y36f N6: nguồn đứng trước lỗi (không phải hạn mức) rồi sang hãng khác
+                        md_hong = {"nguon_id": het_dau["id"], "het_hanmuc": False, **loi_dau}
+                    else:
+                        md_hong = {**mo_ta_het(het_dau["id"], ma0), "nguon_id": het_dau["id"], "het_hanmuc": True,
+                                   **_ly_do_nghi(het_dau, ma0, nghi.get(het_dau["id"]))}   # P3b
                 return {"chu": kq["chu"], "nguon": d["ten"], "nguon_id": d["id"], "nhatky_ai_id": kq["nhatky_ai_id"],
                         "mohinh_id": mh.get("id"), "mohinh": mh.get("ma"), "mohinh_bao": kq.get("mohinh_bao"),
-                        "ghim_hong": ghim_hong, "ghim_khoa": None, "bo_qua": bo_qua, **_chay_bang(d, ds, nghi, thumuc)}
+                        "ghim_hong": ghim_hong, "md_hong": md_hong, "ghim_khoa": None, "bo_qua": bo_qua,
+                        **_chay_bang(d, ds, nghi, thumuc, nghi_mh)}
+            if het_dau is None and str(kq).startswith("hết hạn mức"):
+                het_dau = d
+            elif het_dau is None and kq in ("lỗi", "quá giờ"):   # Y36f N6
+                het_dau = d
+                b = bo_qua[-1] if bo_qua else {}
+                loi_dau = {"loi": b.get("loi") or kq, "loi_ct": b.get("loi_ct") or ""}
             nghi.setdefault(d["id"], kq)
+            nghi_mh.setdefault(d["id"], (d["mohinh"] or {}).get("ma"))
     return {"loi": "Chưa có nguồn AI nào dùng được" if not bo_qua else "Mọi nguồn AI đều chưa dùng được", "bo_qua": bo_qua,
             "ghim_hong": ghim_hong}
 

@@ -31,6 +31,11 @@ class Nen(unittest.TestCase):
         dm._NHO.clear()
         dm._DANG_TAI.clear()
         dg._NHO_TRANGTHAI.clear()
+        congai._HET_MH.clear()   # 0.7.7: nhớ "hết" theo mô hình nằm trong bộ nhớ, mỗi bài bắt đầu sạch
+        congai._KHUNG_HET.clear()
+        congai._TEN_HET.clear()
+        congai._HET_TK.clear()
+        congai._DA_QUET.clear()
         self.vas = [mock.patch.object(dg, "trang_thai", return_value={"da_noi": True, "goi_dang_dung": "max"})]
         for v in self.vas:
             v.start()
@@ -314,7 +319,7 @@ class KiemGiaoDien(unittest.TestCase):
         for chu in ("Tìm nguồn, mô hình…", "Dùng ngay cho cuộc này và các cuộc mới", "Thêm nguồn AI ở mục Mô hình AI",
                     "Đang tải danh sách mô hình…", "Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối",
                     ") cho cuộc này và các cuộc mới.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
-                    "' (mặc định) cho tới khi đặt lại'", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
+                    "' (mặc định)' + (hong.het ? ' cho tới khi đặt lại' : '')", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
             self.assertIn(chu, self.js, chu)
         self.assertIn("#8F5F00", self.js)                                   # chữ vàng tương phản 5,5:1
         self.assertIn(".tn-meta.mh-vang{color:#8F5F00}", self.html)
@@ -351,7 +356,7 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("try { const g = docGhim();", self.js)               # trình duyệt chặn lưu: không lỗi
 
     def test_g2_g3_g5(self):
-        self.assertIn("Cất&nbsp;ở&nbsp;mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
         self.assertIn("'&nbsp;·&nbsp;<span class=\"nw\">' + esc(x.goi_ten)", self.js)
         self.assertIn("'Đăng nhập lúc&nbsp;' + esc(luc(x.dangnhap_luc))", self.js)
 

@@ -3,6 +3,16 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.7
+Tóm tắt: Tự cập nhật hạn mức, mô hình việc nền
+- Mục Mô hình AI tự cập nhật số hạn mức mỗi phút, không cần mở lại màn hay bấm Gọi thử.
+- Qua giờ đặt lại, hạn mức hiện 0% ngay.
+- Gói ChatGPT: phần mềm tự đọc số hạn mức mỗi 10 phút, không tốn lượt hỏi AI.
+- Mô hình hoặc tài khoản bị hãng báo hết hạn mức thì phần mềm tạm không gọi tới giờ đặt lại; hãng không báo giờ thì nghỉ 01 giờ. Các mô hình khác vẫn dùng.
+- Bảng mô hình mặc định có thêm dòng "Việc nền chung": việc chạy nền chưa đặt riêng thì dùng mô hình của dòng này.
+- Trên điện thoại, ô báo rộng hết màn và nằm trên thanh dưới.
+- Trò chuyện AI qua Claude được tra web và dùng nhiều bước trong 01 câu trả lời, không còn bị cắt ở bước đầu; vẫn không chạy lệnh máy, không ghi, sửa tệp. Dòng chữ vàng ghi rõ loại lỗi.
+
 ## 0.7.6
 Tóm tắt: Chọn theo mô hình, tự xoay tài khoản
 - Sửa lỗi bản 0.7.5: bấm chọn mô hình ở khung trò chuyện không đổi được khi chưa đặt mô hình mặc định.
