@@ -9,10 +9,21 @@ mã viết mới).
   `/home/igm/.codex`); tài khoản 02 dùng thư mục con `taikhoan_02` trong cùng ổ (CLAUDE_CONFIG_DIR, CODEX_HOME),
   nên không mất khi cập nhật.
 - Đăng nhập xong thì ghi nguồn AI (G06) mã `goi_claude_01`, `goi_chatgpt_02`...; không ghi mã, đường link vào nhật ký.
+- Bản 0.7.1 (QĐ164, Y24):
+  (1) chặn trùng: đăng nhập xong tài khoản N > 1 thì so định danh với các tài khoản đã kết nối cùng gói; trùng thì
+      đăng xuất ô N, không ghi G06. Định danh chỉ so trong bộ nhớ, không ghi nhật ký, không trả ra giao diện.
+      Claude: `email`, `orgId` của `claude auth status --json` (đã thấy trên CLI 2.1.330). ChatGPT: `email` trong
+      `tokens.id_token` của `$CODEX_HOME/auth.json`, mã tổ chức `tokens.account_id` (theo mã nguồn công khai của Codex,
+      codex-rs/login/src/auth/storage.rs, token_data.rs; chưa thấy trên máy thật). Không đọc được định danh thì không chặn.
+  (2) gỡ tài khoản: đăng xuất CLI ở thư mục đó, G06 `trangthai` = `ngung` (không xoá dòng).
+  (3) ô tài khoản N > 1 chỉ hiện sau khi đăng nhập xong (có dòng G06 đang dùng; bản vẽ Z6-TK); ô đã gỡ ẩn, kể cả
+      tài khoản 01; huỷ, bỏ dở thì xoá thư mục chưa đăng nhập (chưa từng có dòng G06).
 """
+import base64
 import json
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -53,10 +64,13 @@ def thu_muc(goi: str, taikhoan: int) -> Path | None:
     return goc / f"taikhoan_{taikhoan:02d}"
 
 
-def _env(goi: str, taikhoan: int) -> dict:
+def _env(goi: str, taikhoan: int, tao: bool = True) -> dict:
     tm = thu_muc(goi, taikhoan)
     env = dict(os.environ)
     if tm is not None:
+        if not tao:
+            env[GOI[goi]["bien_thumuc"]] = str(tm)
+            return env
         tm.mkdir(parents=True, exist_ok=True)
         os.chmod(tm, 0o700)
         env[GOI[goi]["bien_thumuc"]] = str(tm)
@@ -66,7 +80,7 @@ def _env(goi: str, taikhoan: int) -> dict:
 def _kiem(goi: str, taikhoan: int) -> None:
     if goi not in GOI:
         raise ValueError("Gói không có")
-    if not 1 <= taikhoan <= SO_TAIKHOAN_TOIDA:
+    if not isinstance(taikhoan, int) or not 1 <= taikhoan <= SO_TAIKHOAN_TOIDA:
         raise ValueError(f"Mỗi gói tối đa {SO_TAIKHOAN_TOIDA:02d} tài khoản")
 
 
@@ -134,6 +148,7 @@ def bat_dau(goi: str, taikhoan: int = 1) -> dict:
     if not p["url"] and not p["xong"]:
         _dung(p)
         _PHIEN.pop(k, None)
+        _don(goi, taikhoan)
         return {"loi": "Không lấy được đường link đăng nhập" + (f" ({_duoi(p)})" if _duoi(p) else "")}
     return {"url": p["url"], "ma_thietbi": p["ma_thietbi"] or None, "xong": p["xong"]}
 
@@ -185,6 +200,7 @@ def hoi(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     if p["proc"].poll() not in (None, 0) or p["loi"]:
         loi = _duoi(p)
         _PHIEN.pop((goi, taikhoan), None)
+        _don(goi, taikhoan)
         return {"loi": "Đăng nhập chưa xong" + (f" ({loi})" if loi else "")}
     return {"cho": True}
 
@@ -194,6 +210,82 @@ def huy(goi: str, taikhoan: int) -> None:
     p = _PHIEN.pop((goi, taikhoan), None)
     if p:
         _dung(p)
+    _don(goi, taikhoan)
+
+
+def _g06(thumuc: Path | None = None) -> dict:
+    """{mã G06 gói: trangthai}."""
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        return dict(cn.execute("SELECT ma, trangthai FROM nguon_ai WHERE substr(ma, 1, 4) = 'goi_'").fetchall())
+    finally:
+        cn.close()
+
+
+def _don(goi: str, taikhoan: int, thumuc: Path | None = None) -> bool:
+    """QĐ164 ý 3: xoá thư mục tài khoản N > 1 chưa đăng nhập, chưa từng có dòng G06, không đang đăng nhập."""
+    tm = thu_muc(goi, taikhoan)
+    if tm is None or not tm.is_dir() or (goi, taikhoan) in _PHIEN or ma_nguon(goi, taikhoan) in _g06(thumuc):
+        return False
+    if not re.fullmatch(r"taikhoan_\d\d", tm.name) or trang_thai(goi, taikhoan, bo_nho=True)["da_noi"]:
+        return False
+    shutil.rmtree(tm, ignore_errors=True)
+    _NHO_TRANGTHAI.pop((goi, taikhoan), None)
+    return not tm.exists()
+
+
+def _jwt_than(jwt: str) -> dict:
+    """Phần giữa của id_token (chỉ đọc thông tin, không kiểm chữ ký: tệp do CLI trên chính máy này ghi)."""
+    try:
+        than = jwt.split(".")[1]
+        d = json.loads(base64.urlsafe_b64decode(than + "=" * (-len(than) % 4)))
+        return d if isinstance(d, dict) else {}
+    except (IndexError, ValueError, TypeError):
+        return {}
+
+
+def _dinh_danh(goi: str, taikhoan: int) -> tuple | None:
+    """(email viết thường, mã tổ chức) của tài khoản; None khi không đọc được. Chỉ dùng để so, không ghi đi đâu."""
+    tm = thu_muc(goi, taikhoan)
+    if tm is not None and not tm.is_dir():
+        return None
+    try:
+        if goi == "claude":
+            r = subprocess.run([_cli(goi), "auth", "status", "--json"], capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", timeout=15, env=_env(goi, taikhoan, tao=False))
+            d = json.loads((r.stdout or "").strip() or "{}")
+            email, to_chuc = d.get("email"), d.get("orgId")
+        else:
+            goc = tm or Path(os.environ.get("CODEX_HOME") or os.environ.get("IGM360_THUMUC_CHATGPT", GOI[goi]["thumuc"]))
+            tokens = (json.loads((goc / "auth.json").read_text(encoding="utf-8")) or {}).get("tokens") or {}
+            than = _jwt_than(tokens.get("id_token") or "")
+            email = than.get("email") or (than.get("https://api.openai.com/profile") or {}).get("email")
+            to_chuc = tokens.get("account_id") or (than.get("https://api.openai.com/auth") or {}).get("chatgpt_account_id")
+    except (OSError, ValueError, subprocess.TimeoutExpired, AttributeError):
+        return None
+    if not isinstance(email, str) or not email.strip():
+        return None
+    return email.strip().lower(), to_chuc if isinstance(to_chuc, str) and to_chuc else None
+
+
+def trung(a: tuple | None, b: tuple | None) -> bool:
+    """Cùng email và cùng tổ chức (thiếu mã tổ chức ở 01 bên thì chỉ so email). 02 email khác nhau cùng 01 tổ chức
+    (ví dụ 02 chỗ ngồi của gói Team) là 02 tài khoản khác nhau."""
+    if not a or not b or a[0] != b[0]:
+        return False
+    return a[1] is None or b[1] is None or a[1] == b[1]
+
+
+def _dang_xuat(goi: str, taikhoan: int) -> bool:
+    """Đăng xuất CLI ở thư mục của tài khoản; True khi kiểm lại đã ra."""
+    lenh = ["auth", "logout"] if goi == "claude" else ["logout"]
+    try:
+        subprocess.run([_cli(goi), *lenh], capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=20, env=_env(goi, taikhoan, tao=False))
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    _NHO_TRANGTHAI.pop((goi, taikhoan), None)
+    return not trang_thai(goi, taikhoan, bo_nho=True)["da_noi"]
 
 
 def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
@@ -204,8 +296,32 @@ def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     tt = trang_thai(goi, taikhoan, bo_nho=True)
     if not tt["da_noi"]:
         return {"loi": "CLI báo xong nhưng kiểm lại vẫn chưa đăng nhập: bấm Đăng nhập lại"}
+    if taikhoan > 1:   # QĐ164 ý 1: chặn nối trùng
+        moi = _dinh_danh(goi, taikhoan)
+        for tk in range(1, SO_TAIKHOAN_TOIDA + 1):
+            if tk != taikhoan and trang_thai(goi, tk)["da_noi"] and trung(moi, _dinh_danh(goi, tk)):
+                _dang_xuat(goi, taikhoan)
+                _don(goi, taikhoan)
+                return {"loi": f"Tài khoản này đã kết nối ở tài khoản {tk:02d}", "trung_voi": tk}
     ghi_nguon(goi, taikhoan, nguoi=nguoi)
     return {"xong": True, **tt}
+
+
+def go(goi: str, taikhoan: int, thumuc: Path | None = None) -> dict:
+    """QĐ164 ý 2: gỡ tài khoản gói: đăng xuất CLI ở thư mục đó, G06 `trangthai` = `ngung` (giữ dòng, giữ lịch sử)."""
+    _kiem(goi, taikhoan)
+    p = _PHIEN.pop((goi, taikhoan), None)
+    if p:
+        _dung(p)
+    if trang_thai(goi, taikhoan, bo_nho=True)["da_noi"] and not _dang_xuat(goi, taikhoan):
+        return {"loi": f"Chưa đăng xuất được tài khoản {taikhoan:02d}: anh thử lại sau ít phút"}
+    cn = ketnoi.mo("Viecnen", thumuc)
+    try:
+        so = cn.execute("UPDATE nguon_ai SET trangthai = 'ngung' WHERE ma = ?", (ma_nguon(goi, taikhoan),)).rowcount
+    finally:
+        cn.close()
+    _don(goi, taikhoan, thumuc)
+    return {"ok": True, "co_dong_g06": bool(so)}
 
 
 def trang_thai(goi: str, taikhoan: int, bo_nho: bool = False) -> dict:
@@ -215,10 +331,13 @@ def trang_thai(goi: str, taikhoan: int, bo_nho: bool = False) -> dict:
     nho = _NHO_TRANGTHAI.get(k)
     if nho and not bo_nho and time.time() - nho[0] < NHO_GIAY:
         return nho[1]
+    tm = thu_muc(goi, taikhoan)
+    if tm is not None and not tm.is_dir():   # chưa có thư mục = chưa đăng nhập; chỉ hỏi thì không tạo thư mục
+        return {"da_noi": False, "goi_dang_dung": None}
     lenh = ["auth", "status", "--json"] if goi == "claude" else ["login", "status"]
     try:
         r = subprocess.run([_cli(goi), *lenh], capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           timeout=15, env=_env(goi, taikhoan))
+                           timeout=15, env=_env(goi, taikhoan, tao=False))
         if goi == "claude":
             d = json.loads((r.stdout or "").strip() or "{}")
             kq = {"da_noi": bool(d.get("loggedIn")), "goi_dang_dung": d.get("subscriptionType") or None}
@@ -322,17 +441,22 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
 
 
 def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
-    """Thẻ gói ở màn 13: tài khoản 01 luôn có; tài khoản 02 khi đã có thư mục. Tài khoản đã đăng nhập mà chưa có
-    dòng G06 (ví dụ phiên Claude đăng nhập lúc cài máy, bước 2.04) thì tự ghi nguồn để Cổng AI dùng được."""
-    ra, lan = {}, _lan_dangnhap(thumuc)
+    """Thẻ gói ở màn 13 (QĐ164 ý 3, bản vẽ Z6-TK): tài khoản 01 có sẵn trừ khi đã gỡ; tài khoản N > 1 chỉ hiện sau khi
+    đăng nhập xong, tức có dòng G06 đang dùng (đang đăng nhập dở, đã huỷ, còn sót thư mục thì không hiện; khung đăng
+    nhập ở giao diện tự hiện riêng). Tài khoản 01 đã đăng nhập mà chưa có dòng G06
+    (ví dụ phiên Claude đăng nhập lúc cài máy, bước 2.04) thì tự ghi nguồn để Cổng AI dùng được; dòng đã gỡ (`ngung`)
+    không tự bật lại, chỉ bật lại khi anh đăng nhập lại trên giao diện."""
+    for k in [k for k, p in list(_PHIEN.items()) if time.time() - p["bat_luc"] > HAN_PHIEN_GIAY]:
+        huy(*k)   # lượt bỏ dở quá 15 phút
+    ra, lan, g06 = {}, _lan_dangnhap(thumuc), _g06(thumuc)
     for goi in GOI:
         ds = []
         for tk in range(1, SO_TAIKHOAN_TOIDA + 1):
-            tm = thu_muc(goi, tk)
-            if tk > 1 and not (tm and tm.exists()):
+            ma = ma_nguon(goi, tk)
+            if g06.get(ma) == "ngung" or (tk > 1 and g06.get(ma) != "dung"):
                 continue
             tt = trang_thai(goi, tk)
-            if tt["da_noi"]:
+            if tt["da_noi"] and g06.get(ma) != "ngung" and (tk == 1 or ma in g06):
                 ghi_nguon(goi, tk, thumuc)
             ds.append({"taikhoan": tk, "ma": ma_nguon(goi, tk), "dang_dangnhap": (goi, tk) in _PHIEN,
                        "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt})

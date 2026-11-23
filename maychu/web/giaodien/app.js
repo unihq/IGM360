@@ -5,7 +5,7 @@
 const S = {g: '01', dn: 'matkhau', k: 'binhthuong', trang: '03', tab: 'thongso', cn: 'moinhat', xem: 'dt', thu: 0, tc: 'rong'};
 const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
 const D = {thongso: null, maTam: '', maTamDoiMay: '', xnCb: null, suaK: '', capnhat: null, hetLuc: null, khoaDen: 0,
-  md: null, dn: {}, ht: [], htId: null, soLuc: ''};
+  md: null, dn: {}, trung: {}, ht: [], htId: null, soLuc: ''};
 if (window.innerWidth < 700) { S.xem = 'mb'; document.body.classList.add('dien-thoai'); }
 
 // ---- Định dạng: số 1-9 đứng trước danh từ đếm ghi 02 chữ số; ngày dd/mm/yyyy; nghìn ngăn bằng dấu chấm
@@ -286,20 +286,26 @@ const pct = v => v == null ? null : Math.max(0, Math.min(100, Number(v)));
 function thanhHm(ten, v) { const p = pct(v); return '<div class="hm"><span class="t12 phu nw">' + ten + '</span><div class="td" style="height:8px"><div class="tdf" style="width:'
   + (p ?? 0) + '%;background:' + (p >= 90 ? '#E22E28' : '#1456F0') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : hai(Math.round(p)) + '%') + '</b></div>'; }
 function theGoi(g, ds, nguon, uu) {
-  const dn = D.dn[g] || {};
-  const coTk = ds.some(x => x.da_noi);
+  const dn = D.dn[g] || {}, ten = GOI_NGAN[g].replace('Gói ', '');
+  const coTk = ds.some(x => x.da_noi), coDong = x => nguon.some(y => y.ma === x.ma && y.trangthai === 'dung');
+  // QĐ164 (Z6-TK): mới cài hoặc đã gỡ hết thì thẻ hiện 01 dòng "Chưa có tài khoản" (N10)
+  const rong = !ds.length || (ds.length === 1 && !ds[0].da_noi && !ds[0].khong_ro && !coDong(ds[0]));
   let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + GOI_TEN[g] + '</div><div class="t12 phu">Phí cố định tháng'
     + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>';
-  ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
-    const chuaCo = g === 'chatgpt' && !coTk && !x.khong_ro && ds.length === 1;   // N10: bản vẽ "Chưa có tài khoản"
-    h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>'
-      + (chuaCo ? 'Chưa có tài&nbsp;khoản' : 'Tài khoản ' + x.taikhoan) + '</b><div class="t12 phu">'
-      + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : chuaCo ? 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng' : 'Chưa đăng nhập') + '</div></div>'
+  if (rong && !dn.url) h += '<div class="tk-dong"><span class="anh-dd mini xam">1</span><div class="f1"><b>Chưa có tài&nbsp;khoản</b><div class="t12 phu">'
+    + (g === 'claude' ? 'Đăng nhập để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu : 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng') + '</div></div><span class="nhan n-xem"><i></i>Chưa đăng nhập</span></div>';
+  else ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
+    const go = (x.da_noi || coDong(x)) && !(dn.url && dn.tk === x.taikhoan);
+    h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>Tài khoản ' + x.taikhoan + '</b><div class="t12 phu">'
+      + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : 'Chưa đăng nhập') + '</div>'
+      + (go ? '<button class="btn-chu go-tk" data-go-goi="' + g + '" data-go-tk="' + x.taikhoan + '">' + ICON['user-minus'] + 'Gỡ tài&nbsp;khoản</button>' : '') + '</div>'
       + (x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>' : '<span class="nhan n-xem"><i></i>Chưa đăng nhập</span>') + '</div>';
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio) + thanhHm('Tuần này', n.tyle_tuan)
       + '<div class="t12 phu">' + (n.do_luc ? 'Đo lúc ' + esc(luc(n.do_luc)) + (n.datlai_5gio_luc ? ' · đặt lại 05 giờ lúc ' + esc(gio(n.datlai_5gio_luc)) : '') : 'Chưa đo: số hiện sau lần gọi AI đầu tiên') + '</div></div>'; });
+  // QĐ164 ý 1 (Z6-TK): đăng nhập trùng thì không tạo ô, dải xanh dưới ô đang có; số là số của ô đang giữ tài khoản đó
+  if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.</span></div>';
   if (dn.url) {
-    h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + ' · ' + GOI_TEN[g] + '</div>'
+    h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + ' · ' + GOI_NGAN[g] + '</div>'
       + '<div class="buoc-dn"><span class="so-b">1</span><span class="f1">' + (g === 'claude' ? 'Mở trang đăng nhập, đăng nhập bằng tài&nbsp;khoản&nbsp;Claude của anh.' : 'Mở trang xác nhận, đăng nhập ChatGPT.') + '</span></div>'
       + '<div class="dong lk"><span class="t12 phu f1 cat">' + esc(dn.url.replace(/^https?:\/\//, '')) + '</span><a class="btn btn-phu nho" href="' + esc(dn.url) + '" target="_blank" rel="noopener noreferrer">' + ICON['external-link'] + 'Mở trang</a></div>';
     if (g === 'claude') h += '<div class="buoc-dn"><span class="so-b">2</span><span class="f1">Trang sẽ hiện 01 mã. Chép mã, dán vào ô dưới.</span></div>'
@@ -309,12 +315,25 @@ function theGoi(g, ds, nguon, uu) {
       + '<div class="dong t13 phu">' + ICON.loader + 'Đang chờ anh xác nhận trên web. Xong là thẻ tự chuyển, không cần dán mã.</div>' + (dn.loi ? '<div class="loi-o">' + ICON['circle-alert'] + '<span>' + cum(cau(dn.loi)) + '</span></div>' : '');
     h += '<button class="btn-chu" data-dn-huy="' + g + '">Huỷ đăng nhập</button></div>';
   }
-  const tk2 = ds.length < 2 && coTk ? 2 : null, chua = ds.find(x => !x.da_noi);
+  const chua = rong ? {taikhoan: ds.length ? ds[0].taikhoan : oTrong(ds)} : ds.find(x => !x.da_noi);
+  const them = !rong && ds.length < 2 && ds.filter(x => x.da_noi).length === 1;   // Z6-TK: có 01 tài khoản thì hiện, đủ 02 thì ẩn
   h += '<div class="dong chan-goi">' + (chua && !dn.url ? '<button class="btn btn-chinh" data-dn-goi="' + g + '" data-dn-tk="' + chua.taikhoan + '">' + ICON['log-in'] + 'Đăng nhập</button>' : '')
-    + (tk2 && !dn.url ? '<button class="btn btn-phu" data-dn-goi="' + g + '" data-dn-tk="2">' + ICON['user-plus'] + 'Thêm tài khoản thứ 02</button>' : '')
+    + (them && !dn.url ? '<button class="btn btn-phu" data-them-goi="' + g + '">' + ICON['user-plus'] + 'Thêm tài khoản ' + ten + ' khác</button>' : '')
     + (coTk ? ds.filter(x => x.da_noi).map(x => { const n = nguon.find(y => y.ma === x.ma); return n ? '<button class="btn btn-phu" data-goithu="' + esc(n.id) + '">Gọi thử' + (ds.length > 1 ? ' tài khoản ' + x.taikhoan : '') + '</button>' : ''; }).join('') : '')
     + '</div></div>';
   return h;
+}
+// Số ô tài khoản còn trống đầu tiên (giữ số theo tài khoản: gỡ Tài khoản 1 thì Tài khoản 2 giữ tên)
+const oTrong = ds => [1, 2].find(n => !ds.some(x => x.taikhoan === n));
+// QĐ164 (Z6-TK): thêm tài khoản khác luôn qua 01 hộp hỏi lại; gói chưa có tài khoản thì vào đăng nhập luôn
+async function themTk(g) {
+  const ds = (D.md && D.md.goi[g]) || [], ten = GOI_NGAN[g].replace('Gói ', ''), so = ds.filter(x => x.da_noi).length;
+  if (!so) { const c = ds.find(x => !x.da_noi); await batDauDn(g, c ? c.taikhoan : oTrong(ds)); return; }
+  const o = oTrong(ds);
+  if (so >= 2 || !o) { const c = ds.find(x => !x.da_noi); if (c && so < 2) { await batDauDn(g, c.taikhoan); return; }
+    bao(GOI_NGAN[g] + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.'); return; }
+  xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi anh có 02 gói riêng, mỗi gói 01 tài khoản ' + ten + ' khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.',
+    'Tiếp tục', () => batDauDn(g, o));
 }
 function veMoHinh() {
   const d = D.md; $('#md-songsong').textContent = hai(Number(d.so_viec_ai_songsong || 3));
@@ -322,7 +341,7 @@ function veMoHinh() {
   // N10 b, QĐ160: số ưu tiên = thứ tự dùng thật (máy chủ đã xếp gói trước Khoá API). Gói chưa đăng nhập (chưa có dòng
   // G06) hiện số sẽ nhận: ngay sau các gói đã có, vẫn trước mọi Khoá API.
   let k = 0; const uu = {};
-  d.nguon.filter(n => n.loai !== 'khoa_api').forEach(n => { ++k; if (n.goi && !(n.goi in uu)) uu[n.goi] = k; });
+  d.nguon.filter(n => n.loai !== 'khoa_api' && n.trangthai === 'dung').forEach(n => { ++k; if (n.goi && !(n.goi in uu)) uu[n.goi] = k; });
   ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
     + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khoá API AI</div><div class="t12 phu">Phí theo lượt</div></div></div>'
@@ -340,6 +359,7 @@ function veMoHinh() {
 }
 async function napMoHinh() { try { D.md = await api('/mohinh'); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
 async function batDauDn(g, tk) {
+  D.trung[g] = 0;
   try { const kq = await api('/mohinh/goi/' + g + '/batdau', {taikhoan: tk}); D.dn[g] = {tk, url: kq.url, ma: kq.ma_thietbi, loi: ''}; veMoHinh();
     if (g === 'chatgpt') hoiChatGPT(tk); else { const o = $('#ma-claude'); if (o) o.focus(); } }
   catch (e) { bao(e.message + '.'); }
@@ -347,15 +367,15 @@ async function batDauDn(g, tk) {
 async function hoiChatGPT(tk) {
   const dn = D.dn.chatgpt; if (!dn || dn.tk !== tk || !dn.url) return;
   try { const kq = await api('/mohinh/goi/chatgpt/hoi', {taikhoan: tk});
-    if (kq.xong) { D.dn.chatgpt = {}; bao('Đã kết nối Gói ChatGPT.'); await napMoHinh(); return; } }
-  catch (e) { if (e.status) { D.dn.chatgpt = {}; bao(e.message + '.'); await napMoHinh(); return; } }
+    if (kq.xong) { D.dn.chatgpt = {}; bao('Đã kết nối Gói ChatGPT · Tài khoản ' + tk + '.'); await napMoHinh(); return; } }
+  catch (e) { if (e.status) { D.dn.chatgpt = {}; if (e.status === 409) D.trung.chatgpt = (e.ct || {}).trung_voi; else bao(e.message + '.'); await napMoHinh(); return; } }
   setTimeout(() => hoiChatGPT(tk), 4000);
 }
 async function danMaClaude() {
   const dn = D.dn.claude, ma = ($('#ma-claude') || {}).value || '';
   if (!ma.trim()) { bao('Anh dán mã trang Claude hiện ra.'); return; }
-  try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối Gói Claude.'); await napMoHinh(); }
-  catch (e) { dn.loi = e.message; veMoHinh(); }
+  try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối Gói Claude · Tài khoản ' + dn.tk + '.'); await napMoHinh(); }
+  catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
 }
 
 // ---- Màn 08 Trò chuyện AI
@@ -440,9 +460,14 @@ document.addEventListener('click', async ev => {
     try { const k = await api('/phien/thuhoi_khac', {}); bao('Đã đăng xuất ' + hai(k.so) + ' phiên trên các máy khác.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
   else if ('them' in d) mo('h-them');
   else if (d.dnGoi) { dongHop(); if (S.trang !== '13' || !D.md) { S.trang = '13'; ve(); await napMoHinh(); }
-    let tk = Number(d.dnTk); if (!tk) { const ds = (D.md && D.md.goi[d.dnGoi]) || []; const c = ds.find(x => !x.da_noi); tk = c ? c.taikhoan : Math.min(ds.length + 1, 2); }
-    await batDauDn(d.dnGoi, tk); return; }
+    const tk = Number(d.dnTk); if (tk) await batDauDn(d.dnGoi, tk); else await themTk(d.dnGoi); return; }
+  else if (d.themGoi) { await themTk(d.themGoi); return; }
   else if ('mcXacnhan' in d) { await danMaClaude(); return; }
+  else if (d.goGoi) { const g = d.goGoi, tk = Number(d.goTk), ten = 'Tài khoản ' + tk + ' · ' + GOI_NGAN[g];
+    xacnhan('Gỡ ' + ten + '?', 'Phần mềm ngừng dùng tài khoản này, ô ẩn khỏi màn. Số đã dùng và chi phí cũ giữ nguyên; thao tác ghi vào nhật ký.<br><br>Dùng lại thì đăng nhập lại.', 'Gỡ tài khoản', async () => {
+      D.trung[g] = 0;
+      try { await api('/mohinh/goi/' + g + '/go', {taikhoan: tk}); bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.'); } catch (e) { bao(e.message + '.'); }
+      await napMoHinh(); }); }
   else if (d.dnHuy) { try { await api('/mohinh/goi/' + d.dnHuy + '/huy', {taikhoan: (D.dn[d.dnHuy] || {}).tk || 1}); } catch (e) { /* */ } D.dn[d.dnHuy] = {}; veMoHinh(); }
   else if (d.goithu) { t.disabled = true; const t0 = Date.now();
     try { const k = await api('/mohinh/' + encodeURIComponent(d.goithu) + '/goithu', {}); bao('Gọi thử đạt: ' + k.nguon + ' trả lời sau ' + soVN(Math.round((Date.now() - t0) / 100) / 10) + ' giây.'); }

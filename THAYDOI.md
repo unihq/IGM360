@@ -3,6 +3,12 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.1
+Tóm tắt: Sửa lỗi trùng tài khoản gói AI
+- Đăng nhập lại đúng tài khoản gói AI đã kết nối thì phần mềm báo "Tài khoản Claude này đã kết nối ở Tài khoản 1", không thêm ô mới.
+- Mỗi tài khoản gói Claude, gói ChatGPT có nút Gỡ tài khoản, hỏi lại 01 lần trước khi gỡ; lịch sử dùng AI vẫn giữ.
+- Ô tài khoản thứ 02 chỉ hiện sau khi đăng nhập xong; nút thêm đổi thành "Thêm tài khoản Claude khác".
+
 ## 0.7.0
 Tóm tắt: Nền dữ liệu mới, tên gọi chuẩn, sửa lỗi nhỏ
 - Dữ liệu chuyển sang cấu trúc mới: sổ người chung, mã cố định cho danh mục, sẵn chỗ cho phân quyền tài khoản và thêm nguồn AI. Dữ liệu đang có được giữ nguyên, tự chuyển khi cập nhật.
