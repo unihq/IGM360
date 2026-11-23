@@ -285,7 +285,7 @@ class KiemY24(unittest.TestCase):
         self.assertNotIn("Thêm tài khoản thứ 02", js)
         self.assertIn("'Thêm tài khoản ' + ten + ' khác</button>'", js)
         self.assertIn("xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi anh có 02 gói riêng, mỗi gói 01 tài khoản ' + ten", js)
-        self.assertIn("'Tiếp tục', () => batDauDn(g, o)", js)
+        self.assertIn("'Tiếp tục', () => vao(g, o)", js)
         self.assertIn("ICON['user-minus'] + 'Gỡ tài&nbsp;khoản</button>'", js)
         self.assertIn("xacnhan('Gỡ ' + ten + '?', 'Phần mềm ngừng dùng tài khoản này, ô ẩn khỏi màn.", js)
         self.assertIn("bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.')", js)
@@ -293,8 +293,8 @@ class KiemY24(unittest.TestCase):
         self.assertIn("Đăng nhập tài khoản ' + dn.tk + '</div>", js)                      # QĐ177 (Z9c): bỏ đuôi tên nguồn
         self.assertIn("bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.')", js)
         self.assertIn("D.trung.claude = (e.ct || {}).trung_voi", js)
-        self.assertIn("'Đăng nhập để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu", js)
-        self.assertIn("if (rong && !dn.url) h += ", js)   # U5-2: đang đăng nhập lần đầu thì ẩn dòng "Chưa có tài khoản"
+        self.assertIn("'Kết nối bằng ' + CHU_MDH.toLowerCase() + ' 365&nbsp;ngày để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu", js)
+        self.assertIn("if (rong && !dn.url && !mdMo.length) h += ", js)   # U5-2: đang đăng nhập lần đầu thì ẩn dòng "Chưa có tài khoản"
         thay = Path(api.__file__).parents[2] / "THAYDOI.md"
         muc = thay.read_text(encoding="utf-8").split("## 0.7.1", 1)[1].split("\n## ", 1)[0]   # U5-1
         self.assertIn("ở Tài khoản 1", muc)

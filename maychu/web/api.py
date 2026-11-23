@@ -14,7 +14,7 @@ from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.giamsat import thongbao
-from maychu.hethong.mohinh import congai, dangnhap_goi, danhmuc_mohinh, trochuyen
+from maychu.hethong.mohinh import congai, dangnhap_goi, danhmuc_mohinh, madaihan, trochuyen
 from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
 from maychu.ketnoi import drive
@@ -440,11 +440,75 @@ def goi_go(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     """QĐ164 ý 2: gỡ tài khoản gói (giao diện đã hỏi lại 01 lần)."""
     _goi(goi, body.taikhoan)
     kq = dangnhap_goi.go(goi, body.taikhoan)
+    if goi == "claude" and "loi" not in kq:
+        thongbao.quet_madaihan()   # N24: mã đã xoá thì đóng ngay tin "hết hạn", không chờ lần quét kế tiếp
     ghi_f04("mohinh", "go_goi", dangnhap_goi.nhan_dangnhap(goi, body.taikhoan), ketqua="loi" if "loi" in kq else "dat",
             nguoi_id=p["nguoidung_id"])
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return kq
+
+
+# ---- 0.7.8 (QĐ198, PTD-09): mã dài hạn gói Claude. Không đường nào trả mã ra; F04 chỉ ghi "mã dài hạn" ----
+def _md_nhan(tk: int) -> str:
+    return f"{dangnhap_goi.nhan_dangnhap('claude', tk)} · mã dài hạn"
+
+
+def _md_xong(tk: int, ma: str, p: dict) -> dict:
+    try:
+        kq = madaihan.ket_noi(tk, ma, nguoi=p["nguoidung_id"])
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    finally:
+        madaihan.huy_lay(tk)   # Đ3: quên đầu ra của lệnh lấy mã
+    ghi_f04("mohinh", "luu_madaihan", _md_nhan(tk), nguoi_id=p["nguoidung_id"])
+    thongbao.quet_madaihan()   # mã mới: đóng ngay tin "hết hạn", "sắp hết hạn" cũ
+    if kq.get("goi_thu"):
+        ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap("claude", tk), nguoi_id=p["nguoidung_id"])   # "Đăng nhập lúc"
+    return kq
+
+
+@router.post("/mohinh/goi/claude/madaihan/batdau")
+def md_bat_dau(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
+    _goi("claude", body.taikhoan)
+    kq = madaihan.bat_dau_lay(body.taikhoan, dangnhap_goi._env("claude", body.taikhoan, ma_daihan=False))
+    ghi_f04("mohinh", "batdau_madaihan", _md_nhan(body.taikhoan), ketqua="loi" if "loi" in kq else "dat",
+            nguoi_id=p["nguoidung_id"])
+    if kq.get("khong_ho_tro"):
+        return {"khong_ho_tro": True, "loi": kq["loi"]}
+    if "loi" in kq:
+        raise HTTPException(400, {"loi": kq["loi"], "chi_tiet": kq.get("chi_tiet") or ""})   # N17: câu gốc để rê chuột
+    if kq.get("xong"):   # lệnh in mã ngay, không cần mã trang đăng nhập
+        r = madaihan.gui_ma(body.taikhoan, "")
+        if "ma" in r:
+            return _md_xong(body.taikhoan, r["ma"], p)
+    return {"url": kq["url"]}
+
+
+@router.post("/mohinh/goi/claude/madaihan/ma")
+def md_gui_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
+    """Mã trang đăng nhập hiện → lệnh in mã dài hạn → lưu Két khoá, gọi thử."""
+    _goi("claude", body.taikhoan)
+    r = madaihan.gui_ma(body.taikhoan, body.ma)
+    if "loi" in r:
+        raise HTTPException(400, {"loi": r["loi"], "chi_tiet": r.get("chi_tiet") or ""})
+    return _md_xong(body.taikhoan, r["ma"], p)
+
+
+@router.post("/mohinh/goi/claude/madaihan/dan")
+def md_dan(body: MaGoi, p: dict = Depends(can_dang_nhap)):
+    """Dán mã dài hạn làm ở nơi khác (`claude setup-token` trên máy anh)."""
+    _goi("claude", body.taikhoan)
+    if not madaihan.hop_le(body.ma):
+        raise HTTPException(400, "Mã không đúng dạng mã dài hạn của Claude (bắt đầu bằng sk-ant-oat01-)")
+    return _md_xong(body.taikhoan, body.ma.strip(), p)
+
+
+@router.post("/mohinh/goi/claude/madaihan/huy")
+def md_huy(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
+    _goi("claude", body.taikhoan)
+    madaihan.huy_lay(body.taikhoan)
+    return {"ok": True}
 
 
 @router.get("/mohinh/danhsach")

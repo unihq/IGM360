@@ -129,13 +129,14 @@ class KiemChuong(unittest.TestCase):
         self.assertEqual(self._mo(), [])
 
     def test_sao_luu_loi_01_dong_roi_dong(self):
-        self._saoluu("2026-11-23T02:00:05+07:00", loi=True)
+        hom = datetime.now(MUIGIO_VN).date().isoformat()   # ngày hôm nay (chữ "lúc" chỉ dùng cho lỗi trong ngày)
+        self._saoluu(f"{hom}T02:00:05+07:00", loi=True)
         tb.quet_saoluu(self.t)
-        self._saoluu("2026-11-23T02:01:05+07:00", loi=True)   # lịch thử lại mỗi phút: vẫn 01 dòng
+        self._saoluu(f"{hom}T02:01:05+07:00", loi=True)   # lịch thử lại mỗi phút: vẫn 01 dòng
         tb.quet_saoluu(self.t)
         self.assertEqual(self._mo(), ["saoluu_loi"])
         self.assertEqual(tb.danh_sach(thumuc=self.t)["ds"][0]["chu"], "Sao lưu lúc 02:00 không xong")
-        self._saoluu("2026-11-23T02:02:05+07:00", loi=False)
+        self._saoluu(f"{hom}T02:02:05+07:00", loi=False)
         tb.quet_saoluu(self.t)
         self.assertEqual(self._mo(), [])
         self.assertEqual(self._sql("Dulieu_Chinh", "SELECT lydo_dong FROM canhbao")[0][0], "Sao lưu đã xong lúc 02:02")

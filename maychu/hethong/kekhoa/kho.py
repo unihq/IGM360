@@ -62,6 +62,15 @@ NOIBO = {"totp_2lop"}
 TEN_DICHVU = {"google_oauth_ungdung": "Google Drive · mã ứng dụng", "google_drive_lammoi": "Google Drive · quyền đẩy file"}
 
 
+def ten_dichvu(dv: str) -> str:
+    """Tên hiện của 01 dịch vụ; mã dài hạn gói Claude sinh theo mã nguồn (0 cột)."""
+    if dv in TEN_DICHVU:
+        return TEN_DICHVU[dv]
+    if dv and dv.startswith("goi_claude_") and dv[11:].isdigit():
+        return f"Claude · Code · Tài khoản {int(dv[11:])} · mã dài hạn"
+    return dv
+
+
 def tinh_trang(han: str | None, songay_baotruoc: int, hom_nay: date | None = None) -> tuple[str, int | None]:
     """('khong_han' | 'dung' | 'saphet' | 'hethan', số ngày còn lại)."""
     if not han:
@@ -84,7 +93,7 @@ def danh_sach(thumuc: Path | None = None, songay_baotruoc: int = 5, hom_nay: dat
         if dv in NOIBO:
             continue
         tt, con = tinh_trang(han, songay_baotruoc, hom_nay)
-        ds.append({"id": ma, "dichvu": dv, "ten": TEN_DICHVU.get(dv, dv), "ketnoi_id": kn, "kytu_cuoi": cuoi,
+        ds.append({"id": ma, "dichvu": dv, "ten": ten_dichvu(dv), "ketnoi_id": kn, "kytu_cuoi": cuoi,
                    "han": han, "lan_dung_cuoi": dung, "nguoi_nhap": nguoi, "tinhtrang": tt, "con_ngay": con})
     return ds
 

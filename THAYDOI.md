@@ -3,6 +3,16 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.8
+Tóm tắt: Mã dài hạn 365 ngày cho gói Claude
+- Gói Claude kết nối bằng mã dài hạn dùng 365 ngày, không còn hết phiên giữa chừng như kiểu đăng nhập cũ.
+- Thẻ Claude ở mục Mô hình AI: chưa kết nối có nút Kết nối Claude và Dán mã; đã có mã thì có Lấy mã mới, Dán mã; tài khoản đăng nhập kiểu cũ có nút Chuyển sang mã dài hạn.
+- Thẻ hiện 04 ký tự cuối của mã, ngày hết hạn, số ngày còn lại; 14 ngày cuối đổi màu cảnh báo. Mã hết hạn thì thẻ ghi rõ và phần mềm dùng tài khoản khác rồi tới nguồn kế tiếp.
+- Chuông nhắc mỗi ngày từ 07 ngày trước khi mã hết hạn; lấy mã mới hoặc gỡ tài khoản thì tin nhắc tự đóng.
+- Gỡ tài khoản xoá luôn mã dài hạn khỏi Két khoá. Mã cất đã mã hoá, không hiện lại trên màn, không ghi vào nhật ký.
+- Rê chuột nút chọn mô hình ghi tên ngắn như dòng chữ vàng (ví dụ "Opus"); trên điện thoại, hộp hỏi lại nằm giữa màn.
+- Sửa 01 bài kiểm tự động hỏng khi sang ngày mới.
+
 ## 0.7.7
 Tóm tắt: Tự cập nhật hạn mức, mô hình việc nền
 - Mục Mô hình AI tự cập nhật số hạn mức mỗi phút, không cần mở lại màn hay bấm Gọi thử.
