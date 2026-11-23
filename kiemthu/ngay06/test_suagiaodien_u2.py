@@ -80,7 +80,7 @@ class KiemChuGiaoDien(unittest.TestCase):
         self.assertNotIn("quy đổi tham khảo 07 ngày", self.js)                          # N13
         self.assertIn("Chi phí AI tháng", self.js)
         self.assertIn("chưa có tỷ&nbsp;giá", self.js)                                   # P02 trước ngày 18
-        self.assertIn("<span>LOGO</span>", self.js)                                     # N11
+        self.assertIn("ICON.logo_chatgpt", self.js)   # N11: ô chờ "LOGO" nay là logo gốc OpenAI (QĐ92, QĐ169)
         self.assertIn("Chưa có tài khoản", self.js)                                     # N10
         self.assertNotIn("'Gói ' + esc(x.goi_dang_dung)", self.js)                      # N09
         self.assertIn('có gì&nbsp;mới</span></div><div id="cn-thaydoi">', self.html)    # N03

@@ -31,3 +31,4 @@ Nhãn hiệu thuộc chủ sở hữu, chỉ dùng để chỉ dịch vụ kết
 | `logo/zalo.svg` | Zalo | #0068FF | https://zalo.me | Simple Icons không ghi | 633300dd5d7b |
 | `logo/whatsapp.svg` | WhatsApp | #25D366 | https://about.meta.com/brand/resources/whatsapp/whatsapp-brand | https://about.meta.com/brand/resources/whatsapp/whatsapp-brand | 8fb209a53a61 |
 | `logo/composio.svg` | Composio | Theo màu trong tệp | Kho ComposioHQ/composio, `docs/public/Composio Logo.svg` | Kho không ghi | f73ac7a3c4e9 |
+| `logo/chatgpt.svg` | ChatGPT (nhãn hiệu thuộc OpenAI) | Đen theo tệp; **không thêm màu, không tô màu bằng CSS** (Hướng dẫn thương hiệu OpenAI: không đổi màu Blossom; nền tối dùng bản trắng) | Trang thương hiệu chính thức https://openai.com/brand, nút "Tải logo": `https://cdn.openai.com/brand/openai-logos.zip` (70.258 byte, sha256 đầu `c54e85ab5884`), tệp `OpenAI-logos/SVGs/OAI_OpenAI-Blossom_Black.svg` chép nguyên (QĐ169, 23/11/2026) | https://openai.com/brand | 75c1e9fffa5e |

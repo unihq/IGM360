@@ -17,7 +17,12 @@ mã viết mới).
       codex-rs/login/src/auth/storage.rs, token_data.rs; chưa thấy trên máy thật). Không đọc được định danh thì không chặn.
   (2) gỡ tài khoản: đăng xuất CLI ở thư mục đó, G06 `trangthai` = `ngung` (không xoá dòng).
   (3) ô tài khoản N > 1 chỉ hiện sau khi đăng nhập xong (có dòng G06 đang dùng; bản vẽ Z6-TK); ô đã gỡ ẩn, kể cả
-      tài khoản 01; huỷ, bỏ dở thì xoá thư mục chưa đăng nhập (chưa từng có dòng G06).
+      đăng nhập (chưa từng có dòng G06).
+- Bản 0.7.3 (QĐ169 đợt 1, Y26, bản vẽ Z8): ô tài khoản hiện "Tên · gói" đọc sống mỗi lần hỏi, **không lưu** vào bảng
+  nào (dữ liệu cá nhân, PTD-07). Claude: `oauthAccount.displayName`, `planDisplayName` trong tệp hồ sơ của CLI
+  (`.claude.json`; trường nội bộ, không có trong tài liệu chính thức). ChatGPT: loại gói `chatgpt_plan_type` trong
+  `tokens.id_token` của `auth.json`, đổi ra chữ theo Codex (`codex-rs/protocol/src/auth.rs`); tên `name` nếu có (chưa
+  xác minh). Đọc không được (tệp mất, đổi tên trường) thì lùi về "Tài khoản N" và họ gói như cũ, không báo lỗi.
 """
 import base64
 import json
@@ -352,6 +357,54 @@ def trang_thai(goi: str, taikhoan: int, bo_nho: bool = False) -> dict:
     return kq
 
 
+# Chữ loại gói ChatGPT theo Codex (`PlanType::display_name`, openai/codex `codex-rs/protocol/src/auth.rs`).
+TEN_GOI_CHATGPT = {"free": "Free", "go": "Go", "plus": "Plus", "pro": "Pro (More)", "prolite": "Pro", "promax": "Pro (Max)",
+                   "team": "Team", "business": "Business", "enterprise": "Enterprise", "ent26": "Enterprise",
+                   "edu": "Edu", "edu_plus": "Edu Plus", "edu_pro": "Edu Pro"}
+# Dòng mô tả gói (Z8): chỉ ghi khi có nguồn đã xác minh; chưa có thì bỏ dòng (không tự đặt chữ).
+MOTA_GOI: dict[tuple, str] = {}
+DAI_TOIDA = 60
+
+
+def _chu_gon(v) -> str | None:
+    return v.strip()[:DAI_TOIDA] if isinstance(v, str) and v.strip() else None
+
+
+def _tep_hoso_claude(taikhoan: int) -> Path:
+    """Tệp hồ sơ CLI Claude: tài khoản 01 ở `~/.claude.json` (hoặc trong CLAUDE_CONFIG_DIR nếu máy đặt sẵn);
+    tài khoản N > 1 trong thư mục `taikhoan_NN` (CLI đặt `.claude.json` trong CLAUDE_CONFIG_DIR: chưa thấy trên VPS)."""
+    tm = thu_muc("claude", taikhoan)
+    if tm is not None:
+        return tm / ".claude.json"
+    goc = os.environ.get("CLAUDE_CONFIG_DIR")
+    return Path(goc) / ".claude.json" if goc else Path.home() / ".claude.json"
+
+
+def _tep_auth_codex(taikhoan: int) -> Path:
+    tm = thu_muc("chatgpt", taikhoan)
+    return (tm or Path(os.environ.get("CODEX_HOME") or os.environ.get("IGM360_THUMUC_CHATGPT", GOI["chatgpt"]["thumuc"]))) / "auth.json"
+
+
+def ho_so(goi: str, taikhoan: int, goi_dang_dung: str | None = None) -> dict:
+    """{"ten_hien", "goi_ten", "mota_goi"} đọc sống; trường nào không đọc được thì None (giao diện lùi về
+    "Tài khoản N"). `goi_dang_dung`: họ gói CLI trả (Claude `subscriptionType`), dùng khi không có tên gói."""
+    ten = ten_goi = None
+    try:
+        if goi == "claude":
+            oa = (json.loads(_tep_hoso_claude(taikhoan).read_text(encoding="utf-8")) or {}).get("oauthAccount") or {}
+            ten, ten_goi = _chu_gon(oa.get("displayName")), _chu_gon(oa.get("planDisplayName"))
+        else:
+            tokens = (json.loads(_tep_auth_codex(taikhoan).read_text(encoding="utf-8")) or {}).get("tokens") or {}
+            than = _jwt_than(tokens.get("id_token") or "")
+            tho = (than.get("https://api.openai.com/auth") or {}).get("chatgpt_plan_type")
+            ten, ten_goi = _chu_gon(than.get("name")), TEN_GOI_CHATGPT.get(tho) if isinstance(tho, str) else None
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
+    if not ten_goi and _chu_gon(goi_dang_dung):
+        ten_goi = goi_dang_dung.strip().capitalize()   # đường lùi: họ gói như cũ ("max" → "Max")
+    return {"ten_hien": ten, "goi_ten": ten_goi, "mota_goi": MOTA_GOI.get((goi, ten_goi))}
+
+
 def nhan_dangnhap(goi: str, taikhoan: int) -> str:
     """Chữ ghi ở F04 mỗi lần đăng nhập gói xong (api.py ghi); màn 13 đọc lại để hiện lúc đăng nhập (N09)."""
     return f"{GOI[goi]['ten']} tài khoản {taikhoan:02d}"
@@ -458,7 +511,8 @@ def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
             tt = trang_thai(goi, tk)
             if tt["da_noi"] and g06.get(ma) != "ngung" and (tk == 1 or ma in g06):
                 ghi_nguon(goi, tk, thumuc)
+            hs = ho_so(goi, tk, tt.get("goi_dang_dung")) if tt["da_noi"] else {"ten_hien": None, "goi_ten": None, "mota_goi": None}
             ds.append({"taikhoan": tk, "ma": ma_nguon(goi, tk), "dang_dangnhap": (goi, tk) in _PHIEN,
-                       "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt})
+                       "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt, **hs})
         ra[goi] = ds
     return ra
