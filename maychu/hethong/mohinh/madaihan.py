@@ -15,12 +15,13 @@ Bảo mật (PTD-09 Đ1–Đ8):
 - Đ7: lấy mã mới thì thay dòng cũ (`kho.doi`). Đ8: chỉ nhận chuỗi bắt đầu `sk-ant-oat01-`; lưu xong, gọi thử đạt rồi
   mới đăng xuất kiểu đăng nhập cũ của thư mục đó.
 
-Cách chạy `setup-token` học từ JAVIS `server/claude_setup_token.py` (ghi ở Sổ nguồn gốc; viết mới, không chép mã):
+Cách chạy `setup-token` học từ mã có sẵn ghi ở Sổ nguồn gốc (viết mới, không chép mã):
 lệnh vẽ màn hình đầy đủ nên phải chạy trong khung giả lập dòng lệnh (pty, chỉ có trên Linux, macOS), khung thật rộng để
 mã không bị ngắt dòng; lấy đường link trong siêu liên kết của dòng lệnh trước, không có thì lấy chữ hiện.
 """
 import os
 import re
+import sqlite3
 import subprocess
 import threading
 import time
@@ -54,7 +55,10 @@ def hop_le(ma: str) -> bool:
 
 # ---------------- Két khoá ----------------
 def _dong(tk: int, thumuc=None):
-    c = ketnoi.mo("Baomat", thumuc)
+    try:
+        c = ketnoi.mo("Baomat", thumuc)
+    except (sqlite3.Error, OSError):   # máy chưa có tệp dữ liệu (lúc cài, bài kiểm không dữ liệu): coi như chưa có mã
+        return None
     try:
         return c.execute("SELECT id, kytu_cuoi, han FROM kekhoa WHERE dichvu = ? AND trangthai = 'dung'"
                          " ORDER BY rowid DESC LIMIT 1", (dichvu(tk),)).fetchone()
