@@ -16,7 +16,7 @@ const soVN = v => { const n = Number(v); if (!Number.isFinite(n)) return v;
 const ngay = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
 const gio = iso => iso ? iso.slice(11, 16) : '';
 const homNay = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
-const luc = iso => !iso ? '' : (iso.slice(0, 10) === homNay() ? gio(iso) + ' hôm nay' : ngay(iso) + ' · ' + gio(iso));
+const luc = iso => !iso ? '' : (iso.slice(0, 10) === homNay() ? gio(iso) + '\u00a0hôm\u00a0nay' : ngay(iso) + ' · ' + gio(iso));
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 // Không tách cụm từ khi xuống dòng (chữ do máy chủ gửi): nối các cụm thường gặp bằng dấu cách không ngắt
 // U4 (S1, S3): cụm "mục + tên màn" dài hơn đặt trước để nối trước khi cụm ngắn hơn được nối.
@@ -290,7 +290,7 @@ const tenMoHinh = ma => { if (!ma) return 'mô hình mặc định'; const p = S
 const dongNguon = n => (n.goi ? GOI_NGAN[n.goi] : n.ten) + ' · ' + tenMoHinh(n.mohinh_gannhat);
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
-  : '<span class="logo-cho" data-hang="ChatGPT" title="Logo ChatGPT: chờ file chính thức" style="width:40px;height:40px;border-radius:10px"><span>LOGO</span></span>';
+  : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
 const usd = v => Number(v || 0).toFixed(2).replace('.', ',') + '&nbsp;USD';
 // Tiền đủ 02 cột (QĐ50, QĐ122): USD kèm đồng Việt tham khảo; chưa có tỷ giá (trước ngày 18) thì ghi rõ.
 const vnd = (v, tg) => tg ? '≈&nbsp;' + soVN(Math.round(Number(v || 0) * tg / 1000) * 1000) + '&nbsp;đ tham&nbsp;khảo' : 'chưa có tỷ&nbsp;giá';
@@ -311,7 +311,8 @@ function theGoi(g, ds, nguon, uu) {
     + (g === 'claude' ? 'Đăng nhập để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu : 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng') + '</div></div><span class="nhan n-xem"><i></i>Chưa đăng nhập</span></div>';
   else ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
     const go = (x.da_noi || coDong(x)) && !(dn.url && dn.tk === x.taikhoan);
-    h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>Tài khoản ' + x.taikhoan + '</b><div class="t12 phu">'
+    h += '<div class="tk-dong"><span class="anh-dd mini' + (x.da_noi ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>' + tenTk(x) + '</b>'
+      + (x.da_noi && x.mota_goi ? '<div class="t12 phu">' + esc(x.mota_goi) + '</div>' : '') + '<div class="t12 phu">'
       + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : 'Chưa đăng nhập') + '</div>'
       + (go ? '<button class="btn-chu go-tk" data-go-goi="' + g + '" data-go-tk="' + x.taikhoan + '">' + ICON['user-minus'] + 'Gỡ tài&nbsp;khoản</button>' : '') + '</div>'
       + (x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>' : '<span class="nhan n-xem"><i></i>Chưa đăng nhập</span>') + '</div>';
@@ -338,6 +339,10 @@ function theGoi(g, ds, nguon, uu) {
     + '</div></div>';
   return h;
 }
+// QĐ169 đợt 1 (Z8): "Tên · gói" đọc sống; thiếu tên thì "Tài khoản N"; thiếu cả 02 thì "Tài khoản N" như cũ
+const tenTk = x => { const tk = 'Tài&nbsp;khoản&nbsp;' + x.taikhoan;
+  if (!x.da_noi || (!x.ten_hien && !x.goi_ten)) return tk;
+  return (x.ten_hien ? esc(x.ten_hien) : tk) + (x.goi_ten ? ' · <span class="nw">' + esc(x.goi_ten) + '</span>' : ''); };
 // Số ô tài khoản còn trống đầu tiên (giữ số theo tài khoản: gỡ Tài khoản 1 thì Tài khoản 2 giữ tên)
 const oTrong = ds => [1, 2].find(n => !ds.some(x => x.taikhoan === n));
 // QĐ164 (Z6-TK): thêm tài khoản khác luôn qua 01 hộp hỏi lại; gói chưa có tài khoản thì vào đăng nhập luôn

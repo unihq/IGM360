@@ -3,6 +3,12 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.7.3
+Tóm tắt: Thẻ gói AI ghi tên và tên gói
+- Ô tài khoản gói Claude, gói ChatGPT ghi tên tài khoản và tên gói theo hãng (ví dụ "Tên · Ultra") thay cho "Tài khoản 1". Phần mềm đọc mỗi lần mở màn, không lưu lại.
+- Hãng chưa trả tên thì vẫn ghi "Tài khoản 1" như trước.
+- Thẻ gói ChatGPT và hộp Thêm nguồn AI dùng logo gốc của OpenAI.
+
 ## 0.7.2
 Tóm tắt: Chuông báo tin mới, tự cập nhật
 - Chuông ở thanh trên báo thêm: gói AI hết phiên đăng nhập hoặc dùng gần hết hạn mức tuần, khoá kết nối sắp hết hạn hoặc đã hết hạn, sao lưu không xong, ổ cứng máy chủ đầy, có bản phần mềm mới.

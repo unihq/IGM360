@@ -269,7 +269,7 @@ class KiemChuong(unittest.TestCase):
         lich = (GOC / "maychu/hethong/giamsat/lich.py").read_text(encoding="utf-8")
         for c in ("thongbao.quet)", "thongbao.quet_maychu)", "thongbao.quet_saoluu)", "NHIP_THONGBAO_GIAY = 600"):
             self.assertIn(c, lich)
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.2")
+        self.assertGreaterEqual(tuple(map(int, (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 7, 2))
         muc = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.2", 1)[1].split("\n## ", 1)[0]
         self.assertIn("Tóm tắt: Chuông báo tin mới, tự cập nhật", muc)
 
