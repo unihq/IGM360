@@ -177,7 +177,7 @@ _CHO = {"tu": 0.0, "nguoi": None}
 CHO_TOIDA_GIAY = 30 * 60
 
 
-def yeu_cau(nguoi_id: str, che_do: str, thumuc=None) -> dict:
+def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) -> dict:
     """che_do 'ngay': gửi lệnh luôn. 'cho': không có việc AI đang chạy thì gửi luôn; có thì chờ việc xong,
     tối đa 30 phút (lịch chạy nền gọi xu_ly_cho mỗi phút). Việc mới không nhận khi đang chờ: dang_cho().
     0.7.9 (QĐ213): lớp 1 ổ trống không đủ thì chặn; "gửi lệnh" = lớp 5 chụp bản sao, đẩy Drive rồi mới gửi."""
@@ -189,7 +189,10 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None) -> dict:
     if not o["du"]:
         _ghi_f04("chan_otrong", f"còn {antoan.chu_dungluong(o['trong'])}, cần {antoan.chu_dungluong(o['can'])}",
                  "bichan", None, nguoi_id, thumuc)
-        return {"loi": o["chu"], "o_trong": o}
+        return {"loi": o["chu"] + " " + antoan.CHU["o_thieu_lam"], "o_trong": o}
+    from maychu.ketnoi import drive
+    if not van_capnhat and not drive.dang_noi(thumuc):   # QĐ218 dòng 30, 31: Drive chưa nối thì anh chọn trước
+        return {"loi": antoan.CHU["drive_chua_noi"], "can_chon": "drive_chua_noi"}
     if che_do == "cho" and so_viec_ai_dangchay(thumuc):
         _CHO.update(tu=time.time(), nguoi=nguoi_id)
         return {"ok": True, "cho": True}
@@ -208,7 +211,7 @@ def xu_ly_cho(thumuc=None) -> None:
 
 
 # ---------------- 0.7.9 lớp 5: bản sao Drive trước khi gửi lệnh ----------------
-_SAO = {"buoc": None, "tu": 0.0, "loi": None, "den": None}
+_SAO = {"buoc": None, "tu": 0.0, "loi": None, "den": None, "nguoi": None}   # buoc: chup, day, qua_gio, gui
 _KHOA_SAO = threading.Lock()
 
 
@@ -220,11 +223,36 @@ def trang_thai_sao() -> dict:
     return {"dang_sao": _SAO["buoc"], "sao_loi": _SAO["loi"], "sao_den": _SAO["den"]}
 
 
+def tiep_tuc(nguoi_id: str, van: bool, thumuc=None) -> dict:
+    """QĐ218 dòng 28, 32, 34: bản sao quá 10 phút chưa lên Drive thì chờ anh chọn Huỷ hay Vẫn cập nhật."""
+    if _SAO["buoc"] != "qua_gio":
+        return {"loi": "Không có lượt cập nhật nào đang chờ chọn"}
+    if not van:
+        _SAO.update(buoc=None, loi=None)
+        _ghi_f04("capnhat_ngay", ban_dang_chay(), "bichan", "anh huỷ: bản sao Drive quá 10 phút", nguoi_id, thumuc)
+        return {"ok": True, "huy": True}
+    _SAO["buoc"] = "gui"
+    _chay_nen(lambda: _gui(nguoi_id, _SAO["den"], False, thumuc))
+    return {"ok": True}
+
+
+def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> None:
+    from maychu.hethong import antoan
+    try:
+        antoan.ghi(thumuc, yeu_cau={"tu": ban_dang_chay(), "den": ban_moi, "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
+                                    "drive": len_drive})
+        r = cap_nhat_ngay(nguoi_id, thumuc)
+        if "loi" in r:
+            _SAO.update(loi=r["loi"])
+    finally:
+        _SAO.update(buoc="tai" if not _SAO["loi"] else None)
+
+
 def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None) -> dict:
     """Chụp bản sao 07 tệp vào thư mục riêng, chờ đẩy lên Drive (tối đa CHO_DRIVE_GIAY), rồi gửi lệnh. Chạy nền vì
     đẩy Drive có thể vài phút; giao diện hỏi lại /api/capnhat để biết bước đang chạy."""
     with _KHOA_SAO:
-        if _SAO["buoc"]:
+        if _SAO["buoc"] in ("chup", "day", "qua_gio", "gui"):
             return {"ok": True, "sao": True}
         _SAO.update(buoc="chup", tu=time.time(), loi=None, den=ban_moi)
     _chay_nen(lambda: _sao_roi_gui(nguoi_id, ban_moi, thumuc))
@@ -250,7 +278,7 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
         if kq["ketqua"] == "loi":
             loi = next((x for x in kq["file"] if x["ketqua"] == "loi"), {})
             lydo = (json.loads(loi.get("ketqua_tungbuoc_json") or "{}").get("loi") or "lỗi chụp")[:200]
-            _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=lydo))
+            _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=lydo), buoc=None)
             _ghi_f04("capnhat_ngay", dang, "bichan", "chưa chụp được bản sao: " + lydo, nguoi_id, thumuc)
             return
         if drive.dang_noi(thumuc):
@@ -260,17 +288,14 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
                 drive.day_hang_cho(thumuc)
                 if _con_cho_drive(kq["noi"], thumuc):
                     time.sleep(NGHI_DAY_GIAY)
+            if _con_cho_drive(kq["noi"], thumuc):   # QĐ218 dòng 28: quá 10 phút thì chờ anh chọn (tiep_tuc)
+                _SAO["buoc"] = "qua_gio"
+                return
         _SAO["buoc"] = "gui"
-        antoan.ghi(thumuc, yeu_cau={"tu": dang, "den": ban_moi, "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
-                                    "drive": not _con_cho_drive(kq["noi"], thumuc)})
-        r = cap_nhat_ngay(nguoi_id, thumuc)
-        if "loi" in r:
-            _SAO.update(loi=r["loi"])
+        _gui(nguoi_id, ban_moi, drive.dang_noi(thumuc), thumuc)
     except Exception as e:  # noqa: BLE001 - mọi lỗi đều báo lại, không gửi lệnh khi chưa có bản sao
-        _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=type(e).__name__))
+        _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=type(e).__name__), buoc=None)
         _ghi_f04("capnhat_ngay", dang, "loi", "trước cập nhật: " + type(e).__name__, nguoi_id, thumuc)
-    finally:
-        _SAO.update(buoc=None)
 
 
 NGHI_DAY_GIAY = 15

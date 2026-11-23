@@ -338,8 +338,10 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"Máy chủ dùng tệp hoán đổi {_nb(f'{gt} MB')}, quá {_nb(f'{ng} MB')}"
     if loai == "banmoi":
         return f"Có bản mới {sau}"
-    if loai == "capnhat_kiem":
-        return f"Bản {sau}: kiểm sau cập nhật có {_nb(f'{_so(gt):02d} điểm')} chưa đạt"
+    if loai == "capnhat_kiem":   # QĐ218 dòng 47: "Kiểm sau cập nhật bản 0.3.0: lịch chạy nền chưa bật"
+        from maychu.hethong import capnhat
+        ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")
+        return f"Kiểm sau cập nhật bản {sau}: {ly}" if ly else f"Kiểm sau cập nhật bản {sau} chưa đạt"
     return "Có cảnh báo mới"
 
 

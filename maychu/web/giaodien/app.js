@@ -255,33 +255,56 @@ function datLaiDoiMay() { D.maTamDoiMay = ''; const hop = $('#h-2lop'); xoa6(hop
   $('[data-luu2lop]', hop).textContent = 'Tiếp tục'; }
 
 // ---- Màn 09 ngăn Cập nhật
-// 0.7.9 (QĐ213, QĐ215): chữ của 05 lớp an toàn ở 01 chỗ này (chữ máy chủ gửi viết ở maychu/hethong/antoan.py CHU)
-const CHU_CN = {sao: {chup: 'Đang chụp bản sao 07 tệp dữ liệu', day: 'Đang đẩy bản sao lên Drive (tối đa 10 phút)',
-  gui: 'Đã có bản sao, đang gửi lệnh cập nhật'}, quayve: 'Quay về bản trước', qvTieu: 'Quay về bản ',
-  kiem: 'Kiểm sau cập nhật: ', anToanTieu: 'Chế độ an toàn', cho: 'Trang tự tải lại khi xong. Anh không cần bấm gì thêm.'};
-function veAnToan(d) {   // dải trên cùng ở chế độ an toàn (lớp 2)
-  let o = $('#dai-antoan');
+// 0.7.9: chữ 05 lớp an toàn anh đã duyệt nguyên văn (QĐ218, bảng Z16 dòng 24–47), viết ở 01 chỗ này; số dòng ghi cuối câu.
+// Chữ máy chủ gửi (ổ trống, chế độ an toàn, quay về) viết ở maychu/hethong/antoan.py CHU.
+const CHU_CN = {sao: {chup: 'Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)', day: 'Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)',   // 27
+    qua_gio: 'Bước 1/2 · Bản sao Drive quá 10 phút, chờ anh chọn', gui: 'Bước 2/2 · Đang tải bản ', tai: 'Bước 2/2 · Đang tải bản '},   // 28, 29
+  khoaRe: 'Chưa đủ ổ trống',                                                                                                         // 26
+  hopTieu: 'Cập nhật khi chưa có bản sao Drive?', hopPhu: 'Máy chủ hỏng thì không lấy lại được bản sao này.',                      // 30, 33
+  nutKetNoi: 'Kết nối Drive', nutHuy: 'Huỷ', nutVan: 'Vẫn cập nhật',                                                                // 34
+  theTieu: 'Chế độ an toàn', theDong1: 'Việc nền, AI tạm dừng.', theDong2: 'Chỉ mở Cập nhật và nhật ký; việc ghi khác bị chặn.',    // 36
+  chan: 'Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.',                                                               // 37
+  quayve: 'Quay về bản trước', qvRe: b => 'Chạy lại bản ' + b + ' đi kèm gói cài, không cần mạng', qvTieu: b => 'Quay về bản ' + b + '?',   // 38, 39
+  qvChung: 'Phần mềm tạm ngừng rồi tự mở lại. Thao tác ghi vào nhật ký.',   // 43: bỏ "khoảng 30 giây" vì chưa đo được trên máy thử (QĐ218)
+  qvBao: 'Đang quay về bản trước. Trang tự tải lại khi xong.', kiem: 'Kiểm sau cập nhật: ',                                          // 44, 45, 46
+  cho: 'Trang tự tải lại khi xong. Anh không cần bấm gì thêm.'};
+function veAnToan(d) {   // lớp 2: dải trên cùng (35) và thẻ ở màn Cập nhật (36), viền đỏ, không nền đỏ
+  let o = $('#dai-antoan'); const the = $('#cn-the-antoan');
+  if (the) { the.hidden = !d.an_toan; if (d.an_toan) the.innerHTML = '<div class="f1"><div class="t16 b7 do-chu">' + CHU_CN.theTieu + '</div>'
+    + '<div class="t13">' + CHU_CN.theDong1 + '</div><div class="t13 phu">' + cum(CHU_CN.theDong2) + '</div></div>'; }
   if (!d.an_toan) { if (o) o.hidden = true; return; }
   if (!o) { $('#app').insertAdjacentHTML('afterbegin', '<div id="dai-antoan" class="dai-antoan"></div>'); o = $('#dai-antoan'); }
   o.hidden = false;
-  o.innerHTML = icoMau(ICON['shield-alert'], '#E22E28', 18) + '<span><b>' + CHU_CN.anToanTieu + '.</b> ' + esc(d.an_toan) + '.</span>';
+  o.innerHTML = icoMau(ICON['shield-alert'], '#E22E28', 18) + '<span class="f1">' + cum(d.an_toan) + '</span>'
+    + ((d.quay_ve || {}).co ? '<button class="btn btn-phu nho" data-quayve>' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>' : '');
 }
-function veQuayVe(d) {   // lớp 3: thẻ "Quay về bản trước"
+function veQuayVe(d) {   // lớp 3: thẻ "Quay về bản trước" (38)
   const o = $('#cn-quayve'); if (!o) return; const q = d.quay_ve || {};
-  o.hidden = !q.co;
-  if (q.co) o.innerHTML = '<div class="f1"><div class="t16 b7">' + CHU_CN.quayve + '</div><div class="phu t13">' + esc(q.chu) + '.</div></div>'
-    + '<button class="btn btn-phu" data-quayve>' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>';
+  o.hidden = !q.co || !!d.an_toan;   // chế độ an toàn: nút nằm ở dải trên cùng
+  if (q.co) o.innerHTML = '<div class="f1"><div class="t16 b7">' + CHU_CN.quayve + '</div><div class="phu t13">' + cum(CHU_CN.qvRe(q.ban)) + '</div></div>'
+    + '<button class="btn btn-phu" data-quayve title="' + esc(CHU_CN.qvRe(q.ban)) + '">' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>';
 }
-function moQuayVe() {
+function moQuayVe() {   // 39–44
   const q = (D.capnhat || {}).quay_ve || {}; if (!q.co) return;
-  xacnhan(CHU_CN.qvTieu + q.ban + '?', esc(q.chu) + '.', CHU_CN.quayve, async () => {
+  xacnhan(CHU_CN.qvTieu(q.ban), cum(q.chu) + '<div class="t12 phu" style="margin-top:8px">' + cum(CHU_CN.qvChung) + '</div>', CHU_CN.quayve, async () => {
     try { await api('/capnhat/quayve', {dong_y_mat: !!q.mat_tu}); }
     catch (e) { if (e.status) bao(e.message); return; }
-    S.cn = 'dangcn'; $$('.cn-moi').forEach(x => { x.textContent = q.ban; }); ve(); const het = Date.now() + 3 * 60e3;
+    bao(CHU_CN.qvBao); S.cn = 'dangcn'; $$('.cn-moi').forEach(x => { x.textContent = q.ban; }); ve(); const het = Date.now() + 3 * 60e3;
     const cho = async () => { try { const k = await (await fetch('/suckhoe', {cache: 'no-store'})).json();
       if (k.phienban === q.ban) { location.reload(); return; } } catch (e) { /* đang bật lại */ }
       if (Date.now() < het) setTimeout(cho, 3000); };
     setTimeout(cho, 3000); });
+}
+function moHopDrive(loai, cheDo) {   // lớp 5: hộp "Cập nhật khi chưa có bản sao Drive?" (30–34)
+  if (!$('#h-cndrive')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-cndrive" hidden><div class="hop"><div class="hop-dau">'
+    + ICON['cloud-upload'] + '<b class="f1 t16">' + CHU_CN.hopTieu + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div>'
+    + '<div class="hop-than" id="cndrive-than"></div><div class="hop-chan" id="cndrive-chan"></div></div></div>');
+  D.cnDrive = {loai, cheDo};
+  $('#cndrive-than').innerHTML = '<div class="dong t13 xem-chu">' + ICON['circle-alert'] + '<span>' + cum(loai === 'qua_gio' ? D.capnhat.chu_qua_gio : D.capnhat.chu_drive) + '</span></div>'
+    + '<div class="t12 phu">' + cum(CHU_CN.hopPhu) + '</div>';
+  $('#cndrive-chan').innerHTML = (loai === 'qua_gio' ? '' : '<button class="btn btn-phu" data-cn-ketnoi>' + nbsp(CHU_CN.nutKetNoi) + '</button>')
+    + '<button class="btn btn-phu" data-cn-huy>' + CHU_CN.nutHuy + '</button><button class="btn btn-chinh" data-cn-van>' + nbsp(CHU_CN.nutVan) + '</button>';
+  mo('h-cndrive');
 }
 function veCapNhat(d) {
   D.capnhat = d;
@@ -299,37 +322,48 @@ function veCapNhat(d) {
   $('#ls-capnhat').innerHTML = d.lichsu.map(x => '<div class="hang" style="' + cot + '"><b class="so">' + esc(x.ban)
     + '</b><span data-l="Nội dung">' + cum(tomTat(x.ban)) + kiem(x) + '</span><span data-l="Ngày cài" class="so">' + ngay(x.luc) + '</span></div>').join('');
   veAnToan(d); veQuayVe(d);
+  const o = d.o_trong || {du: true}, oc = $('#cn-otrong');
+  if (oc) oc.innerHTML = o.chu ? '<span class="dong t13 ' + (o.du ? 'phu' : 'do-chu') + '">' + icoMau(ICON['hard-drive'], o.du ? '#646A73' : '#E22E28', 14)
+    + '<span>' + cum(o.chu) + (o.lam ? ' ' + cum(o.lam) : '') + '</span></span>' : '';
+  $$('[data-s="cn:coban"] [data-capnhat]').forEach(b => { b.disabled = !o.du; b.title = o.du ? '' : CHU_CN.khoaRe; });
   $('.tab[data-tab="capnhat"] .cham-xanh').hidden = !d.co_ban_moi;
   ve();
 }
 function moCapNhat() {
   const viec = D.capnhat.so_viec_ai, o = D.capnhat.o_trong || {du: true};
+  if (!o.du) { bao(o.chu + ' ' + (o.lam || '')); return; }   // lớp 1: nút đã khoá; phòng khi bấm qua phím
   $('#cn-viec').innerHTML = viec ? 'Đang có <b>' + hai(viec) + '</b> việc AI chạy.' : 'Không có việc AI nào đang chạy.';
-  // 0.7.9 lớp 1 (ổ trống không đủ thì khoá 02 nút), lớp 5 (Drive chưa nối: bản sao chỉ nằm trên máy chủ)
-  let at = $('#cn-antoan');
-  if (!at) { $('#cn-viec').parentElement.insertAdjacentHTML('afterend', '<div id="cn-antoan"></div>'); at = $('#cn-antoan'); }
-  at.innerHTML = (!o.du ? '<div class="dong t13 do-chu">' + ICON['hard-drive'] + '<span>' + esc(o.chu) + '.</span></div>' : '')
-    + (D.capnhat.chu_drive ? '<div class="dong t13 xem-chu">' + ICON['cloud-upload'] + '<span>' + esc(D.capnhat.chu_drive) + '.</span></div>' : '');
-  $$('#h-capnhat [data-cnngay], #h-capnhat [data-cncho]').forEach(b => { b.disabled = !o.du; });
   mo('h-capnhat');
 }
-async function capNhat(cheDo) {
-  dongHop(); const cu = D.capnhat.ban_dang;
-  try { const kq = await api('/capnhat', {che_do: cheDo});
+async function capNhat(cheDo, van) {
+  dongHop(); const cu = D.capnhat.ban_dang, moi = D.capnhat.ban_moi;
+  try { const kq = await api('/capnhat', {che_do: cheDo, van_capnhat: !!van});
+    if (kq.can_chon) { moHopDrive(kq.can_chon, cheDo); return; }   // lớp 5: Drive chưa kết nối → anh chọn
     if (kq.cho) { bao('Đã hẹn: chờ việc AI đang chạy xong (tối đa 30 phút) rồi tự cập nhật.'); return; } }
   catch (e) { if (e.status) { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: ' + e.message + '.'; ve(); } return; }
+  choCapNhat(cu, moi);
+}
+function choCapNhat(cu, moi) {
   S.cn = 'dangcn'; ve(); const het = Date.now() + 5 * 60e3 + 10 * 60e3;   // 0.7.9: cộng 10 phút chờ bản sao lên Drive
   const cho = async () => {
     try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
       if (k.phienban && k.phienban !== cu) { location.reload(); return; }
       const s = await api('/capnhat');   // lớp 5: bước bản sao đang chạy; lỗi bản sao thì dừng, không gửi lệnh
       if (s.sao_loi && !s.dang_sao) { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: ' + s.sao_loi + '.'; ve(); return; }
-      $('[data-s="cn:dangcn"] .phu').textContent = s.dang_sao ? CHU_CN.sao[s.dang_sao] + '…' : CHU_CN.cho;
+      const b = CHU_CN.sao[s.dang_sao];
+      $('[data-s="cn:dangcn"] .phu').textContent = b ? b + (s.dang_sao === 'gui' || s.dang_sao === 'tai' ? (s.sao_den || moi) : '') : CHU_CN.cho;
+      if (s.dang_sao === 'qua_gio') { D.capnhat = {...D.capnhat, ...s}; if ($('#h-cndrive') ? $('#h-cndrive').hidden : true) moHopDrive('qua_gio'); }
     } catch (e) { /* đang khởi động lại */ }
     if (Date.now() < het) setTimeout(cho, 5000);
     else { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: sau 05 phút máy chủ vẫn chạy bản cũ. Phần mềm vẫn chạy bình thường bằng bản cũ.'; ve(); }
   };
   setTimeout(cho, 5000);
+}
+async function chonDrive(van) {   // nút Huỷ, Vẫn cập nhật trong hộp bản sao Drive
+  const k = D.cnDrive || {}; dongHop();
+  if (k.loai === 'qua_gio') { try { await api('/capnhat/tieptuc', {van}); } catch (e) { if (e.status) bao(e.message); return; }
+    if (!van) { S.cn = 'coban'; ve(); } return; }
+  if (van) await capNhat(k.cheDo || 'ngay', true);
 }
 
 // ---- Màn 13 Mô hình AI: thẻ gói Claude, gói ChatGPT, khoá API; bảng mô hình mặc định
@@ -468,7 +502,8 @@ function theMd(x, go) {
 function moMdGt() {   // hộp (i) "Mã dài hạn" (QĐ214, Z15 dòng 02–10)
   if (!$('#h-mdgt')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-mdgt" hidden><div class="hop" style="max-width:500px"><div class="hop-dau">'
     + ICON['key-round'] + '<b class="f1 t16">' + CHU_Z15.iTieu + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div><div class="hop-than">'
-    + CHU_Z15.iDong.map(([i, c]) => '<div class="dong t13 md-gt">' + icoMau(ICON[i], '#1456F0', 16) + '<span>' + cum(c) + '</span></div>').join('')
+    + CHU_Z15.iDong.map(([i, c]) => '<div class="dong t13 md-gt">' + icoMau(ICON[i], '#1456F0', 16) + '<span>'
+      + cum(c).replace(CHU_Z15.lenh, '<span class="nw">' + CHU_Z15.lenh + '</span>') + '</span></div>').join('')   // lệnh không ngắt dòng
     + '<div class="bao-vang t13">' + ICON['circle-alert'] + '<span>' + cum(CHU_Z15.iNhac) + '</span></div></div>'
     + '<div class="hop-chan"><button class="btn btn-chinh" data-dong>' + CHU_Z15.iNut + '</button></div></div></div>');
   mo('h-mdgt'); }
@@ -833,6 +868,7 @@ document.addEventListener('click', async ev => {
   const d = t.dataset;
   if (!('chuong' in d) && !('tk' in d) && !t.closest('.tha')) dongTha();
   if (d.set) { const [k, v] = d.set.split(':'); S[k] = v; }
+  else if (D.anToan && ((d.trang && d.trang !== '09') || (d.tab && d.tab !== 'capnhat'))) { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); const c = $('#app .cuon'); if (c) c.scrollTop = 0; if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (d.tab) { S.tab = d.tab; napTab(); }
@@ -844,6 +880,7 @@ document.addEventListener('click', async ev => {
   else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; if (v) demSo(true); }
   else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); e.hidden = !v; }
   else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.'); } await demSo(); return; }
+  else if (d.di && D.anToan && d.di !== 'capnhat') { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
   else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }
     if (d.cuon) setTimeout(() => { const e = document.getElementById(d.cuon); if (e) e.scrollIntoView({block: 'start'}); }, 0); }
   else if ('noilai' in d) { try { await api('/demso'); S.k = 'binhthuong'; bao('Đã nối lại máy chủ.'); } catch (e) { /* vẫn mất */ } }
@@ -859,6 +896,9 @@ document.addEventListener('click', async ev => {
   else if ('capnhat' in d) moCapNhat();
   else if ('cnngay' in d) { await capNhat('ngay'); }
   else if ('quayve' in d) { moQuayVe(); }
+  else if ('cnVan' in d) { await chonDrive(true); return; }
+  else if ('cnHuy' in d) { await chonDrive(false); return; }
+  else if ('cnKetnoi' in d) { dongHop(); S.trang = '11'; ve(); return; }
   else if ('mdGt' in d) { moMdGt(); return; }
   else if ('mdChep' in d) { try { await navigator.clipboard.writeText(CHU_Z15.lenh); bao(CHU_Z15.daChep); } catch (e) { /* trình duyệt chặn chép */ } return; }
   else if ('cncho' in d) { await capNhat('cho'); }

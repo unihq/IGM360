@@ -27,20 +27,26 @@ DU_PHONG_BYTE = 2 * 1024 ** 3     # chỗ cho 01 ảnh mới giải nén (ảnh 
 CHO_DRIVE_GIAY = 10 * 60          # chờ bản sao đẩy lên Drive tối đa 10 phút rồi mới gửi lệnh cập nhật
 GIU_BAN_TRUOC = 2                 # giữ bản sao trước cập nhật của 02 lần gần nhất trên máy
 
-# ---- Chữ hiện cho anh (01 chỗ; CPO trình anh duyệt chữ cùng bản vẽ CDO) ----
+# ---- Chữ hiện cho anh (01 chỗ). Anh duyệt nguyên văn: QĐ218 (bảng Z16 dòng 24–47); số dòng ghi cuối mỗi câu ----
 CHU = {
-    "o_thieu": "Ổ trống còn {trong}, cần {can} để cập nhật an toàn. Anh báo CTO dọn ổ",
-    "an_toan": "Chế độ an toàn: bản {den} nâng dữ liệu chưa được, dữ liệu đã trả về như trước lúc {luc}",
-    "an_toan_chan": "Phần mềm đang ở chế độ an toàn: chỉ mở Cài đặt › Cập nhật",
-    "sao_loi": "Chưa chụp được bản sao trước khi cập nhật: {lydo}",
-    "sao_chi_may": "Bản sao chỉ nằm trên máy chủ",
-    "qv_khong_co": "Ảnh này chưa có bản trước để quay về",
-    "qv_mat": "Quay về bản {ban}. Dữ liệu trả về lúc {luc} (trước khi cập nhật); việc nhập sau lúc đó không giữ được",
-    "qv_giu": "Quay về bản {ban}. Dữ liệu giữ nguyên",
+    "o_du": "Ổ trống {trong} · đủ để cập nhật",                                                                  # 24
+    "o_thieu": "Ổ trống còn {trong}, cần {can} để cập nhật an toàn.",                                           # 25
+    "o_thieu_lam": "Dọn ổ máy chủ rồi bấm Kiểm tra lại.",                                                        # 25
+    "an_toan": "Chế độ an toàn: bản {den} nâng dữ liệu chưa được, dữ liệu đã trả về như trước lúc {luc}.",        # 35
+    "an_toan_chan": "Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.",                             # 37
+    "sao_loi": "Chưa chụp được bản sao trước khi cập nhật: {lydo}",          # câu báo lỗi kỹ thuật, ngoài bảng QĐ218
+    "drive_chua_noi": "Drive chưa kết nối. Bản sao chỉ nằm trên máy chủ.",                                        # 31
+    "drive_qua_gio": "Đẩy bản sao lên Drive đã quá 10 phút. Bản sao chỉ nằm trên máy chủ.",                        # 32
+    "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
+    "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
+              "việc nhập sau lúc đó không giữ được.",                                                             # 40
+    "qv_giu": "Lần cập nhật này không nâng dữ liệu: dữ liệu giữ nguyên.",                                         # 41
+    "qv_an_toan": "Dữ liệu đã trả về lúc {luc}, quay về không mất thêm.",                                         # 42
     "qv_can_dong_y": "Lần cập nhật này có nâng dữ liệu: anh xác nhận chấp nhận mất dữ liệu nhập sau giờ cập nhật",
 }
-TEN_DIEM = {"ban": "Đúng bản", "dulieu": "07 tệp dữ liệu", "luocdo": "Lược đồ", "lich": "Lịch chạy nền",
-            "cli": "Công cụ AI", "o_trong": "Ổ trống"}
+# Lý do chưa đạt của từng điểm kiểm sau cập nhật (QĐ218 dòng 46, 47: "05/06 · lịch chạy nền chưa bật")
+TEN_DIEM = {"ban": "chưa đúng bản đích", "dulieu": "tệp dữ liệu chưa đạt kiểm tra", "luocdo": "lược đồ chưa đúng",
+            "lich": "lịch chạy nền chưa bật", "cli": "công cụ AI chưa chạy được", "o_trong": "ổ trống chưa đủ"}
 
 TEN_TEP = "capnhat_trangthai.json"
 CHE_DO = {"an_toan": False, "den": None, "luc": None, "lydo": None}   # trạng thái của lần chạy này (bộ nhớ)
@@ -98,7 +104,8 @@ def o_trong(thumuc: Path | None = None) -> dict:
     trong = shutil.disk_usage(thumuc).free
     can = HE_SO_DULIEU * dulieu + DU_PHONG_BYTE
     return {"du": trong >= can, "trong": trong, "can": can, "dulieu": dulieu,
-            "chu": None if trong >= can else CHU["o_thieu"].format(trong=chu_dungluong(trong), can=chu_dungluong(can))}
+            "chu": CHU["o_du"].format(trong=chu_dungluong(trong)) if trong >= can
+            else CHU["o_thieu"].format(trong=chu_dungluong(trong), can=chu_dungluong(can))}
 
 
 # ---------------- Lớp 2: chế độ an toàn ----------------
@@ -120,8 +127,7 @@ def vao_an_toan(loi: BaseException, thumuc: Path | None = None) -> None:
 def chu_an_toan() -> str | None:
     if not CHE_DO["an_toan"]:
         return None
-    luc = CHE_DO["luc"] or ""
-    return CHU["an_toan"].format(den=CHE_DO["den"], luc=f"{luc[11:16]} {luc[8:10]}/{luc[5:7]}" if len(luc) >= 16 else luc)
+    return CHU["an_toan"].format(den=CHE_DO["den"], luc=_gio(CHE_DO["luc"] or ""))
 
 
 # Đường còn mở ở chế độ an toàn: trang, tài nguyên giao diện, sức khoẻ, đăng nhập – phiên, màn 09 Cập nhật.
@@ -169,7 +175,7 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
                 cli=_kiem_cli("claude") and _kiem_cli("chatgpt"), o_trong=o_trong(thumuc)["du"])
     dat = sum(diem.values())
     loi = [TEN_DIEM[k] for k, v in diem.items() if not v]
-    tom = f"{ban} · {dat:02d}/{len(diem):02d} đạt" + (" · chưa đạt: " + ", ".join(loi) if loi else "")
+    tom = f"{ban} · {dat:02d}/{len(diem):02d} đạt" if not loi else f"{ban} · {dat:02d}/{len(diem):02d} · " + ", ".join(loi)   # 45, 46
     capnhat._ghi_f04("kiem_saunang", tom, "dat" if not loi else "loi", thumuc=thumuc)
     ghi(thumuc, yeu_cau=None, kiem_ban=ban)
     from maychu.hethong.giamsat import thongbao
@@ -195,7 +201,10 @@ def ban_truoc() -> str | None:
 
 
 def _gio(luc: str) -> str:
-    return f"{luc[11:16]} {luc[8:10]}/{luc[5:7]}" if len(luc or "") >= 16 else (luc or "")
+    """"10:05"; hôm khác thì thêm ngày "10:05 23/11"."""
+    if len(luc or "") < 16:
+        return luc or ""
+    return luc[11:16] if luc[:10] == datetime.now(MUIGIO_VN).date().isoformat() else f"{luc[11:16]} {luc[8:10]}/{luc[5:7]}"
 
 
 def thong_tin_quayve(thumuc: Path | None = None) -> dict:
@@ -207,8 +216,9 @@ def thong_tin_quayve(thumuc: Path | None = None) -> dict:
         return {"co": False, "ban": None, "mat_tu": None, "chu": CHU["qv_khong_co"]}
     n = doc(thumuc).get("nang_luocdo") or {}
     mat = n.get("luc") if n.get("ban") == capnhat.ban_dang_chay() and not CHE_DO["an_toan"] else None
-    return {"co": True, "ban": bt, "mat_tu": mat,
-            "chu": CHU["qv_mat"].format(ban=bt, luc=_gio(mat)) if mat else CHU["qv_giu"].format(ban=bt)}
+    chu = (CHU["qv_mat"].format(luc=_gio(mat)) if mat else
+           CHU["qv_an_toan"].format(luc=_gio(CHE_DO["luc"] or "")) if CHE_DO["an_toan"] else CHU["qv_giu"])
+    return {"co": True, "ban": bt, "mat_tu": mat, "chu": chu}
 
 
 def _thoat() -> None:   # pragma: no cover - dừng tiến trình để Docker bật lại vùng chứa

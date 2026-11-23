@@ -58,8 +58,15 @@ class KiemLop1(NenAT):
         with mock.patch("maychu.hethong.antoan.shutil.disk_usage", return_value=SimpleNamespace(free=50 * 1024 ** 3)), \
                 mock.patch.object(capnhat, "kiem_tra", return_value={"co_ban_moi": True, "ban_moi": "0.7.10"}), \
                 mock.patch.object(capnhat, "bat_dau", return_value={"ok": True, "sao": True}) as bd:
-            self.assertEqual(capnhat.yeu_cau("x", "ngay"), {"ok": True, "sao": True})
+            kq = capnhat.yeu_cau("x", "ngay")                                       # QĐ218 dòng 30, 31: Drive chưa nối thì hỏi anh
+            self.assertEqual(kq, {"loi": antoan.CHU["drive_chua_noi"], "can_chon": "drive_chua_noi"})
+            bd.assert_not_called()
+            self.assertEqual(capnhat.yeu_cau("x", "ngay", van_capnhat=True), {"ok": True, "sao": True})   # anh bấm "Vẫn cập nhật"
         bd.assert_called_once()
+
+    def test_chu_o_trong(self):
+        with mock.patch("maychu.hethong.antoan.shutil.disk_usage", return_value=SimpleNamespace(free=int(12.4 * 1024 ** 3))):
+            self.assertEqual(antoan.o_trong()["chu"], "Ổ trống 12,4 GB · đủ để cập nhật")                      # dòng 24
 
 
 # ---------------- Lớp 5: bản sao trước cập nhật ----------------
@@ -100,7 +107,7 @@ class KiemLop5(NenAT):
         self.assertEqual(len(d), 7)
         self.assertTrue(all(x[0] == "hangngay" and json.loads(x[1])["dip"] == "truoc_capnhat" for x in d))   # CDA C1
         self.assertEqual(antoan.doc()["yeu_cau"]["den"], "0.7.10")
-        self.assertIsNone(capnhat.trang_thai_sao()["dang_sao"])
+        self.assertEqual(capnhat.trang_thai_sao()["dang_sao"], "tai")                # dòng 29: Bước 2/2 · Đang tải bản
 
     def test_drive_noi_thi_cho_day_xong(self):
         kq, goi = self.chay(drive_noi=True)
@@ -108,6 +115,27 @@ class KiemLop5(NenAT):
         self.assertTrue(antoan.doc()["yeu_cau"]["drive"])
         noi = next(p for p in (self.dl / "saoluu").iterdir() if "_truoc_" in p.name)
         self.assertEqual(capnhat._con_cho_drive(noi), 0)
+
+    def test_qua_10_phut_cho_anh_chon(self):                                         # QĐ218 dòng 28, 32, 34
+        import contextlib
+        goi = []
+        with contextlib.ExitStack() as st:
+            st.enter_context(mock.patch.object(capnhat, "_chay_nen", side_effect=lambda f: f()))
+            st.enter_context(mock.patch.object(capnhat, "cap_nhat_ngay", side_effect=lambda n, t=None: goi.append(n) or {"ok": True}))
+            st.enter_context(mock.patch("maychu.ketnoi.drive.dang_noi", return_value=True))
+            st.enter_context(mock.patch("maychu.ketnoi.drive.day_hang_cho", return_value={"day": 0, "loi": 1}))
+            st.enter_context(mock.patch.object(antoan, "CHO_DRIVE_GIAY", 0))
+            capnhat.bat_dau("nguoi", "0.7.10")
+            self.assertEqual((capnhat.trang_thai_sao()["dang_sao"], goi), ("qua_gio", []))
+            self.assertEqual(capnhat.bat_dau("nguoi", "0.7.10"), {"ok": True, "sao": True})   # không chạy lượt thứ 02
+            self.assertEqual(capnhat.tiep_tuc("nguoi", True), {"ok": True})
+            self.assertEqual(goi, ["nguoi"])
+            self.assertFalse(antoan.doc()["yeu_cau"]["drive"])
+            capnhat._SAO.update(buoc="qua_gio")
+            self.assertEqual(capnhat.tiep_tuc("nguoi", False), {"ok": True, "huy": True})
+            self.assertIsNone(capnhat.trang_thai_sao()["dang_sao"])
+            self.assertIn("anh huỷ", self.f04("capnhat_ngay")[-1][2])
+            self.assertIn("loi", capnhat.tiep_tuc("nguoi", True))
 
     def test_chup_loi_thi_khong_gui(self):
         kq, goi = self.chay(sao=lambda *a, **k: {"ketqua": "loi", "file": [{"ketqua": "loi", "ketqua_tungbuoc_json": json.dumps({"loi": "đĩa đầy"})}], "noi": self.dl})
@@ -179,7 +207,9 @@ class KiemLop4(NenAT):
         ban = capnhat.ban_dang_chay()
         with mock.patch.object(antoan, "_kiem_cli", return_value=False):
             kq = antoan.kiem_sau_capnhat(True)
-        self.assertEqual((kq["dat"], kq["tong"], kq["loi"]), (5, 6, ["Công cụ AI"]))
+        self.assertEqual((kq["dat"], kq["tong"], kq["loi"]), (5, 6, ["công cụ AI chưa chạy được"]))
+        self.assertIn("Kiểm sau cập nhật bản " + ban + ": công cụ AI chưa chạy được",
+                      [d["chu"] for d in thongbao.danh_sach()["ds"] if d["loai"] == "capnhat_kiem"])   # QĐ218 dòng 47
         self.assertIn(f"capnhat_kiem:{ban}", [d["khoa"] for d in thongbao.danh_sach()["ds"]] if "khoa" in (thongbao.danh_sach()["ds"] or [{}])[0] else
                       ["capnhat_kiem:" + ban for d in thongbao.danh_sach()["ds"] if d["loai"] == "capnhat_kiem"])
         self.assertFalse(antoan.can_kiem())
@@ -202,7 +232,13 @@ class KiemLop4(NenAT):
         antoan.ghi(yeu_cau={"tu": "0.7.8", "den": "9.9.9"})
         with mock.patch.object(antoan, "_kiem_cli", return_value=True):
             kq = antoan.kiem_sau_capnhat(False)
-        self.assertEqual(kq["loi"], ["Đúng bản", "Lịch chạy nền"])
+        self.assertEqual(kq["loi"], ["chưa đúng bản đích", "lịch chạy nền chưa bật"])
+        cn = ketnoi.mo("Nhatky")
+        try:
+            tom = cn.execute("SELECT thamso_tomtat FROM nhatky_thaotac WHERE lenhcon = 'kiem_saunang'").fetchone()[0]
+        finally:
+            cn.close()
+        self.assertTrue(tom.endswith(" · 04/06 · chưa đúng bản đích, lịch chạy nền chưa bật"), tom)   # QĐ218 dòng 46
         self.assertNotIn("yeu_cau", antoan.doc())
 
 
@@ -233,7 +269,7 @@ class KiemLop3(NenAT):
                 mock.patch.object(antoan, "_thoat") as th:
             q = antoan.thong_tin_quayve()
             self.assertEqual((q["co"], q["ban"], q["mat_tu"][:16]), (True, "0.7.8", "2026-11-24T10:05"))
-            self.assertIn("10:05 24/11", q["chu"])
+            self.assertIn("dữ liệu trả về lúc 10:05", q["chu"])                     # QĐ218 dòng 40
             self.assertEqual(antoan.quay_ve("nguoi")["loi"], antoan.CHU["qv_can_dong_y"])
             self.assertEqual(antoan.quay_ve("nguoi", True, tre_giay=0.01), {"ok": True, "ban": "0.7.8"})
             time.sleep(0.3)
@@ -246,7 +282,7 @@ class KiemLop3(NenAT):
         g = self.goc()
         with mock.patch.object(antoan, "GOC_MA", g), mock.patch.object(antoan, "_thoat"):
             q = antoan.thong_tin_quayve()
-            self.assertEqual((q["mat_tu"], q["chu"]), (None, "Quay về bản 0.7.8. Dữ liệu giữ nguyên"))
+            self.assertEqual((q["mat_tu"], q["chu"]), (None, "Lần cập nhật này không nâng dữ liệu: dữ liệu giữ nguyên."))   # 41
         with mock.patch.object(antoan, "GOC_MA", self.g / "khong_co"):
             self.assertEqual(antoan.quay_ve("nguoi")["loi"], antoan.CHU["qv_khong_co"])
 
@@ -410,7 +446,7 @@ class KiemChu(unittest.TestCase):
         js = (GD / "app.js").read_text(encoding="utf-8")
         self.assertEqual(js.count("const CHU_CN = {"), 1)
         self.assertEqual(js.count("const CHU_Z15 = {"), 1)
-        for k in ("o_thieu", "an_toan", "an_toan_chan", "sao_loi", "sao_chi_may", "qv_khong_co", "qv_mat", "qv_giu", "qv_can_dong_y"):
+        for k in ("o_thieu", "an_toan", "an_toan_chan", "sao_loi", "drive_chua_noi", "drive_qua_gio", "o_du", "o_thieu_lam", "qv_an_toan", "qv_khong_co", "qv_mat", "qv_giu", "qv_can_dong_y"):
             self.assertIn(k, antoan.CHU)
 
     def test_23_cau_da_duyet_dung_nguyen_van(self):   # QĐ217 (bảng Z15, Z15b; 03 câu CPO sửa ở dòng 19, 22, 23)
@@ -437,6 +473,27 @@ class KiemChu(unittest.TestCase):
         self.assertEqual(madaihan.CHU_DAN["trung"].format(tk=1) + ".", "Tài khoản Claude này đã kết nối ở Tài khoản 1. Phần mềm không lưu mã."
                          " Thu hồi mã vừa tạo ở claude.ai/settings/claude-code.")                                     # dòng 22
         self.assertEqual(madaihan.CHU_DAN["chua_tron"].format(n=54) + ".", "Mã vừa dán có 54 ký tự, chưa trọn. Chép lại cả mã rồi dán lại.")   # 23
+
+    def test_24_cau_05_lop_dung_nguyen_van(self):   # QĐ218 (bảng Z16 dòng 24–47)
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        for c in ("Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)", "Bước 1/2 · Bản sao Drive quá 10 phút, chờ anh chọn",
+                  "'Bước 2/2 · Đang tải bản '", "'Chưa đủ ổ trống'", "Cập nhật khi chưa có bản sao Drive?",
+                  "Máy chủ hỏng thì không lấy lại được bản sao này.", "'Kết nối Drive'", "'Huỷ'", "'Vẫn cập nhật'",
+                  "'Chế độ an toàn'", "'Việc nền, AI tạm dừng.'", "Chỉ mở Cập nhật và nhật ký; việc ghi khác bị chặn.",
+                  "Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.", "'Quay về bản trước'",
+                  "'Chạy lại bản ' + b + ' đi kèm gói cài, không cần mạng'", "'Quay về bản ' + b + '?'",
+                  "Phần mềm tạm ngừng rồi tự mở lại. Thao tác ghi vào nhật ký.", "Đang quay về bản trước. Trang tự tải lại khi xong.",
+                  "'Kiểm sau cập nhật: '"):
+            self.assertIn(c, js, c)
+        self.assertEqual(antoan.CHU["o_thieu"].format(trong="1,2 GB", can="2,6 GB") + " " + antoan.CHU["o_thieu_lam"],
+                         "Ổ trống còn 1,2 GB, cần 2,6 GB để cập nhật an toàn. Dọn ổ máy chủ rồi bấm Kiểm tra lại.")      # 25
+        self.assertEqual(antoan.CHU["an_toan"].format(den="0.3.0", luc="10:05"),
+                         "Chế độ an toàn: bản 0.3.0 nâng dữ liệu chưa được, dữ liệu đã trả về như trước lúc 10:05.")   # 35
+        self.assertEqual(antoan.CHU["drive_chua_noi"], "Drive chưa kết nối. Bản sao chỉ nằm trên máy chủ.")             # 31
+        self.assertEqual(antoan.CHU["drive_qua_gio"], "Đẩy bản sao lên Drive đã quá 10 phút. Bản sao chỉ nằm trên máy chủ.")   # 32
+        self.assertEqual(antoan.CHU["qv_mat"].format(luc="10:05"), "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu"
+                         " trả về lúc 10:05 (trước khi cập nhật); việc nhập sau lúc đó không giữ được.")                   # 40
+        self.assertEqual(antoan.CHU["qv_an_toan"].format(luc="10:05"), "Dữ liệu đã trả về lúc 10:05, quay về không mất thêm.")   # 42
 
     def test_khong_nen_do(self):
         html = (GD / "index.html").read_text(encoding="utf-8")

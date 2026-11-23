@@ -80,6 +80,11 @@ class MaCu(BaseModel):
 
 class CheDoCapNhat(BaseModel):
     che_do: str = "cho"
+    van_capnhat: bool = False   # QĐ218 dòng 34: anh bấm "Vẫn cập nhật" khi Drive chưa kết nối
+
+
+class TiepTuc(BaseModel):
+    van: bool = False
 
 
 @router.post("/dangnhap")
@@ -213,7 +218,7 @@ def _them_antoan() -> dict:
         noi = drive.dang_noi()
     except Exception:  # noqa: BLE001 - ở chế độ an toàn bảng kết nối có thể chưa đọc được
         noi = False
-    return {"o_trong": {"du": o["du"], "chu": o["chu"]}, "drive_noi": noi, "chu_drive": None if noi else antoan.CHU["sao_chi_may"],
+    return {"o_trong": {"du": o["du"], "chu": o["chu"], "lam": None if o["du"] else antoan.CHU["o_thieu_lam"]}, "drive_noi": noi, "chu_drive": None if noi else antoan.CHU["drive_chua_noi"], "chu_qua_gio": antoan.CHU["drive_qua_gio"],
             **capnhat.trang_thai_sao(), "an_toan": antoan.chu_an_toan(), "quay_ve": antoan.thong_tin_quayve()}
 
 
@@ -244,7 +249,17 @@ def quay_ve(body: QuayVe, p: dict = Depends(can_dang_nhap)):
 
 @router.post("/capnhat")
 def cap_nhat(body: CheDoCapNhat, p: dict = Depends(can_dang_nhap)):
-    kq = capnhat.yeu_cau(p["nguoidung_id"], body.che_do)
+    kq = capnhat.yeu_cau(p["nguoidung_id"], body.che_do, van_capnhat=body.van_capnhat)
+    if kq.get("can_chon"):
+        return kq   # giao diện mở hộp "Cập nhật khi chưa có bản sao Drive?"
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return kq
+
+
+@router.post("/capnhat/tieptuc")
+def tiep_tuc_capnhat(body: TiepTuc, p: dict = Depends(can_dang_nhap)):
+    kq = capnhat.tiep_tuc(p["nguoidung_id"], body.van)
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return kq

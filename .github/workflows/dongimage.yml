@@ -88,12 +88,14 @@ jobs:
           thu() {   # $1: tệp trạng thái (rỗng = chạy bình thường); in số bản /suckhoe trả
             d="$(mktemp -d)"; chmod 777 "$d"
             [ -z "$1" ] || { printf '%s' "$1" > "$d/capnhat_trangthai.json"; chmod 666 "$d/capnhat_trangthai.json"; }
+            t0="$(date +%s)"
             docker run -d --name thu -e IGM360_LICH=tat -v "$d:/dulieu" "$anh" >/dev/null
             ra=""
             for i in $(seq 1 45); do
               ra="$(docker exec thu python -c "import urllib.request,json;print(json.load(urllib.request.urlopen('http://127.0.0.1:8360/suckhoe',timeout=3))['phienban'])" 2>/dev/null || true)"
               [ -n "$ra" ] && break; sleep 2
             done
+            echo "$(( $(date +%s) - t0 ))" > /tmp/giay_khoidong   # QĐ218 dòng 43: số giây thật để thay "khoảng 30 giây"
             [ -n "$ra" ] || docker logs thu 2>&1 | tail -30 >&2
             docker rm -f thu >/dev/null
             echo "$ra"
@@ -104,7 +106,7 @@ jobs:
           [ "$bt" != "$PHIENBAN" ] || { echo "Bản trước trùng bản này: $bt"; exit 1; }
           ra="$(thu "{\"chay_ban_truoc\": {\"ban_anh\": \"$PHIENBAN\", \"ban_truoc\": \"$bt\"}}")"
           [ "$ra" = "$bt" ] || { echo "Bản trước $bt chưa khởi động được trên ảnh $PHIENBAN (trả: $ra)"; exit 1; }
-          echo "Bản $PHIENBAN và bản trước $bt khởi động được" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Bản $PHIENBAN và bản trước $bt khởi động được; bản trước lên trong $(cat /tmp/giay_khoidong) giây (máy CI, chưa tính Docker bật lại vùng chứa)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Đẩy image
         uses: docker/build-push-action@v6
