@@ -376,6 +376,28 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .mb .tc-dau{padding:10px 14px;flex-wrap:wrap}
 .mb .tc-than{padding:14px}
 .mb .tc-nhap{margin:0 12px 14px;width:calc(100% - 24px)}
+/* Ô chọn mô hình màn 08, hộp "Đổi" màn 13 (QĐ178–QĐ183, bản vẽ Z10, Z10b) */
+.tc-duoi{display:flex;align-items:center;gap:8px;margin:-12px 24px 16px;max-width:860px;align-self:center;width:calc(100% - 48px)}
+.mb .tc-duoi{margin:-6px 12px 10px;width:calc(100% - 24px)}
+.mh-chon{position:relative;display:inline-flex}
+.mh-nut{height:30px;padding:0 10px;border:1px solid var(--ke);border-radius:15px;background:#fff;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.mh-nut:hover,.mh-nut.mo{border-color:var(--vien)}
+.mh-cham{width:8px;height:8px;border-radius:4px;background:var(--dat);flex:none}
+.mh-bang{position:absolute;bottom:38px;left:0;width:330px;max-height:440px;overflow:auto;background:#fff;border:1px solid var(--ke);border-radius:12px;box-shadow:0 8px 24px rgba(31,35,41,.14);padding:6px;z-index:60}
+.mb .mh-bang{width:330px;max-width:calc(100vw - 24px);max-height:380px}
+.mh-hop .mh-bang{position:static;width:100%;max-height:none;box-shadow:none;border:0;padding:0}
+.mh-tim{display:flex;align-items:center;gap:6px;height:36px;border:1px solid var(--ke);border-radius:8px;padding:0 10px;margin:2px 2px 4px}
+.mh-tim input{border:0;outline:0;flex:1;min-width:0;height:100%;background:transparent;font-size:13px}
+.mh-ghi{font-size:12px;color:var(--phu);padding:2px 8px 6px}
+.mh-nhom{display:flex;align-items:center;gap:8px;width:100%;padding:8px;border-radius:8px;font-size:13px;font-weight:600;text-align:left}
+.mh-nhom:hover,.mh-dong:hover{background:var(--xam)}
+.mh-nhom .logo-n{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;flex:none}
+.mh-dong{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;padding:6px 8px 6px 38px;border-radius:8px;font-size:13px;text-align:left}
+.mh-dong.on{background:var(--xam);font-weight:600}
+.mh-tai{display:flex;align-items:center;gap:6px;padding:7px 8px 7px 38px;font-size:12px;color:var(--phu)}
+.mh-rong{padding:10px 8px;font-size:13px;color:var(--phu)}
+.mh-chan{border-top:1px solid var(--ke);margin-top:4px;padding-top:4px}
+.tn-meta.mh-vang{color:#8F5F00}
 .mb .tn.toi .tn-noi{max-width:88%}
 .mb .goi3{grid-template-columns:1fr}
 .mb .bm{flex-direction:column}
@@ -1182,8 +1204,7 @@ button.o-bam:hover{border-color:var(--xanh)}
   <circle cx="11" cy="11" r="8" />
 </svg><input placeholder="Tìm hội thoại cũ"></div><div id="ds-ht"></div></div>
       <div class="tc-giua">
-        <div class="tc-dau"><b class="f1 nw" id="tc-tieude">Trò chuyện mới</b>
-          <span class="chip" id="tc-nguon"></span></div>
+        <div class="tc-dau"><b class="f1 nw" id="tc-tieude">Trò chuyện mới</b></div>
         <div class="tc-than">
           <div data-s="tc:rong"><div class="tc-rong"><div class="vong-rong"><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-sparkles"
@@ -1253,6 +1274,7 @@ button.o-bam:hover{border-color:var(--xanh)}
 >
   <rect width="18" height="18" x="3" y="3" rx="2" />
 </svg></button></div>
+        <div class="tc-duoi"><div class="mh-chon" id="mh-chat"></div></div>
       </div></div></div><div class="trang" id="p13" hidden>
       <div class="dau-trang"><div class="ico-tron"><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-brain-circuit"

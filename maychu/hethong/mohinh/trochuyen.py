@@ -30,7 +30,8 @@ def _cua(cn, hoithoai_id: str, nguoidung_id: str) -> bool:
     return bool(cn.execute("SELECT 1 FROM hoithoai WHERE id = ? AND nguoidung_id = ?", (hoithoai_id, nguoidung_id)).fetchone())
 
 
-def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None) -> dict:
+def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, mohinh_id: str | None = None) -> dict:
+    """`mohinh_id`: mô hình anh ghim cho cuộc này (GĐ 1 trình duyệt nhớ, gửi kèm mỗi tin; QĐ180)."""
     noidung = (noidung or "").strip()
     if not noidung:
         raise ValueError("Chưa có nội dung")
@@ -50,7 +51,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None) -
         cn.close()
     lich_su = "\n\n".join(f"{VAI_CHU[v]}: {n}" for v, n in truoc)[-GIU_CHU:]
     cau = (f"Các lượt trước của cuộc trò chuyện:\n{lich_su}\n\nAnh hỏi tiếp:\n{noidung}" if lich_su else noidung)
-    kq = congai.goi(cau, thumuc=thumuc)
+    kq = congai.goi(cau, thumuc=thumuc, loai_viec="trochuyen", mohinh_id=mohinh_id)
     cn = ketnoi.mo("Bot", thumuc)
     try:
         if "loi" in kq:
@@ -59,6 +60,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None) -
         else:
             tl = _ghi_tin(cn, hoithoai_id, "ai", kq["chu"], kq["nhatky_ai_id"])
             tl["nguon"], tl["nguon_id"] = kq["nguon"], kq.get("nguon_id")   # Z10a: giao diện đặt chữ theo mã nguồn
+            tl["mohinh_id"], tl["mohinh"], tl["ghim_hong"] = kq.get("mohinh_id"), kq.get("mohinh"), kq.get("ghim_hong")
     finally:
         cn.close()
     return {"hoithoai_id": hoithoai_id, "hoi": hoi, "tra_loi": tl}

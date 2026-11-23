@@ -15,7 +15,7 @@ class KiemGiaoDien(unittest.TestCase):
         self.js = (GD / "app.js").read_text(encoding="utf-8")
 
     def test_du_cho_du_lieu(self):
-        for ma in ("ds-nguonai", "ds-mohinh", "md-songsong", "ds-ht", "ds-tin", "tc-o", "tc-tieude", "tc-nguon",
+        for ma in ("ds-nguonai", "ds-mohinh", "md-songsong", "ds-ht", "ds-tin", "tc-o", "tc-tieude", "mh-chat",
                    "sua-tu", "mk-gio", "h-nguonai", "h-them", "ds-thongso", "ds-phien"):
             with self.subTest(ma=ma):
                 self.assertIn(f'id="{ma}"', self.html)

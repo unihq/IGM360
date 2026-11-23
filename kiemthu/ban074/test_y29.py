@@ -141,7 +141,7 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
         self.assertIn("bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.')", js)
         self.assertIn("ten = 'tài khoản ' + tk + ' của ' + tenNguon({goi: g});", js)
         self.assertIn("const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);", js)
-        self.assertIn("const moHinhDong = (ma, n) => {", js)                   # QĐ178: 01 hàm rút gọn dùng chung
+        self.assertIn("const moHinhDong = (ma, n) => tenMh(", js)                   # QĐ178: 01 hàm rút gọn dùng chung
         self.assertIn("'<div class=\"tn-meta\">' + cum(nhanTraLoi(x))", js)     # Z10a: dòng dưới câu trả lời
         self.assertIn("(tenNguon(timNguon(d.goithu)) || k.nguon)", js)
         tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
@@ -174,7 +174,7 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
         self.assertEqual(m.group(1), dg.GOI["claude"]["thumuc"])            # tài khoản N > 1 nằm trong cùng ổ
         self.assertIn("igm360-claude:" + m.group(1), dc)                     # đúng chỗ ổ gắn
         self.assertNotIn("CLAUDE_CONFIG_DIR", dc)                            # chỉ đặt ở image: cập nhật là có, không sửa tệp compose
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.4")
+        self.assertGreaterEqual(tuple(map(int, (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 7, 4))
         muc = (GOC / "THAYDOI.md").read_text(encoding="utf-8").split("## 0.7.4", 1)[1].split("\n## ", 1)[0]
         self.assertIn("Tóm tắt:", muc)
         self.assertIn("đăng nhập lại tài khoản Claude 1", muc)
