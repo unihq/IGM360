@@ -92,7 +92,7 @@ class KiemChuGiaoDien(unittest.TestCase):
     def test_cau_bao_may_chu(self):
         nguon = (GOC / "maychu/hethong/mohinh/dangnhap_goi.py").read_text(encoding="utf-8")
         self.assertIn('Bấm \\"Mở trang\\" lấy mã mới rồi dán lại', nguon)              # N12 (giao diện thêm dấu chấm)
-        self.assertIn("mọi việc chờ anh bấm.", (GOC / "maychu/hethong/caidat/thongso.py").read_text(encoding="utf-8"))  # N08
+        self.assertIn("mọi việc chờ bạn bấm.", (GOC / "maychu/hethong/caidat/thongso.py").read_text(encoding="utf-8"))  # N08
 
     @unittest.skipUnless(shutil.which("node"), "máy không có node")
     def test_ham_giu_cum_va_tien(self):

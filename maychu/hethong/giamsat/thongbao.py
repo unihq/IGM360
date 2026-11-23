@@ -351,9 +351,10 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"Máy chủ dùng tệp hoán đổi {_nb(f'{gt} MB')}, quá {_nb(f'{ng} MB')}"
     if loai == "banmoi":
         return f"Có bản mới {sau}"
-    if loai == "quayve_loi":
-        from maychu.hethong import antoan, capnhat
-        return antoan.CHU["qv_loi"].format(ban=capnhat.ban_dang_chay())
+    if loai == "quayve_loi":   # QĐ219 A4, A5
+        from maychu.hethong import antoan
+        q = antoan.quay_ve_loi_gan(luc=sau)
+        return q["chu_chuong"] if q else "Quay về bản trước chưa được"
     if loai == "capnhat_kiem":   # QĐ218 dòng 47: "Kiểm sau cập nhật bản 0.3.0: lịch chạy nền chưa bật"
         from maychu.hethong import capnhat
         ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")

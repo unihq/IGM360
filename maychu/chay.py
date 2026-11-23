@@ -62,10 +62,11 @@ def _ghi(tep: Path, d: dict) -> None:
         tam.unlink(missing_ok=True)
 
 
-def _bo_co(tep: Path, tt: dict, loi: str | None = None) -> None:
+def _bo_co(tep: Path, tt: dict, loi: str | None = None, **them) -> None:
+    """`them`: kieu ("tra" | "khoidong"), ban_truoc, ban_anh, so_lan, da_tra (giờ dữ liệu đã trả về) để bản mới ghi câu A4–A7."""
     tt.pop("chay_ban_truoc", None)
     if loi:
-        tt["quayve_loi"] = {"chu": loi, "luc": _bay()}
+        tt["quayve_loi"] = {"chu": loi, "luc": _bay(), **them}
     _ghi(tep, tt)
 
 
@@ -163,6 +164,7 @@ def _ghi_f04_da_tra(dl: Path, yc: dict) -> None:
 def _xong_tra(dl: Path, tep: Path, tt: dict, yc: dict) -> None:
     _ghi_f04_da_tra(dl, yc)   # dòng F04 "quayve" ghi trước khi trả đã bị trả về theo bản chụp: ghi lại
     yc.pop("tra_du_lieu", None)
+    yc["da_tra"] = (tt.get("nang_luocdo") or {}).get("luc")   # QĐ219 A7: "Dữ liệu đã trả về lúc …"
     tt.pop("nang_luocdo", None)
     tt["chay_ban_truoc"] = yc
     _ghi(tep, tt)
@@ -191,7 +193,8 @@ def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
         _bo_co(tep, tt)   # ảnh đã đổi: về chạy bản trong ảnh
         return goc
     if int(yc.get("so_lan_hong") or 0) >= SO_LAN_HONG:
-        _bo_co(tep, tt, f"bản {yc.get('ban_truoc')} khởi động hỏng {SO_LAN_HONG:02d} lần, đã chạy lại bản {yc.get('ban_anh')}")
+        _bo_co(tep, tt, f"bản {yc.get('ban_truoc')} khởi động hỏng {SO_LAN_HONG:02d} lần, đã chạy lại bản {yc.get('ban_anh')}",
+               kieu="khoidong", ban_truoc=yc.get("ban_truoc"), ban_anh=yc.get("ban_anh"), so_lan=SO_LAN_HONG, da_tra=yc.get("da_tra"))
         return goc
     if tra:
         def ghi_buoc(b):
@@ -202,7 +205,7 @@ def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
             _ghi(tep, tt)
         loi = tra_du_lieu(dl, tra, ghi_buoc)
         if loi:   # dữ liệu đã đổi về như trước lúc trả: chạy bản mới (anh vẫn vào được giao diện)
-            _bo_co(tep, tt, loi)
+            _bo_co(tep, tt, loi, kieu="tra", ban_truoc=yc.get("ban_truoc"), ban_anh=yc.get("ban_anh"))
             return goc
         _xoa_cu(dl, _tep_tra(tra))
         _xong_tra(dl, tep, tt, yc)

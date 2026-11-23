@@ -374,7 +374,7 @@ def bat_dau_drive(request: Request, p: dict = Depends(can_dang_nhap)):
 def ve_trang_drive(code: str = "", state: str = "", error: str = ""):
     """Google chuyển về đây (không mang cookie vì SameSite=Strict); kiểm bằng mã chống giả dùng 01 lần."""
     if error:
-        kq, ok = "Anh chưa cấp quyền cho IGM360 trên Google.", False
+        kq, ok = "Bạn chưa cấp quyền cho IGM360 trên Google.", False
     else:
         try:
             drive.ve_trang(code, state)

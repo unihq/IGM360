@@ -53,14 +53,14 @@ TIEN_TO = "sk-ant-oat01-"
 _KY_TU_AN = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"))
 # N28 (QĐ216): chữ báo khi dán mã, viết ở 01 chỗ; anh duyệt nguyên văn (QĐ217, bảng Z15b dòng 22, 23)
 CHU_DAN = {
-    "trong": "Anh dán mã dài hạn vào ô",
+    "trong": "Bạn dán mã dài hạn vào ô",
     "chua_tron": "Mã vừa dán có {n} ký tự, chưa trọn. Chép lại cả mã rồi dán lại",   # Z15b dòng 23 (CPO trình anh)
     "trung": "Tài khoản Claude này đã kết nối ở Tài khoản {tk}. Phần mềm không lưu mã. Thu hồi mã vừa tạo ở claude.ai/settings/claude-code",   # Z15b dòng 22
     # Y38d N30: CHỮ MỚI do CDO đề xuất, CHỜ ANH DUYỆT (CPO trình): khoá API, và chuỗi không có tiền tố
-    "khoa_api": "Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API",
-    "sai_tien_to": "Mã dài hạn bắt đầu bằng sk-ant-oat01-. Chép lại đúng mã rồi dán lại",
-    # Y38d N40 cách CDO (CHỜ ANH CHỌN, CHỜ DUYỆT CHỮ): giữ mã, báo đăng nhập lại
-    "trung_dang_nhap_lai": "Tài khoản vừa đăng nhập đã kết nối ở Tài khoản {tk}. Mã dài hạn giữ nguyên; anh đăng nhập lại đúng tài khoản Claude này",
+    "khoa_api": "Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API.",            # QĐ219 A1
+    "sai_tien_to": "Đây không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-).",                     # QĐ219 A2
+    # QĐ219 A8 (N40: không gỡ mã): "Lấy tên, gói" đăng nhập nhầm tài khoản đã có ở ô khác
+    "trung_dang_nhap_lai": "Bạn vừa đăng nhập tài khoản đã kết nối ở Tài khoản {tk}. Bấm Lấy tên, gói, đăng nhập đúng tài khoản của mã này.",
 }
 
 

@@ -284,7 +284,7 @@ class KiemY24(unittest.TestCase):
         js = (Path(api.__file__).parent / "giaodien" / "app.js").read_text(encoding="utf-8")
         self.assertNotIn("Thêm tài khoản thứ 02", js)
         self.assertIn("'Thêm tài khoản ' + ten + ' khác</button>'", js)
-        self.assertIn("xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi anh có 02 gói riêng, mỗi gói 01 tài khoản ' + ten", js)
+        self.assertIn("xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi bạn có 02 gói riêng, mỗi gói 01 tài khoản ' + ten", js)
         self.assertIn("'Tiếp tục', () => vao(g, o)", js)
         self.assertIn("ICON['user-minus'] + 'Gỡ tài&nbsp;khoản</button>'", js)
         self.assertIn("xacnhan('Gỡ ' + ten + '?', 'Phần mềm ngừng dùng tài khoản này, ô ẩn khỏi màn.", js)

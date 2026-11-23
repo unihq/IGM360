@@ -43,13 +43,17 @@ CHU = {
               "việc nhập sau lúc đó không giữ được.",                                                             # 40
     "qv_giu": "Lần cập nhật này không nâng dữ liệu: dữ liệu giữ nguyên.",                                         # 41
     "qv_an_toan": "Dữ liệu đã trả về lúc {luc}, quay về không mất thêm.",                                         # 42
-    "qv_can_dong_y": "Lần cập nhật này có nâng dữ liệu: anh xác nhận chấp nhận mất dữ liệu nhập sau giờ cập nhật",
-    # Y38d: CHỮ TẠM, CHỜ ANH DUYỆT (CPO trình cùng bảng): quay về hỏng — lịch sử màn 09, chuông, trang đang chờ
-    "qv_loi": "Quay về bản trước chưa được, phần mềm chạy lại bản {ban}",
+    "qv_can_dong_y": "Lần cập nhật này có nâng dữ liệu: bạn xác nhận chấp nhận mất dữ liệu nhập sau giờ cập nhật",
+    # Quay về hỏng (QĐ219 bảng 15 câu A4–A7): chuông = câu đầu; màn Cập nhật, trang đang chờ = câu đầu + câu sau
+    "qv_loi_tra": "Quay về bản {truoc} chưa được: chưa trả được dữ liệu",                                       # A4
+    "qv_loi_hong": "Quay về bản {truoc} chưa được: bản này lỗi khởi động {n:02d} lần",                            # A5
+    "qv_loi_tra_sau": "Vẫn chạy bản {ban}, dữ liệu giữ nguyên.",                                                # A6
+    "qv_loi_hong_sau": "Đã chạy lại bản {ban}.",                                                                 # A7
+    "qv_loi_da_tra": "Dữ liệu đã trả về lúc {luc}.",                                                             # A7
 }
-# Lý do chưa đạt của từng điểm kiểm sau cập nhật (QĐ218 dòng 46, 47: "05/06 · lịch chạy nền chưa bật")
-TEN_DIEM = {"ban": "chưa đúng bản đích", "dulieu": "tệp dữ liệu chưa đạt kiểm tra", "luocdo": "lược đồ chưa đúng",
-            "lich": "lịch chạy nền chưa bật", "cli": "công cụ AI chưa chạy được", "o_trong": "ổ trống chưa đủ"}
+# Lý do chưa đạt của từng điểm kiểm sau cập nhật (QĐ219 A9–A13; QĐ218 dòng 47: "lịch chạy nền chưa bật")
+TEN_DIEM = {"ban": "chưa lên đúng bản", "dulieu": "tệp dữ liệu hỏng", "luocdo": "cấu trúc dữ liệu lệch",
+            "lich": "lịch chạy nền chưa bật", "cli": "gói AI chưa chạy được", "o_trong": "chưa đủ ổ trống"}
 
 TEN_TEP = "capnhat_trangthai.json"
 CHE_DO = {"an_toan": False, "den": None, "luc": None, "lydo": None}   # trạng thái của lần chạy này (bộ nhớ)
@@ -215,27 +219,45 @@ def kiem_sau_khi_chay(viec, thumuc: Path | None = None) -> dict:
     return kiem_sau_capnhat(viec is not None and not viec.done(), thumuc)
 
 
+def chu_quay_ve_loi(loi: dict, ban_dang: str) -> str:
+    """Câu màn Cập nhật (A6, A7) từ mục `quayve_loi` lệnh chạy ghi. Câu đầu (trước ". " đầu tiên) là câu chuông (A4, A5)."""
+    truoc = loi.get("ban_truoc") or "trước"
+    hong = loi.get("kieu") == "khoidong" or (not loi.get("kieu") and "khởi động" in str(loi.get("chu", "")))
+    ban = loi.get("ban_anh") or ban_dang
+    if not hong:
+        return CHU["qv_loi_tra"].format(truoc=truoc) + ". " + CHU["qv_loi_tra_sau"].format(ban=ban)
+    s = CHU["qv_loi_hong"].format(truoc=truoc, n=int(loi.get("so_lan") or 3)) + ". " + CHU["qv_loi_hong_sau"].format(ban=ban)
+    return s + (" " + CHU["qv_loi_da_tra"].format(luc=_gio(loi["da_tra"])) if loi.get("da_tra") else "")
+
+
+def cau_chuong(chu_man: str) -> str:
+    return str(chu_man).split(". ", 1)[0]
+
+
 def bao_quay_ve_loi(thumuc: Path | None = None) -> None:
-    """Lệnh chạy (maychu/chay.py) ghi `quayve_loi` khi không trả được dữ liệu hoặc bản trước khởi động hỏng: ghi F04 01 lần."""
+    """Lệnh chạy (maychu/chay.py) ghi `quayve_loi` khi không trả được dữ liệu hoặc bản trước khởi động hỏng: ghi F04 01 lần
+    bằng đúng câu màn Cập nhật (QĐ219 A6, A7); lý do kỹ thuật ghi vào nhật ký máy chủ."""
+    import logging
     from maychu.hethong import capnhat
     loi = doc(thumuc).get("quayve_loi")
     if loi:
-        capnhat._ghi_f04("quayve", str(loi.get("chu", ""))[:250], "loi", None, thumuc=thumuc)
+        logging.getLogger(__name__).warning("quay về hỏng: %s", loi.get("chu"))
+        capnhat._ghi_f04("quayve", chu_quay_ve_loi(loi, capnhat.ban_dang_chay())[:250], "loi", None, thumuc=thumuc)
         ghi(thumuc, quayve_loi=None)
 
 
-def quay_ve_loi_gan(thumuc: Path | None = None) -> dict | None:
-    """Y38d: lần quay về hỏng gần nhất trong 07 ngày (đọc F04 `quayve` kết quả `loi`), để màn 09, chuông hiện khi có chữ."""
+def quay_ve_loi_gan(thumuc: Path | None = None, luc: str | None = None) -> dict | None:
+    """Y38d: lần quay về hỏng gần nhất trong 07 ngày (hoặc đúng lượt `luc`), đọc F04 `quayve` kết quả `loi`.
+    `chu_hien` = câu màn Cập nhật (A6, A7), `chu_chuong` = câu chuông (A4, A5)."""
     from datetime import timedelta
     cn = ketnoi.mo("Nhatky", thumuc)
     try:
         d = cn.execute("SELECT luc, thamso_tomtat FROM nhatky_thaotac WHERE congcu = 'capnhat' AND lenhcon = 'quayve' AND ketqua = 'loi'"
-                       " AND luc >= ? ORDER BY luc DESC LIMIT 1",
-                       ((datetime.now(MUIGIO_VN) - timedelta(days=7)).isoformat(timespec="seconds"),)).fetchone()
+                       + (" AND luc = ?" if luc else " AND luc >= ?") + " ORDER BY luc DESC LIMIT 1",
+                       (luc or (datetime.now(MUIGIO_VN) - timedelta(days=7)).isoformat(timespec="seconds"),)).fetchone()
     finally:
         cn.close()
-    from maychu.hethong import capnhat
-    return {"luc": d[0], "chu": d[1], "chu_hien": CHU["qv_loi"].format(ban=capnhat.ban_dang_chay())} if d else None
+    return {"luc": d[0], "chu": d[1], "chu_hien": d[1], "chu_chuong": cau_chuong(d[1])} if d else None
 
 
 def can_kiem(thumuc: Path | None = None) -> bool:

@@ -283,11 +283,11 @@ def _dinh_danh(goi: str, taikhoan: int) -> tuple | None:
 
 
 # ---------------- QĐ216 (B', PTD-09 mục 8.4 N1–N8): tệp chụp tên, gói, dấu băm định danh ----------------
-TEP_CHUP = "igm360_hoso.json"
-# Y38d N40 (CHỜ ANH CHỌN): "Lấy tên, gói" mà đăng nhập trùng tài khoản khác.
-#   True  = gỡ mã của tài khoản đang lấy tên (cách hiện tại, Y38c R10; câu 22).
-#   False = giữ mã, chỉ đăng xuất kiểu cũ và báo anh đăng nhập lại đúng tài khoản (CDO đề xuất).
-GO_MA_KHI_TRUNG = True   # mỗi tài khoản Claude 01 tệp, trong thư mục tài khoản (ổ lưu QĐ173), quyền 600
+TEP_CHUP = "igm360_hoso.json"   # mỗi tài khoản Claude 01 tệp, trong thư mục tài khoản (ổ lưu QĐ173), quyền 600
+# Y38d N40, QĐ219 A8 (anh chốt KHÔNG gỡ mã): "Lấy tên, gói" mà đăng nhập trùng tài khoản khác.
+#   True  = gỡ mã của tài khoản đang lấy tên (cách cũ Y38c R10; câu 22).
+#   False = giữ mã, chỉ đăng xuất kiểu cũ và báo đăng nhập lại đúng tài khoản (câu A8).
+GO_MA_KHI_TRUNG = False
 
 
 def _khoa_bam() -> bytes:
@@ -425,7 +425,7 @@ def go(goi: str, taikhoan: int, thumuc: Path | None = None) -> dict:
         xoa_chup(taikhoan)   # QĐ216 N5
         _NHO_TRANGTHAI.pop((goi, taikhoan), None)
     if trang_thai(goi, taikhoan, bo_nho=True)["da_noi"] and not _dang_xuat(goi, taikhoan):
-        return {"loi": f"Chưa đăng xuất được tài khoản {taikhoan:02d}: anh thử lại sau ít phút"}
+        return {"loi": f"Chưa đăng xuất được tài khoản {taikhoan:02d}: bạn thử lại sau ít phút"}
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         so = cn.execute("UPDATE nguon_ai SET trangthai = 'ngung' WHERE ma = ?", (ma_nguon(goi, taikhoan),)).rowcount

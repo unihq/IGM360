@@ -134,7 +134,7 @@ class KiemLop5(NenAT):
             capnhat._SAO.update(buoc="qua_gio")
             self.assertEqual(capnhat.tiep_tuc("nguoi", False), {"ok": True, "huy": True})
             self.assertIsNone(capnhat.trang_thai_sao()["dang_sao"])
-            self.assertIn("anh huỷ", self.f04("capnhat_ngay")[-1][2])
+            self.assertIn("bạn huỷ", self.f04("capnhat_ngay")[-1][2])
             self.assertIn("loi", capnhat.tiep_tuc("nguoi", True))
 
     def test_chup_loi_thi_khong_gui(self):
@@ -207,8 +207,8 @@ class KiemLop4(NenAT):
         ban = capnhat.ban_dang_chay()
         with mock.patch.object(antoan, "_kiem_cli", return_value=False):
             kq = antoan.kiem_sau_capnhat(True)
-        self.assertEqual((kq["dat"], kq["tong"], kq["loi"]), (5, 6, ["công cụ AI chưa chạy được"]))
-        self.assertIn("Kiểm sau cập nhật bản " + ban + ": công cụ AI chưa chạy được",
+        self.assertEqual((kq["dat"], kq["tong"], kq["loi"]), (5, 6, ["gói AI chưa chạy được"]))   # QĐ219 A12
+        self.assertIn("Kiểm sau cập nhật bản " + ban + ": gói AI chưa chạy được",
                       [d["chu"] for d in thongbao.danh_sach()["ds"] if d["loai"] == "capnhat_kiem"])   # QĐ218 dòng 47
         self.assertIn(f"capnhat_kiem:{ban}", [d["khoa"] for d in thongbao.danh_sach()["ds"]] if "khoa" in (thongbao.danh_sach()["ds"] or [{}])[0] else
                       ["capnhat_kiem:" + ban for d in thongbao.danh_sach()["ds"] if d["loai"] == "capnhat_kiem"])
@@ -232,13 +232,13 @@ class KiemLop4(NenAT):
         antoan.ghi(yeu_cau={"tu": "0.7.8", "den": "9.9.9"})
         with mock.patch.object(antoan, "_kiem_cli", return_value=True):
             kq = antoan.kiem_sau_capnhat(False)
-        self.assertEqual(kq["loi"], ["chưa đúng bản đích", "lịch chạy nền chưa bật"])
+        self.assertEqual(kq["loi"], ["chưa lên đúng bản", "lịch chạy nền chưa bật"])   # QĐ219 A9
         cn = ketnoi.mo("Nhatky")
         try:
             tom = cn.execute("SELECT thamso_tomtat FROM nhatky_thaotac WHERE lenhcon = 'kiem_saunang'").fetchone()[0]
         finally:
             cn.close()
-        self.assertTrue(tom.endswith(" · 04/06 · chưa đúng bản đích, lịch chạy nền chưa bật"), tom)   # QĐ218 dòng 46
+        self.assertTrue(tom.endswith(" · 04/06 · chưa lên đúng bản, lịch chạy nền chưa bật"), tom)   # QĐ218 dòng 46
         self.assertNotIn("yeu_cau", antoan.doc())
 
 
@@ -561,16 +561,21 @@ class KiemY38c(NenAT):
             self.assertEqual(madaihan.gui_ma(1, "Token: " + MA_GIA), {"ma": MA_GIA, "dan_nham": True})
         gho.assert_not_called()
 
-    def test_r10_lay_ten_goi_thay_trung_thi_go_ma(self):
+    def test_r10_lay_ten_goi_thay_trung_thi_giu_ma(self):   # Y38e: QĐ219 A8 thay cách gỡ mã của R10
         self.nguon("goi_claude_02", "goi", 1, "anthropic")
         madaihan.luu(2, MA_GIA)
+        dung = {"ten_hien": "Nguoi Dung", "goi_ten": "Pro", "email_bam": "a" * 64, "tochuc_bam": None, "chup_luc": "y"}
+        dg.ghi_chup(2, dung)                                                       # tên, gói đúng đã chụp trước
         c = {"ten_hien": "B", "goi_ten": "Max", "email_bam": "b" * 64, "tochuc_bam": None, "chup_luc": "x"}
         with mock.patch.object(dg, "chup_song", return_value=c), mock.patch.object(dg, "tim_trung", return_value=1), \
-                mock.patch.object(dg, "_dang_xuat", return_value=True):
+                mock.patch.object(dg, "_dang_xuat", return_value=True) as dx:
             kq = dg._ket_thuc("claude", 2)
-        self.assertEqual(kq["loi"], madaihan.CHU_DAN["trung"].format(tk=1))
-        self.assertIsNone(madaihan.thong_tin(2))
-        self.assertFalse(dg.tep_chup(2).exists())
+        self.assertFalse(dg.GO_MA_KHI_TRUNG)
+        self.assertEqual(kq["loi"], "Bạn vừa đăng nhập tài khoản đã kết nối ở Tài khoản 1. Bấm Lấy tên, gói, đăng nhập đúng"
+                                    " tài khoản của mã này.")                                                    # A8
+        self.assertEqual(madaihan.lay(2), MA_GIA)                                   # mã dài hạn còn trong Két khoá
+        self.assertEqual(dg.doc_chup(2)["ten_hien"], "Nguoi Dung")                  # không ghi tên, gói sai
+        dx.assert_called_once()                                                     # đăng xuất kiểu cũ của tài khoản nhầm
 
     def ket_noi(self, tk, cu, goi_ok=True):
         tt = [{"loggedIn": cu, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
@@ -767,15 +772,147 @@ class KiemY38dBoSung(NenAT):
         self.assertIn('<span class="nw">sk-ant-oat01-</span>', r.stdout)
 
     def test_quay_ve_hong_chuong_va_lich_su(self):
-        capnhat._ghi_f04("quayve", "không trả được dữ liệu: OSError", "loi")
+        antoan.ghi(self.dl, quayve_loi={"chu": "không trả được dữ liệu: OSError", "luc": "x", "kieu": "tra",
+                                        "ban_truoc": "0.7.8", "ban_anh": "0.7.9"})
+        antoan.bao_quay_ve_loi(self.dl)
         q = antoan.quay_ve_loi_gan()
-        self.assertEqual(q["chu_hien"], antoan.CHU["qv_loi"].format(ban=capnhat.ban_dang_chay()))
+        self.assertEqual(q["chu_hien"], "Quay về bản 0.7.8 chưa được: chưa trả được dữ liệu. Vẫn chạy bản 0.7.9, dữ liệu giữ nguyên.")
         thongbao.quet_quayve_loi()
         tin = [d for d in thongbao.danh_sach()["ds"] if d["loai"] == "quayve_loi"]
-        self.assertEqual((len(tin), tin[0]["icon"], tin[0]["muc"], tin[0]["chu"]), (1, "rotate-ccw", "do", q["chu_hien"]))
+        self.assertEqual((len(tin), tin[0]["icon"], tin[0]["muc"], tin[0]["chu"]),
+                         (1, "rotate-ccw", "do", "Quay về bản 0.7.8 chưa được: chưa trả được dữ liệu"))   # A4
         from maychu.web import api
         with mock.patch.object(capnhat, "kiem_tra", return_value={"co_ban_moi": False, "ban_moi": None}):
             self.assertEqual(api._them_antoan()["quayve_loi"]["chu_hien"], q["chu_hien"])
+
+
+# ---------------- Y38e: 15 câu QĐ219, giữ mã khi đăng nhập nhầm, xưng "bạn" QĐ220 ----------------
+class KiemY38e(NenAT):
+    A = {1: "Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API.",
+         2: "Đây không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-).",
+         3: "Đang quay về bản 0.7.8",
+         4: "Quay về bản 0.7.8 chưa được: chưa trả được dữ liệu",
+         5: "Quay về bản 0.7.8 chưa được: bản này lỗi khởi động 03 lần",
+         6: "Quay về bản 0.7.8 chưa được: chưa trả được dữ liệu. Vẫn chạy bản 0.7.9, dữ liệu giữ nguyên.",
+         7: "Quay về bản 0.7.8 chưa được: bản này lỗi khởi động 03 lần. Đã chạy lại bản 0.7.9.",
+         8: "Bạn vừa đăng nhập tài khoản đã kết nối ở Tài khoản 1. Bấm Lấy tên, gói, đăng nhập đúng tài khoản của mã này.",
+         14: "Trình duyệt chặn chép. Bạn bôi đen lệnh rồi chép tay.",
+         15: "Mã đã lưu; lần gọi thử gặp hết hạn mức của gói nên chưa kiểm được mã."}
+
+    def test_15_cau_dung_nguyen_van(self):
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        A = self.A
+        self.assertEqual((madaihan.CHU_DAN["khoa_api"], madaihan.CHU_DAN["sai_tien_to"]), (A[1], A[2]))
+        self.assertEqual(madaihan.chu_loi_dan("sk-ant-api03-" + "x" * 85), A[1])
+        self.assertEqual(madaihan.chu_loi_dan("abc-xyz-123"), A[2])
+        for k, c in (("khoaApi", A[1]), ("saiTienTo", A[2]), ("chepLoi", A[14]), ("kiemHanMucRe", A[15])):
+            self.assertIn(f"  {k}: '{c}'", js)
+        self.assertIn("qvDang: 'Đang quay về bản ',", js)
+        self.assertIn("tieuDangCn(CHU_CN.qvDang + q.ban)", js)                     # A3 = "Đang quay về bản " + bản trước
+        d = {"luc": "x", "ban_truoc": "0.7.8", "ban_anh": "0.7.9"}
+        self.assertEqual(antoan.chu_quay_ve_loi({**d, "kieu": "tra"}, "0.7.9"), A[6])
+        self.assertEqual(antoan.chu_quay_ve_loi({**d, "kieu": "khoidong", "so_lan": 3}, "0.7.9"), A[7])
+        self.assertEqual(antoan.cau_chuong(A[6]), A[4])
+        self.assertEqual(antoan.cau_chuong(A[7]), A[5])
+        self.assertEqual(madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=1), A[8])
+        self.assertEqual([antoan.TEN_DIEM[k] for k in ("ban", "dulieu", "luocdo", "cli", "o_trong")],
+                         ["chưa lên đúng bản", "tệp dữ liệu hỏng", "cấu trúc dữ liệu lệch", "gói AI chưa chạy được",
+                          "chưa đủ ổ trống"])                                       # A9–A13
+        self.assertEqual(antoan.TEN_DIEM["lich"], "lịch chạy nền chưa bật")         # QĐ218 dòng 47 giữ
+
+    def test_a4_a6_tra_du_lieu_hong(self):
+        g = KiemY38d.chuan_bi_tra(self)
+        noi = khoitao._thumuc_chup(self.dl)
+        (noi / "Viecnen.sqlite3").write_bytes(b"khong phai sqlite")
+        self.assertEqual(chay.chon(self.dl, g), g)
+        antoan.bao_quay_ve_loi(self.dl)
+        self.assertEqual(self.f04("quayve")[-1][:2], (self.A[6], "loi"))           # màn Cập nhật: A6
+        self.assertEqual(antoan.quay_ve_loi_gan()["chu_chuong"], self.A[4])
+        thongbao.quet_quayve_loi()
+        tin = [d for d in thongbao.danh_sach()["ds"] if d["loai"] == "quayve_loi"]
+        self.assertEqual(tin[0]["chu"], self.A[4])                                  # chuông: A4
+
+    def test_a5_a7_hong_03_lan_sau_khi_da_tra(self):
+        from datetime import datetime
+        luc = datetime.now(saoluu.MUIGIO_VN).replace(hour=10, minute=5, second=0).isoformat(timespec="seconds")
+        g = KiemY38d.chuan_bi_tra(self)
+        antoan.ghi(self.dl, nang_luocdo={"ban": "0.7.9", "luc": luc})
+        self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                   # trả dữ liệu đạt, chạy bản trước
+        tt = antoan.doc(self.dl)
+        self.assertEqual(tt["chay_ban_truoc"]["da_tra"], luc)
+        tt["chay_ban_truoc"]["so_lan_hong"] = 3                                     # bản trước hỏng 03 lần
+        antoan.ghi(self.dl, chay_ban_truoc=tt["chay_ban_truoc"])
+        self.assertEqual(chay.chon(self.dl, g), g)
+        antoan.bao_quay_ve_loi(self.dl)
+        self.assertEqual(self.f04("quayve")[-1][:2], (self.A[7] + " Dữ liệu đã trả về lúc 10:05.", "loi"))   # A7 có thêm
+        self.assertEqual(antoan.quay_ve_loi_gan()["chu_chuong"], self.A[5])         # chuông: A5
+
+    def test_a7_chua_tra_du_lieu(self):
+        g = self.g / "app"
+        (g / "ban_truoc" / "maychu").mkdir(parents=True)
+        (g / "VERSION").write_text("0.7.9", encoding="utf-8")
+        (g / "ban_truoc" / "VERSION").write_text("0.7.8", encoding="utf-8")
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.7.9", "ban_truoc": "0.7.8", "so_lan_hong": 3})
+        self.assertEqual(chay.chon(self.dl, g), g)
+        antoan.bao_quay_ve_loi(self.dl)
+        self.assertEqual(self.f04("quayve")[-1][0], self.A[7])
+
+    def test_n40_mac_dinh_giu_ma_va_giao_dien(self):
+        self.assertFalse(dg.GO_MA_KHI_TRUNG)
+        kq = KiemY38dBoSung.lay_ten_trung(self, dg.GO_MA_KHI_TRUNG)
+        self.assertEqual((kq["loi"], kq["chu_rieng"]), (self.A[8], True))
+        self.assertEqual(madaihan.lay(2), MA_GIA)
+        self.assertFalse(dg.tep_chup(2).exists())
+
+
+TU_ANH = __import__("re").compile(r"(?<![\w-])[Aa]nh(?![\w-])")
+# Chuỗi trong mã có chữ "anh" nhưng người dùng không nhìn thấy: lời gửi cho AI ở Trò chuyện AI (CTO báo CPO, Y38e)
+CHO_PHEP_PY = {("maychu/hethong/mohinh/trochuyen.py", "Anh"), ("maychu/hethong/mohinh/trochuyen.py", "\n\nAnh hỏi tiếp:\n")}
+
+
+def _chuoi_py(p):
+    """Chuỗi chữ trong mã Python, bỏ chuỗi mô tả hàm; bỏ mã dữ liệu 'anh' (loại người, không phải chữ hiện)."""
+    import ast
+    cay = ast.parse(p.read_text(encoding="utf-8"))
+    mota = {id(n.body[0].value) for n in ast.walk(cay)
+            if isinstance(n, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and n.body
+            and isinstance(n.body[0], ast.Expr) and isinstance(n.body[0].value, ast.Constant)}
+    for n in ast.walk(cay):
+        if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in mota and n.value != "anh":
+            yield n.lineno, n.value
+
+
+class KiemXungHo(unittest.TestCase):
+    """QĐ220, từ điển quy tắc 7: chữ người dùng nhìn thấy xưng "bạn", không xưng "anh" (không bắt "ảnh", "nhanh", "xanh")."""
+
+    def test_regex_khong_bat_nham(self):
+        for s in ("ảnh", "nhanh", "xanh", "thanh", "Thanh toán", "danh sách", "anh-dd", "v-anh", "cạnh", "tranh"):
+            self.assertIsNone(TU_ANH.search(s), s)
+        for s in ("anh bấm", "Anh dán", "của&nbsp;anh.", "của anh", "chờ anh"):
+            self.assertIsNotNone(TU_ANH.search(s), s)
+
+    def test_giao_dien_khong_con_anh(self):
+        import re
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        js = re.sub(r"/\*.*?\*/", "", js, flags=re.S)
+        sai = []
+        for i, d in enumerate(js.splitlines(), 1):
+            c = next((m.start() for m in re.finditer("//", d) if d[max(0, m.start() - 1)] != ":"), len(d))   # bỏ chú thích
+            if TU_ANH.search(d[:c]):
+                sai.append(f"app.js:{i}: {d.strip()[:100]}")
+        html = (GD / "index.html").read_text(encoding="utf-8")
+        html = re.sub(r"<!--.*?-->|<style.*?</style>|<script.*?</script>", "", html, flags=re.S)
+        sai += [f"index.html: …{html[max(0, m.start() - 50):m.end() + 20]}…" for m in TU_ANH.finditer(html)]
+        self.assertEqual(sai, [])
+
+    def test_cau_bao_may_chu_khong_con_anh(self):
+        sai = []
+        for p in sorted((GOC / "maychu").rglob("*.py")):
+            ten = p.relative_to(GOC).as_posix()
+            for dong, s in _chuoi_py(p):
+                if (ten, s) not in CHO_PHEP_PY and TU_ANH.search(s.replace("'anh'", "")):
+                    sai.append(f"{ten}:{dong}: {s[:100]}")
+        self.assertEqual(sai, [])
 
 
 # ---------------- Chữ ở 01 chỗ ----------------
@@ -787,19 +924,19 @@ class KiemChu(unittest.TestCase):
         for k in ("o_thieu", "an_toan", "an_toan_chan", "sao_loi", "drive_chua_noi", "drive_qua_gio", "o_du", "o_thieu_lam", "qv_an_toan", "qv_khong_co", "qv_mat", "qv_giu", "qv_can_dong_y"):
             self.assertIn(k, antoan.CHU)
 
-    def test_23_cau_da_duyet_dung_nguyen_van(self):   # QĐ217 (bảng Z15, Z15b; 03 câu CPO sửa ở dòng 19, 22, 23)
+    def test_23_cau_da_duyet_dung_nguyen_van(self):   # QĐ217 (bảng Z15, Z15b; 03 câu CPO sửa ở dòng 19, 22, 23); xưng "bạn" QĐ220
         js = (GD / "app.js").read_text(encoding="utf-8")
         for c in ("Mã dài hạn là gì?", "'Mã dài hạn'",
                   "Đăng nhập kiểu cũ có thể hết phiên giữa chừng: bot và việc nền dừng theo. Mã dài hạn giữ kết nối ổn định.",
-                  "Mỗi mã dùng 365 ngày. Mã mới chỉ cấp khi anh đăng nhập trang claude.ai.",
-                  'Trước hạn 07 ngày, chuông nhắc mỗi ngày; anh bấm "Lấy mã mới" là xong.',
-                  'Cách 1 (nên dùng): bấm "Kết nối Claude", máy chủ tự chạy lệnh; anh chỉ đăng nhập claude.ai và dán mã xác nhận.',
+                  "Mỗi mã dùng 365 ngày. Mã mới chỉ cấp khi bạn đăng nhập trang claude.ai.",
+                  'Trước hạn 07 ngày, chuông nhắc mỗi ngày; bạn bấm "Lấy mã mới" là xong.',
+                  'Cách 1 (nên dùng): bấm "Kết nối Claude", máy chủ tự chạy lệnh; bạn chỉ đăng nhập claude.ai và dán mã xác nhận.',
                   'Cách 2: khi máy chủ không tự lấy được, chạy lệnh claude setup-token ở máy khác rồi bấm "Dán mã".',
-                  "Mã vẫn tính vào gói Claude của anh: việc chạy nền tính như khi đăng nhập gói.",
+                  "Mã vẫn tính vào gói Claude của bạn: việc chạy nền tính như khi đăng nhập gói.",
                   'Mã dài hạn chỉ dán vào ô "Dán mã". Không chụp ảnh, không gửi qua tin nhắn.', "'Đã hiểu'",
                   "Tạo mã ở máy có Claude Code, chạy lệnh:", "'claude setup-token'", "'Đã chép.'", "'Thu hồi mã cũ ở trang '",
                   "claude.ai/settings/claude-code", "Trang hiện 01 mã xác nhận. Chép mã đó, dán vào ô dưới.",
-                  "Máy chủ tự đổi thành mã dài hạn, cất ở Két khoá; anh không cần chép mã dài hạn.", "'Mã xác nhận'",
+                  "Máy chủ tự đổi thành mã dài hạn, cất ở Két khoá; bạn không cần chép mã dài hạn.", "'Mã xác nhận'",
                   "'Kiểm mã · đạt '", "'Kiểm mã · chưa được '", "Claude chưa nhận mã này. Bấm Lấy mã mới hoặc Dán mã lại.",
                   "'Chưa kiểm được trùng tài khoản'",
                   "Phần mềm chưa có tên, gói của tài khoản này nên chưa so được với tài khoản khác. Mã vẫn dùng bình thường.",
@@ -814,7 +951,7 @@ class KiemChu(unittest.TestCase):
 
     def test_24_cau_05_lop_dung_nguyen_van(self):   # QĐ218 (bảng Z16 dòng 24–47)
         js = (GD / "app.js").read_text(encoding="utf-8")
-        for c in ("Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)", "Bước 1/2 · Bản sao Drive quá 10 phút, chờ anh chọn",
+        for c in ("Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)", "Bước 1/2 · Bản sao Drive quá 10 phút, chờ bạn chọn",
                   "'Bước 2/2 · Đang tải bản '", "'Chưa đủ ổ trống'", "Cập nhật khi chưa có bản sao Drive?",
                   "Máy chủ hỏng thì không lấy lại được bản sao này.", "'Kết nối Drive'", "'Huỷ'", "'Vẫn cập nhật'",
                   "'Chế độ an toàn'", "'Việc nền, AI tạm dừng.'", "Chỉ mở Cập nhật và nhật ký; việc ghi khác bị chặn.",

@@ -108,7 +108,7 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
         except (httpx.HTTPError, KeyError, ValueError, TypeError):
             nhan_lon = None
             if not _NHO["luc_dat"]:
-                _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, anh bấm Kiểm tra lại sau"
+                _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, bạn bấm Kiểm tra lại sau"
         if nhan_lon and nhan_lon != _NHO["nhan_thaydoi"]:
             try:
                 het, ma_tra = _tai_thaydoi_kq()
@@ -189,7 +189,7 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) 
     from maychu.hethong import antoan
     kq = kiem_tra()
     if not kq["co_ban_moi"]:   # QĐ174 điểm 04: chỉ cập nhật khi gói bản mới đã đóng xong trên kho
-        return {"loi": "Chưa có bản mới đóng gói xong, anh chờ vài phút rồi bấm Kiểm tra lại"}
+        return {"loi": "Chưa có bản mới đóng gói xong, bạn chờ vài phút rồi bấm Kiểm tra lại"}
     o = antoan.o_trong(thumuc)
     if not o["du"]:
         _ghi_f04("chan_otrong", f"còn {antoan.chu_dungluong(o['trong'])}, cần {antoan.chu_dungluong(o['can'])}",
@@ -235,7 +235,7 @@ def tiep_tuc(nguoi_id: str, van: bool, thumuc=None) -> dict:
         return {"loi": "Không có lượt cập nhật nào đang chờ chọn"}
     if not van:
         _SAO.update(buoc=None, loi=None)
-        _ghi_f04("capnhat_ngay", ban_dang_chay(), "bichan", "anh huỷ: bản sao Drive quá 10 phút", nguoi_id, thumuc)
+        _ghi_f04("capnhat_ngay", ban_dang_chay(), "bichan", "bạn huỷ: bản sao Drive quá 10 phút", nguoi_id, thumuc)
         return {"ok": True, "huy": True}
     _SAO["buoc"] = "gui"
     _chay_nen(lambda: _gui(nguoi_id, _SAO["den"], False, thumuc))
