@@ -63,6 +63,7 @@ class KiemDoBiDong(Nen):
             cn.close()
         d = next(x for x in dg.danh_sach() if x["id"] == nid)
         self.assertEqual((d["tyle_5gio"], d["datlai_5gio_luc"], d["tyle_tuan"]), (0, None, 60))   # 05 giờ đã đặt lại; tuần chưa
+        self.assertTrue(d["da_datlai_luc"])                                                     # Z12 (3): "Đã đặt lại lúc …"
 
     def test_het_theo_mo_hinh(self):
         c1 = self.nguon("goi_claude_01", "goi", 1, "anthropic")
@@ -171,6 +172,47 @@ class KiemGiaoDien077(unittest.TestCase):
         cg = (GOC / "maychu/hethong/mohinh/congai.py").read_text(encoding="utf-8")
         self.assertNotIn("credentials", cg)                             # không đọc khoá đăng nhập
         self.assertNotIn("oauth/usage", cg)
+
+
+class KiemZ12(unittest.TestCase):
+    def setUp(self):
+        self.js = (GD / "app.js").read_text(encoding="utf-8")
+        self.html = (GD / "index.html").read_text(encoding="utf-8")
+
+    def test_dong_viec_nen_va_ghi_chu(self):
+        self.assertEqual(list(dm.LOAI_VIEC)[-1], "viecnen_chung")                       # dòng cuối bảng
+        self.assertEqual(self.js.count("Việc nền · toàn hệ thống") + self.js.count("Việc nền chung"), 0)   # tên dòng chỉ ở máy chủ (01 chỗ)
+        for chu in ("const CHU_VN = 'Việc nền chưa đặt riêng và bot nền sau này dùng dòng này. Trò chuyện AI không theo.';",
+                    "k === 'viecnen_chung' ? ' <button class=\"nut-ico nho\" data-ivn title=\"' + CHU_VN",
+                    "if ('ivn' in d) { ev.stopImmediatePropagation(); bao(CHU_VN); return; }",
+                    "'Trò chuyện AI chưa đặt thì dùng mặc định của nguồn ưu tiên 1; việc nền chưa đặt riêng theo dòng \"' + LV.viecnen_chung + '\"'",
+                    "bao('Đã đổi mô hình cho \"' + D.dsmh.loai_viec[lv] + '\": ' + ten + ' · ' + tn + '.');"):
+            self.assertIn(chu, self.js, chu)
+        self.assertIn('id="md-ghichu"', self.html)
+
+    def test_han_muc_03_tinh_huong(self):
+        for chu in ("'Đo lúc ' + esc(luc(n.do_luc))", "'&nbsp;· đặt lại 05&nbsp;giờ lúc '",
+                    ">Đã đặt lại lúc ' + esc(gio(n.da_datlai_luc)) + '&nbsp;· số mới có sau lượt gọi AI kế&nbsp;tiếp</div>'",
+                    'title="Số đo sau mỗi lượt gọi AI; màn này tự làm mới 01 phút/lần"',
+                    'title="Qua giờ đặt lại: khung 05 giờ mới bắt đầu, số dùng về 0%"'):
+            self.assertIn(chu, self.js, chu)
+        self.assertIn(".tdf{height:100%;background:var(--xanh);border-radius:5px;transition:width .4s ease}", self.html)
+
+    @unittest.skipUnless(__import__("shutil").which("node"), "máy không có node")
+    def test_thanh_truot_tu_so_cu(self):
+        import subprocess
+        import tempfile
+        i = self.js.index("const pct = ")
+        ham = self.js[i:self.js.index("\n// N09", i) if "\n// N09" in self.js[i:] else self.js.index("\nfunction theGoi", i)]
+        ma = ("const D = {}; const hai = n => String(n);\n" + ham
+              + "\nconst a = thanhHm('x', 42, 'k'); const b = thanhHm('x', 47, 'k');"
+              + "\nconsole.log(JSON.stringify([/width:(\\d+)%/.exec(a)[1], /width:(\\d+)%/.exec(b)[1], /data-w=\"(\\d+)\"/.exec(b)[1]]));")
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "thu.js"
+            p.write_text(ma, encoding="utf-8")
+            r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), ["42", "42", "47"])   # vẽ lại giữ 42% rồi trượt tới 47%
 
 
 if __name__ == "__main__":

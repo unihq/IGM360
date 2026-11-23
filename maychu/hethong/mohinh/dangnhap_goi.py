@@ -511,6 +511,8 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
         for tl, dl in (("tyle_5gio", "datlai_5gio_luc"), ("tyle_tuan", "datlai_tuan_luc")):   # 0.7.7: qua giờ đặt lại = 0%
             try:
                 if d.get(dl) and datetime.fromisoformat(d[dl]) <= bay:
+                    if tl == "tyle_5gio":
+                        d["da_datlai_luc"] = d[dl]   # Z12 tình huống (3): "Đã đặt lại lúc …"
                     d[tl], d[dl] = 0, None
             except ValueError:
                 pass

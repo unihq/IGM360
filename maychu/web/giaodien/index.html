@@ -43,7 +43,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .cg{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--phu);white-space:nowrap}
 .cg i{width:12px;height:8px;border-radius:2px;display:inline-block}
 .td{position:relative;width:100%;background:var(--xam);border:1px solid var(--ke);border-radius:6px;overflow:hidden}
-.tdf{height:100%;background:var(--xanh);border-radius:5px}
+.tdf{height:100%;background:var(--xanh);border-radius:5px;transition:width .4s ease}
 .tdf.chay{width:40%;animation:chay 1.4s ease-in-out infinite}
 @keyframes chay{0%{margin-left:-40%}100%{margin-left:100%}}
 .ghichu{border:1px dashed var(--vien);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--phu);background:#fff}
@@ -1337,7 +1337,7 @@ button.o-bam:hover{border-color:var(--xanh)}
   <path d="M11 12h4" />
 </svg><span>Thứ tự dùng: ưu&nbsp;tiên&nbsp;1 hết hạn&nbsp;mức thì sang ưu&nbsp;tiên&nbsp;2, rồi 3. Số việc AI chạy cùng lúc: <b class="chu-den" id="md-songsong"></b> (đổi ở Cài&nbsp;đặt&nbsp;›&nbsp;Thông&nbsp;số).</span></div>
       <div class="luoi3 goi3" id="ds-nguonai"></div>
-      <div class="dau-muc"><span class="t16 b7">Mô hình mặc định theo loại việc</span><span class="phu t13">Việc nào chưa đặt thì dùng mô hình mặc định của nguồn ưu tiên 1</span></div>
+      <div class="dau-muc"><span class="t16 b7">Mô hình mặc định theo loại việc</span><span class="phu t13" id="md-ghichu">Việc nào chưa đặt thì dùng mô hình mặc định của nguồn ưu tiên 1</span></div>
       <div class="bang" id="ds-mohinh"></div>
       
     </div><div class="trang" id="p12" hidden><div class="dau-trang"><div class="ico-tron"><svg
