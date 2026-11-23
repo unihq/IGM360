@@ -357,8 +357,9 @@ def trang_thai(goi: str, taikhoan: int, bo_nho: bool = False) -> dict:
     return kq
 
 
-# Chữ loại gói ChatGPT theo Codex (`PlanType::display_name`, openai/codex `codex-rs/protocol/src/auth.rs`).
-TEN_GOI_CHATGPT = {"free": "Free", "go": "Go", "plus": "Plus", "pro": "Pro (More)", "prolite": "Pro", "promax": "Pro (Max)",
+# Chữ loại gói ChatGPT theo Codex (`PlanType::display_name`, openai/codex `codex-rs/protocol/src/auth.rs`);
+# QĐ170: mọi loại Pro (pro, prolite, promax) đều hiện "Pro", bỏ phần trong ngoặc.
+TEN_GOI_CHATGPT = {"free": "Free", "go": "Go", "plus": "Plus", "pro": "Pro", "prolite": "Pro", "promax": "Pro",
                    "team": "Team", "business": "Business", "enterprise": "Enterprise", "ent26": "Enterprise",
                    "edu": "Edu", "edu_plus": "Edu Plus", "edu_pro": "Edu Pro"}
 # Dòng mô tả gói (Z8): chỉ ghi khi có nguồn đã xác minh; chưa có thì bỏ dòng (không tự đặt chữ).

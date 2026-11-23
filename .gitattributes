@@ -1,0 +1,2 @@
+# QĐ170: tệp svg (logo gốc của hãng) giữ nguyên byte, không đổi kiểu xuống dòng khi lấy mã trên Windows
+*.svg -text

@@ -16,7 +16,7 @@ const soVN = v => { const n = Number(v); if (!Number.isFinite(n)) return v;
 const ngay = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
 const gio = iso => iso ? iso.slice(11, 16) : '';
 const homNay = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
-const luc = iso => !iso ? '' : (iso.slice(0, 10) === homNay() ? gio(iso) + ' hôm nay' : ngay(iso) + ' · ' + gio(iso));
+const luc = iso => !iso ? '' : (iso.slice(0, 10) === homNay() ? gio(iso) + '\u00a0hôm\u00a0nay' : ngay(iso) + ' · ' + gio(iso));
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 // Không tách cụm từ khi xuống dòng (chữ do máy chủ gửi): nối các cụm thường gặp bằng dấu cách không ngắt
 // U4 (S1, S3): cụm "mục + tên màn" dài hơn đặt trước để nối trước khi cụm ngắn hơn được nối.

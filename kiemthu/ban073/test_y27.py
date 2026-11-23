@@ -87,7 +87,11 @@ class KiemHoSo(unittest.TestCase):
                              "https://api.openai.com/auth": {"chatgpt_plan_type": "plus"}})
         self.assertEqual(dg.ho_so("chatgpt", 1), {"ten_hien": TEN_GIA, "goi_ten": "Plus", "mota_goi": None})
         self._auth_codex(2, {"https://api.openai.com/auth": {"chatgpt_plan_type": "pro"}})
-        self.assertEqual(dg.ho_so("chatgpt", 2), {"ten_hien": None, "goi_ten": "Pro (More)", "mota_goi": None})
+        self.assertEqual(dg.ho_so("chatgpt", 2), {"ten_hien": None, "goi_ten": "Pro", "mota_goi": None})
+        for loai in ("pro", "prolite", "promax"):   # QĐ170: mọi loại Pro hiện "Pro", không ngoặc
+            self._auth_codex(2, {"https://api.openai.com/auth": {"chatgpt_plan_type": loai}})
+            self.assertEqual(dg.ho_so("chatgpt", 2)["goi_ten"], "Pro")
+        self.assertFalse([v for v in dg.TEN_GOI_CHATGPT.values() if "(" in v])
 
     def test_chatgpt_duong_lui(self):
         self.assertEqual(dg.ho_so("chatgpt", 1), {"ten_hien": None, "goi_ten": None, "mota_goi": None})   # chưa có tệp
@@ -133,7 +137,11 @@ class KiemHoSo(unittest.TestCase):
         self.assertNotIn(b"<script", tep)
         import re
         d = json.loads(re.search(r'const ICON=(\{.*?\});?\s*\n', ico, re.S).group(1))
-        self.assertIn('fill="black"', d["logo_chatgpt"])               # giữ đen, không thêm màu (Hướng dẫn OpenAI)
+        self.assertIn('fill="black"', d["logo_chatgpt"])
+        self.assertIn('width="40" height="40"', d["logo_chatgpt"])     # QĐ170 L1: hiện bằng ô 40
+        self.assertIn('width="25" height="25"', d["logo_claude"])      # logo Claude giữ nguyên
+        self.assertIn("gio(iso) + '\\u00a0hôm\\u00a0nay'", js)      # QĐ170 L2: "hôm nay" liền cụm
+        self.assertIn("*.svg -text", (GOC / ".gitattributes").read_text(encoding="utf-8"))               # giữ đen, không thêm màu (Hướng dẫn OpenAI)
         self.assertNotRegex(d["logo_chatgpt"], r'fill="#|stroke="#')
         self.assertIn(d["logo_chatgpt"], html)                          # hộp Thêm nguồn AI
         for f in ("tailieu/Giayphep_Benthuba.md", "tailieu/Songuongoc.md"):
