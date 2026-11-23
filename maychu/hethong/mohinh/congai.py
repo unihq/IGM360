@@ -199,15 +199,17 @@ def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
         ds = dangnhap_goi.thu_tu([dict(zip(cot, r)) for r in cn.execute(
             f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'")])   # QĐ160: gói trước Khoá API
         for d in ds:
-            if md and md["nguon_ai_id"] == d["id"]:
+            if md and md["nguon_ai_id"] == d["id"] and md["ma"]:
                 d["mohinh"], d["macdinh_loai"] = {k: md[k] for k in _COT_MH}, True
-            elif d["loai"] == "goi":
-                d["mohinh"] = None
+            elif d["loai"] == "goi":   # gói: mô hình mặc định của CLI; "mặc định của nguồn" (Z10c) cũng vậy
+                d["mohinh"], d["macdinh_loai"] = None, bool(md and md["nguon_ai_id"] == d["id"])
             else:
                 m = cn.execute("SELECT id, ma_mohinh, gia_vao, gia_ra, tien_ma FROM mohinh_ai WHERE nguon_ai_id = ?"
-                               " AND coalesce(trangthai, 'dung') = 'dung' ORDER BY (gia_vao IS NULL), rowid LIMIT 1",
+                               " AND coalesce(trangthai, 'dung') = 'dung' AND ma_mohinh IS NOT NULL"
+                               " ORDER BY (gia_vao IS NULL), rowid LIMIT 1",
                                (d["id"],)).fetchone()
                 d["mohinh"] = dict(zip(_COT_MH, m)) if m else None
+                d["macdinh_loai"] = bool(md and md["nguon_ai_id"] == d["id"])
         return sorted(ds, key=lambda d: not d.get("macdinh_loai"))
     finally:
         cn.close()
@@ -423,6 +425,7 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
         ds = _nguon(thumuc, loai_viec)
         if mohinh_id and not chi_nguon_id:
             mh = danhmuc_mohinh.mot(mohinh_id, thumuc)
+            mh = mh if mh and mh["ma"] else None
             d = next((x for x in ds if mh and x["id"] == mh["nguon_ai_id"]), None)
             if d is None:   # mô hình ngừng, nguồn đã gỡ hoặc ngừng (Đ1, Đ2)
                 lydo = "không còn dùng được"

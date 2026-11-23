@@ -8,6 +8,8 @@ Ghi vào G08 `mohinh_ai` (bảng có sẵn, 0 đổi cấu trúc): mỗi mô hì
 - Khoá API: hỏi danh sách mô hình của hãng (Anthropic, OpenAI) bằng khoá trong Két khoá; nhớ 24 giờ; hỏi ở luồng
   phụ, trong lúc hỏi giao diện ghi "Đang tải danh sách mô hình…".
 Mô hình mặc định theo loại việc (màn 13, nút "Đổi") ghi ở G08 `macdinh_cho_json` (danh sách mã loại việc).
+"Mặc định của nguồn" (Z10c, S6): 01 dòng G08 của nguồn có `ma_mohinh` trống, chỉ để giữ nguồn mặc định của loại việc;
+không hiện trong danh sách mô hình; cổng AI gặp dòng này thì dùng mô hình mặc định của nguồn đó.
 """
 import json
 import os
@@ -135,6 +137,27 @@ def _da_ket_noi(d: dict, thumuc=None) -> bool:
     return True
 
 
+def _dong_macdinh(cn, nguon_id: str) -> str:
+    """Dòng "mặc định của nguồn" (ma_mohinh trống) của 01 nguồn; chưa có thì thêm."""
+    r = cn.execute("SELECT id FROM mohinh_ai WHERE nguon_ai_id = ? AND ma_mohinh IS NULL ORDER BY rowid LIMIT 1", (nguon_id,)).fetchone()
+    if r:
+        cn.execute("UPDATE mohinh_ai SET trangthai = 'dung' WHERE id = ?", (r[0],))
+        return r[0]
+    mid = maso.tao()
+    cn.execute("INSERT INTO mohinh_ai (id, nguon_ai_id, ma_mohinh, trangthai) VALUES (?, ?, NULL, 'dung')", (mid, nguon_id))
+    return mid
+
+
+def macdinh_chi_tiet(thumuc=None) -> dict:
+    """{mã loại việc: {mohinh_id, nguon_id, ma}}; `ma` trống = mặc định của nguồn đó."""
+    kq = {}
+    for lv, mid in macdinh(thumuc).items():
+        m = mot(mid, thumuc)
+        if m:
+            kq[lv] = {"mohinh_id": m["id"], "nguon_id": m["nguon_ai_id"], "ma": m["ma"]}
+    return kq
+
+
 def macdinh(thumuc=None) -> dict:
     """{mã loại việc: id G08}."""
     cn = ketnoi.mo("Viecnen", thumuc)
@@ -179,7 +202,7 @@ def danh_sach(thumuc=None, nap_nen: bool = True) -> dict:
                          "goi": d.get("goi"), "taikhoan": d.get("taikhoan"), "chinh": i == 0, "dang_tai": d["id"] in _DANG_TAI and not ds, "mohinh": ds})
     finally:
         cn.close()
-    return {"nhom": nhom, "macdinh": macdinh(thumuc), "loai_viec": LOAI_VIEC}
+    return {"nhom": nhom, "macdinh": macdinh(thumuc), "macdinh_ct": macdinh_chi_tiet(thumuc), "loai_viec": LOAI_VIEC}
 
 
 def mot(mohinh_id: str, thumuc=None) -> dict | None:
@@ -193,14 +216,19 @@ def mot(mohinh_id: str, thumuc=None) -> dict | None:
     return dict(zip(("id", "nguon_ai_id", "ma", "gia_vao", "gia_ra", "tien_ma"), r)) if r else None
 
 
-def dat_macdinh(loai_viec: str, mohinh_id: str | None, thumuc=None) -> dict:
-    """Màn 13 nút "Đổi": 01 loại việc chỉ có 01 mô hình mặc định; `mohinh_id` None = về mặc định của nguồn."""
+def dat_macdinh(loai_viec: str, mohinh_id: str | None, thumuc=None, nguon_id: str | None = None) -> dict:
+    """Màn 13 nút "Đổi": 01 loại việc chỉ có 01 mô hình mặc định. `mohinh_id` trống + `nguon_id`: về "mặc định của
+    nguồn" đó (Z10c, S6); cả 02 trống: bỏ đặt (theo nguồn ưu tiên 1)."""
     if loai_viec not in LOAI_VIEC:
         raise ValueError("Loại việc không có")
     if mohinh_id is not None and not mot(mohinh_id, thumuc):
         raise ValueError("Mô hình không còn dùng được")
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
+        if mohinh_id is None and nguon_id is not None:
+            if not cn.execute("SELECT 1 FROM nguon_ai WHERE id = ? AND trangthai = 'dung'", (nguon_id,)).fetchone():
+                raise ValueError("Nguồn không còn dùng được")
+            mohinh_id = _dong_macdinh(cn, nguon_id)
         cn.execute("BEGIN IMMEDIATE")
         for i, j in cn.execute("SELECT id, macdinh_cho_json FROM mohinh_ai WHERE macdinh_cho_json IS NOT NULL").fetchall():
             try:
@@ -217,7 +245,8 @@ def dat_macdinh(loai_viec: str, mohinh_id: str | None, thumuc=None) -> dict:
             cn.execute("UPDATE mohinh_ai SET macdinh_cho_json = ? WHERE id = ?", (json.dumps([*ds, loai_viec]), mohinh_id))
         cn.execute("COMMIT")
     except Exception:
-        cn.execute("ROLLBACK")
+        if cn.in_transaction:
+            cn.execute("ROLLBACK")
         raise
     finally:
         cn.close()

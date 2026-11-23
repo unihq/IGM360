@@ -147,6 +147,44 @@ class KiemDanhSach(Nen):
         self.assertTrue(nid)
 
 
+class KiemMacDinhNguon(Nen):
+    """Y31c S6 (Z10c): "Mặc định của nguồn" ở hộp "Đổi" màn 13."""
+
+    def test_mac_dinh_cua_nguon(self):
+        claude = self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        khoa = self.nguon("khoa_anthropic_01", "khoa_api", 2, "anthropic", tran=10)
+        self.mh(khoa, "claude-opus-4")                                   # chưa có giá
+        co_gia = self.mh(khoa, "claude-sonnet-4-5", (3_000_000, 15_000_000))
+        dm.dat_macdinh("dexuat", None, nguon_id=khoa)
+        ct = dm.macdinh_chi_tiet()["dexuat"]
+        self.assertEqual((ct["nguon_id"], ct["ma"]), (khoa, None))
+        dm.dat_macdinh("trichvanban", None, nguon_id=khoa)               # dùng lại 01 dòng mặc định của nguồn
+        self.assertEqual(dm.macdinh_chi_tiet()["trichvanban"]["mohinh_id"], ct["mohinh_id"])
+        with mock.patch.object(dm.kho, "tim", return_value="k1"):
+            ds = dm.danh_sach(nap_nen=False)
+        self.assertNotIn(None, [m["ma"] for g in ds["nhom"] for m in g["mohinh"]])   # dòng mặc định không hiện là mô hình
+        self.assertEqual(ds["macdinh_ct"]["dexuat"]["nguon_id"], khoa)
+        ng = congai._nguon(None, "dexuat")
+        self.assertEqual((ng[0]["id"], ng[0]["mohinh"]["id"]), (khoa, co_gia))   # khoá: mô hình đầu tiên đã có giá
+        dm.dat_macdinh("dexuat", None, nguon_id=claude)
+        ng = congai._nguon(None, "dexuat")
+        self.assertEqual((ng[0]["id"], ng[0]["mohinh"]), (claude, None))         # gói: mặc định CLI
+        with self.assertRaisesRegex(ValueError, "Nguồn không còn dùng được"):
+            dm.dat_macdinh("dexuat", None, nguon_id="khong-co")
+        dm.dat_macdinh("dexuat", None)                                   # bỏ đặt
+        self.assertNotIn("dexuat", dm.macdinh_chi_tiet())
+
+    def test_ghim_dong_mac_dinh_coi_nhu_khong_ghim(self):
+        claude = self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        dm.dat_macdinh("dexuat", None, nguon_id=claude)
+        md = dm.macdinh_chi_tiet()["dexuat"]["mohinh_id"]
+        with mock.patch.object(congai, "_goi_claude", return_value={"chu": "x", "vao": 1, "ra": 1, "sotien": None, "sotien_thamkhao": None,
+                                                                    "tien_ma": "USD", "hanmuc": {}, "mohinh_bao": None}) as g:
+            kq = congai.goi("hỏi", mohinh_id=md)
+        self.assertEqual(kq["ghim_hong"]["lydo"], "không còn dùng được")
+        self.assertEqual(g.call_args[0][2], None)
+
+
 class KiemCongAI(Nen):
     def setUp(self):
         super().setUp()
@@ -324,6 +362,14 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertNotIn("x.mohinh || n.mohinh_gannhat", self.js)   # không lấy mô hình gần nhất cũ
         tc = (GOC / "maychu/hethong/mohinh/trochuyen.py").read_text(encoding="utf-8")
         self.assertIn('tl["mohinh_bao"] = kq.get("mohinh_bao")', tc)
+
+    def test_y31c_s6(self):
+        for chu in ("const CHU_MD = 'Mặc định của nguồn';", "data-mhmd=", "CHU_MD.toLowerCase().includes(q)",
+                    "'Đã bỏ ghim: cuộc trò chuyện này theo mặc định chung ('",
+                    "'\" về mặc định của nguồn ' + tn + '.'", "{loai_viec: lv, mohinh_id: null, nguon_id: g.nguon_id}",
+                    "const onMd = !dang.ghim && !dang.m && dang.g && dang.g.nguon_id === g.nguon_id;",
+                    "(noi !== 'chat' || dang.ghim)", "(x && x.m ? esc(tenMh(x.m.ma, x.g.nguon_id, x.g)) : 'Mặc định của nguồn')"):
+            self.assertIn(chu, self.js, chu)
 
     def test_ban(self):
         self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.7.5")
