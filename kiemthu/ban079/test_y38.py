@@ -310,7 +310,8 @@ class KiemN19(NenAT):
         p.write_text(json.dumps({"oauthAccount": {"displayName": ten, "planDisplayName": goi, "emailAddress": "x@vidu.invalid"}}), encoding="utf-8")
 
     def ket_noi(self, tk, dinh_danh, cu=True):
-        tt = [{"loggedIn": cu, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
+        tt = [{"loggedIn": cu, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"},
+              {"loggedIn": False, "authMethod": ""}]   # Y38h L6: kiểm lại kiểu cũ sau khi đăng xuất
         with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), \
                 mock.patch.object(dg, "_dinh_danh", side_effect=lambda goi, t: dinh_danh.get(t)), \
                 mock.patch.object(dg, "_dang_xuat", return_value=True) as dx, \
@@ -578,7 +579,8 @@ class KiemY38c(NenAT):
         dx.assert_called_once()                                                     # đăng xuất kiểu cũ của tài khoản nhầm
 
     def ket_noi(self, tk, cu, goi_ok=True):
-        tt = [{"loggedIn": cu, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
+        tt = [{"loggedIn": cu, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"},
+              {"loggedIn": False, "authMethod": ""}]   # Y38h L6: kiểm lại kiểu cũ sau khi đăng xuất
         goi = mock.Mock(return_value={"hanmuc": {}}) if goi_ok else mock.Mock(side_effect=congai.LoiAI("Claude", "lỗi", "x"))
         with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), \
                 mock.patch.object(dg, "_dinh_danh", return_value=(EMAIL_A, "org1")), \
@@ -606,7 +608,8 @@ MA_MOI = "sk-ant-oat01-" + "R" * 30 + "moiN29"
 
 class KiemY38d(NenAT):
     def ket_noi(self, tk, ma, goi_ok=True, loi=None):
-        tt = [{"loggedIn": False, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
+        tt = [{"loggedIn": False, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"},
+              {"loggedIn": False, "authMethod": ""}]   # Y38h L6: kiểm lại kiểu cũ sau khi đăng xuất
         goi = mock.Mock(return_value={"hanmuc": {}}) if goi_ok else mock.Mock(side_effect=loi or congai.LoiAI("Claude", "lỗi", "x"))
         with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), mock.patch.object(congai, "_goi_claude", goi):
             return madaihan.ket_noi(tk, ma)
@@ -1001,6 +1004,70 @@ class KiemY38g(NenAT):
         self.assertEqual(ra[0], KiemY38e.A[15])                                     # A15, không hiện lời gốc tiếng Anh
         self.assertEqual(ra[1], "Đã lưu mã dài hạn nhưng gọi thử chưa được: lỗi khác.")   # ca khác giữ nguyên
         self.assertNotIn("429", "".join(ra))
+
+
+class KiemY38h(NenAT):
+    """CDO U15: L4 ẩn hộp "Làm 01 lần" khi có ô A8; L5 chữ chuông giữ cụm; L6 F04 ghi đúng trạng thái kiểu cũ."""
+
+    def ket_noi_dang_xuat(self, sau):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        tt = [{"loggedIn": True, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}, {"loggedIn": sau, "authMethod": ""}]
+        with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt) as ttc, \
+                mock.patch.object(dg, "ho_so", return_value={"ten_hien": "Nguoi Gia", "goi_ten": "Ultra", "mota_goi": None}), \
+                mock.patch.object(dg, "_dang_xuat", return_value=False) as dx, \
+                mock.patch.object(congai, "_goi_claude", return_value={"hanmuc": {}}):
+            madaihan.ket_noi(1, MA_GIA)                                         # `_dang_xuat` báo False như trên máy thật (mã còn hạn)
+        dx.assert_called_once()
+        self.assertEqual(ttc.call_args_list[-1], mock.call(1, dung_ma=False))   # kiểm lại kiểu cũ KHÔNG kèm mã
+        return self.f04("kiem_madaihan")[-1][0]
+
+    def test_l6_da_thoat_thi_ghi_da_dang_xuat(self):
+        tom = self.ket_noi_dang_xuat(False)
+        self.assertIn("kiểu cũ đã đăng xuất", tom)
+        self.assertNotIn("kiểu cũ giữ", tom)
+
+    def test_l6_con_dang_nhap_thi_ghi_giu(self):
+        self.assertIn("kiểu cũ giữ", self.ket_noi_dang_xuat(True))
+
+    def test_l6_khong_hoi_duoc_thi_ghi_chua_ro(self):
+        self.assertIn("kiểu cũ chưa rõ", self.ket_noi_dang_xuat(None))
+
+    def js(self, them):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8").split("\n")
+        f = lambda p: next(i for i, x in enumerate(js) if x.startswith(p))   # noqa: E731
+        ma = ("const ICON = new Proxy({}, {get: () => '<svg/>'}); const gio = s => s; const homNay = () => '2026-11-24';\n"
+              + "\n".join(js[f("const esc ="):f("const cau =") + 1] + js[f("const MAU_TB ="):f("function veChuong(")]
+                          + [js[f("const coBaoLayLai =")]]) + "\n" + them)
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "y38h.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_l5_chuong_giu_cum(self):
+        A = KiemY38e.A
+        h = self.js("console.log(JSON.stringify([" + ", ".join(
+            "dongTb({chu: " + json.dumps(A[k]) + ", muc: 'do', icon: 'rotate-ccw', di: '09', noi: 'Cập nhật', luc: '2026-11-24T10:05:00'})"
+            for k in (4, 5)) + "]));")
+        self.assertIn("khởi&nbsp;động", h[1])                                       # ảnh U15_13
+        for s in h:
+            self.assertIn("bản&nbsp;0.7.8", s)
+            self.assertIn("chưa&nbsp;được", s)
+        self.assertIn("dữ&nbsp;liệu", h[0])
+        self.assertIn("03&nbsp;lần", h[1])
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_l4_an_hop_lam_01_lan_khi_co_o_a8(self):
+        ra = self.js("const D = {trung: {claude: 1}, trungTk: {claude: 2}, trungChu: {claude: 'A8'}};"
+                     "const a = [coBaoLayLai('claude', 2), coBaoLayLai('claude', 3)];"
+                     "D.trung.claude = 0; a.push(coBaoLayLai('claude', 2)); console.log(JSON.stringify(a));")
+        self.assertEqual(ra, [True, False, False])                                  # chỉ ô đang lấy tên; ô A8 tắt thì hộp hiện lại
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("if (chuaKiem && !coBaoLayLai('claude', tk)) h += '<div class=\"md-hd\">", js)
+        self.assertIn("(cl && coBaoLayLai(g, x.taikhoan) ? baoLayLai(", js)
 
 
 TU_ANH = __import__("re").compile(r"(?<![\w-])[Aa]nh(?![\w-])")

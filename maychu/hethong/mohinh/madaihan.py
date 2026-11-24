@@ -446,7 +446,11 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
         dg.xoa_chup(tk)
     if dat:
         if cu["loggedIn"]:
-            kiem["dang_xuat_cu"] = dg._dang_xuat("claude", tk)
+            dg._dang_xuat("claude", tk)
+            # Y38h L6: `_dang_xuat` kiểm lại bằng `trang_thai`, mà `trang_thai` coi mã dài hạn còn hạn là đã kết nối
+            # → luôn báo "chưa ra" dù kiểu cũ đã thoát. Ghi theo `auth status` KHÔNG kèm mã (như bước `cu` ở trên).
+            ra = _trang_thai_cli(tk, dung_ma=False)["loggedIn"]
+            kiem["dang_xuat_cu"] = None if ra is None else not ra
         hs2 = dg.ho_so("claude", tk)
         kiem.update(ten_sau=bool(hs2.get("ten_hien")), goi_sau=bool(hs2.get("goi_ten")))
         nguon_id = dg.ghi_nguon("claude", tk, thumuc, nguoi=nguoi)
@@ -458,7 +462,7 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
            f" · auth status loggedIn {co(moi['loggedIn'])}, authMethod {moi['authMethod'] or 'trống'}"
            f" · rate_limit_event {co(kiem.get('rate_limit_event'))}"
            f" · tên {co(kiem['ten_truoc'])}/{co(kiem.get('ten_sau'))}, gói {co(kiem['goi_truoc'])}/{co(kiem.get('goi_sau'))}"
-           f" (trước/sau đăng xuất kiểu cũ) · kiểu cũ {'đã đăng xuất' if kiem.get('dang_xuat_cu') else 'không có' if not cu['loggedIn'] else 'giữ'}"
+           f" (trước/sau đăng xuất kiểu cũ) · kiểu cũ {'đã đăng xuất' if kiem.get('dang_xuat_cu') else 'không có' if not cu['loggedIn'] else 'chưa rõ' if dat and kiem.get('dang_xuat_cu') is None else 'giữ'}"
            + (f" · tên, gói theo đăng nhập kiểu cũ lúc {chup['chup_luc'][11:16]}" if chup and dat else " · chưa chụp được tên, gói")   # N7
            + (" · hết hạn mức" if kiem.get("het_hanmuc") else "") + (" · giữ mã cũ" if giu_cu else ""))   # Y38d N37, N29
     nhatky.ghi("mohinh", "kiem_madaihan", tom, ketqua="dat" if dat else "loi", nguoi_id=None if nguoi == "hethong" else nguoi,

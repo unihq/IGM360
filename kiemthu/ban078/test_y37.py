@@ -163,7 +163,8 @@ class KiemChuong(NenMa):
 
 class KiemKetNoi(NenMa):
     def chay(self, dat=True):
-        tt = [{"loggedIn": True, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}]
+        tt = [{"loggedIn": True, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"},
+              {"loggedIn": False, "authMethod": ""}]   # Y38h L6: kiểm lại kiểu cũ sau khi đăng xuất
         hs = {"ten_hien": "Nguoi Gia", "goi_ten": "Ultra", "mota_goi": None}
         goi = mock.Mock(return_value={"hanmuc": {"5gio": {"pct": 3, "datlai": None}}}) if dat else \
             mock.Mock(side_effect=congai.LoiAI("Claude", "lỗi khi chạy", "error_during_execution: " + MA_GIA))

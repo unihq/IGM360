@@ -129,7 +129,7 @@ const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Dat
 const icoTb = x => (ICON[x.icon] || ICON['circle-alert']).replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')
   .replace(/stroke="#[0-9A-Fa-f]{6}"/, 'stroke="' + MAU_TB[x.muc][1] + '"');
 const dongTb = x => '<button class="tha-muc tb-dong" data-di="' + esc(x.di) + '"' + (x.cuon ? ' data-cuon="' + esc(x.cuon) + '"' : '') + '><span class="ico-tron nho '
-  + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + esc(x.chu) + '</span><span class="t12 phu">'
+  + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + cum(x.chu) + '</span><span class="t12 phu">'
   + esc(lucTb(x.luc)) + ' · ' + esc(x.noi) + '</span></span></button>';
 function veChuong(d) {
   const ds = d.thongbao || [], moi = ds.filter(x => x.moi), cu = ds.filter(x => !x.moi);
@@ -506,6 +506,7 @@ const CHU_Z15 = {
   chepLoi: 'Trình duyệt chặn chép. Bạn bôi đen lệnh rồi chép tay.',   // QĐ219 A14
   kiemHanMucRe: 'Mã đã lưu; lần gọi thử gặp hết hạn mức của gói nên chưa kiểm được mã.'};
 // Y38f L3 (Z17): A8 "Lấy tên, gói" đăng nhập nhầm, mã giữ nguyên: ô báo lỗi chữ đỏ + nút làm lại "Lấy tên, gói"
+const coBaoLayLai = (g, tk) => !!(D.trung[g] && (D.trungTk || {})[g] === tk && (D.trungChu || {})[g]);   // Y38f L3, Y38h L4
 const baoLayLai = (chu, tk) => '<div class="bao-lai t13"><div class="loi-o">' + ICON['circle-alert'] + '<span>'
   + cum(cau(chu)).split(CHU_Z15.hdNut).join('<b>' + nbsp(CHU_Z15.hdNut) + '</b>') + '</span></div>'
   + '<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="' + tk + '">' + icoMau(ICON['log-in'], '#1F2329', 16) + nbsp(CHU_Z15.hdNut) + '</button></div>';
@@ -532,7 +533,7 @@ function theMd(x, go) {
   if (md) h += '<button class="btn-chu" data-md-lay="' + tk + '">' + ICON['refresh-cw'] + 'Lấy mã&nbsp;mới</button><button class="btn-chu" data-md-dan="' + tk + '">' + ICON['key-round'] + 'Dán mã</button>';
   else if (x.da_noi) h += '<button class="btn btn-phu nho" data-md-lay="' + tk + '">' + ICON['key-round'] + 'Chuyển sang ' + CHU_MDH.toLowerCase().replace(/ /g, '&nbsp;') + '</button>';
   h += go + '</div>';
-  if (chuaKiem) h += '<div class="md-hd"><div class="b6 t13">' + CHU_Z15.hdTieu + '</div><div class="t13">' + cum(CHU_Z15.hdChu) + '</div>'   // 19
+  if (chuaKiem && !coBaoLayLai('claude', tk)) h += '<div class="md-hd"><div class="b6 t13">' + CHU_Z15.hdTieu + '</div><div class="t13">' + cum(CHU_Z15.hdChu) + '</div>'   // 19
     + '<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="' + tk + '">' + ICON['user-check'] + nbsp(CHU_Z15.hdNut) + '</button></div>';
   return h;
 }
@@ -617,7 +618,7 @@ function theGoi(g, ds, nguon, uu) {
       + (mdHet ? '<span class="nhan n-canh"><i></i>Mã hết hạn</span>' : x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>'
         : '<span class="nhan n-xem"><i></i>' + (cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</span>') + '</div>'
       + (cl ? '<div class="md-khoi">' + theMd(x, nutGo) + '</div>' : '')   // 0.7.8 (Z13, N11b): hàng riêng rộng hết thẻ; "Gỡ tài khoản" xoá cả mã
-      + (cl && D.trung[g] && (D.trungTk || {})[g] === x.taikhoan && (D.trungChu || {})[g] ? baoLayLai(D.trungChu[g], x.taikhoan) : '');   // Y38f L3: A8
+      + (cl && coBaoLayLai(g, x.taikhoan) ? baoLayLai(D.trungChu[g], x.taikhoan) : '');   // Y38f L3: A8
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio, n.ma + '|5') + thanhHm('Tuần này', n.tyle_tuan, n.ma + '|t')
       + (n.da_datlai_luc   // Z12 (3): qua giờ đặt lại
         ? '<div class="t12 phu" title="Qua giờ đặt lại: khung 05 giờ mới bắt đầu, số dùng về 0%">Đã đặt lại lúc ' + esc(gio(n.da_datlai_luc)) + '&nbsp;· số mới có sau lượt gọi AI kế&nbsp;tiếp</div>'
