@@ -25,7 +25,11 @@ jobs:
       - name: Cài thư viện đã khai
         run: pip install -r requirements.txt
       - name: Chạy bài kiểm
-        run: python -m unittest discover -s kiemthu -t . -v
+        shell: bash
+        run: |
+          python -m unittest discover -s kiemthu -t . -v 2>&1 | tee /tmp/ketqua_kiem.txt
+          # 0.8.0: số bài ghi thành chú thích của lần chạy (đọc được qua API công khai, không cần đăng nhập GitHub)
+          echo "::notice title=Ket qua bai kiem::$(grep -E '^(Ran [0-9]+ tests|OK|FAILED)' /tmp/ketqua_kiem.txt | tr '\n' ' ')"
 
   dongimage:
     needs: kiemthu

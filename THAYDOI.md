@@ -3,6 +3,14 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.0
+Tóm tắt: Nền dữ liệu bản 4
+- Dữ liệu nâng lên bản 4 trong 01 lần: dựng sẵn chỗ lưu cho trò chuyện AI (ghim, lưu trữ, mục Đã xoá, Project, chia sẻ), gia hạn gói AI, đã đọc thông báo theo người. Các tính năng này bật dần ở các bản sau.
+- Chuẩn bị tìm tin nhắn không dấu: phần mềm chỉ lưu các từ để tìm, không chép thêm nội dung tin nhắn.
+- Bản sao ngay trước khi cập nhật được ghi riêng, không lẫn với sao lưu hằng ngày; chuông sao lưu chỉ báo theo lần sao lưu hằng ngày.
+- Kiểm sau cập nhật kiểm thêm: số dòng dữ liệu không bị hụt sau khi nâng, chỉ mục tìm tin nhắn đủ.
+- Quay về 0.7.9 sau khi lên 0.8.0 thì dữ liệu trả về lúc trước khi cập nhật; việc nhập sau lúc đó không giữ được.
+
 ## 0.7.9
 Tóm tắt: 05 lớp an toàn khi cập nhật, tên gói Claude
 - Trước khi cập nhật, phần mềm kiểm ổ trống; ổ không đủ thì khoá nút Cập nhật và ghi rõ còn bao nhiêu, cần bao nhiêu.
