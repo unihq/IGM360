@@ -8,6 +8,8 @@ on:
     paths-ignore:
       - "tailieu/**"
       - "LICENSE"
+  # Y44 (QĐ259): tugop.yml gộp bằng GITHUB_TOKEN không tự gọi tệp luồng này, nên gọi chạy tay đóng ảnh cho main.
+  workflow_dispatch:
 
 # Mặc định không cấp quyền nào; từng bước xin đúng quyền cần.
 permissions: {}
@@ -29,9 +31,22 @@ jobs:
       - name: Chạy bài kiểm
         shell: bash
         run: |
-          python -m unittest discover -s kiemthu -t . -v 2>&1 | tee /tmp/ketqua_kiem.txt
-          # 0.8.0: số bài ghi thành chú thích của lần chạy (đọc được qua API công khai, không cần đăng nhập GitHub)
-          echo "::notice title=Ket qua bai kiem::$(grep -E '^(Ran [0-9]+ tests|OK|FAILED)' /tmp/ketqua_kiem.txt | tr '\n' ' ')"
+          # Y44e (CDA N5): đầu ra bài kiểm ghi vào tệp, KHÔNG in ra màn hình trước khi ghi chú thích, nên dòng lệnh
+          # "::notice …" do bài kiểm tự in không thành chú thích. Tài liệu GitHub "Workflow commands": ::stop-commands::.
+          # unittest ghi tiến độ và dòng tổng kết ra stderr; print() của bài kiểm ra stdout → tách 02 tệp, chú thích chỉ đọc
+          # tệp stderr (stdout ghi dồn lúc kết thúc nên nếu chung 01 tệp, dòng in giả nằm SAU dòng tổng kết thật).
+          set +e
+          python -m unittest discover -s kiemthu -t . -v > /tmp/in_ra_kiem.txt 2> /tmp/ketqua_kiem.txt
+          ma=$?
+          set -e
+          # 0.8.0: số bài ghi thành chú thích của lần chạy (đọc được qua API công khai, không cần đăng nhập GitHub).
+          # Chỉ lấy 02 dòng tổng kết cuối của unittest ("Ran N tests …" rồi "OK…"/"FAILED…").
+          echo "::notice title=Ket qua bai kiem::$(grep -E '^(Ran [0-9]+ tests?|OK|FAILED)' /tmp/ketqua_kiem.txt | tail -n 2 | tr '\n' ' ')"
+          khoa="$(python -c 'import secrets; print(secrets.token_hex(16))')"   # mã ngẫu nhiên mỗi lượt
+          echo "::stop-commands::${khoa}"
+          cat /tmp/in_ra_kiem.txt /tmp/ketqua_kiem.txt   # in để xem; dòng lệnh "::…::" trong đây không còn tác dụng
+          echo "::${khoa}::"
+          exit "$ma"
 
   dongimage:
     needs: kiemthu
