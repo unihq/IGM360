@@ -369,7 +369,7 @@ class KiemNangBoModuleXem(CoThuMuc):
         with contextlib.redirect_stdout(ra):
             self.assertEqual(kt.main([str(self.thumuc)]), 0, ra.getvalue())
         self.assertNotIn("module_xem", ra.getvalue())
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 124)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3)
         self.assertNotIn("module_xem", {r[1] for r in self.lay("Baomat", "PRAGMA table_info(nguoidung)")})
         self.assertEqual(self.lay("Baomat", "SELECT ma, vaitro FROM nguoidung WHERE id = ?", (u,)), [("chu", "chu")])
         self.assertEqual(self.lay("Baomat", "SELECT count(*) FROM gan_vaitro")[0][0], 0)

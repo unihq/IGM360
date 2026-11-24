@@ -97,7 +97,14 @@ CREATE TABLE IF NOT EXISTS nguon_ai (
   da_het_luc INTEGER,
   hang TEXT NOT NULL,
   cach_goi TEXT NOT NULL CHECK (cach_goi IN ('cli', 'anthropic', 'openai')),
-  diachi_goc TEXT
+  diachi_goc TEXT,
+  goi_ten TEXT,
+  giahan_ngay TEXT,
+  giahan_trangthai TEXT CHECK (giahan_trangthai IS NULL OR giahan_trangthai IN ('tudong', 'dahuy')),
+  chuky TEXT CHECK (chuky IS NULL OR chuky IN ('thang', 'nam')),
+  phi_ky INTEGER,
+  phi_tien_ma TEXT,
+  khoanchi_ma TEXT
 );
 
 -- G07 Lịch định kỳ: 01 dòng = 01 việc lặp lại
@@ -302,4 +309,17 @@ CREATE TABLE IF NOT EXISTS caitien_ketqua (
   chiphi INTEGER,
   thoigian_ms INTEGER,
   bangchung TEXT
+);
+
+-- H14 Mã phiên CLI (bản 4, PTD-10): 01 dòng = 01 mã phiên CLI của 01 đối tượng trên 01 tài khoản. Chỉ ghi thêm.
+-- 01 nơi giữ mã phiên cho nối phiên trò chuyện (TC76) và cứu việc AI kẹt (QĐ95): G02 0 cột.
+CREATE TABLE IF NOT EXISTS phien_cli (
+  id TEXT PRIMARY KEY NOT NULL,
+  doituong_loai TEXT CHECK (doituong_loai IS NULL OR doituong_loai IN ('hoithoai', 'viecnen')),
+  doituong_id TEXT,
+  nguon_ai_id TEXT REFERENCES nguon_ai(id),
+  loai TEXT CHECK (loai IS NULL OR loai IN ('claude', 'codex')),
+  ma_phien TEXT,
+  gan_luc TEXT,
+  dong_luc TEXT
 );

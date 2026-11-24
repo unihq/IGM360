@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS nhatky_noihayim (
 -- N01 Sao lưu: 01 dòng = 01 lần sao lưu 01 file
 CREATE TABLE IF NOT EXISTS saoluu (
   id TEXT PRIMARY KEY NOT NULL,
-  loai TEXT CHECK (loai IS NULL OR loai IN ('hangngay', 'camay_hangtuan')),
+  loai TEXT CHECK (loai IS NULL OR loai IN ('hangngay', 'camay_hangtuan', 'truoc_capnhat')),
   file_dulieu TEXT,
   chup_luc TEXT,
   cach_chup TEXT CHECK (cach_chup IS NULL OR cach_chup IN ('backup_api', 'vacuum_into')),

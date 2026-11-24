@@ -125,10 +125,10 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
     os.chmod(goc, 0o700)
     os.chmod(noi, 0o700)
     dong_n01, ketqua_chung = [], "xong_tren_may"
+    loai = _loai_n01(thumuc, truoc_ban)
     for ten in ketnoi.CAC_FILE:
-        # CDA C1 (Y38): lượt trước cập nhật vẫn ghi N01 `loai` = 'hangngay' (CHECK N01 chỉ nhận 'hangngay',
-        # 'camay_hangtuan'; 0 đổi lược đồ), dịp ghi ở `ketqua_tungbuoc_json` khoá "dip" = "truoc_capnhat".
-        # Chỗ nào sau này đọc N01 theo nghĩa "hằng ngày" (đếm lượt, tính giờ sao lưu gần nhất) phải lọc bỏ `dip`.
+        # Dịp ghi ở `ketqua_tungbuoc_json` khoá "dip" = "truoc_capnhat" (CDA C1, Y38). Từ lược đồ bản 4 (QĐ227) cột `loai`
+        # = 'truoc_capnhat'; Nhatky còn lược đồ 3 (chế độ an toàn sau lần nâng hỏng) thì vẫn 'hangngay' + `dip` (V1b).
         buoc = {"dip": "truoc_capnhat", "ban": truoc_ban} if truoc_ban else {}
         tam = noi / f"{ten}.sqlite3.tam"
         chinh = noi / f"{ten}.sqlite3"
@@ -163,7 +163,7 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
             buoc["loi"] = str(loi)[:300]
             ketqua = ketqua_chung = "loi"
         dong_n01.append({
-            "id": maso.tao(), "loai": "hangngay", "file_dulieu": ten,
+            "id": maso.tao(), "loai": loai, "file_dulieu": ten,
             "chup_luc": luc.isoformat(timespec="seconds"), "cach_chup": "backup_api",
             "kiemtra": kiemtra, "mabam": _mabam(chinh) if ketqua != "loi" else None,
             "dungluong_byte": chinh.stat().st_size if ketqua != "loi" else None,
@@ -178,6 +178,21 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
         _don_ban_cu(goc, thumuc)
         _don_truoc_capnhat(goc, thumuc)
     return {"ketqua": ketqua_chung, "file": dong_n01, "noi": noi}
+
+
+def _loai_n01(thumuc: Path, truoc_ban: str | None) -> str:
+    """QĐ227, V1b: 'truoc_capnhat' chỉ khi tệp Nhatky đã ở lược đồ ≥ 4 (CHECK bản 3 không nhận giá trị này)."""
+    if not truoc_ban:
+        return "hangngay"
+    try:
+        cn = ketnoi.mo("Nhatky", thumuc)
+        try:
+            ban = cn.execute("PRAGMA user_version").fetchone()[0]
+        finally:
+            cn.close()
+    except sqlite3.Error:
+        ban = 0
+    return "truoc_capnhat" if ban >= 4 else "hangngay"
 
 
 def _ghi_n01(thumuc: Path, dong: list) -> None:

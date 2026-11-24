@@ -25,7 +25,11 @@ jobs:
       - name: Cài thư viện đã khai
         run: pip install -r requirements.txt
       - name: Chạy bài kiểm
-        run: python -m unittest discover -s kiemthu -t . -v
+        shell: bash
+        run: |
+          python -m unittest discover -s kiemthu -t . -v 2>&1 | tee /tmp/ketqua_kiem.txt
+          # 0.8.0: số bài ghi thành chú thích của lần chạy (đọc được qua API công khai, không cần đăng nhập GitHub)
+          echo "::notice title=Ket qua bai kiem::$(grep -E '^(Ran [0-9]+ tests|OK|FAILED)' /tmp/ketqua_kiem.txt | tr '\n' ' ')"
 
   dongimage:
     needs: kiemthu
@@ -80,6 +84,12 @@ jobs:
           tags: igm360-thu:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 0.8.0 (QĐ229): cụm tìm chữ H08 cần SQLite ≥ 3.43 (`contentless_delete`); thấp hơn thì không đẩy image.
+      - name: Kiểm bản SQLite trong image
+        shell: bash
+        run: |
+          docker run --rm --entrypoint python "igm360-thu:${GITHUB_SHA}" -c "import sqlite3, sys; v = tuple(map(int, sqlite3.sqlite_version.split('.'))); print('SQLite', sqlite3.sqlite_version); sys.exit(0 if v >= (3, 43, 0) else 1)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Thử bản trước khởi động được
         shell: bash

@@ -536,8 +536,8 @@ def kiem(thumuc: Path) -> tuple[bool, list[str]]:
         finally:
             cn.close()
     chu_ban = " · ".join(f"{t} {'không có' if b is None else b}" for t, b in ban.items())
-    if all(b == 3 for b in ban.values()):
-        ghi(1, True, f"Phiên bản lược đồ: {chu_ban}. Đã ở bản 3, không cần nâng")
+    if all(b is not None and b >= 3 for b in ban.values()):   # 0.8.0: bản 4 cũng không cần nâng 2 → 3
+        ghi(1, True, f"Phiên bản lược đồ: {chu_ban}. Đã ở bản 3 trở lên, không cần nâng")
         return dat, dong
     ghi(1, all(b in (2, 3) for b in ban.values()), f"Phiên bản lược đồ (cần 2 hoặc 3, đủ 07 file): {chu_ban}")
     if not dat:

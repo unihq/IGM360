@@ -105,7 +105,7 @@ class KiemLop5(NenAT):
         finally:
             cn.close()
         self.assertEqual(len(d), 7)
-        self.assertTrue(all(x[0] == "hangngay" and json.loads(x[1])["dip"] == "truoc_capnhat" for x in d))   # CDA C1
+        self.assertTrue(all(x[0] == "truoc_capnhat" and json.loads(x[1])["dip"] == "truoc_capnhat" for x in d))   # QĐ227 (bản 4); CDA C1 giữ "dip"
         self.assertEqual(antoan.doc()["yeu_cau"]["den"], "0.7.10")
         self.assertEqual(capnhat.trang_thai_sao()["dang_sao"], "tai")                # dòng 29: Bước 2/2 · Đang tải bản
 
@@ -280,7 +280,7 @@ class KiemLop3(NenAT):
         self.assertIn("0.7.9 → 0.7.8", self.f04("quayve")[0][0])
         (g / "VERSION").write_text("0.7.9", encoding="utf-8")
         self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                    # lệnh chạy trả dữ liệu trước khi chạy bản trước
-        self.assertEqual(self.f04("thu"), [])
+        self.assertEqual(self.f04("thu"), [("sau_chup", "dat", None)])   # QĐ237: nhật ký sau giờ chụp được giữ khi quay về
         self.assertNotIn("tra_du_lieu", antoan.doc(self.dl)["chay_ban_truoc"])
         self.assertNotIn("nang_luocdo", antoan.doc(self.dl))
         self.assertIn("đã trả dữ liệu về bản chụp", self.f04("quayve")[-1][0])   # nhật ký ghi lại sau khi trả
@@ -717,7 +717,7 @@ class KiemY38d(NenAT):
         tt["chay_ban_truoc"]["tra_du_lieu"]["buoc"] = "thay"
         antoan.ghi(self.dl, chay_ban_truoc=tt["chay_ban_truoc"])
         self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                   # đổi .cu về, trả lại từ đầu, đạt
-        self.assertEqual(self.f04("thu"), [])
+        self.assertEqual(self.f04("thu"), [("sau_chup", "dat", None)])   # QĐ237: nhật ký giữ, không ghi đôi khi trả lại từ đầu
         self.assertEqual([p.name for p in self.dl.iterdir() if p.name.endswith(".cu")], [])
         dong = self.f04("quayve")[-1]
         self.assertIn("đã trả dữ liệu về bản chụp", dong[0])

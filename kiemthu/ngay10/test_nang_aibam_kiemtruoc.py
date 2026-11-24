@@ -9,6 +9,7 @@ import json
 import sqlite3
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from kiemthu.ngay07.test_luocdo_ban3 import CoThuMuc, dung_ban2
 from maychu.dulieu import aibam, ketnoi, khoitao, kiemtruoc_ban3 as kt, maso, phienban
@@ -46,14 +47,15 @@ class KiemDoiAiBam(NenBan2):
 
     def test_55_cot_ai_bam(self):
         ds = {t: aibam.cac_cot(t) for t in ketnoi.CAC_FILE}
-        self.assertEqual(sum(map(len, ds.values())), 58)            # thiết kế mục 0.4: 55 cột, gồm `nguoi_khai` của A18
+        self.assertEqual(sum(map(len, ds.values())), 59)            # thiết kế mục 0.4: 58 cột + 0.8.0 H18 `nguoi_tao`
+        self.assertIn(("chiase_lienket", "nguoi_tao"), ds["Bot"])
         self.assertIn(("nhatky_thaotac", "nguoi_id"), ds["Nhatky"])
         self.assertNotIn(("nguoidung", "nguoi_id"), ds["Baomat"])   # nguoi_id khác F04 trỏ A18, không phải "ai bấm"
 
     def test_nang_doi_gia_tri_cu_va_ca_55_cot_hop_le(self):
         self.them_gia_tri_cu()
         khoitao.tao_het(self.thumuc)
-        self.assertEqual(set(self.ban().values()), {3})
+        self.assertEqual(set(self.ban().values()), {khoitao.PHIENBAN_LUOCDO})   # 0.8.0: nâng thẳng 2 → 4
         self.assertEqual(self.lay("Dulieu_Chinh", "SELECT nguoi_dat FROM thongso WHERE ten IN ('thu_01', 'thu_02')"),
                          [(self.chu,), (self.chu,)])
         self.assertEqual(self.lay("Baomat", "SELECT nguoi_nhap FROM kekhoa"), [(self.chu,)])
@@ -137,6 +139,12 @@ class KiemTruoc(NenBan2):
 
 class KiemHangSo(unittest.TestCase):
     def test_hang_so_sinh_bang_may_khop_ma(self):
+        # 0.8.0: công cụ này là của lần nâng 2 → 3; so với lược đồ bản 3 lưu ở kiemthu/ban080/luocdo_ban3 (đúng d369e42)
+        ban3 = Path(__file__).resolve().parents[1] / "ban080" / "luocdo_ban3"
+        with mock.patch.object(khoitao, "THUMUC_LUOCDO", ban3), mock.patch.object(aibam, "_LUOCDO", ban3):
+            self.so_hang_so()
+
+    def so_hang_so(self):
         doi_ten = {}
         for (f, cu), moi in khoitao.DOI_TEN[3].items():
             doi_ten.setdefault(f, []).append([cu, moi])

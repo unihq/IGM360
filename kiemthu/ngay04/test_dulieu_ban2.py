@@ -77,7 +77,7 @@ class KiemBan2(unittest.TestCase):
         return ketnoi.mo(ten, self.thumuc)
 
     def test_file_moi_ban_2_va_cot_bat_buoc(self):
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 124)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3)
         for ten in ketnoi.CAC_FILE:
             cn = self.mo(ten)
             try:
@@ -139,7 +139,7 @@ class KiemBan2(unittest.TestCase):
             cn.execute("INSERT INTO theodoi_maychu (id, ram_dung) VALUES (?, 639)", (ma_n02,))
         finally:
             cn.close()
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 108)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 124)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3)
         cn = self.mo("Bot")
         try:
             self.assertEqual(cn.execute("PRAGMA user_version").fetchone()[0], khoitao.PHIENBAN_LUOCDO)
@@ -163,7 +163,7 @@ class KiemBan2(unittest.TestCase):
         finally:
             cn.close()
         for ten in ketnoi.CAC_FILE:
-            self.assertTrue((self.thumuc / "saoluu" / "truoc_nangcap_v03" / f"{ten}.sqlite3").exists())
+            self.assertTrue((self.thumuc / "saoluu" / f"truoc_nangcap_v{khoitao.PHIENBAN_LUOCDO:02d}" / f"{ten}.sqlite3").exists())
 
     def test_nang_cap_loi_thi_tra_nguyen_trang(self):
         dung_ban1(self.thumuc)
