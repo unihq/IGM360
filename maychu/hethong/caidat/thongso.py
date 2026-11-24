@@ -220,6 +220,8 @@ def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "
     giatri = (giatri or "").strip()
     if ten in KHONG_SUA:
         return {"loi": KHONG_SUA[ten], "o": "giatri"}
+    if ten in CONG_TAC:   # CDA Y49b N3: công tắc chỉ đổi bằng gat() (POST /thongso/{ten}/gat), giữ 01 đường ghi
+        return {"loi": "Thông số này đổi bằng công tắc", "o": "giatri"}
     loi = kiem_giatri(ten, giatri) if giatri else ("Thông số này không để trống được" if THEO_TEN.get(ten, [0] * 8)[5] else None)
     if loi:
         return {"loi": loi, "o": "giatri"}

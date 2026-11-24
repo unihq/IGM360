@@ -40,6 +40,8 @@ CHU = {
     "drive_qua_gio": "Đẩy bản sao lên Drive đã quá 10 phút. Bản sao chỉ nằm trên máy chủ.",                        # 32
     # QĐ287 (Z24 dòng 1, chữ A; QĐ288 "bản sao"): bản sao trước khi nâng đã xoá (QĐ281) → nút Quay về khoá
     "qv_het_han": "Không còn dữ liệu để quay về: bản sao trước khi nâng đã xoá ngày {ngay} (giữ 30 ngày).",
+    # CDA Y49b N1: không có dòng F04 ghi ngày xoá → đúng câu đã duyệt, bỏ vế ngày (CPO báo anh)
+    "qv_het_han_khong_ngay": "Không còn dữ liệu để quay về: bản sao trước khi nâng đã xoá (giữ 30 ngày).",
     "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
     "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
               "việc nhập sau lúc đó không giữ được.",                                                             # 40
@@ -340,7 +342,8 @@ def thong_tin_quayve(thumuc: Path | None = None) -> dict:
         if not noi.is_dir():
             ngay = saoluu.ngay_xoa_truoc_nangcap(noi.name, thumuc)
             return {"co": True, "khoa": True, "ban": bt, "mat_tu": None,
-                    "chu": CHU["qv_het_han"].format(ngay=datetime.fromisoformat(ngay).strftime("%d/%m/%Y") if ngay else "?")}
+                    "chu": CHU["qv_het_han"].format(ngay=datetime.fromisoformat(ngay).strftime("%d/%m/%Y")) if ngay
+                    else CHU["qv_het_han_khong_ngay"]}
     chu = (CHU["qv_mat"].format(luc=_gio(mat)) if mat else
            CHU["qv_an_toan"].format(luc=_gio(CHE_DO["luc"] or "")) if CHE_DO["an_toan"] else CHU["qv_giu"])
     return {"co": True, "ban": bt, "mat_tu": mat, "chu": chu}

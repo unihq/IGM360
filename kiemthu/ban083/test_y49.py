@@ -88,6 +88,13 @@ class KiemCongTac(Nen):
         self.assertEqual(sum(1 for x in ls if x["hieuluc_den"] is None), 1)
         self.assertIn("loi", thongso.gat("nguong_ocung", True, "hethong", self.thumuc))   # không phải công tắc
 
+    def test_y49b_n3_dat_khong_nhan_cong_tac(self):
+        thongso.khoi_tao(self.thumuc)
+        kq = thongso.dat("saoluu_drive", "1", "2099-01-01", nguoi="hethong", thumuc=self.thumuc)
+        self.assertEqual(kq, {"loi": "Thông số này đổi bằng công tắc", "o": "giatri"})
+        self.assertFalse(thongso.drive_bat(self.thumuc))
+        self.assertEqual(len(thongso.lich_su("saoluu_drive", self.thumuc)), 1)   # chỉ dòng khởi tạo, không thêm dòng
+
     def test_tat_thi_khong_xep_hang_cho(self):
         kq = saoluu.chay(self.thumuc, LUC)
         self.assertEqual(kq["ketqua"], "xong_tren_may")
@@ -270,6 +277,46 @@ class KiemD1(Nen):
             antoan.ghi(self.thumuc, nang_luocdo={"den": khoitao.PHIENBAN_LUOCDO, "ban": "0.0.1", "luc": "2026-10-01T10:00:00+07:00"})
             q = antoan.thong_tin_quayve(self.thumuc)
             self.assertEqual((q["co"], q.get("khoa"), q["mat_tu"]), (True, None, None))   # bản không nâng lược đồ: như cũ
+
+    def mo_nang_ban_dang_chay(self):
+        noi = khoitao._thumuc_chup(self.thumuc)
+        noi.mkdir(parents=True)
+        for t in ("Dulieu_Chinh", "Nhatky"):
+            (noi / f"{t}.sqlite3").write_bytes(b"x")
+        antoan.ghi(self.thumuc, nang_luocdo={"den": khoitao.PHIENBAN_LUOCDO, "ban": capnhat.ban_dang_chay(),
+                                             "luc": "2026-10-01T10:00:00+07:00"})
+        return noi
+
+    def test_y49b_n2_xoa_do_giua_chung_van_khoa(self):
+        noi = self.mo_nang_ban_dang_chay()
+        that = shutil.rmtree
+
+        def xoa_do(p, *a, **k):   # xoá được 01 tệp rồi hỏng giữa chừng
+            next(Path(p).iterdir()).unlink()
+            raise OSError("ổ lỗi giữa chừng")
+        with mock.patch.object(antoan, "ban_truoc", return_value="0.8.1"):
+            with mock.patch.object(saoluu.shutil, "rmtree", side_effect=xoa_do):
+                with self.assertRaises(OSError):
+                    saoluu.don_truoc_nangcap(self.thumuc, datetime(2026, 11, 2, tzinfo=saoluu.MUIGIO_VN))
+            self.assertFalse(noi.exists())                                        # tên cũ đã mất trước khi xoá
+            self.assertTrue(noi.with_name(noi.name + saoluu.DUOI_DANG_XOA).exists())
+            self.assertEqual(len(self.f04("saoluu", "xoa_truoc_nangcap")), 1)
+            q = antoan.thong_tin_quayve(self.thumuc)
+            self.assertEqual((q["co"], q["khoa"]), (True, True))                  # khoá, không trả 01 phần tệp
+            self.assertEqual(antoan.quay_ve("hethong", True, self.thumuc), {"loi": q["chu"]})
+        self.assertIs(saoluu.shutil.rmtree, that)
+        saoluu.don_truoc_nangcap(self.thumuc, datetime(2026, 11, 3, tzinfo=saoluu.MUIGIO_VN))   # lượt sau xoá tiếp phần sót
+        self.assertEqual([p.name for p in self.goc.iterdir() if p.name.startswith("truoc_nangcap_v")], [])
+        self.assertEqual(len(self.f04("saoluu", "xoa_truoc_nangcap")), 1)        # không ghi F04 lần 02
+
+    def test_y49b_n1_thieu_dong_f04_bo_ve_ngay(self):
+        noi = self.mo_nang_ban_dang_chay()
+        shutil.rmtree(noi)                                                        # mất thư mục mà không có dòng F04
+        with mock.patch.object(antoan, "ban_truoc", return_value="0.8.1"):
+            q = antoan.thong_tin_quayve(self.thumuc)
+        self.assertEqual((q["co"], q["khoa"]), (True, True))
+        self.assertEqual(q["chu"], "Không còn dữ liệu để quay về: bản sao trước khi nâng đã xoá (giữ 30 ngày).")
+        self.assertNotIn("?", q["chu"])
 
 
 # ---------------- Chữ (QĐ278, QĐ282, QĐ287, QĐ288, QĐ290) ----------------

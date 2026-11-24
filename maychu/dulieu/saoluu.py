@@ -307,6 +307,7 @@ def don_khi_khoidong(thumuc: Path | None = None) -> dict:
 # ---------------- 0.8.3 D1 (QĐ281, QĐ284; PTD-15 mục 6.3): bản sao trước khi nâng `truoc_nangcap_vNN` ----------------
 GIU_TRUOC_NANG_NGAY = 30   # QĐ281: giữ bản của lần nâng gần nhất 30 ngày
 DAU_TRUOC_NANG = "truoc_nangcap_v"
+DUOI_DANG_XOA = ".dang_xoa"   # CDA Y49b N2: đổi tên trước rồi mới xoá; còn sót thì lượt sau xoá tiếp
 
 
 def _thumuc_truoc_nang(goc: Path) -> list[tuple[int, Path]]:
@@ -341,7 +342,10 @@ def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = Non
     tt = antoan.doc(thumuc)
     if antoan.CHE_DO["an_toan"] or tt.get("chay_ban_truoc") or tt.get("dang_nang"):
         return []
-    cac = _thumuc_truoc_nang(thumuc_saoluu(thumuc))
+    goc = thumuc_saoluu(thumuc)
+    for p in (goc.glob(DAU_TRUOC_NANG + "*" + DUOI_DANG_XOA) if goc.is_dir() else []):   # lượt trước xoá dở
+        shutil.rmtree(p, ignore_errors=True)
+    cac = _thumuc_truoc_nang(goc)
     if not cac:
         return []
     n = tt.get("nang_luocdo") or {}
@@ -361,11 +365,14 @@ def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = Non
     ra = []
     for p, lydo in xoa:
         so, byte = _dem_tep(p)
-        shutil.rmtree(p, ignore_errors=True)
-        if p.exists():
-            continue
+        bo = p.with_name(p.name + DUOI_DANG_XOA)
+        try:   # CDA Y49b N2: đổi tên 01 lần (nguyên tử) → tên cũ mất hẳn thì Quay về khoá, không bao giờ trả 01 phần tệp
+            os.replace(p, bo)
+        except OSError:
+            continue   # đổi tên không được: thư mục còn nguyên, không ghi F04, lượt sau thử lại
         nhatky.ghi("saoluu", "xoa_truoc_nangcap", f"{p.name} · {lydo} · {so:02d} tệp · {byte} byte", thumuc=thumuc)
         ra.append({"thumuc": p.name, "lydo": lydo, "byte": byte})
+        shutil.rmtree(bo, ignore_errors=True)   # xoá dở thì lượt sau xoá tiếp (đầu hàm)
     return ra
 
 
