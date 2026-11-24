@@ -768,7 +768,10 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         self.assertIn('<button class="btn khoa" disabled title="Đang cập nhật lên 0.8.4">', cn)
         for h in (at, cn):
             self.assertNotIn("data-canang", h)
-            self.assertNotIn("data-cave", h)                                        # CDA A2: không về bản trước lúc bị chặn
+            self.assertNotIn("data-cave", h)                                        # CDA A2: không bấm được Về bản trước lúc bị chặn
+        self.assertIn('<button class="btn-chu nho qv-khoa" disabled title="Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.">', at)   # QĐ308: khoá, không ẩn
+        self.assertIn('<button class="btn-chu nho qv-khoa" disabled title="Đang cập nhật lên 0.8.4">', cn)
+        self.assertEqual(at.count("qv-khoa"), 1)                                   # 01 dòng công cụ (khối thử chỉ có Claude)
         self.assertIn("D.ca.chan_chu = D.ca.chan === 'che_do_an_toan' ? CHU_CN.chan", self.app)
         self.assertIn(": D.ca.chan === 'dang_cap_nhat' ? TD8.dang(D.ca.cap_nhat_len || (D.capnhat || {}).ban_moi || '') : '';", self.app)
         self.assertIn("chan: 'Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.',", self.app)   # câu sẵn có QĐ218 dòng 37

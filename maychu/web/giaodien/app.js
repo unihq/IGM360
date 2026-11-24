@@ -551,12 +551,14 @@ function htmlCongCu(c, bay) {
       else if ((x.hong || []).includes(hg.ban)) o3 = '<span class="so" style="color:' + CA.mau.xem + '">' + esc(hg.ban) + '</span><div class="t12" style="color:' + CA.mau.xem + '">' + CA.chuaDat + '</div>';
       else o3 = '<span class="so" style="color:' + CA.mau.xanh + '">' + esc(hg.ban) + '</span>' + (hg.ra_luc && caHomNay(hg.ra_luc, bay) ? '<div class="t12 phu">' + cum(CA.raLuc(caLuc(hg.ra_luc, bay))) + '</div>' : '');
     }
-    const coVe = !x.trong_goi && !dn && !c.tam_dung && !c.chan;
+    const coVe = !x.trong_goi && !dn && !c.tam_dung;   // QĐ308 điểm 10: bị chặn thì khóa + câu rê chuột (không ẩn)
     h += '<div class="cl-hang cl5"><b>' + esc(x.ten) + '</b><span data-l="' + CA.cot[1] + '"><span class="so">' + esc(x.trong_goi ? CA.oGoi(x.ban || '') : x.ban) + '</span>'
       + (x.truoc || x.truoc_goi ? '<div class="t12 phu">' + cum(CA.truoc(x.truoc || caBan(x.ban_goi, true))) + '</div>' : '')
       + '</span><span data-l="' + CA.cot[2] + '">' + o3 + '</span>'
       + '<span data-l="' + CA.cot[3] + '">' + (gan ? ngay(caVn(gan)) + ' ' + caVn(gan).slice(11, 16) : CA.chuaNang) + '</span><span class="phai">'
-      + (coVe ? '<button class="btn-chu nho" data-cave="' + esc(x.goi) + '">' + icoMau(ICON['rotate-ccw'], '#1456F0', 14) + CA.ve + '</button>' : '') + '</span></div>';
+      + (!coVe ? '' : c.chan ? '<button class="btn-chu nho qv-khoa" disabled' + (c.chan_chu ? ' title="' + esc(c.chan_chu) + '"' : '') + '>'
+        + icoMau(ICON['rotate-ccw'], '#646A73', 14) + CA.ve + '</button>'
+        : '<button class="btn-chu nho" data-cave="' + esc(x.goi) + '">' + icoMau(ICON['rotate-ccw'], '#1456F0', 14) + CA.ve + '</button>') + '</span></div>';
   });
   // dòng trạng thái (01 dòng): đang nâng > tạm dừng > việc vừa xảy ra hôm nay > tắt > hãng có bản mới > mới nhất
   let tt;
