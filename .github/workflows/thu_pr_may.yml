@@ -1,0 +1,23 @@
+name: Thử PR máy mở (Y44i lượt 4b)
+
+# QĐ300 (CDA KT-Y44h): GITHUB_TOKEN tự mở 01 PR chạm .github/ để xem luật main có đòi chủ mã duyệt không.
+# Nhánh thử, KHÔNG gộp, KHÔNG duyệt. CPO tự xem khung gộp và tự đóng PR.
+on:
+  push:
+    branches: ["thu/pr-may-mo"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  mo_pr:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Mở PR (không gộp, không duyệt)
+        run: >-
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head thu/pr-may-mo
+          --title "Lượt thử 4b, KHÔNG gộp"
+          --body "Lượt thử 4b, KHÔNG gộp. QĐ300: PR do máy GitHub (GITHUB_TOKEN) mở, chạm .github/, để xem luật main có đòi chủ mã duyệt không."
