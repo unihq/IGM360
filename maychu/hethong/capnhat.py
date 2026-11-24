@@ -317,6 +317,10 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
     from maychu.hethong.caidat import thongso
     from maychu.ketnoi import drive
     dang = ban_dang_chay()
+    from maychu.hethong.mohinh import nangcli
+    het_cho = time.time() + CHO_NANG_CLI_GIAY   # CDA K1 (Y46): công cụ AI đang nâng dở thì cập nhật chờ xong
+    while nangcli.dang_nang() and time.time() < het_cho:
+        time.sleep(NGHI_DAY_GIAY)
     try:
         kq = saoluu.chay(thumuc, truoc_ban=ban_moi or "moi",
                          bao=lambda i, n: tiendo.chi_tiet("chup", thumuc, da=i, tong=n, xong=i == n))   # bước 2: tệp i/07
@@ -357,6 +361,7 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
 
 
 NGHI_DAY_GIAY = 15
+CHO_NANG_CLI_GIAY = 20 * 60   # CDA K1 (Y46): chờ công cụ AI nâng xong tối đa 20 phút (npm tối đa 15 phút + kiểm thử)
 
 
 def cap_nhat_ngay(nguoi_id: str, thumuc=None) -> dict:

@@ -181,6 +181,9 @@ def gat_cong_tac(ten: str, body: GatCongTac, p: dict = Depends(can_dang_nhap)):
         raise HTTPException(400, kq)
     if kq.get("doi"):
         ghi_f04("thongso", "gat", f"{ten} → {'bật' if body.bat else 'tắt'}", nguoi_id=p["nguoidung_id"])
+    if ten == "tunang_congcu_ai" and body.bat:   # QĐ264 (Z20 dòng 13): gạt bật lại thì bỏ tạm dừng sau quay về
+        from maychu.hethong.mohinh import nangcli
+        nangcli.mo_lai(ly_do="bạn bật lại công tắc")
     return kq
 
 

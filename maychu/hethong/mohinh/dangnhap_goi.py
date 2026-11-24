@@ -62,8 +62,14 @@ NHO_GIAY = 30
 
 
 def _cli(goi: str) -> str:
+    """Đường tệp chạy CLI. Y46 (QĐ263, CDA KT-Y46-KH): biến môi trường (bài kiểm) > bản đã nâng đạt kiểm (con trỏ trong
+    /dulieu/cli, đọc mỗi lần gọi nên đổi bản không cần khởi động lại) > bản trong gói. Lượt AI đang chạy làm tiếp bằng
+    bản cũ; lượt mới dùng bản mới (U20-HOI)."""
     g = GOI[goi]
-    return os.environ.get(g["cli_bien"], g["cli"])
+    if g["cli_bien"] in os.environ:
+        return os.environ[g["cli_bien"]]
+    from maychu.hethong.mohinh import nangcli
+    return nangcli.duong_cli(goi) or g["cli"]
 
 
 def thu_muc(goi: str, taikhoan: int) -> Path | None:

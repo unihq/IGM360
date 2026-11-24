@@ -50,6 +50,12 @@ async def vongdoi(_app: FastAPI):
         nguoidung.tao_quantri_tu_env()
         thongso.khoi_tao()
         capnhat.ghi_khoi_dong()
+        try:   # QĐ264 (Y46): lên bản mới hơn bản đã quay về thì công cụ AI tự nâng lại
+            from maychu.hethong.mohinh import nangcli
+            nangcli.mo_lai_neu_len_ban_moi(capnhat.ban_dang_chay())
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).exception("mở lại tự nâng công cụ AI lỗi")
         try:   # QĐ279 (PTD-15 6.2 điểm 3): dọn 01 lần tệp sao lưu đã dồn, dòng chờ mất tệp; chạy lại không đổi gì
             from maychu.dulieu import saoluu
             saoluu.don_khi_khoidong()

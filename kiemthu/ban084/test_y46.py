@@ -49,6 +49,10 @@ class ChayGia:
             b.write_text(self.ban_cai or ban, encoding="utf-8")
             Path(lenh[lenh.index("--cache") + 1]).mkdir(parents=True, exist_ok=True)
             return subprocess.CompletedProcess(lenh, 1 if self.loi_cai else 0, "", "")
+        if lenh[1:] in (["auth", "status", "--json"], ["login", "status"]):       # kiểm thử thêm khi đã đăng nhập
+            ok = getattr(self, "da_noi_moi", True)
+            out = json.dumps({"loggedIn": ok}) if lenh[1] == "auth" else ("Logged in using ChatGPT" if ok else "Not logged in")
+            return subprocess.CompletedProcess(lenh, 0 if ok else 1, out, "")
         if lenh[-1] == "--version":
             p = Path(lenh[0])
             out = p.read_text(encoding="utf-8") if p.exists() else ""
@@ -74,6 +78,8 @@ class Nen(unittest.TestCase):
         nangcli._GOC.update(claude="2.1.331", chatgpt="0.172.0")                   # bản trong gói, không chạy CLI thật
         self.addCleanup(nangcli._GOC.clear)
         self.enterContext(mock.patch.object(nangcli, "_uoc_giai_nen", return_value=1000))
+        from maychu.hethong.mohinh import dangnhap_goi
+        self.trang_thai = self.enterContext(mock.patch.object(dangnhap_goi, "trang_thai", return_value={"da_noi": False}))
 
     def nang(self, **kw):
         chay = kw.pop("chay", None) or ChayGia()
@@ -177,7 +183,140 @@ class KiemBoNang(Nen):
         self.assertEqual(self.f04("thieu_o")[0][1], "bichan")
 
 
+class KiemDangNhapSauNang(Nen):
+    def setUp(self):
+        super().setUp()
+        from maychu.hethong.mohinh import congai
+        self.congai = congai
+        self.goi_claude = self.enterContext(mock.patch.object(congai, "_goi_claude", return_value={"chu": "OK"}))
+        self.goi_chatgpt = self.enterContext(mock.patch.object(congai, "_goi_chatgpt", return_value={"chu": "OK"}))
+
+    def test_da_dang_nhap_ban_moi_doc_duoc_tep_dang_nhap(self):
+        self.trang_thai.return_value = {"da_noi": True}
+        kq, chay = self.nang()
+        self.assertEqual(kq["kq"], "dat")
+        self.assertIn(["auth", "status", "--json"], [l[1:] for l in chay.lenh])
+        a = self.goi_claude.call_args                                             # P3: 01 lượt gọi ngắn bằng bản mới
+        self.assertEqual((a.args[0], a.args[1], a.args[2]), (1, nangcli.CAU_THU, None))
+        self.assertTrue(a.kwargs["cli"].endswith(str(Path("2.1.340", "node_modules", ".bin", "claude"))))
+
+    def test_p3_goi_ngan_loi_thi_hong_het_han_muc_thi_dat(self):
+        self.trang_thai.return_value = {"da_noi": True}
+        self.goi_claude.side_effect = self.congai.LoiAI("Claude", "báo lỗi", "x")
+        self.assertEqual(self.nang()[0]["kq"], "hong")
+        self.goi_claude.side_effect = self.congai.HetHanMuc("hết hạn mức", {})
+        self.assertEqual(self.nang(npm={"ban": "2.1.341"})[0]["kq"], "dat")      # đã tới được hãng: CLI chạy được
+
+    def test_chua_dang_nhap_khong_goi_ai(self):
+        self.nang()
+        self.goi_claude.assert_not_called()
+
+    def test_da_dang_nhap_ban_moi_doc_loi_thi_hong(self):
+        self.trang_thai.return_value = {"da_noi": True}
+        chay = ChayGia()
+        chay.da_noi_moi = False                                                   # CLI mới không đọc được tệp đăng nhập cũ
+        kq, _ = self.nang(goi="chatgpt", npm={"ban": "0.180.0"}, chay=chay)
+        self.assertEqual(kq["kq"], "hong")
+
+
 class KiemConTro(Nen):
+    def test_cli_thu_tu_bien_moi_truong_con_tro_ban_trong_goi(self):
+        from maychu.hethong.mohinh import dangnhap_goi as dg
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("IGM360_CLAUDE_CLI", None)
+            self.assertEqual(dg._cli("claude"), "claude")                         # chưa nâng: bản trong gói
+            self.nang()
+            self.assertTrue(dg._cli("claude").endswith(str(Path(".bin", "claude"))))   # con trỏ bản đã nâng
+            os.environ["IGM360_CLAUDE_CLI"] = "/khong_co_cli"
+            self.assertEqual(dg._cli("claude"), "/khong_co_cli")                  # biến môi trường đứng đầu (bài kiểm)
+
+    def test_qd264_quay_ve_thi_tam_dung_len_ban_moi_thi_mo_lai(self):
+        self.nang()
+        with mock.patch.object(antoan, "thong_tin_quayve", return_value={"co": True, "ban": "0.8.3", "mat_tu": None,
+                                                                         "chu": ""}), \
+                mock.patch.object(antoan, "_thoat"), mock.patch.object(antoan.threading, "Timer"), \
+                mock.patch.object(capnhat, "ban_dang_chay", return_value="0.8.4"):   # không hẹn giờ thoát tiến trình
+            antoan.quay_ve("hethong", False, self.dl, tre_giay=0)
+        d = nangcli.doc_trangthai(self.dl)
+        self.assertEqual((d["tam_dung"], d["tam_dung_ban"]), (True, "0.8.3"))
+        self.assertIsNone(nangcli.duong_cli("claude", self.dl))                   # dùng bản trong gói
+        nangcli.mo_lai_neu_len_ban_moi("0.8.3", self.dl)
+        self.assertTrue(nangcli.doc_trangthai(self.dl)["tam_dung"])               # cùng bản đã quay về: vẫn dừng
+        nangcli.mo_lai_neu_len_ban_moi("0.8.5", self.dl)
+        self.assertFalse(nangcli.doc_trangthai(self.dl)["tam_dung"])              # lên bản mới: tự nâng lại
+        api = (Path(__file__).resolve().parents[2] / "maychu/web/api.py").read_text(encoding="utf-8")
+        self.assertIn('if ten == "tunang_congcu_ai" and body.bat:', api)          # gạt bật lại cũng mở lại (Z20 dòng 13)
+        kd = (Path(__file__).resolve().parents[2] / "maychu/khoidong.py").read_text(encoding="utf-8")
+        self.assertIn("nangcli.mo_lai_neu_len_ban_moi(capnhat.ban_dang_chay())", kd)
+
+    def test_diem_kiem_cli_doc_ban_dang_dung(self):
+        from maychu.hethong.mohinh import dangnhap_goi as dg
+        os.environ.pop("IGM360_CLAUDE_CLI", None)
+        self.nang()
+        chay = ChayGia()
+        with mock.patch.object(antoan.subprocess, "run", side_effect=chay):
+            self.assertTrue(antoan._kiem_cli("claude"))
+        self.assertEqual(chay.lenh[0][0], dg._cli("claude"))                      # 06 điểm kiểm đúng bản đang dùng
+
+
+class KiemSoatCDA(Nen):
+    """CDA KT-Y46-1: P1 (tạm dừng giữa lúc nâng), K1 chiều ngược, P2, P4, P5."""
+
+    def test_p1_quay_ve_giua_luc_nang_khong_mat_co_tam_dung(self):
+        chay = ChayGia()
+        goc = chay.__call__
+
+        def npm_xong_thi_quay_ve(lenh, **kw):
+            r = goc(lenh, **kw)
+            if lenh[0] == "npm":
+                nangcli.tam_dung("0.8.3", self.dl)                                # quay về đúng lúc npm đang chạy
+            return r
+        kq, _ = self.nang(chay=npm_xong_thi_quay_ve)
+        self.assertEqual(kq["kq"], "dat")
+        d = nangcli.doc_trangthai(self.dl)
+        self.assertEqual((d["tam_dung"], d["claude"]["dang"]), (True, "2.1.340"))   # cờ tạm dừng còn
+        self.assertIsNone(nangcli.duong_cli("claude", self.dl))
+
+    def test_k1_cap_nhat_cho_khi_dang_nang(self):
+        dem = {"n": 0}
+
+        def dang():
+            dem["n"] += 1
+            return "claude" if dem["n"] <= 2 else None
+        with mock.patch.object(nangcli, "dang_nang", side_effect=dang), \
+                mock.patch.object(capnhat.time, "sleep") as ngu, \
+                mock.patch("maychu.dulieu.saoluu.chay", side_effect=RuntimeError("dừng sau khi chờ")):
+            capnhat._sao_roi_gui("hethong", "0.8.5", self.dl)
+        self.assertEqual(ngu.call_count, 2)                                       # chờ đúng lúc bộ nâng còn chạy
+        self.assertEqual(dem["n"], 3)
+
+    def test_p2_khong_tai_ban_bang_hoac_thap_hon_ban_trong_goi(self):
+        self.nang(npm={"ban": "2.1.340"}, ngay=True)
+        nangcli._GOC["claude"] = "2.1.345"                                       # lên bản IGM360 có CLI cao hơn
+        kq, chay = self.nang(npm={"ban": "2.1.344"}, ngay=True)
+        self.assertEqual(kq, {"kq": "moi_nhat", "ban": "2.1.345"})
+        self.assertEqual([l for l in chay.lenh if l[0] == "npm"], [])
+
+    def test_p4_khong_nho_ket_qua_none(self):
+        nangcli._GOC.clear()
+        tra = iter([None, "2.1.331"])
+        with mock.patch.object(nangcli, "ban_cua", side_effect=lambda *a: next(tra)):
+            self.assertIsNone(nangcli.ban_trong_goi("claude"))
+            self.assertEqual(nangcli.ban_trong_goi("claude"), "2.1.331")         # hỏi lại, không nhớ None
+
+    def test_p5_dang_co_viec_ai_thi_chua_xoa_ban_cu(self):
+        for ban in ("2.1.340", "2.1.341"):
+            self.nang(npm={"ban": ban}, ngay=True)
+        with mock.patch.object(capnhat, "so_viec_ai_dangchay", return_value=1):
+            self.nang(npm={"ban": "2.1.342"}, ngay=True)
+        con = sorted(p.name for p in (nangcli.thumuc_cli(self.dl) / "claude").iterdir())
+        self.assertEqual(con, ["2.1.340", "2.1.341", "2.1.342"])                 # chưa xóa bản trước-trước
+        self.nang(npm={"ban": "2.1.342"}, ngay=True)                              # lượt sau, không còn việc AI
+        con = sorted(p.name for p in (nangcli.thumuc_cli(self.dl) / "claude").iterdir())
+        self.assertEqual(con, ["2.1.341", "2.1.342"])
+
+
+class KiemConTroCu(Nen):
     def test_duong_cli_va_k3_ban_trong_goi_cao_hon(self):
         self.assertIsNone(nangcli.duong_cli("claude", self.dl))                   # chưa nâng: bản trong gói
         self.nang()

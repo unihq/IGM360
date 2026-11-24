@@ -32,8 +32,10 @@ GOI_CLI = {
 CHO_GIAY = 24 * 3600          # chỉ nhận bản hãng đã ra từ 24 giờ (QĐ263)
 CONG_TAC = "tunang_congcu_ai"  # thông số P01, mặc định bật (QĐ263)
 GIO_KIEM = 3                  # 03:00 mỗi ngày (QĐ271)
-_KHOA = threading.Lock()
+_KHOA = threading.Lock()       # 01 lượt nâng / về bản trước tại 01 lúc
+_KHOA_TT = threading.Lock()    # CDA P1: đọc – sửa – ghi tệp trạng thái (tạm dừng giữa lúc đang nâng không bị mất)
 _DANG = {"goi": None}
+CAU_THU = "Trả lời đúng 01 chữ: OK"   # P3: lượt gọi ngắn kiểm thử bản mới (gửi cho AI, không hiện trên màn)
 SO_BAN_RE = re.compile(r"(\d+\.\d+\.\d+)")
 
 
@@ -64,6 +66,14 @@ def ghi_trangthai(d: dict, thumuc: Path | None = None) -> None:
     os.replace(tam, goc / "trangthai.json")
 
 
+def _sua_goi(goi: str, g: dict, thumuc: Path | None = None) -> None:
+    """P1: đọc lại tệp ngay trước khi ghi, chỉ thay phần của 01 gói (giữ cờ tạm dừng do quay về ghi giữa chừng)."""
+    with _KHOA_TT:
+        d = doc_trangthai(thumuc)
+        d[goi] = g
+        ghi_trangthai(d, thumuc)
+
+
 def _goi_tt(d: dict, goi: str) -> dict:
     return d.setdefault(goi, {"dang": None, "truoc": None, "hong": [], "lan_cuoi": None, "ket_qua": None})
 
@@ -91,8 +101,11 @@ _GOC = {}
 
 def ban_trong_goi(goi: str, chay=subprocess.run) -> str | None:
     """Bản nền trong gói (không đổi trong 01 lần chạy vùng chứa, nhớ lại sau lần hỏi đầu)."""
-    if goi not in _GOC:
-        _GOC[goi] = ban_cua(GOI_CLI[goi]["lenh"], chay)
+    if not _GOC.get(goi):   # CDA P4: không nhớ kết quả None (hỏi lại lần sau)
+        b = ban_cua(GOI_CLI[goi]["lenh"], chay)
+        if b:
+            _GOC[goi] = b
+        return b
     return _GOC[goi]
 
 
@@ -149,6 +162,52 @@ def _uoc_giai_nen(goi: str, co_npm: int) -> int:
     return max(int(co_npm or 0), da_cai)
 
 
+def _kiem_dang_nhap(goi: str, duong: str, chay=subprocess.run) -> bool:
+    """Kiểm thử thêm khi tài khoản 01 đã đăng nhập (PTD-14 mục 5: CLI mới đọc được tệp đăng nhập cũ không): bản mới
+    chạy lệnh xem trạng thái đăng nhập (0 hạn mức) với đúng thư mục đăng nhập; phải còn báo đã đăng nhập.
+    Chưa đăng nhập thì bỏ qua (chỉ `--version`)."""
+    from maychu.hethong.mohinh import dangnhap_goi as dg
+    try:
+        if not dg.trang_thai(goi, 1, bo_nho=True).get("da_noi"):
+            return True
+        lenh = ["auth", "status", "--json"] if goi == "claude" else ["login", "status"]
+        r = chay([duong, *lenh], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20,
+                 env=dg._env(goi, 1, tao=False))
+        chu = (r.stdout or "") + (r.stderr or "")
+        if goi == "claude":
+            return r.returncode == 0 and (json.loads((r.stdout or "").strip() or "{}").get("loggedIn") is True
+                                          or dg.trang_thai(goi, 1).get("ma_daihan") is True)
+        return r.returncode == 0 and "logged in using chatgpt" in dg.MAU_RE.sub("", chu).lower()
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return False
+
+
+def _kiem_goi_ngan(goi: str, duong: str) -> bool:
+    """CDA P3 (việc 2, QĐ263): khi tài khoản 01 đã đăng nhập, bản mới trả lời 01 câu rất ngắn qua đúng cách cổng AI gọi.
+    Hết hạn mức tức là CLI đã tới được hãng bằng tệp đăng nhập → tính là chạy được. Lỗi khác → chưa đạt."""
+    from maychu.hethong.mohinh import congai, dangnhap_goi as dg
+    try:
+        if not dg.trang_thai(goi, 1).get("da_noi"):
+            return True
+        (congai._goi_claude if goi == "claude" else congai._goi_chatgpt)(1, CAU_THU, None, cli=duong)
+        return True
+    except congai.HetHanMuc:
+        return True
+    except Exception:  # noqa: BLE001 - LoiAI, hết giờ, lỗi chạy: bản mới chưa đạt
+        return False
+
+
+def _don_ban_cu(goi: str, giu: tuple, thumuc: Path | None = None) -> None:
+    """Giữ đúng bản đang dùng và 01 bản trước. CDA P5: đang có việc AI chạy thì chưa xóa (lượt sau xóa)."""
+    from maychu.hethong import capnhat
+    goc = thumuc_cli(thumuc) / goi
+    if not goc.is_dir() or capnhat.so_viec_ai_dangchay(thumuc) > 0:
+        return
+    for p in goc.iterdir():
+        if p.is_dir() and p.name not in giu:
+            shutil.rmtree(p, ignore_errors=True)
+
+
 def chan_vi(thumuc: Path | None = None) -> str | None:
     """K1: lý do không chạy bộ nâng lúc này (None = được chạy)."""
     from maychu.hethong import antoan, capnhat, tiendo
@@ -197,7 +256,9 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         bay = bay or _bay()
         moi = hoi_npm(goi, client)
         ban = moi["ban"]
-        dang = g.get("dang") or ban_trong_goi(goi, chay)
+        goc_ban = ban_trong_goi(goi, chay)
+        dang = max((x for x in (g.get("dang"), goc_ban) if x), key=_khoa_so, default=None)   # CDA P2: bản cao hơn
+        _don_ban_cu(goi, tuple(x for x in (g.get("dang"), g.get("truoc")) if x), thumuc)   # P5: bản sót lượt trước
         if _khoa_so(ban) <= _khoa_so(dang):
             return {"kq": "moi_nhat", "ban": dang}
         if ban in (g.get("hong") or []):
@@ -215,7 +276,7 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         if shutil.disk_usage(goc).free < can:   # K1b
             _f04("thieu_o", f"{goi} {ban}: thiếu chỗ trống, cần {can} byte", "bichan", nguoi, thumuc)
             g.update(lan_cuoi=bay.isoformat(timespec="seconds"), ket_qua="thieu_o")
-            ghi_trangthai(d, thumuc)
+            _sua_goi(goi, g, thumuc)
             return {"kq": "thieu_o", "ban": ban, "can": can}
         dich, dem = goc / goi / ban, goc / ".npm_dem"
         lenh = ["npm", "install", "--prefix", str(dich), "--registry", REGISTRY, "--cache", str(dem),
@@ -229,21 +290,20 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
             cai_dat = False
         finally:
             shutil.rmtree(dem, ignore_errors=True)   # K1c
-        dat = cai_dat and ban_cua(str(_bin(goi, ban, thumuc)), chay) == ban
+        dat = cai_dat and ban_cua(str(_bin(goi, ban, thumuc)), chay) == ban \
+            and _kiem_dang_nhap(goi, str(_bin(goi, ban, thumuc)), chay) and _kiem_goi_ngan(goi, str(_bin(goi, ban, thumuc)))
         g["lan_cuoi"] = bay.isoformat(timespec="seconds")
         if not dat:
             g["hong"] = sorted(set(g.get("hong") or []) | {ban}, key=_khoa_so)
             g["ket_qua"] = "hong"
             shutil.rmtree(dich, ignore_errors=True)
-            ghi_trangthai(d, thumuc)
+            _sua_goi(goi, g, thumuc)
             _f04("loi", f"{goi} {ban}: kiểm thử chưa đạt, giữ bản {dang}", "loi", nguoi, thumuc)
             return {"kq": "hong", "ban": ban, "giu": dang}
         cu = g.get("dang")
         g.update(truoc=cu, dang=ban, ket_qua="dat", nang_luc=g["lan_cuoi"])
-        ghi_trangthai(d, thumuc)
-        for p in (goc / goi).iterdir():   # giữ đúng bản đang dùng và 01 bản trước
-            if p.is_dir() and p.name not in (ban, cu):
-                shutil.rmtree(p, ignore_errors=True)
+        _sua_goi(goi, g, thumuc)
+        _don_ban_cu(goi, tuple(x for x in (ban, cu) if x), thumuc)
         _f04("nang", f"{goi} {cu or 'trong gói ' + str(dang)} → {ban}", "dat", nguoi, thumuc)
         return {"kq": "dat", "ban": ban, "truoc": cu or dang}
     finally:
@@ -263,23 +323,33 @@ def ve_ban_truoc(goi: str, thumuc: Path | None = None, nguoi: str | None = None)
         g["hong"] = sorted(set(g.get("hong") or []) | {dang}, key=_khoa_so)
         g.update(dang=truoc if truoc and _bin(goi, truoc, thumuc).exists() else None, truoc=None, ket_qua="ve",
                  lan_cuoi=_bay().isoformat(timespec="seconds"))
-        ghi_trangthai(d, thumuc)
+        _sua_goi(goi, g, thumuc)
         _f04("ve", f"{goi} {dang} → {g['dang'] or 'trong gói'}", "dat", nguoi, thumuc)
         return {"kq": "ve", "tu": dang, "ve": g["dang"]}
 
 
 def tam_dung(ban_igm: str, thumuc: Path | None = None) -> None:
     """QĐ264: quay về bản trước của IGM360 → công cụ AI dùng bản trong gói, tự nâng tạm dừng."""
-    d = doc_trangthai(thumuc)
-    d.update(tam_dung=True, tam_dung_ban=ban_igm)
-    ghi_trangthai(d, thumuc)
+    with _KHOA_TT:
+        d = doc_trangthai(thumuc)
+        d.update(tam_dung=True, tam_dung_ban=ban_igm)
+        ghi_trangthai(d, thumuc)
     _f04("tam_dung", f"quay về bản {ban_igm}: dùng bản trong gói, tự nâng tạm dừng", "dat", None, thumuc)
+
+
+def mo_lai_neu_len_ban_moi(ban_dang: str, thumuc: Path | None = None) -> None:
+    """QĐ264: lên bản IGM360 mới hơn bản đã quay về thì bỏ tạm dừng (gọi lúc khởi động)."""
+    d = doc_trangthai(thumuc)
+    if d.get("tam_dung") and _khoa_so(ban_dang) > _khoa_so(d.get("tam_dung_ban")):
+        mo_lai(thumuc, f"lên bản {ban_dang}")
 
 
 def mo_lai(thumuc: Path | None = None, ly_do: str = "bat_lai") -> None:
     """Bỏ tạm dừng: anh gạt công tắc bật lại, hoặc lên bản IGM360 mới (QĐ264)."""
-    d = doc_trangthai(thumuc)
-    if d.get("tam_dung"):
+    with _KHOA_TT:
+        d = doc_trangthai(thumuc)
+        if not d.get("tam_dung"):
+            return
         d.update(tam_dung=False, tam_dung_ban=None)
         ghi_trangthai(d, thumuc)
-        _f04("mo_lai", ly_do, "dat", None, thumuc)
+    _f04("mo_lai", ly_do, "dat", None, thumuc)

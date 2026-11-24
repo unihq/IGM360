@@ -373,6 +373,12 @@ def quay_ve(nguoi_id: str, dong_y_mat: bool = False, thumuc: Path | None = None,
         capnhat._ghi_f04("quayve", f"{dang} → {q['ban']}" + (f" · dữ liệu trả về lúc {_gio(q['mat_tu'])}" if q["mat_tu"] else
                                                              " · dữ liệu giữ nguyên"), "dat", None, nguoi_id, thumuc)
         ghi(thumuc, chay_ban_truoc=co, nang_luocdo=None if not q["mat_tu"] else (doc(thumuc).get("nang_luocdo")))
+        try:   # QĐ264 (Y46): quay về thì công cụ AI dùng bản trong gói của bản đó, tự nâng tạm dừng
+            from maychu.hethong.mohinh import nangcli
+            nangcli.tam_dung(q["ban"], thumuc)
+        except Exception:  # noqa: BLE001 - không làm hỏng quay về
+            import logging
+            logging.getLogger(__name__).exception("tạm dừng tự nâng công cụ AI lỗi")
     except Exception as e:  # noqa: BLE001
         return {"loi": "Chưa quay về được: " + type(e).__name__}
     threading.Timer(tre_giay, _thoat).start()

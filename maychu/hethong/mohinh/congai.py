@@ -474,8 +474,8 @@ def _loi_claude(kq: dict | None, r) -> tuple[str, str]:
     return "không trả kết quả", (che(dong[-1])[:200] if dong else "")
 
 
-def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
-    lenh = [dangnhap_goi._cli("claude"), "-p", "--output-format", "stream-json", "--verbose"]
+def _goi_claude(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = None) -> dict:
+    lenh = [cli or dangnhap_goi._cli("claude"), "-p", "--output-format", "stream-json", "--verbose"]   # cli: Y46 kiểm thử bản mới
     if _TRA_WEB.get():
         lenh += ["--tools", CONGCU_TRA_WEB, "--allowedTools", CONGCU_TRA_WEB, "--disallowedTools", CONGCU_CAM,
                  "--strict-mcp-config"]
@@ -511,8 +511,8 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None) -> dict:
             "mohinh_bao": bao}
 
 
-def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None) -> dict:
-    lenh = [dangnhap_goi._cli("chatgpt"), "exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only"]
+def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = None) -> dict:
+    lenh = [cli or dangnhap_goi._cli("chatgpt"), "exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only"]
     if mohinh:
         lenh += ["-m", mohinh]
     lenh.append("-")   # đọc câu hỏi từ đầu vào chuẩn
