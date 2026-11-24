@@ -667,7 +667,7 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         moi = self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})
         h, = self.ve(self.khoi(moi, dang_nang={"goi": "claude", "ban": "2.1.332", "cu": "2.1.331", "cu_goi": False}))
         self.assertIn("Đang nâng Claude · Code lên 2.1.332: tải và kiểm thử.", h)
-        self.assertIn("AI vẫn chạy bằng bản 2.1.331 trong lúc nâng.", h)
+        self.assertIn("Trong lúc nâng, AI vẫn chạy bằng bản 2.1.331.", h)        # QĐ309 đổi câu dòng 8 (A)
         self.assertIn('<div class="tdf chay"></div>', h)
         self.assertIn("disabled>loaderĐang nâng…</button>", h)
         self.assertNotIn("data-cave", h)
@@ -743,10 +743,10 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         self.assertIn("body.dien-thoai #khoi-cl .btn-chu,body.dien-thoai #khoi-cl .nut-gat,body.dien-thoai #khoi-cl .btn{min-height:44px", html)
         self.assertIn("#khoi-cl .btn-chu,#khoi-cl .nut-gat,#khoi-cl .btn{min-height:44px;min-width:44px;align-items:center}}", html)
 
-    def test_so_ngan_nghin(self):
+    def test_so_ngan_nghin(self):   # QĐ311 G3 + QĐ312 (bỏ số 0 thừa)
         g, m = 1024 ** 3, 1024 ** 2
-        self.assertEqual([antoan.chu_dungluong(x) for x in (1.2 * g, 1.0 * g, 1250.5 * g, 1250 * g, 819 * m, 1023 * m)],
-                         ["1,2 GB", "1 GB", "1.250,5 GB", "1.250 GB", "819 MB", "1.023 MB"])
+        self.assertEqual([antoan.chu_dungluong(x) for x in (1.0 * g, 1.2 * g, 819 * m, 9315.2 * g, 1250 * g, 999 * m, 1000 * m, 1023 * m, 0)],
+                         ["1 GB", "1,2 GB", "819 MB", "9.315,2 GB", "1.250 GB", "999 MB", "1 GB", "1 GB", "0 MB"])
 
     def test_qd308_4_chua_nang(self):
         h, = self.ve(self.khoi(self.goi(nang_luc=None, su_kien=None)))
@@ -788,6 +788,43 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         h, = self.ve(self.khoi(self.goi(ban="2.1.332", su_kien={"loai": "dat", "luc": "2026-11-24T14:20:00+07:00", "ban": "2.1.332"}), bat=False))
         self.assertIn("Tự nâng đang tắt. Hãng có bản mới thì hiện ở đây; bạn bấm Nâng công cụ AI để nâng.", h)
         self.assertNotIn("Đã nâng Claude · Code", h)
+
+    def test_cdo_u37a_l5_khong_ngat_trong_goi(self):
+        sk = {"loai": "hong", "luc": "2026-11-24T14:20:00+07:00", "ban": "2.1.332", "giu": "2.1.300", "giu_goi": True}
+        self.ve(self.khoi(self.goi(ban="2.1.300", trong_goi=True, truoc=None, su_kien=sk)),
+                self.khoi(self.goi(ban="2.1.340", truoc=None, truoc_goi=True)))
+        lui, nang = self.tho
+        self.assertIn("2.1.300 · trong&nbsp;gói</span>", lui)                       # ô bản đang dùng
+        self.assertIn("đã tự về bản 2.1.300 trong&nbsp;gói.", lui)                    # dòng 10
+        self.assertIn("bản trước 2.1.300 trong&nbsp;gói", nang)                        # dòng phụ chỗ 12
+
+    def test_qd311_l4_ban_du_24_gio_tu_nang_luot_ke_tiep(self):
+        moi = {"ban": "2.1.341", "ra_luc": "2026-11-22T13:38:00Z", "uoc_chu": "185 MB"}   # 20:38 ngày 22/11 giờ Việt Nam
+        da_kiem, chua_kiem = self.ve(self.khoi(self.goi(hang=moi)), self.khoi(self.goi(hang=moi), kiem_ngay="2026-11-23"))
+        self.assertIn("Claude · Code có bản 2.1.341 (ra lúc 20:38 ngày 22/11). Tự nâng lúc 03:00 ngày mai.", da_kiem)
+        self.assertIn("Claude · Code có bản 2.1.341 (ra lúc 20:38 ngày 22/11). Tự nâng lúc 03:00 hôm nay.", chua_kiem)
+        self.assertIn("Muốn có ngay thì bấm Nâng công cụ AI.", da_kiem)
+        self.assertNotIn("Tự nâng khi bản ra đủ 24 giờ", da_kiem)
+
+    def test_qd311_g2_gom_ban_cu(self):
+        ma = self.app[self.app.index("// <G2>"):self.app.index("// </G2>")]
+        ds = ["haiku", "sonnet", "opus", "fable", "claude-opus-5-5", "claude-fable-5-2", "claude-sonnet-5-5", "claude-haiku-5-5",
+              "claude-fable-5-1", "claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5", "claude-fable-5", "claude-opus-4-8",
+              "claude-opus-4-7", "claude-opus-4-6", "claude-sonnet-4-6"]                 # danh mục thật 13 mô hình + 04 bí danh
+        chay = ma + "const ds = " + json.dumps([{"ma": x, "khoa": "goi_claude|" + x} for x in ds]) + ";\n" \
+            "const a = tachBanCu(ds, null), b = tachBanCu(ds, 'goi_claude|claude-opus-4-8');\n" \
+            "console.log(JSON.stringify([a.chinh.map(m => m.ma), a.cu.length, b.chinh.map(m => m.ma), b.cu.length]));"
+        ra = subprocess.run(["node", "-e", chay], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(ra.returncode, 0, ra.stderr)
+        chinh, n, chinh_ghim, n_ghim = json.loads(ra.stdout)
+        self.assertEqual(chinh, ["haiku", "sonnet", "opus", "fable", "claude-opus-5-5", "claude-fable-5-2", "claude-sonnet-5-5", "claude-haiku-5-5"])
+        self.assertEqual(n, 9)                                                    # "Bản cũ (09)" như CDO U37-G2
+        self.assertIn("claude-opus-4-8", chinh_ghim)                              # mô hình đang ghim luôn hiện
+        self.assertEqual(n_ghim, 8)
+        self.assertIn("banCu: n => 'Bản cũ (' + hai(n) + ')'", self.app)
+        self.assertIn("const {chinh, cu} = !q && g.nhom === 'goi_claude' ? tachBanCu(hien, dang.m && dang.m.khoa) : {chinh: hien, cu: []};", self.app)
+        self.assertIn("if ('mhcu' in d) { MH.cu = !MH.cu; veLaiMh(); return; }", self.app)
+        self.assertIn("[data-ivn],[data-mhcu]');", self.app)
 
     def test_icon_dung_net_ban_ve_va_khung(self):
         for net in ('<line x1="10" x2="10" y1="15" y2="9" />', "'m16 12-4-4-4 4', 'M12 16V8'"):
@@ -865,11 +902,73 @@ class KiemPhanD(Nen):
         for x in ("can: 'Cần nâng công cụ AI', moi: 'mới'",
                   "re: (can, dang) => 'Mô hình mới theo tài khoản. Cần Claude · Code từ ' + can + ', bản đang dùng ' + dang"
                   " + '. Tự dùng được khi công cụ AI nâng xong.'",
-                  "if (m.can_nang) { h += '<div class=\"mh-dong mh-xam\" title=\"' + esc(CHU_D.re(m.can_nang, m.ban_dang))",
+                  "if (m.can_nang) return '<div class=\"mh-dong mh-xam\" title=\"' + esc(CHU_D.re(m.can_nang, m.ban_dang))",
                   "(m.moi ? ' <span class=\"mh-moi\">' + CHU_D.moi + '</span>' : '')"):
             self.assertIn(x, app)
         html = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
         self.assertIn(".mh-moi{font-size:11px;color:#258832;border:1px solid #258832;border-radius:8px;padding:0 6px;margin-left:4px}", html)
+
+
+class KiemK4VungChua(Nen):
+    """K4 (QĐ263): tệp `kiemthu/vungchua/kiem_nang_cli.py` (bước trong ảnh của dongimage.yml) chạy với thư mục npm giả.
+    Chạy thật trên máy GitHub (Linux); Windows không chạy được tệp chạy kiểu shell nên bỏ qua phần chạy."""
+
+    def nap(self):
+        import importlib.util
+        p = Path(__file__).resolve().parents[1] / "vungchua" / "kiem_nang_cli.py"
+        spec = importlib.util.spec_from_file_location("kiem_nang_cli", p)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    def npm_gia(self):
+        goc = self.dl / "npm_goc"
+        for ten, lenh, ban, chu in (("@anthropic-ai/claude-code", "claude", "2.1.331", "2.1.331 (Claude Code)"),
+                                    ("@openai/codex", "codex", "0.172.0", "codex-cli 0.172.0")):
+            g = goc / ten
+            g.mkdir(parents=True)
+            (g / "package.json").write_text(json.dumps({"name": ten, "version": ban, "bin": {lenh: "cli.sh"}}), encoding="utf-8")
+            (g / "cli.sh").write_text(f"#!/bin/sh\necho '{chu}'\n", encoding="utf-8")
+            (g / "cli.sh").chmod(0o755)
+        (goc / "@anthropic-ai" / "claude-code-linux-x64").mkdir()                # gói nhị phân theo máy: chép cả phạm vi
+        return goc
+
+    @unittest.skipIf(os.name == "nt", "tệp chạy kiểu shell chỉ chạy trên Linux (máy GitHub)")
+    def test_k4_chep_cli_trong_anh_lam_ban_nang_gia(self):
+        m = self.nap()
+        ra = []
+        self.assertEqual(m.chay(self.npm_gia(), self.dl, in_ra=ra.append), 0, ra)
+        self.assertEqual(ra, ["Đạt · claude 2.1.331: nâng dat, chạy qua bản nâng được, về bản trước ve",
+                              "Đạt · chatgpt 0.172.0: nâng dat, chạy qua bản nâng được, về bản trước ve"])
+        self.assertTrue((nangcli.thumuc_cli(self.dl) / "claude" / "2.1.331" / "node_modules" / "@anthropic-ai" / "claude-code-linux-x64").is_dir())
+        self.assertEqual(nangcli._GOC, {"claude": "2.1.331", "chatgpt": "0.172.0"})   # trả lại bản trong gói như trước
+
+    def test_k4_thieu_goi_thi_chua_dat_va_chan_npm(self):
+        m = self.nap()
+        ra = []
+        self.assertEqual(m.chay(self.dl / "khong_co", self.dl, in_ra=ra.append), 1)
+        self.assertIn("Lỗi: claude: ảnh không có @anthropic-ai/claude-code", ra)
+        with self.assertRaises(RuntimeError):
+            m._chan_npm("subprocess.Popen", ("npm", ["npm", "install"], None, None))
+        with self.assertRaises(RuntimeError):
+            m._chan_npm("subprocess.Popen", (None, '"/usr/local/bin/npm" install', None, None))
+        m._chan_npm("subprocess.Popen", ("claude", ["claude", "--version"], None, None))   # lệnh khác: cho chạy
+
+    def test_k4_buoc_trong_dongimage(self):
+        yml = (Path(__file__).resolve().parents[2] / ".github/workflows/dongimage.yml").read_text(encoding="utf-8")
+        self.assertIn("- name: Kiểm bộ nâng công cụ AI trong ảnh", yml)
+        self.assertIn('docker exec -i -w /app thu_cli python - < kiemthu/vungchua/kiem_nang_cli.py | tee -a "$GITHUB_STEP_SUMMARY" || kq=$?', yml)
+        self.assertLess(yml.index("- name: Kiểm bộ nâng công cụ AI trong ảnh"), yml.index("- name: Đẩy image"))   # chưa đạt thì không đẩy
+
+    def test_version_va_thaydoi_084_nguyen_van_qd309(self):
+        goc = Path(__file__).resolve().parents[2]
+        self.assertEqual((goc / "VERSION").read_text(encoding="utf-8").strip(), "0.8.4")
+        td = (goc / "THAYDOI.md").read_text(encoding="utf-8").replace("\r\n", "\n")
+        muc = td[td.index("## 0.8.4\n"):td.index("## 0.8.3\n")]
+        self.assertTrue(muc.startswith("## 0.8.4\nTóm tắt: Công cụ AI tự nâng mỗi ngày\nNâng dữ liệu: không\n"))
+        self.assertEqual(muc.count("\n- "), 7)
+        self.assertIn("- Kiểm thử chưa đạt thì tự về bản trước và không thử lại bản đó; gói AI đang hết hạn mức thì hoãn, lượt kiểm"
+                      " sau thử lại.\n", muc)
 
 
 if __name__ == "__main__":

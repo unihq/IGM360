@@ -3,6 +3,17 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.4
+Tóm tắt: Công cụ AI tự nâng mỗi ngày
+Nâng dữ liệu: không
+- Cài đặt › Cập nhật có khối "Công cụ AI": bản Claude · Code, ChatGPT · Codex đang dùng, bản mới của hãng và lần nâng gần nhất.
+- Mỗi ngày lúc 03:00, phần mềm tự kiểm bản mới của hãng; chỉ nhận bản đã ra từ 24 giờ, kiểm thử đạt mới dùng. Công tắc "Tự nâng mỗi ngày" mặc định bật.
+- Kiểm thử chưa đạt thì tự về bản trước và không thử lại bản đó; gói AI đang hết hạn mức thì hoãn, lượt kiểm sau thử lại.
+- Nút "Nâng công cụ AI" nâng ngay, không chờ đủ 24 giờ; nút "Về bản trước" ở từng công cụ.
+- Mô hình mới cần công cụ bản cao hơn hiện xám "Cần nâng công cụ AI" ở ô chọn mô hình; nâng xong thì tự chọn được.
+- Quay về bản trước của IGM360 thì công cụ AI dùng bản trong gói của bản đó và tạm dừng tự nâng.
+- Chuông báo khi nâng xong, khi kiểm thử chưa đạt, khi ổ máy chủ không đủ chỗ trống hoặc không kết nối được máy chủ của hãng.
+
 ## 0.8.3
 Tóm tắt: Công tắc sao lưu Drive, giữ bản sao 30 ngày
 Nâng dữ liệu: không

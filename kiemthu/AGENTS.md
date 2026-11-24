@@ -18,6 +18,8 @@ Bài kiểm unittest của toàn phần mềm. Mỗi bản có 01 thư mục `ba
 - Không gọi CLI thật (Claude, Codex): trỏ `IGM360_CLAUDE_CLI`, `IGM360_CODEX_CLI` tới đường không có; giả lập bằng `mock`.
 - Không gọi mạng thật: Google, GHCR, GitHub giả lập (`httpx.MockTransport`, `mock`).
 - Lịch chạy nền tắt trong bài kiểm (`IGM360_LICH=tat`).
+- Không gọi npm thật (Y46): truyền hàm chạy, máy npm giả.
+- Móc `kiemthu/__init__.py` ghi lại mọi lần ghi vào thư mục dữ liệu mặc định `/dulieu` và mọi lần chạy npm thật; bài cuối `kiemthu/test_zz_khong_ghi_dulieu.py` hỏng nếu có (CDA KT-Y46-4a).
 - Bài kiểm cũ: không xóa, không sửa câu kiểm; chỉ thêm dòng ở phần chuẩn bị khi hành vi mặc định đổi theo QĐ (luật 18 cửa chặn). Câu kiểm ghi nguyên văn chữ đã được QĐ đổi thì đổi theo QĐ và ghi rõ trong báo cáo.
 - Giá trị giống khóa, IP, email trong bài kiểm: ghép từ nhiều mảnh lúc chạy để kho không chứa chuỗi đó.
 - Không in dòng lệnh của máy GitHub (dòng bắt đầu bằng 02 dấu hai chấm) trong bài kiểm.
@@ -25,6 +27,7 @@ Bài kiểm unittest của toàn phần mềm. Mỗi bản có 01 thư mục `ba
 ## 4. Được chứa / không được chứa
 
 - Được: `test_*.py`, `__init__.py`, khung dùng chung trong bài kiểm.
+- `vungchua/`: tệp chạy trong ảnh ở bước đóng ảnh (không tên `test_*`, không nhập gì từ `kiemthu`); bài kiểm gọi lại tệp đó với dữ liệu giả.
 - Không: dữ liệu thật, tệp lớn, khóa thật, đường dẫn máy cá nhân.
 
 ## 5. Quyết định đã chốt – không tự đảo

@@ -248,6 +248,7 @@ class KiemU10b(unittest.TestCase):
                                  "luuGhim", "ghimId", "timMh", "datGhim", "ghimKhoa", "nhomChinh", "mdLoai", "mdChat", "nbsp", "logoNhom",
                                  "chonDang", "CHU_MD", "nhomDangMo")]
         phan += [ham(t) for t in ("dangChonChat", "chuGhimHong", "dsMhHtml")]
+        phan += [lay(t) for t in ("CHU_D", "hoMh", "soMh", "soCao")]   # QĐ311 G2 (Y46): dsMhHtml gom bản cũ (soCao kèm tachBanCu)
         nhom = [{"nhom": "goi_claude", "khoa_md": "goi_claude|", "nguon_ids": ["c1"], "goi": "claude", "chinh": True, "dang_tai": False,
                  "mohinh": [{"khoa": "goi_claude|sonnet", "ma": "sonnet"}, {"khoa": "goi_claude|opus", "ma": "opus"}]},
                 {"nhom": "goi_chatgpt", "khoa_md": "goi_chatgpt|", "nguon_ids": ["g1"], "goi": "chatgpt", "chinh": False, "dang_tai": False,

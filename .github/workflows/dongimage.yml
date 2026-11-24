@@ -129,6 +129,23 @@ jobs:
           [ "$ra" = "$bt" ] || { echo "Bản trước $bt chưa khởi động được trên ảnh $PHIENBAN (trả: $ra)"; exit 1; }
           echo "Bản $PHIENBAN và bản trước $bt khởi động được; bản trước lên trong $(cat /tmp/giay_khoidong) giây (máy CI, chưa tính Docker bật lại vùng chứa)" | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # Y46 K4 (QĐ263): bộ nâng công cụ AI chạy đúng trong ảnh thật. Chép CLI có sẵn trong ảnh làm bản nâng giả (không gọi
+      # npm, không gọi hãng), đổi con trỏ, chạy --version qua đường cổng AI dùng, rồi về bản trước. Chưa đạt thì không đẩy ảnh.
+      - name: Kiểm bộ nâng công cụ AI trong ảnh
+        shell: bash
+        run: |
+          d="$(mktemp -d)"; chmod 777 "$d"
+          docker run -d --name thu_cli -e IGM360_LICH=tat -v "$d:/dulieu" "igm360-thu:${GITHUB_SHA}" >/dev/null
+          for i in $(seq 1 45); do
+            docker exec thu_cli python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8360/suckhoe',timeout=3)" 2>/dev/null && break
+            sleep 2
+          done
+          kq=0
+          docker exec -i -w /app thu_cli python - < kiemthu/vungchua/kiem_nang_cli.py | tee -a "$GITHUB_STEP_SUMMARY" || kq=$?
+          [ "$kq" = 0 ] || docker logs thu_cli 2>&1 | tail -30 >&2
+          docker rm -f thu_cli >/dev/null
+          exit "$kq"
+
       - name: Đẩy image
         uses: docker/build-push-action@v6
         with:
