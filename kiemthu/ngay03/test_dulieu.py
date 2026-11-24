@@ -5,6 +5,7 @@ import sqlite3
 import stat
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime
 from pathlib import Path
 
@@ -109,6 +110,7 @@ class KiemSaoLuuDoMay(unittest.TestCase):
         self.tam = tempfile.TemporaryDirectory()
         self.thumuc = Path(self.tam.name)
         khoitao.tao_het(self.thumuc)
+        self.enterContext(mock.patch("maychu.hethong.caidat.thongso.drive_bat", return_value=True))   # 0.8.3 (QĐ277): bài cũ giả Drive bật
 
     def tearDown(self):
         self.tam.cleanup()
