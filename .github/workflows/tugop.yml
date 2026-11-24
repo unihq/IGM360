@@ -1,0 +1,89 @@
+name: Tự gộp bản sửa lỗi (QĐ259)
+
+# QĐ259 (anh "Chọn B"), QĐ266: bản sửa lỗi trong phạm vi anh đã duyệt, kiểm xanh thì tự gộp main, CPO báo anh sau.
+# Tính năng mới, đổi dữ liệu, đổi giao diện: anh duyệt như nay (cửa chặn dưới đây tự chặn).
+#
+# Chạy sau khi tệp luồng "Kiểm và đóng image (GHCR)" chạy xong trên nhánh sualoi/* (sự kiện workflow_run). Theo tài liệu
+# GitHub, workflow_run chạy bằng bản tệp luồng trên nhánh mặc định (main) và có quyền ghi: nhánh sửa lỗi không tự sửa được
+# cửa chặn. Bước kiểm ở đây chỉ đọc phần đổi (git diff), không chạy mã của nhánh.
+#
+# Gộp bằng GITHUB_TOKEN không tự gọi tệp luồng khác (tài liệu GitHub), nên gộp xong gọi chạy tay đóng ảnh cho main
+# (workflow_dispatch là ngoại lệ, vẫn chạy). Không cần khoá bí mật mới.
+on:
+  workflow_run:
+    workflows: ["Kiểm và đóng image (GHCR)"]
+    types: [completed]
+    branches: ["sualoi/**"]
+
+permissions: {}
+
+concurrency:
+  group: tugop
+  cancel-in-progress: false
+
+jobs:
+  tugop:
+    # Lượt kiểm phải xanh, do đẩy nhánh (không do chạy tay), từ chính kho này
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # gộp PR vào main
+      pull-requests: write   # mở PR từ nhánh sualoi/*
+      actions: write         # gọi chạy tay đóng ảnh cho main
+      checks: read           # đọc số bài kiểm (chú thích "Ran N tests")
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NHANH: ${{ github.event.workflow_run.head_branch }}
+      DAU: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4     # bản main: công cụ cửa chặn lấy từ main
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Lấy nhánh sửa lỗi (chỉ để đọc phần đổi)
+        shell: bash
+        run: |
+          git fetch -q origin "$DAU"
+          echo "GOC=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+
+      - name: Số bài kiểm của main và của nhánh
+        shell: bash
+        run: |
+          so_bai() {   # chú thích "Ran N tests … OK (skipped=K)" của việc kiemthu trên 01 commit
+            id="$(gh api "repos/$GITHUB_REPOSITORY/commits/$1/check-runs" --jq '[.check_runs[] | select(.name == "kiemthu" and .conclusion == "success")][0].id')"
+            [ -n "$id" ] && [ "$id" != "null" ] && gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" --jq '.[].message' | grep -m1 -o 'Ran [0-9]* tests.*' || true
+          }
+          { echo "KIEM_GOC=$(so_bai "$GOC")"; echo "KIEM_DAU=$(so_bai "$DAU")"; } >> "$GITHUB_ENV"
+
+      - name: Cửa chặn (14 đường dẫn + 06 luật, CDA Phần 11)
+        shell: bash
+        run: |
+          python3 .github/cua/kiem_sualoi.py --goc "$GOC" --dau "$DAU" --nhanh "$NHANH" --kiem-goc "$KIEM_GOC" --kiem-dau "$KIEM_DAU" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Quét chung thông tin nhạy cảm
+        shell: bash
+        run: |
+          python3 .github/cua/quet_chung.py --goc "$GOC" --dau "$DAU" | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Gộp vào main
+        shell: bash
+        run: |
+          so="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$NHANH" --base main --state open --json number --jq '.[0].number')"
+          if [ -z "$so" ]; then
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$NHANH" --title "Sửa lỗi: $NHANH" \
+              --body "Bản sửa lỗi tự gộp theo QĐ259: kiểm xanh, cửa chặn đạt, quét chung đạt. CPO báo anh sau."
+            so="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$NHANH" --base main --state open --json number --jq '.[0].number')"
+          fi
+          gh pr merge "$so" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$DAU"
+          echo "Đã gộp PR #$so ($NHANH, $DAU)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Đóng ảnh cho main
+        shell: bash
+        run: gh workflow run dongimage.yml --repo "$GITHUB_REPOSITORY" --ref main

@@ -8,6 +8,8 @@ on:
     paths-ignore:
       - "tailieu/**"
       - "LICENSE"
+  # Y44 (QĐ259): tugop.yml gộp bằng GITHUB_TOKEN không tự gọi tệp luồng này, nên gọi chạy tay đóng ảnh cho main.
+  workflow_dispatch:
 
 # Mặc định không cấp quyền nào; từng bước xin đúng quyền cần.
 permissions: {}
