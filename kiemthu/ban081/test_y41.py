@@ -27,6 +27,7 @@ const S = {}, D = {capnhat: {}}, CHU_CN = {sao: {tai: 'Bước 2/2 · Đang tả
 const phan = {textContent: ''}, $ = () => phan;
 const tieuDangCn = () => {}, ve = () => {}, veQuayVe = () => {}, moHopDrive = () => {};
 const location = {reload: () => { taiLai++; }};
+const DAU_SAU_CN = '#sau-capnhat';   // 0.8.2 (CDO U21 G1): hằng của app.js mà choCapNhat dùng
 const dongHo = {now: () => T};
 const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
@@ -265,6 +266,7 @@ const phan = {textContent: '', innerHTML: '', dataset: {}, classList: {toggle() 
 const $ = () => phan;
 const tieuDangCn = () => {}, ve = () => {}, veQuayVe = () => {}, moHopDrive = () => {};
 const location = {reload: () => { taiLai.push(T); }};
+const DAU_SAU_CN = '#sau-capnhat';   // 0.8.2 (CDO U21 G1): hằng của app.js mà choCapNhat dùng
 const dongHo = {now: () => T};
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
 """ + kich_ban + r"""
@@ -280,7 +282,8 @@ const api = async () => { const s = CN(hoi); if (!s) throw new Error('mất kế
         self.assertNotIn("loi", kq, kq)
         return kq
 
-    def test_luong_ban_moi_chay_buoc_7_8_roi_xong_tu_tai_lai(self):
+    def test_luong_ban_moi_chay_tai_lai_ngay(self):
+        """QĐ258 (đổi QĐ253): bản mới chạy là trang tải lại ngay, không chờ kiểm 06 điểm (kiểm chạy nền)."""
         cu, moi = (json.dumps(_td(b, m, **x), ensure_ascii=False) for b, m, x in (
             ("tai", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23}, {}),
             ("kiem", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23, "nang": 200, "kiem": 230}, {"chi_tiet": {"da": 3, "tong": 6}})))
@@ -291,10 +294,8 @@ const BAN = n => n <= 3 ? '0.2.0' : n <= 6 ? null : '0.3.0';      // 03 lần b�
 const CN = n => n <= 3 ? {{dang_sao: 'tai', tien_do: {cu}}} : n <= 6 ? null : n <= 8 ? {{tien_do: {moi}}}
   : {{tien_do: {xong}, kiem_hien: {{chu: '06/06 đạt', dat: true}}}};
 """)
-        self.assertEqual(kq["hoi"], 9)
-        self.assertEqual(len(kq["taiLai"]), 1)                           # tải lại đúng 01 lần
-        self.assertEqual(kq["taiLai"][0], 9 * 5000 + 3000)                # sau khi hiện "xong" 03 giây
-        self.assertIn("Xong 08/08 bước", kq["html"])
+        self.assertEqual(kq["hoi"], 7)                                    # lần đầu thấy bản mới
+        self.assertEqual(kq["taiLai"], [7 * 5000])                       # tải lại ngay, đúng 01 lần
         self.assertEqual(kq["con"], 0)                                    # dừng hỏi
 
     def test_luong_loi_dung_hoi_va_hien_thu_lai(self):
@@ -323,7 +324,6 @@ const CN = n => T < 25 * P ? {dang_sao: 'cho_viec', tien_do: TD('gui', {o_trong:
 """)
         self.assertNotEqual(kq["cn"], "hong")                            # cách cũ (35 phút từ lúc bấm) báo hỏng ở phút 35
         self.assertEqual(len(kq["taiLai"]), 1)
-        self.assertIn("Xong 08/08 bước", kq["html"])
 
     def test_luong_tai_qua_35_phut_thi_bao_hong(self):
         kq = self.luong(self.TD_DONG + """

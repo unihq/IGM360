@@ -486,7 +486,8 @@ class KiemY40c(Nen):
 
 class KiemImage(unittest.TestCase):
     def test_ghim_trixie_va_buoc_kiem_sqlite(self):
-        self.assertIn("\nFROM python:3.12-slim-trixie\n", (GOC / "Dockerfile").read_text(encoding="utf-8"))
+        # QĐ229 giữ nhãn trixie; 0.8.2 (QĐ258) ghim thêm mã sha256
+        self.assertRegex((GOC / "Dockerfile").read_text(encoding="utf-8"), r"\nFROM python:3\.12-slim-trixie@sha256:[0-9a-f]{64}\r?\n")
         ci = (GOC / ".github/workflows/dongimage.yml").read_text(encoding="utf-8")
         self.assertIn("Kiểm bản SQLite trong image", ci)
         self.assertIn("(3, 43, 0)", ci)

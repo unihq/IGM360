@@ -35,6 +35,7 @@ LOAI = {
     "banmoi": ("tin", "cloud-download", "capnhat", None, "Cài đặt › Cập nhật"),
     "capnhat_kiem": ("do", "shield-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # 0.7.9 lớp 4
     "quayve_loi": ("do", "rotate-ccw", "capnhat", None, "Cài đặt › Cập nhật"),   # Y38d: quay về hỏng
+    "drive_nen": ("xem", "cloud-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ261, QĐ262: Bản sao Drive lỗi
 }
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
@@ -211,6 +212,29 @@ def quet_quayve_loi(thumuc: Path | None = None) -> None:
             _mo(w, f"quayve_loi:{q['luc']}", None)
 
 
+SO_LAN_BAO_DRIVE = 3   # QĐ261: đẩy nền lỗi 03 lần liên tiếp (thử lại 05, 10 phút → khoảng 15 phút) thì báo chuông
+
+
+def quet_drive_nen(thumuc: Path | None = None) -> None:
+    """QĐ261, QĐ262: bản chụp trước cập nhật đẩy Drive nền (bản không nâng dữ liệu) lỗi SO_LAN_BAO_DRIVE lần liên tiếp thì
+    mở 01 tin vàng "Bản sao Drive lỗi"; đẩy đủ tệp thì tự đóng. Lần mở đầu ghi 01 dòng F04."""
+    from maychu.hethong import capnhat, tiendo
+    td = tiendo.doc(thumuc)
+    dn = tiendo.drive_nen(td, thumuc)
+    khoa = f"drive_nen:{td.get('den')}" if td else None
+    moi = False
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, "drive_nen:"):
+            if k != khoa or not dn or dn["da"] >= dn["tong"]:
+                _dong(w, k, "Bản sao Drive đã lên đủ tệp" if dn and k == khoa else "Đã có lượt cập nhật mới")
+        if dn and dn["da"] < dn["tong"] and dn["lan"] >= SO_LAN_BAO_DRIVE:
+            moi = khoa not in _khoa_mo(w, "drive_nen:")
+            _mo(w, khoa, None, None, dn["tong"], dn["da"])
+    if moi:
+        capnhat._ghi_f04("drive_nen_loi", f"{td.get('den')}: {dn['da']:02d}/{dn['tong']:02d} tệp, đã thử {dn['lan']:02d} lần",
+                         "loi", "đẩy Drive nền lỗi", thumuc=thumuc)
+
+
 def quet_saoluu(thumuc: Path | None = None) -> None:
     """Lượt sao lưu hằng ngày gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút).
     0.8.0 (QĐ227): chỉ đọc `loai` = 'hangngay'; lượt trước cập nhật (`truoc_capnhat`) không che lần sao lưu hằng ngày hỏng."""
@@ -271,7 +295,7 @@ def quet_banmoi(thumuc: Path | None = None, hoi_kho: bool = False) -> None:
             _mo(w, f"banmoi:{moi}", None)
 
 
-NGUON = (quet_goi, quet_khoa, quet_madaihan, quet_saoluu, quet_maychu, quet_banmoi)
+NGUON = (quet_goi, quet_khoa, quet_madaihan, quet_saoluu, quet_maychu, quet_banmoi, quet_drive_nen)
 
 
 def quet(thumuc: Path | None = None) -> dict:
@@ -357,6 +381,9 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         from maychu.hethong import antoan
         q = antoan.quay_ve_loi_gan(luc=sau)
         return q["chu_chuong"] if q else "Quay về bản trước chưa được"
+    if loai == "drive_nen":   # QĐ262 nguyên văn: "Bản sao Drive sau cập nhật {bản} chưa lên: {k}/07 tệp, đã thử 03 lần"
+        return (f"Bản sao Drive sau cập nhật {sau} chưa lên: {_so(gt):02d}/{_so(ng):02d} tệp,"
+                f" đã thử {_nb(f'{SO_LAN_BAO_DRIVE:02d} lần')}")
     if loai == "capnhat_kiem":   # QĐ218 dòng 47: "Kiểm sau cập nhật bản 0.3.0: lịch chạy nền chưa bật"
         from maychu.hethong import capnhat
         ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")
