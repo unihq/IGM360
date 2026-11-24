@@ -22,6 +22,10 @@ Giao diện 01 trang: `index.html` (khung, CSS), `app.js` (vẽ màn, gọi `/ap
 - Chữ đưa vào HTML phải qua `esc()` hoặc `cum()`; không ghép chữ từ máy chủ thẳng vào HTML.
 - Không thêm thư viện JS ngoài; không tải tệp từ mạng ngoài lúc chạy.
 - Tiếng Việt có dấu, không ngắt dòng giữa 01 cụm từ; số 1–9 trước danh từ đếm ghi 02 chữ số.
+- Chữ người dùng thấy xưng "bạn", không xưng "anh" (QĐ219, QĐ220).
+- Dùng đúng từ điển thuật ngữ (tài liệu nội bộ, hỏi người giữ); nhãn, tên chỉ số 02–04 tiếng (QĐ135, QĐ136).
+- Số: dấu chấm ngăn nghìn, dấu phẩy thập phân, bỏ số 0 thừa, đơn vị đặt sau số (ví dụ 1.250 MB, 0,5%).
+- Chữ màu Đạt #258832 và Cảnh báo #E22E28 chỉ đặt trên nền trắng, luôn có icon hoặc chấm đi kèm.
 
 ## 4. Được chứa / không được chứa
 
@@ -38,6 +42,7 @@ Giao diện 01 trang: `index.html` (khung, CSS), `app.js` (vẽ màn, gọi `/ap
 ## 6. Kiểm trước bàn giao
 
 - `node --check app.js`; bài kiểm giao diện chạy bằng node (thẻ tiến độ, công tắc) đạt, 0 chữ "undefined".
+- Xem ở khổ điện thoại 390 điểm ảnh: không tràn ngang; ô bấm cao tối thiểu 44 điểm ảnh.
 - CDO nghiệm thu bằng bản bấm thử.
 
 ## 7. Người giữ
