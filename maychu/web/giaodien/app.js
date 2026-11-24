@@ -198,7 +198,8 @@ const CHU_Z21 = {tat: 'Tắt', bat: 'Bật', tu: n => 'Từ ' + n, macDinh: ' ·
 function veCongTac(t, d) {
   const bat = t.giatri === '1';
   return '<div class="ts"><div class="ts-ten">' + esc(t.nhan) + (t.giai_thich ? '<div class="t12 phu">' + cum(t.giai_thich) + '</div>' : '')
-    + (bat && !d.drive_noi ? '<div class="t12 xem-chu">' + cum(CHU_Z21.chuaNoi) + '</div>' : '') + '</div><div class="ts-gt">'
+    + (bat && !d.drive_noi ? '<div class="t12 xem-chu" style="display:flex;align-items:center;gap:4px;margin-top:2px">'   // Z21_02 (QĐ278)
+      + icoMau(ICON['cloud-alert'], '#8F5F00', 13) + '<span>' + cum(CHU_Z21.chuaNoi) + '</span></div>' : '') + '</div><div class="ts-gt">'
     + '<span class="b7 so">' + (bat ? CHU_Z21.bat : CHU_Z21.tat) + '</span><span class="t12 phu">'
     + (t.hieuluc_tu ? CHU_Z21.tu(ngay(t.hieuluc_tu)) + (t.nguoi_dat === 'hethong' ? CHU_Z21.macDinh : CHU_Z21.banDoi) : ' ') + '</span></div>'
     + '<button class="gat-o nut-gat" data-gat="' + esc(t.ten) + '" role="switch" aria-checked="' + bat + '" aria-label="' + esc(t.nhan) + '">'
