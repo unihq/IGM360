@@ -65,6 +65,11 @@ class Nen(unittest.TestCase):
         khoitao.tao_het(self.dl)
         antoan.CHE_DO["an_toan"] = False
         self.addCleanup(antoan.CHE_DO.update, an_toan=False)
+        capnhat._SAO.update(buoc=None, tu=0.0, loi=None, den=None)                # trạng thái bộ nhớ do bài trước để lại
+        capnhat._CHO.update(tu=0.0, nguoi=None)
+        from maychu.hethong import tiendo
+        tiendo._NHO.update(td=None, ghi_luc=0.0)
+        self.addCleanup(tiendo._NHO.update, td=None, ghi_luc=0.0)
         nangcli._GOC.clear()
         nangcli._GOC.update(claude="2.1.331", chatgpt="0.172.0")                   # bản trong gói, không chạy CLI thật
         self.addCleanup(nangcli._GOC.clear)

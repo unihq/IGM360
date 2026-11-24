@@ -75,7 +75,8 @@ class KiemCongTac(Nen):
         self.assertEqual(t["giai_thich"], "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive.")
         ten = [x["ten"] for x in d["thongso"]]
         self.assertEqual(ten.index("saoluu_drive") + 1, ten.index("nguong_cho_day_drive"))   # Z21: đứng trên ngưỡng chờ Drive
-        self.assertEqual(d["tong"], len(thongso.DANHMUC) - len(thongso.GIAIDOAN_SAU))       # ô đếm tính thêm thông số mới
+        self.assertEqual(d["tong"], len(thongso.DANHMUC) - len(thongso.GIAIDOAN_SAU)
+                         - len(getattr(thongso, "AN_O_THONGSO", ())))      # ô đếm tính thêm thông số mới; 0.8.4: trừ thông số ẩn (Y46)
 
     def test_gat_nhieu_lan_trong_ngay_giu_lich_su(self):
         thongso.khoi_tao(self.thumuc)
