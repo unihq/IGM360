@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from datetime import date, datetime
 from pathlib import Path
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -64,6 +65,7 @@ class KiemNgay05(unittest.TestCase):
         khoitao.tao_het(self.thumuc)
         drive._TRANGTHAI.clear()
         drive._MA_TRUYCAP.clear()
+        self.enterContext(mock.patch("maychu.hethong.caidat.thongso.drive_bat", return_value=True))   # 0.8.3 (QĐ277): bài cũ giả Drive bật
 
     def tearDown(self):
         for k, v in self.env.items():
@@ -134,6 +136,7 @@ class KiemNgay05(unittest.TestCase):
             self.assertEqual((b["4_mahoa"], b["5_day_drive"]), ("dat", "cho_day"))
 
     def test_don_ban_cu_giu_tep_chua_day_drive(self):
+        self.enterContext(mock.patch.object(drive, "dang_noi", return_value=True))   # 0.8.3 (QĐ283): chỉ giữ tệp chờ khi Drive đã nối
         for ngay in (18, 19, 20, 21, 22):
             saoluu.chay(self.thumuc, datetime(2026, 11, ngay, 2, 5, tzinfo=saoluu.MUIGIO_VN))
         goc = saoluu.thumuc_saoluu(self.thumuc)

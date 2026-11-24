@@ -212,8 +212,10 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) 
         _ghi_f04("chan_otrong", f"còn {antoan.chu_dungluong(o['trong'])}, cần {antoan.chu_dungluong(o['can'])}",
                  "bichan", None, nguoi_id, thumuc)
         return {"loi": o["chu"] + " " + antoan.CHU["o_thieu_lam"], "o_trong": o}
+    from maychu.hethong.caidat import thongso
     from maychu.ketnoi import drive
-    if not van_capnhat and not drive.dang_noi(thumuc):   # QĐ218 dòng 30, 31: Drive chưa nối thì anh chọn trước
+    # QĐ218 dòng 30, 31: Drive chưa nối thì anh chọn trước. QĐ277: công tắc "Sao lưu Google Drive" tắt thì không hỏi.
+    if not van_capnhat and thongso.drive_bat(thumuc) and not drive.dang_noi(thumuc):
         return {"loi": antoan.CHU["drive_chua_noi"], "can_chon": "drive_chua_noi"}
     # Y38c R4: chụp bản sao, đẩy Drive TRƯỚC; chế độ "cho" chờ việc AI xong (tối đa 30 phút) ngay trước khi gửi lệnh,
     # nên việc AI bắt đầu trong lúc chụp vẫn được chờ. Từ lúc bấm tới lúc gửi lệnh, dang_cho() = True để không nhận việc mới.
@@ -312,6 +314,7 @@ def _con_cho_drive(noi: Path, thumuc=None) -> int:
 def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
     from maychu.dulieu import saoluu
     from maychu.hethong import antoan, tiendo
+    from maychu.hethong.caidat import thongso
     from maychu.ketnoi import drive
     dang = ban_dang_chay()
     try:
@@ -319,12 +322,15 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
                          bao=lambda i, n: tiendo.chi_tiet("chup", thumuc, da=i, tong=n, xong=i == n))   # bước 2: tệp i/07
         if kq["ketqua"] == "loi":
             loi = next((x for x in kq["file"] if x["ketqua"] == "loi"), {})
-            lydo = (json.loads(loi.get("ketqua_tungbuoc_json") or "{}").get("loi") or "lỗi chụp")[:200]
+            lydo = (json.loads(loi.get("ketqua_tungbuoc_json") or "{}").get("loi") or "chưa rõ lỗi")[:200]   # QĐ290
             _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=lydo), buoc=None)
             tiendo.loi("chup", thumuc, "tệp " + loi["file_dulieu"] if loi.get("file_dulieu") else None)
             _ghi_f04("capnhat_ngay", dang, "bichan", "chưa chụp được bản sao: " + lydo, nguoi_id, thumuc)
             return
-        noi_drive = drive.dang_noi(thumuc)
+        bat = thongso.drive_bat(thumuc)
+        if not bat:   # QĐ277: công tắc tắt → không đẩy Drive, bước 3 ghi "tắt" (Z21 dòng 5)
+            tiendo.dat(thumuc, drive_tat=True)
+        noi_drive = bat and drive.dang_noi(thumuc)
         if noi_drive and not _SAO.get("day_truoc", True):   # QĐ258: không nâng dữ liệu → Drive đẩy nền sau khi bản mới lên
             tiendo.sang("drive", thumuc, nen=True, da=0, tong=_con_cho_drive(kq["noi"], thumuc))
             tiendo.dat(thumuc, drive_noi=str(kq["noi"]))   # QĐ261: thẻ sau khi tải lại, chuông đọc hàng chờ đúng thư mục này

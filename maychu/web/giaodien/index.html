@@ -376,6 +376,8 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 /* 14 công cụ */
 .nac.nho button{padding:6px 2px;font-size:12px}
 .gat-o{display:inline-flex;cursor:pointer}
+.nut-gat{background:none;border:0;padding:0;margin-left:12px;align-self:center}   /* QĐ278 Z21: công tắc ở Thông số */
+.qv-khoa,.qv-khoa:hover{color:#646A73;cursor:not-allowed}   /* QĐ287 Z24 dòng 2: nút Quay về khoá, tương phản 5,45:1 */
 .gat-o input{display:none}
 .gat{width:38px;height:22px;border-radius:11px;background:var(--xam);border:1px solid var(--vien);position:relative;transition:.15s}
 .gat::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;border:1px solid var(--vien);transition:.15s}
@@ -1626,7 +1628,7 @@ button.o-bam:hover{border-color:var(--xanh)}
   <circle cx="12" cy="12" r="10" />
   <path d="m9 12 2 2 4-4" />
 </svg><small></small></b></div>
-      <div class="f1"><div class="t20 b7">Đang dùng bản mới nhất</div><div class="phu">Bản <b class="so" id="ban-hien"></b> · tự kiểm tra mỗi <span id="cn-nhip">05&nbsp;phút</span>, lần gần nhất <span id="cn-luc"></span><span id="cn-loi" class="xem-chu"></span></div><div class="ks canh" id="cn-kiemloi" hidden></div><div id="cn-saulen"></div></div>
+      <div class="f1"><div class="t20 b7">Đang dùng bản mới nhất</div><div class="phu">Bản <b class="so" id="ban-hien"></b> · tự kiểm tra mỗi <span id="cn-nhip">05&nbsp;phút</span>, lần gần nhất <span id="cn-luc"></span><span id="cn-loi" class="xem-chu"></span></div><div class="ks canh" id="cn-kiemloi" hidden></div><div class="ks phu" id="cn-qvkhoa" hidden></div><div id="cn-saulen"></div></div>
       <div class="cn-nut"><button class="btn btn-phu" data-kiemtra><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-refresh-cw"
   xmlns="http://www.w3.org/2000/svg"

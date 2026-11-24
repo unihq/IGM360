@@ -156,12 +156,32 @@ def doc_het_thongbao(p: dict = Depends(can_dang_nhap)):
 
 @router.get("/thongso")
 def doc_thongso(p: dict = Depends(can_dang_nhap)):
-    return thongso.doc_het()
+    from maychu.ketnoi import drive
+    try:
+        noi = drive.dang_noi()
+    except Exception:  # noqa: BLE001
+        noi = False
+    return {**thongso.doc_het(), "drive_noi": noi}   # QĐ278 Z21 dòng 2: bật mà chưa nối thì hiện dòng nhắc
 
 
 @router.get("/thongso/{ten}/lichsu")
 def lichsu_thongso(ten: str, p: dict = Depends(can_dang_nhap)):
     return thongso.lich_su(ten)
+
+
+class GatCongTac(BaseModel):
+    bat: bool
+
+
+@router.post("/thongso/{ten}/gat")
+def gat_cong_tac(ten: str, body: GatCongTac, p: dict = Depends(can_dang_nhap)):
+    """QĐ278 (Z21): gạt công tắc có hiệu lực ngay; ghi F04 01 dòng (ai, lúc, bật hay tắt) – PTD-15 mục 3."""
+    kq = thongso.gat(ten, body.bat, nguoi=p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(400, kq)
+    if kq.get("doi"):
+        ghi_f04("thongso", "gat", f"{ten} → {'bật' if body.bat else 'tắt'}", nguoi_id=p["nguoidung_id"])
+    return kq
 
 
 @router.post("/thongso/{ten}")
@@ -218,7 +238,7 @@ def _them_antoan() -> dict:
         noi = drive.dang_noi()
     except Exception:  # noqa: BLE001 - ở chế độ an toàn bảng kết nối có thể chưa đọc được
         noi = False
-    return {"o_trong": {"du": o["du"], "chu": o["chu"], "lam": None if o["du"] else antoan.CHU["o_thieu_lam"]}, "drive_noi": noi, "chu_drive": None if noi else antoan.CHU["drive_chua_noi"], "chu_qua_gio": antoan.CHU["drive_qua_gio"],
+    return {"o_trong": {"du": o["du"], "chu": o["chu"], "lam": None if o["du"] else antoan.CHU["o_thieu_lam"]}, "drive_noi": noi, "drive_bat": thongso.drive_bat(), "chu_drive": None if noi else antoan.CHU["drive_chua_noi"], "chu_qua_gio": antoan.CHU["drive_qua_gio"],
             **capnhat.trang_thai_sao(), "an_toan": antoan.chu_an_toan(), "quay_ve": antoan.thong_tin_quayve(),
             "quayve_loi": antoan.quay_ve_loi_gan(), "kiem_hien": next((x.get("kiem") for x in capnhat.lich_su() if x["ban"] == capnhat.ban_dang_chay()), None),
             "tien_do": _tien_do()}

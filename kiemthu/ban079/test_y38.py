@@ -32,6 +32,7 @@ class NenAT(NenMa):
         capnhat._SAO.update(buoc=None, tu=0.0, loi=None, den=None)
         self.addCleanup(antoan.CHE_DO.update, an_toan=False)
         self.dl = self.g / "dulieu"
+        self.enterContext(mock.patch("maychu.hethong.caidat.thongso.drive_bat", return_value=True))   # 0.8.3 (QĐ277): bài cũ giả Drive bật
 
     def f04(self, lenhcon):
         cn = ketnoi.mo("Nhatky")

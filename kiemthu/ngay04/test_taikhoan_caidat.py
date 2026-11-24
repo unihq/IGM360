@@ -88,7 +88,7 @@ class KiemMayChu(unittest.TestCase):
     def test_thong_so(self):
         self.dang_nhap_lan_dau()
         d = self.c.get("/api/thongso").json()
-        self.assertEqual((d["tong"], d["da_dat"]), (14, 10))   # ngưỡng tiền AI tự áp dụng: Từ GĐ 2, không tính
+        self.assertEqual((d["tong"], d["da_dat"]), (15, 11))   # ngưỡng tiền AI tự áp dụng: Từ GĐ 2, không tính; +saoluu_drive (QĐ278, mặc định "0")
         self.assertNotIn("gio_baocao_sang", [t["ten"] for t in d["thongso"]])
         self.assertEqual(self.c.post("/api/thongso/phuongphap_giaxuat", json={"giatri": "binhquan_giaquyen", "hieuluc_tu": "2099-01-01"},
                                      headers=self.h).status_code, 400)

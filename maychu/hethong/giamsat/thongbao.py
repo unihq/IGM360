@@ -219,8 +219,9 @@ def quet_drive_nen(thumuc: Path | None = None) -> None:
     """QĐ261, QĐ262: bản chụp trước cập nhật đẩy Drive nền (bản không nâng dữ liệu) lỗi SO_LAN_BAO_DRIVE lần liên tiếp thì
     mở 01 tin vàng "Bản sao Drive lỗi"; đẩy đủ tệp thì tự đóng. Lần mở đầu ghi 01 dòng F04."""
     from maychu.hethong import capnhat, tiendo
+    from maychu.hethong.caidat import thongso
     td = tiendo.doc(thumuc)
-    dn = tiendo.drive_nen(td, thumuc)
+    dn = tiendo.drive_nen(td, thumuc) if thongso.drive_bat(thumuc) else None   # QĐ277: tắt thì chuông Drive không mở
     khoa = f"drive_nen:{td.get('den')}" if td else None
     moi = False
     with _Ghi(thumuc) as w:

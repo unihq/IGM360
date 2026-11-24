@@ -8,6 +8,9 @@ Không bao giờ chép thẳng file đang chạy. Mỗi file 05 bước:
       01 bản khoá chủ anh đã chép về máy là giải mã được bản trên Drive, kể cả khi mất cả VPS;
   (5) xếp tệp `.mahoa` vào hàng chờ đẩy Drive (M01); việc đẩy chạy theo lịch khi đã kết nối Drive
       (maychu/ketnoi/drive.py), đẩy xong mới xoá tệp `.mahoa` trên máy.
+      0.8.3 (QĐ277): công tắc "Sao lưu Google Drive" tắt thì bỏ qua bước (5). QĐ279 (luật C): dòng M01 loại `saoluu` đang
+      chờ chỉ tồn tại khi tệp còn trên máy; QĐ283: tắt hoặc bật mà chưa nối Drive thì dọn tệp theo luật 03 ngày / 02 lượt,
+      không giữ tệp đang chờ.
 Bản chụp chưa mã hoá giữ trên máy 03 ngày để khôi phục nhanh (thư mục quyền 700, tệp quyền 600).
 """
 import hashlib
@@ -83,9 +86,42 @@ def _tep_dang_cho(thumuc: Path) -> set[str]:
         cn.close()
 
 
-def _don_ban_cu(goc: Path, thumuc: Path) -> None:
+def _giu_tep_cho(thumuc: Path) -> bool:
+    """QĐ279, QĐ283: chỉ giữ tệp đang chờ đẩy Drive khi công tắc BẬT và Drive ĐÃ NỐI. Không đọc được thì giữ (an toàn:
+    không xoá tệp chưa lên Drive)."""
+    from maychu.hethong.caidat import thongso
+    from maychu.ketnoi import drive
+    try:
+        return thongso.drive_bat(thumuc) and drive.dang_noi(thumuc)
+    except Exception:  # noqa: BLE001
+        return True
+
+
+CHO_DANG = ("cho", "dangday", "loi")   # PTD-15 6.2 điểm 1: chỉ dòng đang chờ; dòng 'xong' là lịch sử đẩy, giữ
+
+
+def _don_dong_mat_tep(thumuc: Path) -> int:
+    """QĐ279 (luật C): xoá dòng M01 loại `saoluu` đang chờ mà tệp không còn trên máy. Không đụng loại `filegoc`,
+    `goi_banghigoc` (QĐ54), không đụng dòng `xong`. Trả số dòng đã xoá."""
+    cn = ketnoi.mo("Hotho", thumuc)
+    try:
+        cn.execute("BEGIN IMMEDIATE")
+        mat = [r[0] for r in cn.execute("SELECT id, duongdan_tam FROM cho_day_drive WHERE loai = 'saoluu' AND trangthai IN"
+                                        " (?, ?, ?)", CHO_DANG).fetchall() if not (r[1] and Path(r[1]).exists())]
+        for i in mat:
+            cn.execute("DELETE FROM cho_day_drive WHERE id = ? AND loai = 'saoluu'", (i,))
+        cn.execute("COMMIT")
+    except Exception:
+        cn.execute("ROLLBACK")
+        raise
+    finally:
+        cn.close()
+    return len(mat)
+
+
+def _don_ban_cu(goc: Path, thumuc: Path, giu: bool = True) -> None:
     ngay = sorted(p for p in goc.iterdir() if p.is_dir() and len(p.name) == 10)
-    cho = _tep_dang_cho(thumuc)
+    cho = _tep_dang_cho(thumuc) if giu else set()
     for p in ngay[:-GIU_SO_NGAY]:
         con = [x for x in p.iterdir() if str(x) in cho]
         if not con:
@@ -105,9 +141,9 @@ def ten_truoc_capnhat(luc: datetime, ban: str) -> str:
 GIU_TRUOC_CAPNHAT = 2   # giữ bản sao trước cập nhật của 02 lần gần nhất trên máy (bản lâu dài ở Drive)
 
 
-def _don_truoc_capnhat(goc: Path, thumuc: Path) -> None:
+def _don_truoc_capnhat(goc: Path, thumuc: Path, giu: bool = True) -> None:
     cac = sorted((p for p in goc.iterdir() if p.is_dir() and "_truoc_" in p.name), key=lambda p: p.stat().st_mtime)
-    cho = _tep_dang_cho(thumuc)
+    cho = _tep_dang_cho(thumuc) if giu else set()
     for p in cac[:-GIU_TRUOC_CAPNHAT]:
         if not any(str(x) in cho for x in p.iterdir()):
             shutil.rmtree(p, ignore_errors=True)
@@ -126,6 +162,8 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
     os.chmod(noi, 0o700)
     dong_n01, ketqua_chung = [], "xong_tren_may"
     loai = _loai_n01(thumuc, truoc_ban)
+    from maychu.hethong.caidat import thongso
+    drive_bat = thongso.drive_bat(thumuc)
     for ten in ketnoi.CAC_FILE:
         # Dịp ghi ở `ketqua_tungbuoc_json` khoá "dip" = "truoc_capnhat" (CDA C1, Y38). Từ lược đồ bản 4 (QĐ227) cột `loai`
         # = 'truoc_capnhat'; Nhatky còn lược đồ 3 (chế độ an toàn sau lần nâng hỏng) thì vẫn 'hangngay' + `dip` (V1b).
@@ -156,7 +194,7 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
             buoc["3_doiten"] = "dat"
             ma_hoa_tep(chinh, thumuc)
             buoc["4_mahoa"] = "dat"
-            buoc["5_day_drive"] = "cho_day"
+            buoc["5_day_drive"] = "cho_day" if drive_bat else "bo_qua_drive_tat"   # QĐ277: tắt thì không xếp hàng chờ
             ketqua = "xong_tren_may"
         except Exception as loi:  # ghi lại rồi dừng cả lượt
             tam.unlink(missing_ok=True)
@@ -178,10 +216,13 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
         if ketqua == "loi":
             break
     _ghi_n01(thumuc, dong_n01)
-    _xep_cho_drive(thumuc, dong_n01, noi, luc)
+    if drive_bat:   # QĐ283: bật mà chưa nối vẫn xếp hàng chờ (nối Drive trong 03 ngày thì bản còn trên máy vẫn lên)
+        _xep_cho_drive(thumuc, dong_n01, noi, luc)
     if ketqua_chung != "loi":
-        _don_ban_cu(goc, thumuc)
-        _don_truoc_capnhat(goc, thumuc)
+        giu = _giu_tep_cho(thumuc)
+        _don_ban_cu(goc, thumuc, giu)
+        _don_truoc_capnhat(goc, thumuc, giu)
+        _don_dong_mat_tep(thumuc)   # QĐ279: xoá tệp nào thì xoá dòng chờ trỏ tệp đó trong cùng lượt
     return {"ketqua": ketqua_chung, "file": dong_n01, "noi": noi}
 
 
@@ -228,3 +269,112 @@ def _xep_cho_drive(thumuc: Path, dong_n01: list, noi: Path, luc: datetime) -> No
         cn.execute("COMMIT")
     finally:
         cn.close()
+
+
+def _dem_tep(goc: Path) -> tuple[int, int]:
+    so = byte = 0
+    if goc.is_dir():
+        for duong, _t, ds in os.walk(goc):
+            for ten in ds:
+                try:
+                    byte += (Path(duong) / ten).stat().st_size
+                    so += 1
+                except OSError:
+                    pass
+    return so, byte
+
+
+def don_khi_khoidong(thumuc: Path | None = None) -> dict:
+    """QĐ279 lượt dọn 01 lần khi bản mới chạy (PTD-15 6.2 điểm 3): dọn tệp đã dồn theo luật 03 ngày / 02 lượt (QĐ283) và
+    các dòng chờ mất tệp. Chạy lại không đổi gì; chỉ ghi 01 dòng F04 khi có dọn. Không gọi ở chế độ an toàn (khoidong)."""
+    thumuc = thumuc or ketnoi.thumuc_dulieu()
+    goc = thumuc_saoluu(thumuc)
+    truoc = _dem_tep(goc)
+    if goc.is_dir():
+        giu = _giu_tep_cho(thumuc)
+        _don_ban_cu(goc, thumuc, giu)
+        _don_truoc_capnhat(goc, thumuc, giu)
+    dong = _don_dong_mat_tep(thumuc)
+    sau = _dem_tep(goc)
+    kq = {"dong": dong, "tep": truoc[0] - sau[0], "byte": truoc[1] - sau[1]}
+    if dong or kq["tep"]:
+        from maychu.hethong import nhatky
+        nhatky.ghi("saoluu", "don_tep_don", f"xoá {kq['dong']:02d} dòng chờ mất tệp · {kq['tep']:02d} tệp"
+                   f" · giải phóng {kq['byte']} byte", thumuc=thumuc)
+    return kq
+
+
+# ---------------- 0.8.3 D1 (QĐ281, QĐ284; PTD-15 mục 6.3): bản sao trước khi nâng `truoc_nangcap_vNN` ----------------
+GIU_TRUOC_NANG_NGAY = 30   # QĐ281: giữ bản của lần nâng gần nhất 30 ngày
+DAU_TRUOC_NANG = "truoc_nangcap_v"
+
+
+def _thumuc_truoc_nang(goc: Path) -> list[tuple[int, Path]]:
+    ra = []
+    for p in (goc.iterdir() if goc.is_dir() else []):
+        so = p.name[len(DAU_TRUOC_NANG):] if p.name.startswith(DAU_TRUOC_NANG) else ""
+        if p.is_dir() and so.isdigit():
+            ra.append((int(so), p))
+    return sorted(ra)
+
+
+def _kiem_dat(ban: str | None, thumuc: Path) -> bool:
+    """D1-2: lượt "Kiểm sau cập nhật" GẦN NHẤT của bản `ban` đã đạt (F04 capnhat / kiem_saunang, như capnhat.lich_su)."""
+    if not ban:
+        return False
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        d = cn.execute("SELECT ketqua FROM nhatky_thaotac WHERE congcu = 'capnhat' AND lenhcon = 'kiem_saunang'"
+                       " AND thamso_tomtat LIKE ? ORDER BY luc DESC LIMIT 1", (ban + " · %",)).fetchone()
+    finally:
+        cn.close()
+    return bool(d and d[0] == "dat")
+
+
+def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = None) -> list[dict]:
+    """D1 (QĐ281): giữ bản sao trước khi nâng của lần nâng gần nhất 30 ngày, tính từ `nang_luocdo.luc` (D1-1); bản cũ hơn
+    chỉ xoá khi lần nâng gần nhất đã "Kiểm sau cập nhật" đạt (D1-2); không chạy ở chế độ an toàn, không chạy khi còn cờ
+    quay về hay đang nâng (D1-4); mỗi thư mục xoá ghi 01 dòng F04 (D1-5). Không đọc được giờ nâng thì không xoá bản mới
+    nhất."""
+    from maychu.hethong import antoan, nhatky
+    thumuc = thumuc or ketnoi.thumuc_dulieu()
+    tt = antoan.doc(thumuc)
+    if antoan.CHE_DO["an_toan"] or tt.get("chay_ban_truoc") or tt.get("dang_nang"):
+        return []
+    cac = _thumuc_truoc_nang(thumuc_saoluu(thumuc))
+    if not cac:
+        return []
+    n = tt.get("nang_luocdo") or {}
+    moi_nhat = cac[-1][0]
+    xoa = []
+    if n.get("den") == moi_nhat and _kiem_dat(n.get("ban"), thumuc):
+        xoa += [(p, "cũ hơn bản v%02d" % moi_nhat) for _so, p in cac[:-1]]
+    try:
+        luc = datetime.fromisoformat(n["luc"]) if n.get("den") == moi_nhat and n.get("luc") else None
+    except (TypeError, ValueError):
+        luc = None
+    if luc is not None:
+        if luc.tzinfo is None:
+            luc = luc.replace(tzinfo=MUIGIO_VN)
+        if (bay_gio or datetime.now(MUIGIO_VN)) - luc > timedelta(days=GIU_TRUOC_NANG_NGAY):
+            xoa.append((cac[-1][1], f"quá {GIU_TRUOC_NANG_NGAY} ngày sau lần nâng"))
+    ra = []
+    for p, lydo in xoa:
+        so, byte = _dem_tep(p)
+        shutil.rmtree(p, ignore_errors=True)
+        if p.exists():
+            continue
+        nhatky.ghi("saoluu", "xoa_truoc_nangcap", f"{p.name} · {lydo} · {so:02d} tệp · {byte} byte", thumuc=thumuc)
+        ra.append({"thumuc": p.name, "lydo": lydo, "byte": byte})
+    return ra
+
+
+def ngay_xoa_truoc_nangcap(ten: str, thumuc: Path | None = None) -> str | None:
+    """QĐ287: giờ thật lúc xoá thư mục `ten` (dòng F04 do `don_truoc_nangcap` ghi), cho dòng báo `qv_het_han`."""
+    cn = ketnoi.mo("Nhatky", thumuc)
+    try:
+        d = cn.execute("SELECT luc FROM nhatky_thaotac WHERE congcu = 'saoluu' AND lenhcon = 'xoa_truoc_nangcap'"
+                       " AND thamso_tomtat LIKE ? ORDER BY luc DESC LIMIT 1", (ten + " · %",)).fetchone()
+    finally:
+        cn.close()
+    return d[0] if d else None

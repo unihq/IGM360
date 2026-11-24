@@ -14,6 +14,7 @@ from datetime import datetime
 
 from maychu.dulieu import saoluu
 from maychu.hethong import capnhat
+from maychu.hethong.caidat import thongso
 from maychu.hethong.giamsat import domay, thongbao
 from maychu.hethong.mohinh import congai
 from maychu.ketnoi import drive
@@ -40,6 +41,7 @@ async def chay_mai() -> None:
             if bay_gio.hour >= GIO_SAOLUU and not saoluu.da_co_hom_nay(bay_gio=bay_gio):
                 kq = await asyncio.to_thread(saoluu.chay)
                 log.info("sao lưu: %s", kq["ketqua"])
+                await asyncio.to_thread(saoluu.don_truoc_nangcap)   # D1 (QĐ281): mốc 30 ngày tự đến
                 await asyncio.to_thread(thongbao.quet_saoluu)
             if lan_tb_cuoi is None or asyncio.get_running_loop().time() - lan_tb_cuoi >= NHIP_THONGBAO_GIAY:
                 lan_tb_cuoi = asyncio.get_running_loop().time()
@@ -52,7 +54,8 @@ async def chay_mai() -> None:
                 await asyncio.to_thread(thongbao.quet_banmoi, None, True)
             if asyncio.get_running_loop().time() - lan_day_cuoi >= 300:
                 lan_day_cuoi = asyncio.get_running_loop().time()
-                kq = await asyncio.to_thread(drive.day_hang_cho)
+                # QĐ277: công tắc "Sao lưu Google Drive" tắt thì lịch không đẩy
+                kq = await asyncio.to_thread(drive.day_hang_cho) if thongso.drive_bat() else {}
                 if kq.get("day") or kq.get("loi"):
                     log.info("đẩy Drive: %s", kq)
         except Exception:  # lỗi 01 lượt không được làm dừng lịch

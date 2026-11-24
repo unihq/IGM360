@@ -21,6 +21,7 @@ DANHMUC = [
     ("cach_phanbo_chiphimua", 0, "Tiêu thức phân bổ", "chu", "", "theo_sochiec",
      {"theo_sochiec": "Theo số lượng", "theo_giatri": "Theo giá trị"}, ""),
     ("nguong_ocung", 1, "Báo khi ổ cứng máy chủ dùng quá", "so", "%", "70", None, ""),
+    ("saoluu_drive", 1, "Sao lưu Google Drive", "codong", "", "0", {"0": "Tắt", "1": "Bật"}, ""),   # QĐ277, QĐ278 (Z21)
     ("nguong_cho_day_drive", 1, "Dữ liệu chờ đẩy lên Drive tối đa", "so", "GB", "5", None, ""),
     ("songay_giu_banghigoc_vps", 1, "Số ngày giữ bản ghi gốc trên máy chủ", "so", "ngày", None, None,
      "Đang giữ mãi, không tự xoá"),
@@ -44,6 +45,9 @@ KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulie
 # gửi cho mọi việc chờ; luồng Giám đốc sản phẩm quyết 20:55 ngày 21/11/2026).
 GIAIDOAN_SAU = {"nguong_tien_ai_tuapdung"}
 THEO_TEN = {d[0]: d for d in DANHMUC}
+# QĐ278 (Z21 dòng 1): thông số gạt công tắc, đổi có hiệu lực ngay trong ngày (không qua hộp "Sửa" chọn ngày áp dụng)
+CONG_TAC = {"saoluu_drive"}
+GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 
 
 def _hom_nay() -> str:
@@ -112,7 +116,7 @@ def dat_moc_doc(nguoi: str = "hethong", thumuc: Path | None = None, luc: datetim
 
 def _dong_dang_dung(cn, ten: str, ngay: str):
     return cn.execute("SELECT id, giatri, hieuluc_tu, nguoi_dat FROM thongso WHERE ten = ? AND congty_id IS NULL"
-                      " AND hieuluc_tu <= ? AND (hieuluc_den IS NULL OR hieuluc_den > ?) ORDER BY hieuluc_tu DESC LIMIT 1",
+                      " AND hieuluc_tu <= ? AND (hieuluc_den IS NULL OR hieuluc_den > ?) ORDER BY hieuluc_tu DESC, tao_luc DESC, rowid DESC LIMIT 1",
                       (ten, ngay, ngay)).fetchone()
 
 
@@ -140,7 +144,8 @@ def doc_het(thumuc: Path | None = None) -> dict:
                        "giatri": gt, "giatri_chu": (lua or {}).get(gt, gt) if gt is not None else None,
                        "hieuluc_tu": d[2] if d else None, "nguoi_dat": d[3] if d else None,
                        "luachon": [{"giatri": k, "chu": v} for k, v in (lua or {}).items()],
-                       "khi_trong": trong, "khong_sua": KHONG_SUA.get(ten), "sap_ap_dung": {"giatri": sap[0], "tu": sap[1]} if sap else None})
+                       "khi_trong": trong, "khong_sua": KHONG_SUA.get(ten),
+                       "cong_tac": ten in CONG_TAC, "giai_thich": GIAI_THICH.get(ten), "sap_ap_dung": {"giatri": sap[0], "tu": sap[1]} if sap else None})
     finally:
         cn.close()
     tinh = [x for x in ds if x["ten"] not in GIAIDOAN_SAU]
@@ -151,7 +156,7 @@ def lich_su(ten: str, thumuc: Path | None = None) -> list[dict]:
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
         dong = cn.execute("SELECT giatri, hieuluc_tu, hieuluc_den, nguoi_dat, ghichu FROM thongso WHERE ten = ?"
-                          " AND congty_id IS NULL ORDER BY hieuluc_tu DESC", (ten,)).fetchall()
+                          " AND congty_id IS NULL ORDER BY hieuluc_tu DESC, tao_luc DESC, rowid DESC", (ten,)).fetchall()
     finally:
         cn.close()
     return [dict(zip(("giatri", "hieuluc_tu", "hieuluc_den", "nguoi_dat", "ghichu"), d)) for d in dong]
@@ -171,6 +176,41 @@ def kiem_giatri(ten: str, giatri: str) -> str | None:
         except ValueError:
             return "Giá trị phải là số"
     return None
+
+
+def drive_bat(thumuc: Path | None = None) -> bool:
+    """QĐ277: công tắc "Sao lưu Google Drive". Chưa có dòng nào thì coi là TẮT (mặc định thiết kế)."""
+    return doc_mot("saoluu_drive", "0", thumuc) == "1"
+
+
+def gat(ten: str, bat: bool, nguoi: str = "hethong", thumuc: Path | None = None) -> dict:
+    """QĐ278: gạt công tắc, có hiệu lực ngay hôm nay. Giữ đúng luật bảng P01 (không xoá dòng cũ): đóng dòng đang dùng
+    (`hieuluc_den` = hôm nay) rồi thêm 01 dòng từ hôm nay; gạt nhiều lần trong 01 ngày thì các dòng cũ cùng ngày có
+    hieuluc_tu = hieuluc_den (không còn hiệu lực), lịch sử vẫn đủ."""
+    aibam.kiem(nguoi)
+    if ten not in CONG_TAC:
+        return {"loi": "Thông số này không phải công tắc"}
+    gt, ngay = "1" if bat else "0", _hom_nay()
+    cn = ketnoi.mo("Dulieu_Chinh", thumuc)
+    try:
+        cn.execute("BEGIN IMMEDIATE")
+        cu = _dong_dang_dung(cn, ten, ngay)
+        if cu and cu[1] == gt:
+            cn.execute("ROLLBACK")
+            return {"ok": True, "doi": False}
+        cn.execute("UPDATE thongso SET hieuluc_den = ? WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL",
+                   (ngay, ten))
+        d = THEO_TEN[ten]
+        cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
+                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                   (maso.tao(), ten, gt, d[3], d[4], ngay, nguoi, "Gạt công tắc", datetime.now(MUIGIO_VN).isoformat(timespec="seconds")))
+        cn.execute("COMMIT")
+    except Exception:
+        cn.execute("ROLLBACK")
+        raise
+    finally:
+        cn.close()
+    return {"ok": True, "doi": True}
 
 
 def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "hethong", thumuc: Path | None = None) -> dict:

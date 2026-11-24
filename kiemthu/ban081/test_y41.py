@@ -135,7 +135,7 @@ class KiemTheTienDo(unittest.TestCase):
     def test_dang_chay_buoc_2_so_do_that(self):
         k = self.the(_td("chup", {"o_trong": 0, "chup": 2}, chi_tiet={"da": 4, "tong": 7}), 8, cu="0.2.0")
         h = k["html"]
-        for chu in ("Đang cập nhật lên 0.3.0", "<b>Bước 2/8:</b> Chụp dữ liệu · 04/07 tệp", "Đã chạy 00:08 · còn khoảng",
+        for chu in ("Đang cập nhật lên 0.3.0", "<b>Bước 2/8:</b> Sao lưu dữ liệu · 04/07 tệp", "Đã chạy 00:08 · còn khoảng",
                     "phút (ước tính)", "Trang tự tải lại khi xong. Bạn không cần bấm gì thêm.", "04/07 tệp</span>",
                     "lucide-loader", "stroke=\"#1456F0\"", "1. Kiểm ổ trống</span><span class=\"td8-m\">00:02"):
             self.assertIn(chu, h)
@@ -168,7 +168,7 @@ class KiemTheTienDo(unittest.TestCase):
         td = _td("chup", {"o_trong": 0, "chup": 2}, chi_tiet={"da": 1, "tong": 7}, loi="chup", loi_ct="tệp Bot",
                  loi_luc="2026-11-24T10:00:15+07:00")
         h = self.the(td, 600, cu="0.2.0")["html"]
-        for chu in ("Chưa cập nhật được lên 0.3.0", "<b>Dừng ở bước 2/8:</b> Chụp dữ liệu chưa được (tệp Bot)", "Đã chạy 00:15<",
+        for chu in ("Chưa cập nhật được lên 0.3.0", "<b>Dừng ở bước 2/8:</b> Sao lưu dữ liệu chưa được (tệp Bot)", "Đã chạy 00:15<",
                     "Chưa gửi lệnh cập nhật nên bản 0.2.0 và dữ liệu giữ nguyên. Lỗi ghi vào nhật ký.", "data-cnngay",
                     "Thử lại</button>", "lucide-circle-alert", "chưa được</span>", "#E22E28"):
             self.assertIn(chu, h)
@@ -368,6 +368,7 @@ class NenTD(unittest.TestCase):
         bien.start()
         self.addCleanup(bien.stop)
         khoitao.tao_het(self.dl)
+        self.enterContext(mock.patch("maychu.hethong.caidat.thongso.drive_bat", return_value=True))   # 0.8.3 (QĐ277): bài cũ giả Drive bật
         tiendo._NHO.update(td=None, ghi_luc=0.0)
         self.addCleanup(tiendo._NHO.update, td=None, ghi_luc=0.0)
         nhip = mock.patch.object(tiendo, "NHIP_GHI_GIAY", 0.0)   # bài kiểm nhịp ghi đặt lại 01 giây riêng

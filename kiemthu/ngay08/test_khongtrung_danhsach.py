@@ -62,7 +62,7 @@ class KiemDanhSachMoRong(CoThuMuc):
         self.assertEqual({d[0] for d in dong}, set(dsmorong.KHOITAO))
         self.assertTrue(all(d[1] == "danhsach" and d[3] == "hethong" for d in dong))
         self.assertEqual(json.loads(dict((d[0], d[2]) for d in dong)["ds_loai_nguoi"]), ["anh", "nhanvien", "khach"])
-        self.assertEqual(thongso.doc_het(self.thumuc)["tong"], 14)  # ngăn Thông số: 13 + tyle_bao_hanmuc_tuan (QĐ165) = 14
+        self.assertEqual(thongso.doc_het(self.thumuc)["tong"], 15)  # ngăn Thông số: 13 + tyle_bao_hanmuc_tuan (QĐ165) + saoluu_drive (QĐ278) = 15
         khoitao.tao_het(self.thumuc)  # chạy lại không thêm
         self.assertEqual(len(self.lay("Dulieu_Chinh", "SELECT 1 FROM thongso WHERE ten LIKE 'ds\\_%' ESCAPE '\\'")), 21)
 

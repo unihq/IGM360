@@ -270,6 +270,7 @@ def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | 
              "luc": bay,   # luc: giờ máy chủ, trang tự tính % giữa 02 lần hỏi và lúc máy chủ đang thay bản (QĐ253)
              "drive": (td.get("chi_tiet") or {}).get("drive"),   # QĐ255 điểm 3: số tệp đã lên Drive / tổng, kể cả khi đã qua bước 3
              "drive_nen": _drive_nen_an_toan(td, thumuc),          # QĐ261: Drive đẩy nền sau khi lên bản (số sống từ hàng chờ)
+             "drive_tat": bool(td.get("drive_tat")),               # QĐ277 (Z21 dòng 5): công tắc tắt → bước 3 "tắt"
              # QĐ255 điểm 2 (CDA N5-B): máy chủ là nguồn duy nhất của ngưỡng treo; trang chỉ đọc cờ này
              "treo": not td.get("xong") and (_giay(td.get("bat_dau"), bay) or 0) > TOI_DA_LUOT_GIAY}
     if td.get("xong"):

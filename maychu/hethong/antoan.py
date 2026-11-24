@@ -35,9 +35,11 @@ CHU = {
     "o_thieu_lam": "Dọn ổ máy chủ rồi bấm Kiểm tra lại.",                                                        # 25
     "an_toan": "Chế độ an toàn: bản {den} nâng dữ liệu chưa được, dữ liệu đã trả về như trước lúc {luc}.",        # 35
     "an_toan_chan": "Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.",                             # 37
-    "sao_loi": "Chưa chụp được bản sao trước khi cập nhật: {lydo}",          # câu báo lỗi kỹ thuật, ngoài bảng QĐ218
+    "sao_loi": "Chưa tạo được bản sao trước khi cập nhật: {lydo}",          # QĐ290 (Z25 dòng 8), ngoài bảng QĐ218
     "drive_chua_noi": "Drive chưa kết nối. Bản sao chỉ nằm trên máy chủ.",                                        # 31
     "drive_qua_gio": "Đẩy bản sao lên Drive đã quá 10 phút. Bản sao chỉ nằm trên máy chủ.",                        # 32
+    # QĐ287 (Z24 dòng 1, chữ A; QĐ288 "bản sao"): bản sao trước khi nâng đã xoá (QĐ281) → nút Quay về khoá
+    "qv_het_han": "Không còn dữ liệu để quay về: bản sao trước khi nâng đã xoá ngày {ngay} (giữ 30 ngày).",
     "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
     "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
               "việc nhập sau lúc đó không giữ được.",                                                             # 40
@@ -233,6 +235,13 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
     loi = [TEN_DIEM[k] for k, v in diem.items() if not v]
     tom = f"{ban} · {dat:02d}/{len(diem):02d} đạt" if not loi else f"{ban} · {dat:02d}/{len(diem):02d} · " + ", ".join(loi)   # 45, 46
     capnhat._ghi_f04("kiem_saunang", tom, "dat" if not loi else "loi", thumuc=thumuc)
+    if not loi:   # D1-2 (QĐ281): kiểm đạt thì dọn bản sao trước khi nâng cũ hơn ngay (lên 0.8.3: v03 xoá)
+        try:
+            from maychu.dulieu import saoluu
+            saoluu.don_truoc_nangcap(thumuc)
+        except Exception:  # noqa: BLE001 - dọn lỗi không làm hỏng lượt kiểm
+            import logging
+            logging.getLogger(__name__).exception("dọn bản sao trước khi nâng lỗi")
     tiendo.chi_tiet("kiem", thumuc, da=6, tong=6, xong=True)
     tiendo.xong(ban, thumuc)   # QĐ251: hết lượt cập nhật → 01 dòng F04 tóm tắt thời gian từng bước
     ghi(thumuc, yeu_cau=None, kiem_ban=ban)
@@ -325,6 +334,13 @@ def thong_tin_quayve(thumuc: Path | None = None) -> dict:
         return {"co": False, "ban": None, "mat_tu": None, "chu": CHU["qv_khong_co"]}
     n = doc(thumuc).get("nang_luocdo") or {}
     mat = n.get("luc") if n.get("ban") == capnhat.ban_dang_chay() and not CHE_DO["an_toan"] else None
+    if mat:   # QĐ284, QĐ287 (D1-3): bản có nâng lược đồ mà bản sao trước khi nâng đã xoá → nút hiện, khoá, kèm dòng báo
+        from maychu.dulieu import khoitao, saoluu
+        noi = khoitao._thumuc_chup(thumuc or ketnoi.thumuc_dulieu())
+        if not noi.is_dir():
+            ngay = saoluu.ngay_xoa_truoc_nangcap(noi.name, thumuc)
+            return {"co": True, "khoa": True, "ban": bt, "mat_tu": None,
+                    "chu": CHU["qv_het_han"].format(ngay=datetime.fromisoformat(ngay).strftime("%d/%m/%Y") if ngay else "?")}
     chu = (CHU["qv_mat"].format(luc=_gio(mat)) if mat else
            CHU["qv_an_toan"].format(luc=_gio(CHE_DO["luc"] or "")) if CHE_DO["an_toan"] else CHU["qv_giu"])
     return {"co": True, "ban": bt, "mat_tu": mat, "chu": chu}
@@ -340,7 +356,7 @@ def quay_ve(nguoi_id: str, dong_y_mat: bool = False, thumuc: Path | None = None,
     from maychu.hethong import capnhat
     thumuc = thumuc or ketnoi.thumuc_dulieu()
     q = thong_tin_quayve(thumuc)
-    if not q["co"]:
+    if not q["co"] or q.get("khoa"):   # QĐ287: nút khoá thì máy chủ cũng từ chối
         return {"loi": q["chu"]}
     if q["mat_tu"] and not dong_y_mat:
         return {"loi": CHU["qv_can_dong_y"], "mat_tu": q["mat_tu"]}

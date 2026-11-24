@@ -180,6 +180,7 @@ function veThongSo() {
     return '<div class="the nhom-ts"><div class="tieu">'
     + (ICON[NHOM_ICO[ten]] || '') + '<span class="b7">' + esc(ten) + '</span><span class="phu t12 ml">' + hai(ds.length) + ' thông số</span></div>'
     + ds.map(t => { const gt = hienGt(t);
+      if (t.cong_tac) return veCongTac(t, d);
       return '<div class="ts' + (gt ? '' : ' chua') + '"><div class="ts-ten">' + esc(t.nhan)
         + (gt || !t.khi_trong ? '' : '<div class="t12 xem-chu">' + cum(t.khi_trong) + '</div>') + '</div><div class="ts-gt">'
         + (gt ? '<span class="b7 so">' + esc(gt) + '</span><span class="t12 phu">Từ ' + ngay(t.hieuluc_tu) + ' · ' + (t.nguoi_dat === 'hethong' ? 'Mặc định' : 'Chủ') + '</span>'
@@ -189,6 +190,24 @@ function veThongSo() {
           : '<button class="btn-chu" data-sua="' + t.ten + '">' + ICON.pencil + 'Sửa</button>') + '</div>'; }).join('')
     + sau.map(t => '<div class="dong t12 phu">' + ICON.khoats + '<span>' + cum(t.khong_sua + ': ' + t.nhan + '. ' + (t.khi_trong || '').replace(/^GĐ 1: /, 'GĐ 1 ')) + '</span></div>').join('')
     + '</div>'; }).join('');
+}
+// QĐ278 (Z21 dòng 1–3): công tắc "Sao lưu Google Drive" gạt ngay (không qua hộp "Sửa"), chữ đúng bảng chữ màn 09.
+const CHU_Z21 = {tat: 'Tắt', bat: 'Bật', tu: n => 'Từ ' + n, macDinh: ' · Mặc định', banDoi: ' · Bạn đổi',
+  chuaNoi: 'Drive chưa nối: bản sao chỉ nằm trên máy chủ.',
+  hopTieu: 'Tắt sao lưu Google Drive?', hopChu: 'Bản sao chỉ nằm trên máy chủ. Máy chủ hỏng thì không lấy lại được.', hopNut: 'Tắt'};
+function veCongTac(t, d) {
+  const bat = t.giatri === '1';
+  return '<div class="ts"><div class="ts-ten">' + esc(t.nhan) + (t.giai_thich ? '<div class="t12 phu">' + cum(t.giai_thich) + '</div>' : '')
+    + (bat && !d.drive_noi ? '<div class="t12 xem-chu">' + cum(CHU_Z21.chuaNoi) + '</div>' : '') + '</div><div class="ts-gt">'
+    + '<span class="b7 so">' + (bat ? CHU_Z21.bat : CHU_Z21.tat) + '</span><span class="t12 phu">'
+    + (t.hieuluc_tu ? CHU_Z21.tu(ngay(t.hieuluc_tu)) + (t.nguoi_dat === 'hethong' ? CHU_Z21.macDinh : CHU_Z21.banDoi) : ' ') + '</span></div>'
+    + '<button class="gat-o nut-gat" data-gat="' + esc(t.ten) + '" role="switch" aria-checked="' + bat + '" aria-label="' + esc(t.nhan) + '">'
+    + '<input type="checkbox" tabindex="-1"' + (bat ? ' checked' : '') + '><span class="gat"></span></button></div>';
+}
+async function gatCongTac(ten) {
+  const t = D.thongso.thongso.find(x => x.ten === ten), bat = t.giatri !== '1';
+  const lam = async () => { try { await api('/thongso/' + encodeURIComponent(ten) + '/gat', {bat}); } catch (e) { if (e.status) bao(e.message + '.'); } await napThongSo(); };
+  if (bat) await lam(); else xacnhan(CHU_Z21.hopTieu, cum(CHU_Z21.hopChu), CHU_Z21.hopNut, lam);   // gạt bật thì không hỏi
 }
 async function napThongSo() { D.thongso = await api('/thongso'); veThongSo(); }
 async function moSua(ten) {
@@ -297,10 +316,10 @@ function veQuayVe(d) {   // lớp 3 theo bản vẽ Z16: nút chữ dưới "Ki�
   const q = d.quay_ve || {}, dang = S.cn === 'dangcn' || ['chup', 'day', 'qua_gio', 'cho_viec', 'gui', 'tai'].includes(d.dang_sao);
   $$('[data-qv-nut]').forEach(b => { b.hidden = !q.co || !!d.an_toan; b.title = q.co ? CHU_CN.qvRe(q.ban) : '';
     b.innerHTML = ICON['rotate-ccw'] + nbsp(CHU_CN.quayve); });
-  $$('[data-quayve]').forEach(b => { b.disabled = dang; });
+  $$('[data-quayve]').forEach(b => { b.disabled = dang || !!q.khoa; });   // QĐ287: khoá thì bấm không được
 }
 function moQuayVe() {   // 39–44
-  const q = (D.capnhat || {}).quay_ve || {}; if (!q.co || S.cn === 'dangcn') return;   // N33
+  const q = (D.capnhat || {}).quay_ve || {}; if (!q.co || q.khoa || S.cn === 'dangcn') return;   // N33; QĐ287: khoá không mở hộp
   const dam = cum(CHU_CN.qvDam), chu = cum(q.chu).replace(dam, '<b>' + dam + '</b>');
   xacnhan(CHU_CN.qvTieu(q.ban), chu + '<div class="t12 phu" style="margin-top:8px">' + cum(CHU_CN.qvChung) + '</div>', CHU_CN.quayve, async () => {
     try { await api('/capnhat/quayve', {dong_y_mat: !!q.mat_tu}); }
@@ -353,16 +372,24 @@ function veCapNhat(d) {
   const o = d.o_trong || {du: true}, oc = $('#cn-otrong');
   if (oc) oc.innerHTML = !o.chu ? '' : '<div class="ot-dong ' + (o.du ? 'dat' : 'canh') + '">' + icoMau(ICON[o.du ? 'circle-check' : 'hard-drive'], o.du ? '#258832' : '#E22E28', 14)
     + '<span>' + cum(o.chu) + '</span></div>' + (o.lam ? '<div class="t12 phu" style="margin-top:2px">' + cum(o.lam) + '</div>' : '');   // N36 (b)
-  if (oc && d.co_ban_moi && typeof d.nang_dulieu === 'boolean') {   // QĐ261 dòng 1: thẻ Có bản mới biết trước có nâng dữ liệu không
+  if (oc && d.co_ban_moi && d.drive_bat === false) {   // QĐ278 Z21 dòng 4 (thay 02 dòng nâng dữ liệu), QĐ280, QĐ282 dòng 7
+    oc.insertAdjacentHTML('beforeend', '<div class="ot-dong">' + icoMau(ICON['cloud-off'], '#646A73', 14) + '<span class="phu">' + cum(SL.tat) + '</span></div>'
+      + (d.nang_dulieu === true ? '<div class="ot-dong xem-chu">' + icoMau(ICON.database, '#8F5F00', 14) + '<span>' + cum(SL.tatNd) + '</span></div>' : ''));
+  } else if (oc && d.co_ban_moi && typeof d.nang_dulieu === 'boolean') {   // QĐ261 dòng 1: thẻ Có bản mới biết trước có nâng dữ liệu không
     const mau = d.nang_dulieu ? '#8F5F00' : '#646A73';
     oc.insertAdjacentHTML('beforeend', '<div class="ot-dong">' + icoMau(ICON.database, mau, 14) + '<span>' + cum(d.nang_dulieu ? SL.ndCo : SL.ndKhong) + '</span></div>');
   }
   const sl = veSauLen(d);   // QĐ261 dòng 4–8: thẻ bản đang dùng sau khi tải lại
   const kl = $('#cn-kiemloi'), k = d.kiem_hien;   // N36 (e): lỗi kiểm sau cập nhật hiện cả ở thẻ đầu
   if (kl) { kl.hidden = !k || k.dat || sl.co; if (k && !k.dat) kl.innerHTML = icoMau(ICON['circle-alert'], '#E22E28', 13) + '<span>' + CHU_CN.kiem + cum(k.chu) + '</span>'; }
+  const qk = (d.quay_ve || {}).khoa;   // QĐ287 (Z24): bản sao trước khi nâng đã xoá → nút hiện, khoá; dòng báo dưới dòng bản
   $$('[data-qv-nut]').forEach(b => {   // QĐ261 dòng 7: kiểm chưa đạt thì "Quay về bản trước" thành nút viền (mở hộp quay về Z16)
     b.className = sl.loiKiem ? 'btn btn-phu' : 'btn-chu';
-    b.innerHTML = icoMau(ICON['rotate-ccw'], sl.loiKiem ? '#1F2329' : '#1456F0', sl.loiKiem ? 16 : 14) + nbsp(CHU_CN.quayve); });
+    b.innerHTML = icoMau(ICON['rotate-ccw'], sl.loiKiem ? '#1F2329' : '#1456F0', sl.loiKiem ? 16 : 14) + nbsp(CHU_CN.quayve);
+    if (qk) { b.className = 'btn-chu qv-khoa'; b.innerHTML = icoMau(ICON.lock, '#646A73', 14) + nbsp(CHU_CN.quayve);   // Z24 dòng 2
+      b.disabled = true; b.title = d.quay_ve.chu; } });
+  const qkd = $('#cn-qvkhoa');
+  if (qkd) { qkd.hidden = !qk; qkd.innerHTML = qk ? icoMau(ICON['archive-x'], '#646A73', 14) + '<span>' + cum(d.quay_ve.chu) + '</span>' : ''; }
   if (d.quayve_loi) $('#ls-capnhat').insertAdjacentHTML('afterbegin', '<div class="hang" style="' + cot + '"><b class="so">' + esc(d.ban_dang)   // Y38d
     + '</b><span data-l="Nội dung"><span class="ks canh">' + icoMau(ICON['rotate-ccw'], '#E22E28', 13) + '<span>' + cum(cau(d.quayve_loi.chu_hien))
     + '</span></span></span><span data-l="Ngày cài" class="so">' + ngay(d.quayve_loi.luc) + '</span></div>');
@@ -376,6 +403,8 @@ function veCapNhat(d) {
 }
 // QĐ261 (bản vẽ Z19, chữ U19 anh duyệt dòng 1–9): chữ thẻ Có bản mới và thẻ bản đang dùng sau khi tải lại, viết ở 01 chỗ này.
 const SL = {ndKhong: 'Không nâng dữ liệu: bản sao Drive đẩy sau khi lên bản mới.', ndCo: 'Có nâng dữ liệu: đẩy bản sao Drive xong mới cập nhật.',
+  // QĐ278 Z21 dòng 4, 6 (QĐ288 "lưu"), QĐ282 dòng 7: công tắc Sao lưu Google Drive đang tắt
+  tat: 'Sao lưu Google Drive đang tắt: bản sao chỉ lưu trên máy chủ.', tatNd: 'Bản này có nâng dữ liệu.', tatSau: 'Bản sao Drive: tắt',
   vuaLen: (b, l, g) => 'Vừa lên bản ' + b + ' lúc ' + l + ' · tổng thời gian ' + g,
   dangKiem: (k, n) => 'Kiểm sau cập nhật: đang kiểm ' + hai(k) + '/' + hai(n),
   vanChay: b => 'Bản ' + b + ' vẫn chạy. Lỗi đã ghi nhật ký và báo chuông.',
@@ -395,6 +424,7 @@ function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt v�
   else if (k) h += dong(k.dat ? 'dat' : 'canh', k.dat ? 'circle-check' : 'circle-alert', k.dat ? '#258832' : '#E22E28', CHU_CN.kiem + k.chu)
     + (k.dat ? '' : '<div class="t12 phu">' + cum(SL.vanChay(d.ban_dang)) + '</div>');
   const dn = t.drive_nen;
+  if (t.drive_tat) h += '<div class="ks phu">' + icoMau(ICON['cloud-off'], '#646A73', 14) + '<span>' + cum(SL.tatSau) + '</span></div>';   // QĐ278 Z21 dòng 6
   if (dn && dn.tong) h += dn.da >= dn.tong ? dong('dat', 'cloud-check', '#258832', SL.daLen(dn.tong))
     : dn.loi ? dong('xem', 'cloud-alert', '#8F5F00', SL.chuaLenHet(dn.da, dn.tong, (dn.hen || '').slice(11, 16))) : dong('', 'cloud-upload', '#1456F0', SL.dangDay(dn.da, dn.tong));
   e.innerHTML = h;
@@ -419,10 +449,11 @@ async function capNhat(cheDo, van) {
 // nguyên văn ở bảng màn 09 (Bangdulieu_Manhinh_GD1), viết ở 01 chỗ này. Bước có số đo (tệp i/07, điểm k/06, tệp lên Drive)
 // tính theo số đo; bước 5–7 ước tính theo thời gian các lần trước (máy chủ tính từ F04, trả ở tien_do.du_kien).
 const TD8 = {ma: ['o_trong', 'chup', 'drive', 'gui', 'tai', 'khoidong', 'nang', 'kiem'], uoc: ['tai', 'khoidong', 'nang'],
-  ten: ['Kiểm ổ trống', 'Chụp dữ liệu', 'Bản sao Drive', 'Gửi lệnh cập nhật', 'Tải gói cài', 'Thay bản chạy', 'Nâng dữ liệu', 'Kiểm sau cập nhật'],
+  ten: ['Kiểm ổ trống', 'Sao lưu dữ liệu', 'Bản sao Drive', 'Gửi lệnh cập nhật', 'Tải gói cài', 'Thay bản chạy', 'Nâng dữ liệu', 'Kiểm sau cập nhật'],
   cot: {o_trong: 'đang kiểm', drive: 'đang đẩy lên', gui: 'đang gửi'}, uocTinh: 'ước tính', xong: 'xong', cham: 'lâu hơn ước tính',
   quaGio: 'quá 10 phút', chuaDuoc: 'chưa được', tep: ' tệp', diem: ' điểm', sauUoc: ' (ước tính)', thuongLe: ' lâu hơn thường lệ',
   chuaNoi: 'chưa nối Drive', chuaLenHet: 'chưa lên hết',   // QĐ255 điểm 3: bước 3 bỏ qua
+  tat: 'tắt',   // QĐ278 Z21 dòng 5: công tắc Sao lưu Google Drive tắt
   sauLen: 'sau khi lên bản', sauTaiLai: 'sau khi tải lại',   // QĐ261 dòng 2, 3: Drive đẩy nền, kiểm chạy nền sau khi tải lại
   dang: b => 'Đang cập nhật lên ' + b, daLen: b => 'Đã lên bản ' + b, chuaLen: b => 'Chưa cập nhật được lên ' + b,
   buoc: k => 'Bước ' + k + '/8:', dung: k => 'Dừng ở bước ' + k + '/8:', xongBuoc: 'Xong 08/08 bước', quaChu: 'Bản sao Drive quá 10 phút, chờ bạn chọn',
@@ -439,8 +470,14 @@ ICON['circle-minus'] = ICON['circle-minus'] || ICON['circle-check'].replace('luc
 // QĐ261, QĐ262 (bản vẽ Z19): 02 icon Lucide (giấy phép ISC) lấy đúng nét trong bản vẽ: Drive đã lên đủ, Drive lỗi / chuông.
 const svgLucide = (ten, net) => '<svg\n  style="flex:none;vertical-align:middle" class="lucide lucide-' + ten + '"\n  xmlns="http://www.w3.org/2000/svg"\n'
   + '  width="16"\n  height="16"\n  viewBox="0 0 24 24"\n  fill="none"\n  stroke="#1F2329"\n  stroke-width="2"\n  stroke-linecap="round"\n'
-  + '  stroke-linejoin="round"\n>\n' + net.map(d => '  <path d="' + d + '" />\n').join('') + '</svg>';
+  + '  stroke-linejoin="round"\n>\n' + net.map(d => d.startsWith('<') ? '  ' + d + '\n' : '  <path d="' + d + '" />\n').join('') + '</svg>';
 ICON['cloud-check'] = ICON['cloud-check'] || svgLucide('cloud-check', ['m17 15-5.5 5.5L9 18', 'M5 17.743A7 7 0 1 1 15.71 10h1.79a4.5 4.5 0 0 1 1.5 8.742']);
+// QĐ278, QĐ287 (bản vẽ Z21, Z24): Drive tắt, không còn bản sao để quay về, nút khoá
+ICON['cloud-off'] = ICON['cloud-off'] || svgLucide('cloud-off', ['m2 2 20 20', 'M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193',
+  'M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07']);
+ICON['archive-x'] = ICON['archive-x'] || svgLucide('archive-x', ['<rect width="20" height="5" x="2" y="3" rx="1" />',
+  'M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8', 'm9.5 17 5-5', 'm9.5 12 5 5']);
+ICON.lock = ICON.lock || svgLucide('lock', ['<rect width="18" height="11" x="3" y="11" rx="2" ry="2" />', 'M7 11V7a5 5 0 0 1 10 0v4']);
 ICON['cloud-alert'] = ICON['cloud-alert'] || svgLucide('cloud-alert', ['M12 12v4', 'M12 20h.01', 'M17 18h.5a1 1 0 0 0 0-9h-1.79A7 7 0 1 0 7 17.708']);
 const mmss = g => { g = Math.max(0, Math.floor(g || 0)); return hai(Math.floor(g / 60)) + ':' + hai(g % 60); };
 function tinhTienDo(td, bay) {   // bay: giờ máy chủ (ms). Cùng cách tính với maychu/hethong/tiendo.hien
@@ -456,6 +493,7 @@ function tinhTienDo(td, bay) {   // bay: giờ máy chủ (ms). Cùng cách tín
   const so = (x, n) => hai(+x || 0) + '/' + hai(n);
   const thu = TD8.ma.map((m, i) => {   // từng bước: trạng thái và chữ cột phải
     if (xong || i < vi) { const sau = TD8.ma.slice(i + 1).map(x => moc[x]).find(Boolean) || td.xong, dr = td.drive || {};
+      if (m === 'drive' && td.drive_tat) return {tt: 'bo', cot: TD8.tat};   // QĐ278 Z21 dòng 5
       if (m === 'drive' && dr.nen) return {tt: 'nen', cot: TD8.sauLen};   // QĐ258, QĐ261 dòng 2: Drive đẩy nền sau khi bản mới lên
       if (m === 'drive' && !moc.drive) return {tt: 'bo', cot: TD8.chuaNoi};   // QĐ255 điểm 3: Drive chưa nối
       if (m === 'drive' && dr.tong && (+dr.da || 0) < dr.tong) return {tt: 'bo', cot: TD8.chuaLenHet};   // "Vẫn cập nhật" khi quá giờ
@@ -1104,6 +1142,7 @@ document.addEventListener('click', async ev => {
   else if (d.mo) { if (d.mo === 'h-2lop') datLaiDoiMay(); mo(d.mo); }
   else if ('dong' in d) dongHop();
   else if (d.sua) { await moSua(d.sua); }
+  else if (d.gat) { await gatCongTac(d.gat); }   // QĐ278: công tắc Thông số
   else if ('luusua' in d) { await luuSua(); }
   else if ('locChua' in d) { $('#ds-thongso').classList.toggle('chi-chua'); t.classList.toggle('on'); }
   else if (d.thuhoi) xacnhan('Thu hồi phiên này?', 'Máy đó phải đăng nhập lại mới dùng tiếp được.', 'Thu hồi', async () => {

@@ -3,6 +3,16 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.3
+Tóm tắt: Công tắc sao lưu Drive, giữ bản sao 30 ngày
+Nâng dữ liệu: không
+- Cài đặt › Thông số có công tắc "Sao lưu Google Drive", mặc định tắt. Khi tắt, cập nhật không chờ Drive; bản sao chỉ lưu trên máy chủ.
+- Khi tắt: thẻ Có bản mới ghi "Sao lưu Google Drive đang tắt", bản có nâng dữ liệu thì thêm dòng "Bản này có nâng dữ liệu."; bước 3 ghi "tắt"; thẻ bản đang dùng ghi "Bản sao Drive: tắt".
+- Sửa lỗi tệp sao lưu dồn trên ổ máy chủ: khi Drive tắt hoặc chưa nối, máy chủ chỉ giữ bản sao của 03 ngày gần nhất và 02 lần trước cập nhật gần nhất.
+- Bật công tắc mà chưa nối Drive: bản sao vẫn chờ đẩy; nối Drive trong 03 ngày thì bản còn trên máy vẫn lên Drive.
+- Bản sao dữ liệu trước khi nâng giữ 30 ngày sau lần nâng gần nhất, rồi tự xoá khi lần nâng mới đã kiểm đạt.
+- Bản sao trước khi nâng đã xoá thì nút Quay về bản trước của bản có nâng dữ liệu bị khoá, kèm dòng báo không còn dữ liệu để quay về. Bản không nâng dữ liệu vẫn quay về như cũ.
+
 ## 0.8.2
 Tóm tắt: Cập nhật nhanh hơn
 Nâng dữ liệu: không
