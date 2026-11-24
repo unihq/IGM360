@@ -26,6 +26,9 @@ DANHMUC = [
     ("songay_giu_banghigoc_vps", 1, "Số ngày giữ bản ghi gốc trên máy chủ", "so", "ngày", None, None,
      "Đang giữ mãi, không tự xoá"),
     ("songay_baotruoc_khoa_hethan", 1, "Báo trước khi khoá kết nối hết hạn", "so", "ngày", "5", None, ""),
+    # QĐ263, QĐ271 (Z20 dòng 1): công tắc "Tự nâng mỗi ngày" của khối Công cụ AI, mặc định bật; hiện ở màn Cập nhật,
+    # không hiện ở ngăn Thông số (AN_O_THONGSO)
+    ("tunang_congcu_ai", 2, "Tự nâng mỗi ngày", "codong", "", "1", {"0": "Tắt", "1": "Bật"}, ""),
     ("so_viec_ai_songsong", 2, "Số việc AI chạy cùng lúc", "so", "việc", "3", None, ""),
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
     ("tyle_bao_hanmuc_tuan", 2, "Báo khi gói AI dùng quá hạn mức tuần", "so", "%", "80", None, ""),   # QĐ165, PTD-06 mục 10
@@ -46,7 +49,8 @@ KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulie
 GIAIDOAN_SAU = {"nguong_tien_ai_tuapdung"}
 THEO_TEN = {d[0]: d for d in DANHMUC}
 # QĐ278 (Z21 dòng 1): thông số gạt công tắc, đổi có hiệu lực ngay trong ngày (không qua hộp "Sửa" chọn ngày áp dụng)
-CONG_TAC = {"saoluu_drive"}
+CONG_TAC = {"saoluu_drive", "tunang_congcu_ai"}
+AN_O_THONGSO = {"tunang_congcu_ai"}   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 
 
@@ -135,7 +139,7 @@ def doc_het(thumuc: Path | None = None) -> dict:
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
         ds = []
-        for ten, nhom, nhan, kieu, donvi, _m, lua, trong in DANHMUC:
+        for ten, nhom, nhan, kieu, donvi, _m, lua, trong in (x for x in DANHMUC if x[0] not in AN_O_THONGSO):
             d = _dong_dang_dung(cn, ten, ngay)
             sap = cn.execute("SELECT giatri, hieuluc_tu FROM thongso WHERE ten = ? AND congty_id IS NULL AND hieuluc_tu > ?"
                              " ORDER BY hieuluc_tu LIMIT 1", (ten, ngay)).fetchone()
@@ -176,6 +180,11 @@ def kiem_giatri(ten: str, giatri: str) -> str | None:
         except ValueError:
             return "Giá trị phải là số"
     return None
+
+
+def cong_tac_bat(ten: str, thumuc: Path | None = None) -> bool:
+    """Công tắc đang bật? Chưa có dòng nào thì theo mặc định trong DANHMUC."""
+    return doc_mot(ten, THEO_TEN[ten][5], thumuc) == "1"
 
 
 def drive_bat(thumuc: Path | None = None) -> bool:
