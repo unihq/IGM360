@@ -112,6 +112,7 @@ async function xacNhanMa(nut) {
 }
 
 // ---- Màn 02
+const DAU_SAU_CN = '#sau-capnhat';   // dấu trên địa chỉ trang khi tự tải lại sau cập nhật (CDO U21 G1)
 async function vaoPhanMem() {
   const toi = await api('/toi');
   const chu = (toi.ten || toi.ten_dangnhap || '').trim();
@@ -119,6 +120,8 @@ async function vaoPhanMem() {
   D.hetLuc = toi.het_luc; S.g = '02'; S.dn = 'matkhau';
   try { D.anToan = !!(await (await fetch('/suckhoe', {cache: 'no-store'})).json()).an_toan; } catch (e) { D.anToan = false; }
   if (D.anToan) { S.trang = '09'; S.tab = 'capnhat'; ve(); napTab(); return; }   // 0.7.9 lớp 2: chỉ mở Cài đặt › Cập nhật
+  if (location.hash === DAU_SAU_CN) {   // CDO U21 G1: vừa tải lại sau cập nhật → mở đúng Cài đặt › Cập nhật để thấy thẻ kết quả
+    S.trang = '09'; S.tab = 'capnhat'; history.replaceState(null, '', location.pathname + location.search); }
   ve(); demSo();
   if (S.trang === '09') napTab();
 }
@@ -377,7 +380,8 @@ const SL = {ndKhong: 'Không nâng dữ liệu: bản sao Drive đẩy sau khi l
   dangKiem: (k, n) => 'Kiểm sau cập nhật: đang kiểm ' + hai(k) + '/' + hai(n),
   vanChay: b => 'Bản ' + b + ' vẫn chạy. Lỗi đã ghi nhật ký và báo chuông.',
   dangDay: (k, n) => 'Bản sao Drive: đang đẩy ' + hai(k) + '/' + hai(n) + ' tệp', daLen: n => 'Bản sao Drive: đã lên ' + hai(n) + '/' + hai(n) + ' tệp',
-  chuaLenHet: (k, n) => 'Bản sao Drive: chưa lên hết ' + hai(k) + '/' + hai(n) + ' tệp · tự đẩy lại sau 05 phút'};
+  // QĐ273 (anh "Chọn A"): giờ hẹn đẩy lại sớm nhất trong hàng chờ, giờ Việt Nam
+  chuaLenHet: (k, n, hen) => 'Bản sao Drive: chưa lên hết ' + hai(k) + '/' + hai(n) + ' tệp' + (hen ? ' · tự đẩy lại từ ' + hen : '')};
 function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt vừa lên bản này thì xoá trống
   const e = $('#cn-saulen'), the = $('[data-s="cn:moinhat"]'), t = d.tien_do, k = d.kiem_hien;
   const co = !!(e && t && t.den === d.ban_dang && !t.loi && !t.treo && ['nang', 'kiem', 'xong'].includes(t.buoc));
@@ -392,10 +396,10 @@ function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt v�
     + (k.dat ? '' : '<div class="t12 phu">' + cum(SL.vanChay(d.ban_dang)) + '</div>');
   const dn = t.drive_nen;
   if (dn && dn.tong) h += dn.da >= dn.tong ? dong('dat', 'cloud-check', '#258832', SL.daLen(dn.tong))
-    : dn.loi ? dong('xem', 'cloud-alert', '#8F5F00', SL.chuaLenHet(dn.da, dn.tong)) : dong('', 'cloud-upload', '#1456F0', SL.dangDay(dn.da, dn.tong));
+    : dn.loi ? dong('xem', 'cloud-alert', '#8F5F00', SL.chuaLenHet(dn.da, dn.tong, (dn.hen || '').slice(11, 16))) : dong('', 'cloud-upload', '#1456F0', SL.dangDay(dn.da, dn.tong));
   e.innerHTML = h;
   if (the) the.classList.toggle('vien-loi', loiKiem);
-  return {co, loiKiem, keoDrive: !!(dn && dn.tong && dn.da < dn.tong && !dn.loi)};
+  return {co, loiKiem, keoDrive: !!(dn && dn.tong && dn.da < dn.tong)};   // CDO U21 G2: Drive lỗi vẫn theo dõi (tự đẩy lại)
 }
 function moCapNhat() {
   const viec = D.capnhat.so_viec_ai, o = D.capnhat.o_trong || {du: true};
@@ -508,7 +512,7 @@ function theoKiem() {   // QĐ258, QĐ261: trang đã chạy bản mới; kiểm
   const hoi = async () => {
     let tiep = true;
     try { const s = await api('/capnhat'), t = s.tien_do, dn = t && t.drive_nen;
-      tiep = !!t && !t.loi && !t.treo && (t.buoc !== 'xong' || !!(dn && dn.tong && dn.da < dn.tong && !dn.loi));
+      tiep = !!t && !t.loi && !t.treo && (t.buoc !== 'xong' || !!(dn && dn.tong && dn.da < dn.tong));   // G2: Drive lỗi vẫn hỏi
       veCapNhat(s); }
     catch (e) { /* mạng chập chờn: hỏi lại lượt sau */ }
     if (tiep && Date.now() - D.theoKiemTu < PHUT_THEO * 60e3) setTimeout(hoi, NHIP_GIAY * 1000); else D.theoKiem = false;
@@ -536,7 +540,7 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
   const cho = async () => {
     try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
       // QĐ258 (đổi QĐ253): bản mới chạy là tải lại ngay; kiểm 06 điểm chạy nền, kết quả hiện sau (theoKiem)
-      if (k.phienban && k.phienban !== cu) { location.reload(); return; } else {
+      if (k.phienban && k.phienban !== cu) { location.hash = DAU_SAU_CN; location.reload(); return; } else {   // G1: về Cập nhật
         const s = await api('/capnhat');   // lớp 5: bước bản sao đang chạy; lỗi bản sao thì dừng, không gửi lệnh
         if (s.sao_loi && !s.dang_sao) { if (s.tien_do && s.tien_do.loi) { hien(s, {}); return; }   // QĐ253: lỗi bước 1–4 có nút Thử lại
           S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: ' + s.sao_loi + '.'; ve(); return; }

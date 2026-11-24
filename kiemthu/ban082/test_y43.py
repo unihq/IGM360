@@ -188,9 +188,23 @@ class KiemChuongDrive(NenTD):
         from maychu.hethong import tiendo
         self.chuan_bi(lan=1, xong=3)
         h = tiendo.hien(self.dl)
-        self.assertEqual(h["drive_nen"], {"da": 3, "tong": 7, "loi": True, "lan": 1})
+        self.assertEqual(h["drive_nen"], {"da": 3, "tong": 7, "loi": True, "lan": 1, "hen": None})
         self.assertNotIn("drive_noi", h)
         self.assertNotIn(str(self.dl), json.dumps(h, ensure_ascii=False))
+
+    def test_gio_hen_day_lai_som_nhat_qd273(self):
+        """QĐ273: drive_nen có giờ hẹn đẩy lại sớm nhất (lan_thu_ke, giờ Việt Nam) của các tệp đang lỗi."""
+        from maychu.dulieu import ketnoi
+        from maychu.hethong import tiendo
+        self.chuan_bi(lan=1, xong=3)
+        cn = ketnoi.mo("Hotho", self.dl)
+        try:
+            ids = [r[0] for r in cn.execute("SELECT id FROM cho_day_drive WHERE trangthai = 'loi' ORDER BY rowid")]
+            for i, gio in zip(ids, ("2026-11-24T14:45:00+07:00", "2026-11-24T14:35:00+07:00", "2026-11-24T14:50:00+07:00")):
+                cn.execute("UPDATE cho_day_drive SET lan_thu_ke = ? WHERE id = ?", (gio, i))
+        finally:
+            cn.close()
+        self.assertEqual(tiendo.hien(self.dl)["drive_nen"]["hen"], "2026-11-24T14:35:00+07:00")
 
     def test_chuong_sau_03_lan_va_tu_dong(self):
         from maychu.hethong.giamsat import thongbao
@@ -278,13 +292,15 @@ const $ = s => s === '#cn-saulen' ? khung : the;
 
     def test_sau_tai_lai_kiem_chua_dat_va_drive_loi(self):
         kq = self.sau_len({"ban_dang": "0.3.0", "kiem_hien": {"dat": False, "chu": "05/06 · lịch chạy nền chưa bật"},
-                           "tien_do": self.tien_do("xong", xong="2026-11-24T14:20:45+07:00", drive_nen={"da": 3, "tong": 7, "loi": True})})
+                           "tien_do": self.tien_do("xong", xong="2026-11-24T14:20:45+07:00",
+                                                   drive_nen={"da": 3, "tong": 7, "loi": True, "hen": "2026-11-24T14:35:00+07:00"})})
         h = kq["h"]
         for chu in ('class="ks canh"', "Kiểm sau cập nhật: 05/06 · lịch chạy nền chưa bật",
                     "Bản 0.3.0 vẫn chạy. Lỗi đã ghi nhật ký và báo chuông.",
-                    "Bản sao Drive: chưa lên hết 03/07 tệp · tự đẩy lại sau 05 phút", "lucide-cloud-alert", 'class="ks xem"'):
+                    "Bản sao Drive: chưa lên hết 03/07 tệp · tự đẩy lại từ 14:35", "lucide-cloud-alert", 'class="ks xem"'):
             self.assertIn(chu, h)
-        self.assertEqual((kq["lop"], kq["r"]["loiKiem"], kq["r"]["keoDrive"]), (["vien-loi"], True, False))
+        self.assertNotIn("sau 05 phút", h)                                  # QĐ273 thay câu cũ
+        self.assertEqual((kq["lop"], kq["r"]["loiKiem"], kq["r"]["keoDrive"]), (["vien-loi"], True, True))   # G2: vẫn theo dõi
 
     def test_khong_hien_khi_khong_phai_luot_vua_len(self):
         for td in (None, self.tien_do("tai"), {**self.tien_do("xong"), "den": "0.2.9"}, {**self.tien_do("kiem"), "treo": True}):
@@ -308,7 +324,7 @@ const $ = s => s === '#cn-saulen' ? khung : the;
 let T = 1, hen = [], hoi = 0, ve = [];
 const D = {}, dongHo = {now: () => T};
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
-const api = async () => { hoi++; const dn = {da: Math.min(7, hoi), tong: 7, loi: false};
+const api = async () => { hoi++; const dn = {da: Math.min(7, hoi), tong: 7, loi: hoi >= 5 && hoi < 7};   // G2: lượt 5–6 Drive lỗi
   return {tien_do: {buoc: hoi < 4 ? 'kiem' : 'xong', den: '0.9.9', drive_nen: dn}, lan: hoi}; };
 const veCapNhat = s => { ve.push(s.lan); theoKiem(); };
 """ + ham + r"""
@@ -319,16 +335,42 @@ const veCapNhat = s => { ve.push(s.lan); theoKiem(); };
 })();
 """
         kq = self.node(ma)
-        self.assertEqual(kq["hoi"], 7)                                   # kiểm xong lượt 4, Drive lên đủ 07/07 lượt 7
+        self.assertEqual(kq["hoi"], 7)                                   # kiểm xong lượt 4; Drive lỗi lượt 5–6 vẫn hỏi; đủ 07/07 lượt 7
         self.assertEqual(kq["ve"], [1, 2, 3, 4, 5, 6, 7])                # vẽ lại mỗi lượt
         self.assertEqual((kq["dang"], kq["giay"]), (False, 70))         # mỗi 10 giây, rồi thôi hỏi
 
     def test_tai_lai_ngay_va_khong_con_cho_xong(self):
         js = GD.joinpath("app.js").read_text(encoding="utf-8")
-        for chu in ("if (k.phienban && k.phienban !== cu) { location.reload(); return; }",
+        for chu in ("if (k.phienban && k.phienban !== cu) { location.hash = DAU_SAU_CN; location.reload(); return; }",
                     "else if ((dangLuot && t.den === d.ban_dang) || sl.keoDrive) theoKiem();"):
             self.assertTrue(chu in js, chu)
         self.assertFalse("moiChay" in js)
+
+
+    def test_sau_cap_nhat_tai_lai_ve_cai_dat_cap_nhat(self):
+        """CDO U21 G1: tải lại sau cập nhật mở đúng Cài đặt › Cập nhật (dấu #sau-capnhat), rồi xoá dấu khỏi địa chỉ."""
+        js = GD.joinpath("app.js").read_text(encoding="utf-8").replace("\r\n", "\n").split("\n")
+        dau = next(x for x in js if x.startswith("const DAU_SAU_CN = "))
+        a = next(i for i, x in enumerate(js) if x.startswith("async function vaoPhanMem("))
+        b = next(i for i in range(a, len(js)) if js[i] == "}")
+        ma = r"""
+const S = {trang: '03', tab: 'thongso'}, D = {}, goi = [];
+const $ = () => ({textContent: ''});
+const api = async () => ({ten: 'Chu'});
+const fetch = async () => ({json: async () => ({an_toan: false})});
+const location = {hash: '#sau-capnhat', pathname: '/', search: ''};
+const history = {replaceState: (a, b, u) => { goi.push('xoa:' + u); location.hash = ''; }};
+const ve = () => goi.push('ve'), demSo = () => {}, napTab = () => goi.push('napTab:' + S.trang + '/' + S.tab);
+""" + dau + "\n" + "\n".join(js[a:b + 1]) + r"""
+(async () => { await vaoPhanMem(); const mot = [S.trang, S.tab, location.hash];
+  S.trang = '03'; S.tab = 'thongso'; await vaoPhanMem();   // lần mở sau (không còn dấu): màn như thường
+  console.log(JSON.stringify({mot, hai: [S.trang, S.tab], goi})); })();
+"""
+        kq = self.node(ma)
+        self.assertEqual(kq["mot"], ["09", "capnhat", ""])
+        self.assertIn("napTab:09/capnhat", kq["goi"])
+        self.assertIn("xoa:/", kq["goi"])
+        self.assertEqual(kq["hai"], ["03", "thongso"])
 
 
 if __name__ == "__main__":
