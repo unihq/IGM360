@@ -391,7 +391,7 @@ def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     if not tt["da_noi"]:
         return {"loi": "CLI báo xong nhưng kiểm lại vẫn chưa đăng nhập: bấm Đăng nhập lại"}
     c = chup_song(taikhoan) if goi == "claude" else None
-    if taikhoan > 1:   # QĐ164 ý 1: chặn nối trùng (QĐ216 N4: so dấu băm, kể cả tài khoản đang dùng mã dài hạn)
+    if taikhoan >= 1:   # QĐ164 ý 1: chặn nối trùng (QĐ216 N4: so dấu băm, kể cả tài khoản đang dùng mã dài hạn); Y38i G1: cả ô 1
         tk = tim_trung(goi, taikhoan, (c["email_bam"], c["tochuc_bam"]) if c else dinh_danh_bam(goi, taikhoan))
         if tk:
             _dang_xuat(goi, taikhoan)

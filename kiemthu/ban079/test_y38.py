@@ -1070,6 +1070,61 @@ class KiemY38h(NenAT):
         self.assertIn("(cl && coBaoLayLai(g, x.taikhoan) ? baoLayLai(", js)
 
 
+class KiemY38i(NenAT):
+    """CDO U15b G1 (QĐ164 ý 1): "Lấy tên, gói" ở ô 1 cũng chặn trùng với ô khác (trước đây chỉ ô 2 trở đi)."""
+    EMAIL_O2 = "nguoi.o2@vidu.invalid"
+
+    def lay_ten_o1(self, o2_co_ma, o1_co_ma=True):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        if o1_co_ma:
+            madaihan.luu(1, MA_GIA)
+        c = {"ten_hien": "Nguoi O2", "goi_ten": "Max", "email_bam": dg._bam(self.EMAIL_O2), "tochuc_bam": None, "chup_luc": "x"}
+        if o2_co_ma:   # ô 2 dùng mã dài hạn, đã có tệp chụp
+            madaihan.luu(2, MA_MOI)
+            dg.ghi_chup(2, dict(c))
+        da_noi = lambda goi, tk, bo_nho=False: {"da_noi": tk in (1, 2), "goi_dang_dung": None}   # noqa: E731
+        with mock.patch.object(dg, "trang_thai", side_effect=da_noi), mock.patch.object(dg, "chup_song", return_value=dict(c)), \
+                mock.patch.object(dg, "_dinh_danh", side_effect=lambda goi, tk, *a, **k: (self.EMAIL_O2, None) if tk == 2 else None), \
+                mock.patch.object(dg, "_dang_xuat", return_value=True) as dx, \
+                mock.patch.object(dg, "ghi_nguon") as gn:
+            kq = dg._ket_thuc("claude", 1)
+        return kq, dx, gn
+
+    def test_g1_o1_trung_o2_co_ma(self):
+        kq, dx, gn = self.lay_ten_o1(o2_co_ma=True)
+        self.assertEqual((kq["trung_voi"], kq.get("lay_lai"), kq.get("chu_rieng")), (2, True, True))
+        self.assertEqual(kq["loi"], madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=2))   # A8, số ô đang giữ tài khoản
+        self.assertEqual(madaihan.lay(1), MA_GIA)                                    # giữ mã ô 1
+        self.assertIsNone(dg.doc_chup(1))                                            # không ghi tên, gói của ô 2 vào ô 1
+        dx.assert_called_once()
+        gn.assert_not_called()
+
+    def test_g1_o1_trung_o2_chi_dang_nhap_kieu_cu(self):
+        kq, dx, gn = self.lay_ten_o1(o2_co_ma=False)                                  # ô 2 chưa có tệp chụp: so định danh sống
+        self.assertEqual((kq["trung_voi"], kq.get("lay_lai")), (2, True))
+        self.assertEqual(madaihan.lay(1), MA_GIA)
+        self.assertIsNone(dg.doc_chup(1))
+        gn.assert_not_called()
+
+    def test_g1_o1_chua_co_ma_trung_thi_khong_ghi_g06(self):
+        kq, dx, gn = self.lay_ten_o1(o2_co_ma=False, o1_co_ma=False)
+        self.assertEqual(kq["trung_voi"], 2)
+        self.assertNotIn("lay_lai", kq)
+        gn.assert_not_called()                                                       # QĐ164 ý 1: không ghi G06
+
+    def test_g1_o1_khong_trung_thi_ghi_ten_goi_nhu_cu(self):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        madaihan.luu(1, MA_GIA)
+        c = {"ten_hien": "Nguoi O1", "goi_ten": "Pro", "email_bam": dg._bam("nguoi.o1@vidu.invalid"), "tochuc_bam": None, "chup_luc": "x"}
+        with mock.patch.object(dg, "trang_thai", return_value={"da_noi": True, "goi_dang_dung": None}), \
+                mock.patch.object(dg, "chup_song", return_value=c), \
+                mock.patch.object(dg, "_dinh_danh", return_value=(self.EMAIL_O2, None)), \
+                mock.patch.object(dg, "_dang_xuat", return_value=True):
+            kq = dg._ket_thuc("claude", 1)
+        self.assertTrue(kq.get("chup"))
+        self.assertEqual(dg.doc_chup(1)["ten_hien"], "Nguoi O1")
+
+
 TU_ANH = __import__("re").compile(r"(?<![\w-])[Aa]nh(?![\w-])")
 # QĐ221: lời gửi AI ở Trò chuyện AI cũng xưng "bạn" — không còn ngoại lệ nào
 CHO_PHEP_PY = set()
