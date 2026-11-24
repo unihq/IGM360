@@ -25,6 +25,22 @@ NHIP_THONGBAO_GIAY = 600   # ước lượng, chưa đo: gói AI hỏi CLI mỗi
 log = logging.getLogger("igm360.lich")
 
 
+_VIEC_CLI = {"viec": None}   # giữ tham chiếu việc nền kiểm công cụ AI (không bị dọn giữa chừng, không chạy chồng)
+
+
+def dang_kiem_cli() -> bool:
+    v = _VIEC_CLI["viec"]
+    return v is not None and not v.done()
+
+
+async def _kiem_cli_nen() -> None:
+    try:
+        kq = await asyncio.to_thread(nangcli.luot_hang_ngay)
+        log.info("công cụ AI: %s", kq)
+    except Exception:  # noqa: BLE001 - lỗi 01 lượt không làm dừng lịch
+        log.exception("kiểm công cụ AI lỗi")
+
+
 async def chay_mai() -> None:
     gio_do_cuoi = None
     lan_day_cuoi = 0.0
@@ -43,11 +59,11 @@ async def chay_mai() -> None:
                 kq = await asyncio.to_thread(saoluu.chay)
                 log.info("sao lưu: %s", kq["ketqua"])
                 await asyncio.to_thread(saoluu.don_truoc_nangcap)   # D1 (QĐ281): mốc 30 ngày tự đến
-            # Y46 (QĐ271): công cụ AI tự kiểm bản mới từ 03:00 mỗi ngày; máy tắt lúc đó thì kiểm khi bật lại
-            if bay_gio.hour >= nangcli.GIO_KIEM and not nangcli.da_kiem_hom_nay(bay_gio):
-                kq = await asyncio.to_thread(nangcli.luot_hang_ngay)
-                log.info("công cụ AI: %s", kq)
                 await asyncio.to_thread(thongbao.quet_saoluu)
+            # Y46 (QĐ271): công cụ AI tự kiểm bản mới từ 03:00 mỗi ngày; máy tắt lúc đó thì kiểm khi bật lại.
+            # CDA L2: chạy thành việc nền riêng (npm tải lâu), vòng lịch không chờ.
+            if bay_gio.hour >= nangcli.GIO_KIEM and not nangcli.da_kiem_hom_nay(bay_gio) and not dang_kiem_cli():
+                _VIEC_CLI["viec"] = asyncio.create_task(_kiem_cli_nen())
             if lan_tb_cuoi is None or asyncio.get_running_loop().time() - lan_tb_cuoi >= NHIP_THONGBAO_GIAY:
                 lan_tb_cuoi = asyncio.get_running_loop().time()
                 await asyncio.to_thread(congai.quet_codex)   # 0.7.7: đọc tệp phiên Codex, không gọi AI

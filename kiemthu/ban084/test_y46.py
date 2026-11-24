@@ -2,11 +2,13 @@
 
 Loại 1 – bài đơn vị: giả tiến trình (npm, CLI), giả npm bằng httpx.MockTransport. KHÔNG gọi npm, CLI, mạng thật.
 """
+import asyncio
 import json
 import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -200,12 +202,29 @@ class KiemDangNhapSauNang(Nen):
         self.assertEqual((a.args[0], a.args[1], a.args[2]), (1, nangcli.CAU_THU, None))
         self.assertTrue(a.kwargs["cli"].endswith(str(Path("2.1.340", "node_modules", ".bin", "claude"))))
 
-    def test_p3_goi_ngan_loi_thi_hong_het_han_muc_thi_dat(self):
+    def test_p3_goi_ngan_loi_thi_hong(self):
         self.trang_thai.return_value = {"da_noi": True}
         self.goi_claude.side_effect = self.congai.LoiAI("Claude", "báo lỗi", "x")
         self.assertEqual(self.nang()[0]["kq"], "hong")
+
+    def test_qd306_het_han_muc_thi_hoan_giu_ban_cu_luot_sau_thu_lai(self):
+        self.trang_thai.return_value = {"da_noi": True}
+        self.nang(npm={"ban": "2.1.340"})                                         # đang dùng 2.1.340
         self.goi_claude.side_effect = self.congai.HetHanMuc("hết hạn mức", {})
-        self.assertEqual(self.nang(npm={"ban": "2.1.341"})[0]["kq"], "dat")      # đã tới được hãng: CLI chạy được
+        kq, _ = self.nang(npm={"ban": "2.1.341"})
+        self.assertEqual(kq, {"kq": "hoan", "ban": "2.1.341", "giu": "2.1.340"})
+        tt = nangcli.doc_trangthai(self.dl)["claude"]
+        self.assertEqual((tt["dang"], tt["hong"], tt["ket_qua"], tt["hoan_ban"]), ("2.1.340", [], "hoan", "2.1.341"))
+        self.assertTrue(nangcli.duong_cli("claude", self.dl).endswith(str(Path("2.1.340", "node_modules", ".bin", "claude"))))
+        self.assertFalse((nangcli.thumuc_cli(self.dl) / "claude" / "2.1.341").exists())
+        self.assertEqual(self.f04("hoan"), [("claude 2.1.341: hoãn: hết hạn mức, giữ bản 2.1.340", "bichan")])
+        self.assertEqual(self.f04("loi"), [])
+        self.assertEqual(self.nang(npm={"ban": "2.1.341"})[0]["kq"], "hoan")      # vẫn hết hạn mức: hoãn tiếp
+        self.goi_claude.side_effect = None                                        # có hạn mức lại
+        kq, _ = self.nang(npm={"ban": "2.1.341"}, ngay=True)                       # nút Nâng công cụ AI vẫn dùng được
+        self.assertEqual(kq["kq"], "dat")
+        tt = nangcli.doc_trangthai(self.dl)["claude"]
+        self.assertEqual((tt["dang"], tt["ket_qua"], tt.get("hoan_ban")), ("2.1.341", "dat", None))
 
     def test_chua_dang_nhap_khong_goi_ai(self):
         self.nang()
@@ -363,8 +382,45 @@ class KiemLichChuong(Nen):
 
     def test_lich_goi_tu_03_gio_va_khi_bat_lai(self):
         lich = (Path(__file__).resolve().parents[2] / "maychu/hethong/giamsat/lich.py").read_text(encoding="utf-8")
-        self.assertIn("if bay_gio.hour >= nangcli.GIO_KIEM and not nangcli.da_kiem_hom_nay(bay_gio):", lich)
+        self.assertIn("if bay_gio.hour >= nangcli.GIO_KIEM and not nangcli.da_kiem_hom_nay(bay_gio) and not dang_kiem_cli():",
+                      lich)
         self.assertEqual(nangcli.GIO_KIEM, 3)
+        # CDA L1: chuông sao lưu quét ngay sau dọn bản sao trước khi nâng (như trước Y46)
+        self.assertIn("await asyncio.to_thread(saoluu.don_truoc_nangcap)   # D1 (QĐ281): mốc 30 ngày tự đến\n"
+                      "                await asyncio.to_thread(thongbao.quet_saoluu)", lich)
+
+    def test_l2_vong_lich_khong_cho_luot_kiem_cong_cu_ai(self):
+        """CDA L2: lượt kiểm chạy thành việc nền; vòng lịch chạy tiếp 05 vòng trong khi lượt kiểm còn treo, không chạy chồng."""
+        from maychu.hethong.giamsat import lich
+        cho, goi, vong, ngu_that = threading.Event(), [], [0], asyncio.sleep
+
+        def luot(*_a, **_k):
+            goi.append(1)
+            cho.wait(10)
+            return {}
+
+        async def ngu(_giay):
+            vong[0] += 1
+            await ngu_that(0.05)
+            if vong[0] >= 5:
+                self.assertFalse(cho.is_set())        # lượt kiểm vẫn đang treo
+                cho.set()
+                await ngu_that(0.05)
+                raise asyncio.CancelledError
+
+        with mock.patch.object(lich.asyncio, "sleep", ngu), mock.patch.object(lich.domay, "ghi_n02"), \
+                mock.patch.object(lich.thongbao, "quet_maychu"), mock.patch.object(lich.capnhat, "xu_ly_cho"), \
+                mock.patch.object(lich.saoluu, "da_co_hom_nay", return_value=True), \
+                mock.patch.object(lich.thongbao, "quet", return_value={}), mock.patch.object(lich.thongbao, "quet_banmoi"), \
+                mock.patch.object(lich.congai, "quet_codex"), mock.patch.object(lich.drive, "day_hang_cho", return_value={}), \
+                mock.patch.object(nangcli, "GIO_KIEM", 0), mock.patch.object(nangcli, "da_kiem_hom_nay", return_value=False), \
+                mock.patch.object(nangcli, "luot_hang_ngay", luot):
+            try:
+                asyncio.run(lich.chay_mai())
+            except asyncio.CancelledError:
+                pass
+        self.assertEqual(vong[0], 5)
+        self.assertEqual(goi, [1])                    # 01 lượt, không chạy chồng dù hôm nay "chưa kiểm"
 
 
 class KiemConTroCu(Nen):

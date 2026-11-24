@@ -183,19 +183,20 @@ def _kiem_dang_nhap(goi: str, duong: str, chay=subprocess.run) -> bool:
         return False
 
 
-def _kiem_goi_ngan(goi: str, duong: str) -> bool:
+def _kiem_goi_ngan(goi: str, duong: str) -> str:
     """CDA P3 (việc 2, QĐ263): khi tài khoản 01 đã đăng nhập, bản mới trả lời 01 câu rất ngắn qua đúng cách cổng AI gọi.
-    Hết hạn mức tức là CLI đã tới được hãng bằng tệp đăng nhập → tính là chạy được. Lỗi khác → chưa đạt."""
+    Trả "dat" | "hoan" | "loi". QĐ306 (anh chọn B): hết hạn mức thì chưa kiểm được → "hoan" (giữ bản cũ, lượt sau thử
+    lại), không tính đạt, không tính hỏng. Lỗi khác → "loi" (chưa đạt)."""
     from maychu.hethong.mohinh import congai, dangnhap_goi as dg
     try:
         if not dg.trang_thai(goi, 1).get("da_noi"):
-            return True
+            return "dat"
         (congai._goi_claude if goi == "claude" else congai._goi_chatgpt)(1, CAU_THU, None, cli=duong)
-        return True
+        return "dat"
     except congai.HetHanMuc:
-        return True
+        return "hoan"
     except Exception:  # noqa: BLE001 - LoiAI, hết giờ, lỗi chạy: bản mới chưa đạt
-        return False
+        return "loi"
 
 
 def _don_ban_cu(goi: str, giu: tuple, thumuc: Path | None = None) -> None:
@@ -293,10 +294,18 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
             cai_dat = False
         finally:
             shutil.rmtree(dem, ignore_errors=True)   # K1c
-        dat = cai_dat and ban_cua(str(_bin(goi, ban, thumuc)), chay) == ban \
-            and _kiem_dang_nhap(goi, str(_bin(goi, ban, thumuc)), chay) and _kiem_goi_ngan(goi, str(_bin(goi, ban, thumuc)))
+        duong_moi = str(_bin(goi, ban, thumuc))
+        dat = cai_dat and ban_cua(duong_moi, chay) == ban and _kiem_dang_nhap(goi, duong_moi, chay)
+        thu = _kiem_goi_ngan(goi, duong_moi) if dat else "loi"
         g["lan_cuoi"] = bay.isoformat(timespec="seconds")
-        if not dat:
+        g.pop("hoan_ban", None)
+        if thu == "hoan":   # QĐ306: không đổi con trỏ, không ghi bản hỏng; lượt sau (03:00 hoặc bấm nút) thử lại
+            g.update(ket_qua="hoan", hoan_ban=ban)
+            shutil.rmtree(dich, ignore_errors=True)
+            _sua_goi(goi, g, thumuc)
+            _f04("hoan", f"{goi} {ban}: hoãn: hết hạn mức, giữ bản {dang}", "bichan", nguoi, thumuc)
+            return {"kq": "hoan", "ban": ban, "giu": dang}
+        if thu != "dat":
             g["hong"] = sorted(set(g.get("hong") or []) | {ban}, key=_khoa_so)
             g["ket_qua"] = "hong"
             shutil.rmtree(dich, ignore_errors=True)
