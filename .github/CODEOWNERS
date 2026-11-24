@@ -1,0 +1,3 @@
+# QĐ293 (P2, CDA KT-Y44d mục 11.7): mọi thay đổi trong .github/ (tệp luồng, cửa chặn, tệp này) phải có chủ mã duyệt.
+# Luật main bật "Require review from Code Owners". GitHub đọc tệp này ở nhánh gốc của PR (main), nhánh không tự sửa được.
+/.github/ @Mr-Jin-Tech

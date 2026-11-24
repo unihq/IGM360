@@ -227,7 +227,7 @@ def main() -> int:
     p.add_argument("--goc", required=True)
     p.add_argument("--dau", required=True)
     p.add_argument("--nhanh", required=True)
-    p.add_argument("--kiem-goc", help='dòng "Ran N tests … OK (skipped=K)" của main')
+    p.add_argument("--kiem-goc", help='dòng "Ran N tests … OK (skipped=K)" của main ở điểm rẽ nhánh (Y44e N4)')
     p.add_argument("--kiem-dau", help="như trên, của nhánh")
     a = p.parse_args()
     so_bai = None

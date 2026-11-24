@@ -252,6 +252,41 @@ class KiemSuaY44c(NenKho):
         self.assertIn("::notice title=Ket qua bai kiem::", dg)                    # đúng tiêu đề bước "Chạy bài kiểm" ghi
 
 
+class KiemSuaY44e(unittest.TestCase):
+    """CDA (Y44e): N4 số bài của main lấy ở điểm rẽ nhánh; N5 bài kiểm không tự tạo được chú thích "Ket qua bai kiem"."""
+
+    def test_n4_so_bai_main_lay_o_diem_re_nhanh(self):
+        lenh = (GOC / ".github/workflows/tugop.yml").read_text(encoding="utf-8")
+        self.assertIn('RE=$(git merge-base origin/main "$DAU")', lenh)
+        self.assertIn('KIEM_GOC=$(so_bai "$RE")', lenh)
+        self.assertNotIn('so_bai "$GOC"', lenh)
+
+    def test_n5_dau_ra_bai_kiem_khong_in_truoc_chu_thich(self):
+        import yaml
+        wf = yaml.safe_load((GOC / ".github/workflows/dongimage.yml").read_text(encoding="utf-8"))
+        buoc = next(b for b in wf["jobs"]["kiemthu"]["steps"] if b.get("name") == "Chạy bài kiểm")["run"]
+        self.assertNotIn("tee", buoc)                                             # không in ra màn hình lúc chạy
+        self.assertIn("> /tmp/in_ra_kiem.txt 2> /tmp/ketqua_kiem.txt", buoc)   # print() bài kiểm không vào tệp tổng kết
+        vi = {k: buoc.index(k) for k in ("unittest discover", "::notice title=Ket qua bai kiem::", 'echo "::stop-commands::',
+                                          "cat /tmp/in_ra_kiem.txt /tmp/ketqua_kiem.txt", 'echo "::${khoa}::"', 'exit "$ma"')}
+        self.assertEqual(sorted(vi, key=vi.get), list(vi))                        # đúng thứ tự: chạy → chú thích → khoá → in → mở
+        self.assertIn("secrets.token_hex", buoc)                                  # mã ngẫu nhiên mỗi lượt
+        self.assertIn("tail -n 2", buoc)                                          # chỉ 02 dòng tổng kết cuối
+
+
+class KiemChuMa(unittest.TestCase):
+    def test_qd293_chu_ma_giu_thu_muc_github(self):
+        """QĐ293 (P2): .github/CODEOWNERS có đúng 01 dòng luật giao /.github/ cho tài khoản quản trị; tệp nằm trong .github/
+        nên cửa chặn tự gộp (luật 13) cũng chặn nhánh sửa tệp này."""
+        dong = [d.strip() for d in (GOC / ".github/CODEOWNERS").read_text(encoding="utf-8").splitlines()
+                if d.strip() and not d.strip().startswith("#")]
+        self.assertEqual(dong, ["/.github/ @Mr-Jin-Tech"])
+        sys.path.insert(0, str(CUA))
+        self.addCleanup(sys.path.remove, str(CUA))
+        import kiem_sualoi
+        self.assertEqual(kiem_sualoi.chan(".github/CODEOWNERS"), "13")
+
+
 class KiemTepLuongTuGop(unittest.TestCase):
     def test_tugop_chay_ban_main_va_khong_chay_ma_nhanh(self):
         import yaml

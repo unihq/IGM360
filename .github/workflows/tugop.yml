@@ -49,17 +49,22 @@ jobs:
         run: |
           git fetch -q origin "$DAU"
           echo "GOC=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+          # Y44e (CDA N4): số bài của "main" lấy ở điểm rẽ nhánh (main đi trước có thêm bài thì không chặn nhầm)
+          echo "RE=$(git merge-base origin/main "$DAU")" >> "$GITHUB_ENV"
 
       - name: Số bài kiểm của main và của nhánh
         shell: bash
         run: |
           so_bai() {   # chú thích "Ran N tests … OK (skipped=K)" của việc kiemthu trên 01 commit
-            # CDA KT-Y44c N2: chỉ chú thích tiêu đề "Ket qua bai kiem" (bước "Chạy bài kiểm" ghi), lấy chú thích CUỐI;
-            # kiem_sualoi.py lấy dòng "Ran" cuối trong đó. Bài kiểm tự in ::notice:: hay dòng "Ran …" không giả được số.
+            # CDA KT-Y44c N2, Y44e N5: chỉ chú thích tiêu đề "Ket qua bai kiem", lấy chú thích CUỐI; kiem_sualoi.py lấy
+            # dòng "Ran" cuối trong đó. Mức bảo đảm: bước "Chạy bài kiểm" (dongimage.yml) ghi đầu ra bài kiểm vào tệp, chỉ
+            # in sau khi đã ghi chú thích và bọc ::stop-commands:: mã ngẫu nhiên, nên bài kiểm không tự tạo được chú thích;
+            # dòng "Ran …" bài kiểm tự in nằm trước dòng tổng kết thật nên không được lấy. Nhánh sửa lỗi sửa dongimage.yml
+            # thì cửa chặn luật 13 dừng (không tự gộp).
             id="$(gh api "repos/$GITHUB_REPOSITORY/commits/$1/check-runs" --jq '[.check_runs[] | select(.name == "kiemthu" and .conclusion == "success")][0].id')"
             [ -n "$id" ] && [ "$id" != "null" ] && gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" --jq '[.[] | select(.title == "Ket qua bai kiem") | .message] | last // empty' | tr '\n' ' ' || true
           }
-          { echo "KIEM_GOC=$(so_bai "$GOC")"; echo "KIEM_DAU=$(so_bai "$DAU")"; } >> "$GITHUB_ENV"
+          { echo "KIEM_GOC=$(so_bai "$RE")"; echo "KIEM_DAU=$(so_bai "$DAU")"; } >> "$GITHUB_ENV"
 
       - name: Cửa chặn (14 đường dẫn + 06 luật, CDA Phần 11)
         shell: bash
