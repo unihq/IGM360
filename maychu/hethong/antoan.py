@@ -39,9 +39,9 @@ CHU = {
     "drive_chua_noi": "Drive chưa kết nối. Bản sao chỉ nằm trên máy chủ.",                                        # 31
     "drive_qua_gio": "Đẩy bản sao lên Drive đã quá 10 phút. Bản sao chỉ nằm trên máy chủ.",                        # 32
     # QĐ287, QĐ296 (Z24 dòng 1, anh sửa chữ 24/11/2026 19:21): bản sao trước khi nâng đã xoá (QĐ281) → nút Quay về khoá
-    "qv_het_han": "Không còn dữ liệu bản sao trước đó (đã xoá ngày {ngay}).",
+    "qv_het_han": "Không còn dữ liệu bản sao trước đó (đã xóa ngày {ngay}).",
     # CDA Y49b N1, QĐ296 (Z24 dòng 1b): không có dòng F04 ghi ngày xoá
-    "qv_het_han_khong_ngay": "Không tìm thấy ngày xoá dữ liệu bản sao.",
+    "qv_het_han_khong_ngay": "Không tìm thấy ngày xóa dữ liệu bản sao.",
     "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
     "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
               "việc nhập sau lúc đó không giữ được.",                                                             # 40

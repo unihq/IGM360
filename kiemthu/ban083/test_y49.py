@@ -272,7 +272,7 @@ class KiemD1(Nen):
             q = antoan.thong_tin_quayve(self.thumuc)
             ngay = datetime.fromisoformat(self.f04("saoluu", "xoa_truoc_nangcap")[-1][0]).strftime("%d/%m/%Y")
             self.assertEqual((q["co"], q["khoa"]), (True, True))
-            self.assertEqual(q["chu"], "Không còn dữ liệu bản sao trước đó (đã xoá ngày " + ngay + ").")   # QĐ296
+            self.assertEqual(q["chu"], "Không còn dữ liệu bản sao trước đó (đã xóa ngày " + ngay + ").")   # QĐ296
             self.assertEqual(antoan.quay_ve("hethong", True, self.thumuc), {"loi": q["chu"]})   # máy chủ cũng từ chối
             antoan.ghi(self.thumuc, nang_luocdo={"den": khoitao.PHIENBAN_LUOCDO, "ban": "0.0.1", "luc": "2026-10-01T10:00:00+07:00"})
             q = antoan.thong_tin_quayve(self.thumuc)
@@ -315,7 +315,7 @@ class KiemD1(Nen):
         with mock.patch.object(antoan, "ban_truoc", return_value="0.8.1"):
             q = antoan.thong_tin_quayve(self.thumuc)
         self.assertEqual((q["co"], q["khoa"]), (True, True))
-        self.assertEqual(q["chu"], "Không tìm thấy ngày xoá dữ liệu bản sao.")   # QĐ296
+        self.assertEqual(q["chu"], "Không tìm thấy ngày xóa dữ liệu bản sao.")   # QĐ296
         self.assertNotIn("?", q["chu"])
 
 
@@ -343,8 +343,8 @@ class KiemChu(unittest.TestCase):
             self.assertIn(x, chu)
         self.assertEqual(thongso.GIAI_THICH["saoluu_drive"], "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive.")
         self.assertEqual(antoan.CHU["sao_loi"], "Chưa tạo được bản sao trước khi cập nhật: {lydo}")
-        self.assertEqual(antoan.CHU["qv_het_han"], "Không còn dữ liệu bản sao trước đó (đã xoá ngày {ngay}).")   # QĐ296
-        self.assertEqual(antoan.CHU["qv_het_han_khong_ngay"], "Không tìm thấy ngày xoá dữ liệu bản sao.")
+        self.assertEqual(antoan.CHU["qv_het_han"], "Không còn dữ liệu bản sao trước đó (đã xóa ngày {ngay}).")   # QĐ296
+        self.assertEqual(antoan.CHU["qv_het_han_khong_ngay"], "Không tìm thấy ngày xóa dữ liệu bản sao.")
         self.assertIn('or "chưa rõ lỗi")', (GOC / "maychu/hethong/capnhat.py").read_text(encoding="utf-8"))
 
     def test_y49c_bat_chua_noi_co_icon_cloud_alert(self):
