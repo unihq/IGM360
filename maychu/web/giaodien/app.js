@@ -506,7 +506,7 @@ function veTienDo(td, o) {   // td = null: thẻ cũ (quay về bản trước, 
 }
 // </TD8>
 function theoKiem() {   // QĐ258, QĐ261: trang đã chạy bản mới; kiểm 06 điểm, đẩy Drive chạy nền → hỏi lại máy chủ, vẽ lại mỗi lượt
-  const NHIP_GIAY = 10, PHUT_THEO = 15;   // tối đa 15 phút cho 01 lần mở trang; Drive lỗi thì thôi hỏi (máy chủ tự đẩy lại, có chuông)
+  const NHIP_GIAY = 10, PHUT_THEO = 15;   // tối đa 15 phút cho 01 lần mở trang; Drive lỗi vẫn hỏi theo nhịp này để lần đẩy lại thành công tự hiện (CDO U21 G2)
   if (D.theoKiem || (D.theoKiemTu && Date.now() - D.theoKiemTu > PHUT_THEO * 60e3)) return;
   D.theoKiem = true; D.theoKiemTu = D.theoKiemTu || Date.now();
   const hoi = async () => {
