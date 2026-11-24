@@ -26,6 +26,13 @@ UOC_TINH = ("tai", "khoidong", "nang")   # bước 5–7: trang ghi rõ "ước 
 MAC_DINH_GIAY = {"o_trong": 1, "chup": 20, "drive": 0, "gui": 2, "tai": 300, "khoidong": 15, "nang": 30, "kiem": 40}
 NHIP_GHI_GIAY = 1.0
 SO_LAN_TB = 5
+# Y41b N1 (CDA KT-Y41): lượt dài nhất hợp lệ ≈ Drive 10 phút + chờ việc AI 30 phút + watchtower 30 phút (QĐ252) + khởi động,
+# nâng, kiểm vài phút ≈ 75 phút; lấy 02 giờ có dư. Lượt bắt đầu quá 02 giờ mà chưa xong = lượt treo: bản mới không nối lại;
+# dòng F04 tổng quá 02 giờ không dùng tính trung bình.
+TOI_DA_LUOT_GIAY = 2 * 3600
+# Trần từng bước khi tính trung bình = giới hạn chờ cứng của chính bước + phần dư. Vượt trần là có chờ người, chờ việc khác
+# hoặc lượt treo (N2: bước Drive gồm lúc chờ bạn chọn, bước gửi lệnh gồm lúc chờ việc AI), không phản ánh thời gian làm bước.
+TRAN_GIAY = {"o_trong": 300, "chup": 1800, "drive": 10 * 60 + 60, "gui": 120, "tai_khoidong": 30 * 60 + 300, "nang": 1800, "kiem": 600}
 _NHO = {"td": None, "ghi_luc": 0.0}
 _KHOA = threading.Lock()
 _log = logging.getLogger(__name__)
@@ -119,6 +126,9 @@ def vao_ban_moi(ban: str, thumuc: Path | None = None) -> bool:
         td = doc(thumuc)
         if not td or td.get("xong") or td.get("loi") or td.get("den") != ban:
             return False
+        if (_giay(td.get("bat_dau"), _bay()) or 0) > TOI_DA_LUOT_GIAY:   # N1: lượt treo cũ, không nối lại, không ghi F04
+            huy(thumuc)
+            return False
         _NHO["td"] = td
         if "khoidong" not in (td.get("moc") or {}):
             sang("khoidong", thumuc)
@@ -178,8 +188,8 @@ def _da_co_f04(bat_dau: str, thumuc: Path | None) -> bool:
 
 
 def trong_so(thumuc: Path | None = None) -> dict:
-    """Thời gian dự kiến mỗi bước (giây): trung bình SO_LAN_TB dòng F04 `tiendo` gần nhất; bước nào chưa có số thì
-    lấy mặc định. "tai_khoidong" chia lại: bước 6 lấy mặc định (tối đa nửa), bước 5 phần còn lại."""
+    """Thời gian dự kiến mỗi bước (giây): trung bình SO_LAN_TB dòng F04 `tiendo` gần nhất, bỏ lượt tổng quá
+    TOI_DA_LUOT_GIAY và giá trị vượt TRAN_GIAY (Y41b N1); bước nào chưa có số thì lấy mặc định. "tai_khoidong" chia lại: bước 6 lấy mặc định (tối đa nửa), bước 5 phần còn lại."""
     du = dict(MAC_DINH_GIAY)
     try:
         cn = ketnoi.mo("Nhatky", thumuc)
@@ -192,8 +202,12 @@ def trong_so(thumuc: Path | None = None) -> dict:
         dong = []
     gom: dict[str, list] = {}
     for d in dong:
-        for k, v in re.findall(r"\b([a-z_]+)=(\d+)\b", d or ""):
-            gom.setdefault(k, []).append(int(v))
+        so = {k: int(v) for k, v in re.findall(r"(?:^|\s)([a-z_]+)=(\d+)(?=\s|$)", d or "")}
+        if so.get("tong", 0) > TOI_DA_LUOT_GIAY:   # N1: lượt treo, bỏ cả dòng
+            continue
+        for k, v in so.items():
+            if k != "tong" and v <= TRAN_GIAY.get(k, TOI_DA_LUOT_GIAY):   # N1: bỏ giá trị vượt trần của bước
+                gom.setdefault(k, []).append(v)
     for k, ds in gom.items():
         tb = sum(ds) / len(ds)
         if k == "tai_khoidong":

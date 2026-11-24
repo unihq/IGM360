@@ -291,7 +291,8 @@ class KiemTienDo(NenTD):
 
     def test_buoc_6_den_8_ban_moi_va_dong_f04(self):
         from maychu.hethong import tiendo
-        tiendo.bat_dau("0.8.0", "0.8.9", "2026-11-24T10:00:00+07:00", self.dl)
+        luc = tiendo._bay()                                            # Y41b: lượt mới (quá 02 giờ là lượt treo, không nối)
+        tiendo.bat_dau("0.8.0", "0.8.9", luc, self.dl)
         for b in ("gui", "tai"):
             tiendo.sang(b, self.dl)
         tiendo._NHO["td"] = None                                       # bản mới là tiến trình khác: đọc từ tệp
@@ -308,7 +309,7 @@ class KiemTienDo(NenTD):
         dong = self.f04("tiendo")
         self.assertEqual(len(dong), 1)
         for k in ("0.8.0 → 0.8.9", "o_trong=", "chup=", "gui=", "tai_khoidong=", "nang=", "kiem=", "tong=",
-                  "bat_dau=2026-11-24T10:00:00+07:00"):
+                  "bat_dau=" + luc):
             self.assertIn(k, dong[0])
         self.assertEqual(tiendo.hien(self.dl)["phan_tram"], 100)
 
@@ -330,6 +331,43 @@ class KiemTienDo(NenTD):
         self.assertEqual(du["tai"] + du["khoidong"], 300.0)            # trung bình (200 + 400) / 2
         self.assertEqual(du["khoidong"], float(tiendo.MAC_DINH_GIAY["khoidong"]))
         self.assertEqual(du["drive"], float(tiendo.MAC_DINH_GIAY["drive"]))   # bước chưa có số: mặc định
+
+    def test_luot_treo_khong_noi_lai(self):
+        """Y41b N1: lượt cũ treo (bắt đầu quá 02 giờ) thì bản mới không nối lại, không ghi dòng F04 sai."""
+        from datetime import datetime, timedelta
+        from maychu.dulieu.saoluu import MUIGIO_VN
+        from maychu.hethong import tiendo
+        cu = (datetime.now(MUIGIO_VN) - timedelta(seconds=tiendo.TOI_DA_LUOT_GIAY + 60)).isoformat(timespec="seconds")
+        tiendo.bat_dau("0.8.0", "0.8.9", cu, self.dl)
+        tiendo.sang("tai", self.dl)
+        tiendo._NHO["td"] = None
+        self.assertFalse(tiendo.vao_ban_moi("0.8.9", self.dl))
+        self.assertIsNone(tiendo.doc(self.dl))                         # bỏ lượt treo khỏi tệp trạng thái
+        tiendo.xong("0.8.9", self.dl)
+        self.assertEqual(self.f04("tiendo"), [])
+        vua = (datetime.now(MUIGIO_VN) - timedelta(seconds=tiendo.TOI_DA_LUOT_GIAY - 600)).isoformat(timespec="seconds")
+        tiendo.bat_dau("0.8.0", "0.8.9", vua, self.dl)                 # lượt dài nhưng còn trong 02 giờ: vẫn nối
+        tiendo.sang("tai", self.dl)
+        tiendo._NHO["td"] = None
+        self.assertTrue(tiendo.vao_ban_moi("0.8.9", self.dl))
+
+    def test_trong_so_bo_gia_tri_bat_thuong(self):
+        """Y41b N1: số CDA thử (bước kiểm 255.255 giây) và lượt quá 02 giờ không làm lệch thời gian dự kiến."""
+        from maychu.hethong import capnhat, tiendo
+        dong = ("o_trong=1 chup=10 gui=2 tai_khoidong=200 nang=40 kiem=40 · tong=293",
+                "o_trong=1 chup=10 gui=2 tai_khoidong=400 nang=60 kiem=255255 · tong=255728",    # lượt treo: bỏ cả dòng
+                "o_trong=1 chup=12 gui=1800 tai_khoidong=300 nang=50 kiem=999 · tong=3162",      # gửi lệnh gồm 30 phút chờ việc AI
+                "o_trong=1 chup=14 drive=4000 gui=4 tai_khoidong=500 nang=60 kiem=60 · tong=4639")  # Drive gồm lúc chờ bạn chọn
+        for i, d in enumerate(dong):
+            capnhat._ghi_f04("tiendo", f"0.8.{i} → 0.8.{i + 1} · {d} giây · bat_dau=2026-11-2{i}T10:00:00+07:00", "dat",
+                             thumuc=self.dl)
+        du = tiendo.trong_so(self.dl)
+        self.assertEqual(du["kiem"], 50.0)                             # (40 + 60) / 2: bỏ 255255 và 999
+        self.assertEqual(du["gui"], 3.0)                               # (2 + 4) / 2: bỏ 1800
+        self.assertEqual(du["drive"], float(tiendo.MAC_DINH_GIAY["drive"]))   # 4000 vượt trần: chưa có số hợp lệ
+        self.assertEqual(du["chup"], 12.0)                             # (10 + 12 + 14) / 3
+        self.assertAlmostEqual(du["tai"] + du["khoidong"], 1000 / 3, places=0)
+        self.assertNotIn("tong", du)
 
     def test_hien_so_do_that_va_uoc_tinh(self):
         from maychu.hethong import tiendo
@@ -393,7 +431,7 @@ class KiemTienDo(NenTD):
         from fastapi.testclient import TestClient
         from maychu import khoidong
         from maychu.hethong import tiendo
-        tiendo.bat_dau("0.7.9", khoidong.PHIENBAN, "2026-11-24T10:00:00+07:00", self.dl)
+        tiendo.bat_dau("0.7.9", khoidong.PHIENBAN, tiendo._bay(), self.dl)
         tiendo.sang("tai", self.dl)
         tiendo._NHO["td"] = None
         with TestClient(khoidong.app) as c:
