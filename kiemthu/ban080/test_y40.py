@@ -351,6 +351,139 @@ class KiemY40b(Nen):
         self.assertNotIn("fetchall", Path(timchu.__file__).read_text(encoding="utf-8").split("def dung_lai", 1)[1].split("def tim", 1)[0])
 
 
+class KiemY40c(Nen):
+    """QĐ237 (G1, cách C): quay về có trả dữ liệu vẫn giữ 05 sổ nhật ký (F04, G04, H05, N01, N02) và M01 loại 'saoluu'
+    ghi sau giờ chụp; N01 về lược đồ 3 thì 'truoc_capnhat' → 'hangngay' + "dip"; ghi nối lỗi không chặn quay về."""
+    LUC = "2026-11-24T09:00:00+07:00"
+
+    def dung(self):
+        from datetime import datetime, timedelta
+        from maychu import chay
+        dung_ban3(self.dl)
+        khoitao.tao_het(self.dl)                         # chụp truoc_nangcap_v04 (dữ liệu bản 3) rồi nâng lên bản 4
+        # dòng ghi trên 0.8.0: sau giờ chụp, trước lúc quay về (giữ theo `id`, giờ chỉ để xếp lịch sử)
+        self.LUC = (datetime.now(saoluu.MUIGIO_VN) - timedelta(seconds=2)).isoformat(timespec="seconds")
+        g = self.g / "app"
+        (g / "ban_truoc" / "maychu").mkdir(parents=True)
+        (g / "VERSION").write_text("0.8.0", encoding="utf-8")
+        (g / "ban_truoc" / "VERSION").write_text("0.7.9", encoding="utf-8")
+        self.id = {k: maso.tao() for k in ("f04", "g04", "h05", "n02", "n01a", "n01b", "m_co", "m_mat", "m_goc")}
+        cn = ketnoi.mo("Nhatky", self.dl)
+        try:
+            cn.execute("INSERT INTO nhatky_thaotac (id, luc, congcu, lenhcon, thamso_tomtat, ketqua) VALUES (?, ?, 'capnhat',"
+                       " 'khoidong', '0.8.0', 'dat')", (self.id["f04"], self.LUC))
+            for bang, k in (("nhatky_ai", "g04"), ("nhatky_noihayim", "h05"), ("theodoi_maychu", "n02")):
+                cn.execute(f"INSERT INTO {bang} (id, luc) VALUES (?, ?)", (self.id[k], self.LUC))
+            cn.execute("INSERT INTO saoluu (id, loai, file_dulieu, chup_luc, ketqua_tungbuoc_json, ketqua) VALUES (?, 'truoc_capnhat',"
+                       " 'Bot', ?, ?, 'xong_tren_may')", (self.id["n01a"], self.LUC, json.dumps({"dip": "truoc_capnhat", "ban": "0.8.1"})))
+            cn.execute("INSERT INTO saoluu (id, loai, file_dulieu, chup_luc, ketqua_tungbuoc_json, ketqua) VALUES (?, 'truoc_capnhat',"
+                       " 'Hotho', ?, '{}', 'xong_tren_may')", (self.id["n01b"], self.LUC))
+        finally:
+            cn.close()
+        tep_co = self.dl / "saoluu" / "2026-11-25" / "Bot.sqlite3.enc"
+        tep_co.parent.mkdir(parents=True, exist_ok=True)
+        tep_co.write_bytes(b"ban sao gia")
+        cn = ketnoi.mo("Hotho", self.dl)
+        try:
+            for k, loai, duong in (("m_co", "saoluu", str(tep_co)), ("m_mat", "saoluu", str(self.dl / "khong_co.enc")),
+                                   ("m_goc", "filegoc", str(tep_co))):
+                cn.execute("INSERT INTO cho_day_drive (id, loai, duongdan_tam, trangthai, tao_luc) VALUES (?, ?, ?, 'cho', ?)",
+                           (self.id[k], loai, duong, self.LUC))
+        finally:
+            cn.close()
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.8.0", "ban_truoc": "0.7.9", "nguoi": None,
+                                            "tra_du_lieu": {"thumuc": "truoc_nangcap_v04", "tep": list(ketnoi.CAC_FILE)}})
+        return chay, g
+
+    def co(self, ten, bang, k):
+        return bool(self.lay(ten, f"SELECT 1 FROM {bang} WHERE id = ?", (self.id[k],)))
+
+    def test_giu_05_so_m01_va_n01_ve_ban_3(self):
+        chay, g = self.dung()
+        self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")
+        self.assertEqual(self.ban()["Nhatky"], 3)                                      # dữ liệu đã trả về bản 3
+        for bang, k in (("nhatky_thaotac", "f04"), ("nhatky_ai", "g04"), ("nhatky_noihayim", "h05"), ("theodoi_maychu", "n02")):
+            self.assertTrue(self.co("Nhatky", bang, k), bang)
+        n01 = dict(self.lay("Nhatky", "SELECT id, loai || '|' || ketqua_tungbuoc_json FROM saoluu WHERE id IN (?, ?)",
+                            (self.id["n01a"], self.id["n01b"])))
+        for k in ("n01a", "n01b"):
+            loai, js = n01[self.id[k]].split("|", 1)
+            self.assertEqual((loai, json.loads(js)["dip"]), ("hangngay", "truoc_capnhat"), k)   # CHECK bản 3, giữ "dip"
+        self.assertTrue(self.co("Hotho", "cho_day_drive", "m_co"))                       # M01 'saoluu' còn tệp: giữ
+        self.assertFalse(self.co("Hotho", "cho_day_drive", "m_mat"))                     # mất tệp: bỏ
+        self.assertFalse(self.co("Hotho", "cho_day_drive", "m_goc"))                     # 'filegoc': không chép
+        self.assertFalse((self.dl / chay.TEP_GIU).exists())
+        self.assertNotIn("giu_nhatky", antoan.doc(self.dl))
+        qv = self.lay("Nhatky", "SELECT luc, thamso_tomtat FROM nhatky_thaotac WHERE lenhcon = 'quayve'")
+        self.assertEqual(len(qv), 1)
+        self.assertGreater(qv[0][0], self.LUC)                                           # dòng "quayve" ghi sau dòng đã giữ
+        self.assertNotIn("chưa giữ được", qv[0][1])
+
+    def test_lich_su_co_dong_ban_vua_lui(self):
+        chay, g = self.dung()
+        chay.chon(self.dl, g)
+        with mock.patch.object(capnhat, "ban_dang_chay", return_value="0.7.9"):          # như 0.7.9 khởi động
+            capnhat.ghi_khoi_dong(self.dl)
+            self.assertEqual([x["ban"] for x in capnhat.lich_su(self.dl)][:2], ["0.7.9", "0.8.0"])
+
+    def test_ghi_noi_loi_khong_chan_lan_sau_ghi_lai(self):
+        chay, g = self.dung()
+        with mock.patch.object(chay, "_noi_bang", side_effect=sqlite3.OperationalError("khoá giả")):
+            self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                      # vẫn quay về
+        self.assertTrue((self.dl / chay.TEP_GIU).exists())
+        self.assertEqual(antoan.doc(self.dl)["giu_nhatky"]["loi"], "OperationalError")
+        self.assertFalse(self.co("Nhatky", "nhatky_thaotac", "f04"))
+        self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                          # lần khởi động sau: ghi lại
+        self.assertTrue(self.co("Nhatky", "nhatky_thaotac", "f04"))
+        self.assertTrue(self.co("Hotho", "cho_day_drive", "m_co"))
+        self.assertFalse((self.dl / chay.TEP_GIU).exists())
+        self.assertNotIn("giu_nhatky", antoan.doc(self.dl))
+
+    def test_chay_02_lan_khong_ghi_doi(self):
+        import shutil
+        chay, g = self.dung()
+        chay._chep_giu(self.dl, self.dl / "saoluu" / "truoc_nangcap_v04")
+        luu = self.g / "giu_luu.sqlite3"
+        shutil.copy(self.dl / chay.TEP_GIU, luu)
+        chay.chon(self.dl, g)
+        dem = lambda: [self.lay("Nhatky", f"SELECT count(*) FROM {b}")[0][0] for b in chay.BANG_GIU] + \
+            [self.lay("Hotho", "SELECT count(*) FROM cho_day_drive")[0][0]]   # noqa: E731
+        truoc = dem()
+        shutil.copy(luu, self.dl / chay.TEP_GIU)
+        chay._ghi_noi_giu(self.dl)                                                     # ghi nối lần 02
+        self.assertEqual(dem(), truoc)
+
+    def test_chep_loi_van_quay_ve_ghi_chu(self):
+        chay, g = self.dung()
+        with mock.patch.object(chay, "_chep_giu", side_effect=OSError("đĩa giả lỗi")):
+            self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")
+        qv = self.lay("Nhatky", "SELECT thamso_tomtat FROM nhatky_thaotac WHERE lenhcon = 'quayve'")
+        self.assertIn("chưa giữ được nhật ký sau giờ nâng", qv[0][0])
+        self.assertFalse((self.dl / chay.TEP_GIU).exists())
+
+    def test_tra_loi_thi_bo_tep_giu(self):
+        chay, g = self.dung()
+        with mock.patch.object(chay, "tra_du_lieu", return_value="không trả được dữ liệu: OSError"):
+            self.assertEqual(chay.chon(self.dl, g), g)                                    # không trả: chạy bản mới
+        self.assertFalse((self.dl / chay.TEP_GIU).exists())
+        self.assertTrue(self.co("Nhatky", "nhatky_thaotac", "f04"))                      # nhật ký vẫn ở tệp đang chạy
+
+    def test_nhatky_ban_4_giu_truoc_capnhat(self):
+        from maychu import chay
+        khoitao.tao_het(self.dl)
+        giu = self.dl / chay.TEP_GIU
+        cn = sqlite3.connect(giu)
+        try:
+            cn.execute("CREATE TABLE saoluu (id TEXT, loai TEXT, chup_luc TEXT, ketqua_tungbuoc_json TEXT)")
+            cn.execute("INSERT INTO saoluu VALUES ('x1', 'truoc_capnhat', ?, '{}')", (self.LUC,))
+            cn.commit()
+        finally:
+            cn.close()
+        chay._ghi_noi_giu(self.dl)
+        self.assertEqual(self.lay("Nhatky", "SELECT loai, ketqua_tungbuoc_json FROM saoluu WHERE id = 'x1'"),
+                         [("truoc_capnhat", "{}")])                                    # lược đồ 4: giữ nguyên giá trị
+
+
 class KiemImage(unittest.TestCase):
     def test_ghim_trixie_va_buoc_kiem_sqlite(self):
         self.assertIn("\nFROM python:3.12-slim-trixie\n", (GOC / "Dockerfile").read_text(encoding="utf-8"))

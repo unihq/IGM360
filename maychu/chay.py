@@ -145,6 +145,95 @@ def tra_du_lieu(dl: Path, tra: dict, ghi_buoc=lambda b: None) -> str | None:
     return None
 
 
+# ---- QĐ237 (G1, cách C): quay về có trả dữ liệu vẫn giữ nhật ký ghi sau giờ chụp ----
+# 05 sổ chỉ ghi thêm ở Nhatky + M01 loại 'saoluu' (Hotho). Lọc theo `id` chưa có trong bản chụp (bảng chỉ ghi thêm).
+TEP_GIU = "nhatky_giu.tam.sqlite3"
+BANG_GIU = ("nhatky_thaotac", "nhatky_ai", "nhatky_noihayim", "saoluu", "theodoi_maychu")   # F04, G04, H05, N01, N02
+
+
+def _co_bang(cn, sch: str, bang: str) -> bool:
+    return bool(cn.execute(f"SELECT 1 FROM {sch}.sqlite_master WHERE type = 'table' AND name = ?", (bang,)).fetchone())
+
+
+def _chep_giu(dl: Path, noi: Path) -> int:
+    """Bước 1 (trước khi đổi tên tệp, để không mất phần WAL): chép dòng mới so với bản chụp ra tệp tạm (quyền 600).
+    M01: chỉ `loai` = 'saoluu' còn tệp trên đĩa; không chép `filegoc`, `goi_banghigoc` (trỏ B02, B03 sẽ bị trả). Trả số dòng."""
+    giu = dl / TEP_GIU
+    giu.unlink(missing_ok=True)
+    so = 0
+    for ten, cac_bang, loc in (("Nhatky", BANG_GIU, ""), ("Hotho", ("cho_day_drive",), " AND loai = 'saoluu'")):
+        if not (dl / f"{ten}.sqlite3").exists() or not (noi / f"{ten}.sqlite3").exists():
+            continue
+        cn = sqlite3.connect(dl / f"{ten}.sqlite3", isolation_level=None)
+        try:
+            cn.execute("ATTACH DATABASE ? AS chup", (str(noi / f"{ten}.sqlite3"),))
+            cn.execute("ATTACH DATABASE ? AS giu", (str(giu),))
+            for bang in cac_bang:
+                if _co_bang(cn, "main", bang) and _co_bang(cn, "chup", bang):
+                    cn.execute(f"CREATE TABLE giu.{bang} AS SELECT * FROM main.{bang}"
+                               f" WHERE id NOT IN (SELECT id FROM chup.{bang}){loc}")
+                    so += cn.execute(f"SELECT count(*) FROM giu.{bang}").fetchone()[0]
+            if _co_bang(cn, "giu", "cho_day_drive"):
+                for i, duong in cn.execute("SELECT id, duongdan_tam FROM giu.cho_day_drive").fetchall():
+                    if not duong or not Path(duong).exists():
+                        cn.execute("DELETE FROM giu.cho_day_drive WHERE id = ?", (i,))
+                        so -= 1
+        finally:
+            cn.close()
+    if giu.exists():
+        os.chmod(giu, 0o600)
+    return so
+
+
+def _noi_bang(cn, bang: str, ban: int) -> None:
+    cot = [r[1] for r in cn.execute(f"PRAGMA main.table_info({bang})")]
+    cot = [c for c in cot if c in {r[1] for r in cn.execute(f"PRAGMA giu.table_info({bang})")}]
+    lay = list(cot)
+    if bang == "saoluu" and ban < 4:   # Nhatky trả về lược đồ 3: CHECK bản 3 không nhận 'truoc_capnhat' → 'hangngay' + "dip"
+        lay = ["CASE WHEN loai = 'truoc_capnhat' THEN 'hangngay' ELSE loai END" if c == "loai" else
+               "CASE WHEN loai = 'truoc_capnhat' AND json_valid(ketqua_tungbuoc_json)"
+               " AND json_extract(ketqua_tungbuoc_json, '$.dip') IS NULL"
+               " THEN json_set(ketqua_tungbuoc_json, '$.dip', 'truoc_capnhat') ELSE ketqua_tungbuoc_json END"
+               if c == "ketqua_tungbuoc_json" else c for c in cot]
+    cn.execute(f"INSERT OR IGNORE INTO main.{bang} ({', '.join(cot)}) SELECT {', '.join(lay)} FROM giu.{bang}")
+
+
+def _ghi_noi_giu(dl: Path) -> None:
+    """Bước 3 (sau khi thay đủ 07 tệp): ghi nối dòng đã giữ, `INSERT OR IGNORE` (chạy lại không ghi đôi). Lỗi thì để lỗi lan ra."""
+    giu = dl / TEP_GIU
+    for ten, cac_bang in (("Nhatky", BANG_GIU), ("Hotho", ("cho_day_drive",))):
+        cn = sqlite3.connect(dl / f"{ten}.sqlite3", isolation_level=None)
+        try:
+            cn.execute("ATTACH DATABASE ? AS giu", (str(giu),))
+            ban = cn.execute("PRAGMA main.user_version").fetchone()[0]
+            cn.execute("BEGIN IMMEDIATE")
+            try:
+                for bang in cac_bang:
+                    if _co_bang(cn, "giu", bang) and _co_bang(cn, "main", bang):
+                        _noi_bang(cn, bang, ban)
+                cn.execute("COMMIT")
+            except Exception:
+                cn.execute("ROLLBACK")
+                raise
+        finally:
+            cn.close()
+    giu.unlink(missing_ok=True)
+
+
+def _thu_ghi_noi(dl: Path, tep: Path, tt: dict) -> None:
+    """Ghi nối lỗi thì KHÔNG chặn quay về: giữ tệp tạm + cờ `giu_nhatky` (kèm lý do), lần khởi động sau ghi lại."""
+    if not (dl / TEP_GIU).exists():
+        if tt.pop("giu_nhatky", None) is not None:
+            _ghi(tep, tt)
+        return
+    try:
+        _ghi_noi_giu(dl)
+        tt.pop("giu_nhatky", None)
+    except (OSError, sqlite3.Error) as e:
+        tt["giu_nhatky"] = {"tep": TEP_GIU, "loi": type(e).__name__, "luc": _bay()}
+    _ghi(tep, tt)
+
+
 def _ghi_f04_da_tra(dl: Path, yc: dict) -> None:
     try:
         from maychu.dulieu import maso
@@ -154,7 +243,8 @@ def _ghi_f04_da_tra(dl: Path, yc: dict) -> None:
             cn.execute("INSERT INTO nhatky_thaotac (id, luc, nguoi_loai, nguoi_id, congcu, lenhcon, thamso_tomtat, ketqua)"
                        " VALUES (?, ?, ?, ?, 'capnhat', 'quayve', ?, 'dat')",
                        (maso.tao(), _bay(), "anh" if nguoi else None, nguoi,
-                        f"{yc.get('ban_anh')} → {yc.get('ban_truoc')} · đã trả dữ liệu về bản chụp trước lúc nâng"))
+                        f"{yc.get('ban_anh')} → {yc.get('ban_truoc')} · đã trả dữ liệu về bản chụp trước lúc nâng"
+                        + (" · chưa giữ được nhật ký sau giờ nâng" if yc.get("giu_loi") else "")))
         finally:
             cn.close()
     except Exception:  # noqa: BLE001 - không ghi được nhật ký thì vẫn chạy bản trước
@@ -162,6 +252,7 @@ def _ghi_f04_da_tra(dl: Path, yc: dict) -> None:
 
 
 def _xong_tra(dl: Path, tep: Path, tt: dict, yc: dict) -> None:
+    _thu_ghi_noi(dl, tep, tt)   # QĐ237: nhật ký, M01 'saoluu' ghi sau giờ chụp nối lại TRƯỚC dòng "quayve"
     _ghi_f04_da_tra(dl, yc)   # dòng F04 "quayve" ghi trước khi trả đã bị trả về theo bản chụp: ghi lại
     yc.pop("tra_du_lieu", None)
     yc["da_tra"] = (tt.get("nang_luocdo") or {}).get("luc")   # QĐ219 A7: "Dữ liệu đã trả về lúc …"
@@ -179,6 +270,8 @@ def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
     if not isinstance(yc, dict):
         return goc
     tra = yc.get("tra_du_lieu") if isinstance(yc.get("tra_du_lieu"), dict) else None
+    if not tra and tt.get("giu_nhatky"):   # QĐ237: lần trước ghi nối nhật ký lỗi → ghi lại trước khi chạy
+        _thu_ghi_noi(dl, tep, tt)
     if tra and tra.get("buoc") == "thay":   # V2: lần trước dừng giữa lúc thay tệp (mất điện, bị dừng) → đổi `.cu` về, làm lại
         _doi_ve_cu(dl, _tep_tra(tra))
         tra.pop("buoc", None)
@@ -197,6 +290,13 @@ def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
                kieu="khoidong", ban_truoc=yc.get("ban_truoc"), ban_anh=yc.get("ban_anh"), so_lan=SO_LAN_HONG, da_tra=yc.get("da_tra"))
         return goc
     if tra:
+        if tra.get("buoc") != "xong_thay":
+            try:   # QĐ237 bước 1: đọc tệp đang chạy TRƯỚC khi đổi tên (lỗi thì vẫn quay về, ghi chú ở dòng "quayve")
+                _chep_giu(dl, dl / "saoluu" / str(tra.get("thumuc", "")))
+            except (OSError, sqlite3.Error):
+                (dl / TEP_GIU).unlink(missing_ok=True)
+                yc["giu_loi"] = True
+
         def ghi_buoc(b):
             if b:
                 tra["buoc"] = b
@@ -205,6 +305,7 @@ def chon(thumuc_dulieu: Path | None = None, goc: Path = GOC) -> Path:
             _ghi(tep, tt)
         loi = tra_du_lieu(dl, tra, ghi_buoc)
         if loi:   # dữ liệu đã đổi về như trước lúc trả: chạy bản mới (anh vẫn vào được giao diện)
+            (dl / TEP_GIU).unlink(missing_ok=True)   # không trả thì nhật ký vẫn còn ở tệp đang chạy
             _bo_co(tep, tt, loi, kieu="tra", ban_truoc=yc.get("ban_truoc"), ban_anh=yc.get("ban_anh"))
             return goc
         _xoa_cu(dl, _tep_tra(tra))
