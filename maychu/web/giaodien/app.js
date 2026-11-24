@@ -590,6 +590,8 @@ async function mdLay(tk) {   // 0.7.8: máy chủ chạy lệnh lấy mã của 
   catch (e) { if (D.mdh[tk]) { D.mdh[tk] = {...D.mdh[tk], loi: e.message, ct: (e.ct || {}).chi_tiet || ''}; veMoHinh(); } else bao(e.message + '.'); }
 }
 async function mdXong(tk, kq) { D.mdh[tk] = null;
+  if (kq.lay_lai && kq.trung_voi) { D.trung.claude = kq.trung_voi; D.trungTk = {...(D.trungTk || {}), claude: tk};   // QĐ223: ô A8
+    D.trungChu = {...(D.trungChu || {}), claude: kq.trung_chu}; }
   if (kq.giu_ma_cu) { bao(CHU_Z15.kiemLoiRe); await napMoHinh(); return; }   // Y38d N29: giữ mã cũ
   bao(kq.goi_thu ? 'Đã lưu ' + CHU_MDH.toLowerCase() + ' cho tài khoản ' + tk + ', hết hạn ' + ngay(kq.han) + '.'
     : kq.het_hanmuc ? CHU_Z15.kiemHanMucRe   // QĐ222 (N43): hết hạn mức → câu A15, không hiện lời gốc của Claude

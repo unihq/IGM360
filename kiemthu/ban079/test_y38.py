@@ -583,7 +583,7 @@ class KiemY38c(NenAT):
               {"loggedIn": False, "authMethod": ""}]   # Y38h L6: kiểm lại kiểu cũ sau khi đăng xuất
         goi = mock.Mock(return_value={"hanmuc": {}}) if goi_ok else mock.Mock(side_effect=congai.LoiAI("Claude", "lỗi", "x"))
         with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), \
-                mock.patch.object(dg, "_dinh_danh", return_value=(EMAIL_A, "org1")), \
+                mock.patch.object(dg, "_dinh_danh", side_effect=lambda goi, t, *a, **k: (EMAIL_A, "org1") if t == tk else None), \
                 mock.patch.object(dg, "ho_so", return_value={"ten_hien": "Nguoi Gia", "goi_ten": "Ultra", "mota_goi": None}), \
                 mock.patch.object(dg, "_dang_xuat", return_value=True), mock.patch.object(congai, "_goi_claude", goi):
             return madaihan.ket_noi(tk, MA_GIA)
@@ -1123,6 +1123,80 @@ class KiemY38i(NenAT):
             kq = dg._ket_thuc("claude", 1)
         self.assertTrue(kq.get("chup"))
         self.assertEqual(dg.doc_chup(1)["ten_hien"], "Nguoi O1")
+
+
+class KiemY38j(NenAT):
+    """QĐ223 (G1b, cách B): dán mã ở ô 1 khi đăng nhập kiểu cũ nhầm tài khoản ô khác → vẫn lưu mã, không ghi tệp chụp,
+    đăng xuất lượt nhầm, trả trung_voi + lay_lai (câu A8). Ô 2 trở đi giữ câu 22."""
+    EMAIL_O2 = "nguoi.o2@vidu.invalid"
+
+    def dan_ma(self, tk, o2_co_ma, trung=True):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        c2 = {"ten_hien": "Nguoi O2", "goi_ten": "Max", "email_bam": dg._bam(self.EMAIL_O2), "tochuc_bam": None, "chup_luc": "x"}
+        c = c2 if trung else {**c2, "ten_hien": "Nguoi O1", "email_bam": dg._bam("nguoi.o1@vidu.invalid")}
+        giu = 1 if tk == 2 else 2   # ô đang giữ tài khoản
+        if o2_co_ma:
+            madaihan.luu(giu, MA_MOI)
+            dg.ghi_chup(giu, dict(c2))
+        tt = [{"loggedIn": True, "authMethod": ""}, {"loggedIn": True, "authMethod": "oauth_token"}, {"loggedIn": False, "authMethod": ""}]
+        da_noi = lambda goi, t, bo_nho=False: {"da_noi": t in (1, 2), "goi_dang_dung": None}   # noqa: E731
+        with mock.patch.object(madaihan, "_trang_thai_cli", side_effect=tt), \
+                mock.patch.object(dg, "trang_thai", side_effect=da_noi), mock.patch.object(dg, "chup_song", return_value=dict(c)), \
+                mock.patch.object(dg, "_dinh_danh", side_effect=lambda goi, t, *a, **k: (self.EMAIL_O2, None) if t == giu else None), \
+                mock.patch.object(dg, "ho_so", return_value={"ten_hien": None, "goi_ten": None, "mota_goi": None}), \
+                mock.patch.object(dg, "_dang_xuat", return_value=False) as dx, \
+                mock.patch.object(dg, "ghi_nguon", return_value="nguon_thu"), \
+                mock.patch.object(congai, "_goi_claude", return_value={"hanmuc": {}}) as goi:
+            kq = madaihan.ket_noi(tk, MA_GIA)
+        return kq, dx, goi
+
+    def kiem_o1_trung(self, kq, dx):
+        self.assertEqual((kq["xong"], kq["trung_voi"], kq["lay_lai"]), (True, 2, True))
+        self.assertEqual(kq["trung_chu"], "Bạn vừa đăng nhập tài khoản đã kết nối ở Tài khoản 2. Bấm Lấy tên, gói, đăng nhập đúng"
+                                          " tài khoản của mã này.")                                           # A8
+        self.assertEqual(madaihan.lay(1), MA_GIA)                                    # vẫn lưu mã
+        self.assertIsNone(dg.doc_chup(1))                                            # không ghi tên, gói của ô 2
+        dx.assert_called_once()                                                      # đăng xuất lượt nhầm
+        tom = self.f04("kiem_madaihan")[-1][0]
+        self.assertIn("đăng nhập kiểu cũ trùng tài khoản 02, đã đăng xuất lượt nhầm, không ghi tên, gói", tom)
+        self.assertNotIn(self.EMAIL_O2, tom)
+        self.assertNotIn("Nguoi O2", tom)
+
+    def test_o1_trung_o2_co_ma(self):
+        self.kiem_o1_trung(*self.dan_ma(1, o2_co_ma=True)[:2])
+
+    def test_o1_trung_o2_chi_dang_nhap_kieu_cu(self):
+        self.kiem_o1_trung(*self.dan_ma(1, o2_co_ma=False)[:2])
+
+    def test_o1_khong_trung_nhu_cu(self):
+        kq, dx, _ = self.dan_ma(1, o2_co_ma=True, trung=False)
+        self.assertNotIn("trung_voi", kq)
+        self.assertEqual(dg.doc_chup(1)["ten_hien"], "Nguoi O1")                    # ghi tên, gói như cũ
+        dx.assert_called_once()                                                      # gọi thử đạt → đăng xuất kiểu cũ (Đ8)
+
+    def test_o2_trung_cau_22_nhu_cu(self):
+        kq, dx, goi = self.dan_ma(2, o2_co_ma=True)
+        self.assertEqual(kq, {"loi": madaihan.CHU_DAN["trung"].format(tk=1), "trung_voi": 1})
+        self.assertIsNone(madaihan.thong_tin(2))                                     # không lưu mã
+        goi.assert_not_called()
+        dx.assert_not_called()
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_giao_dien_hien_o_a8_sau_dan_ma(self):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8").split("\n")
+        a = next(i for i, x in enumerate(js) if x.startswith("async function mdXong("))
+        b = next(i for i in range(a, len(js)) if js[i].rstrip().endswith("await napMoHinh(); }"))
+        ma = ("const D = {mdh: {}, trung: {}}; const bao = s => 0; const napMoHinh = async () => {}; const ngay = s => s;"
+              "const CHU_MDH = 'Mã dài hạn'; const CHU_Z15 = {};\n" + "\n".join(js[a:b + 1])
+              + "\n(async () => { await mdXong(1, {xong: true, goi_thu: true, han: 'x', trung_voi: 2, lay_lai: true, trung_chu: 'A8'});"
+              "console.log(JSON.stringify([D.trung.claude, D.trungTk.claude, D.trungChu.claude])); })();")
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "y38j.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), [2, 1, "A8"])                        # coBaoLayLai('claude', 1) → ô A8 ở ô 1
 
 
 TU_ANH = __import__("re").compile(r"(?<![\w-])[Aa]nh(?![\w-])")
