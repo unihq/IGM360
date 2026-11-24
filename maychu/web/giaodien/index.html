@@ -46,6 +46,17 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .tdf{height:100%;background:var(--xanh);border-radius:5px;transition:width .4s ease}
 .tdf.chay{width:40%;animation:chay 1.4s ease-in-out infinite}
 @keyframes chay{0%{margin-left:-40%}100%{margin-left:100%}}
+.td-so{font-size:22px!important;font-weight:700}
+.td-buoc{font-size:14px;margin-top:4px}
+.td-gio{font-size:13px;margin-top:6px}
+.td8{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,auto);grid-auto-flow:column;gap:6px 24px;margin-top:12px;padding-top:10px;border-top:1px solid var(--ke)}
+.td8-dong{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0}
+.td8-dong .f1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td8-dong.cho{color:#646A73}
+.td8-dong.dang{font-weight:600}
+.td8-m{font-size:12px;color:#646A73;white-space:nowrap;font-variant-numeric:tabular-nums}
+body.dien-thoai .td8{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}
+@media (max-width:600px){.td8{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .ghichu{border:1px dashed var(--vien);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--phu);background:#fff}
 .ghichu b{color:var(--chu)}
 .ghichu.lon{padding:28px;font-size:14px}

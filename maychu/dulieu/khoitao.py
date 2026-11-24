@@ -425,7 +425,7 @@ def _dem_dong(thumuc: Path, ban: dict) -> dict:
     return ra
 
 
-def tao_het(thumuc: Path | None = None) -> dict:
+def tao_het(thumuc: Path | None = None, bao=None) -> dict:
     """Tạo đủ 07 file. Trả về {tên file: số bảng}; lệch thiết kế thì trả nguyên trạng rồi báo lỗi.
     0.7.9 lớp 2: trước khi nâng ghi cờ "đang nâng" (tệp trạng thái, không phải bảng); nâng xong bỏ cờ."""
     from maychu.hethong import antoan
@@ -443,7 +443,14 @@ def tao_het(thumuc: Path | None = None) -> dict:
         antoan.ghi(thumuc, dang_nang={"tu": min(b for b in ban.values() if b > 0), "den": PHIENBAN_LUOCDO, "luc": luc,
                                       "tep": co_san}, chup_luc=luc)
     try:
-        ketqua = {ten: tao_mot(ten, thumuc, chu) for ten in ketnoi.CAC_FILE}
+        ketqua = {}
+        for ten in ketnoi.CAC_FILE:
+            ketqua[ten] = tao_mot(ten, thumuc, chu)
+            if bao and can_nang:   # 0.8.1 (QĐ251) bước 7: đã nâng tệp i/07
+                try:
+                    bao(len(ketqua), len(ketnoi.CAC_FILE))
+                except Exception:  # noqa: BLE001 - báo tiến độ lỗi không chặn nâng
+                    pass
         lech = {t: (so, ketnoi.SO_BANG[t]) for t, so in ketqua.items() if so != ketnoi.SO_BANG[t]}
         if lech:   # 0.7.9: lệch số bảng cũng trả nguyên trạng (trước đây báo lỗi mà dữ liệu đã nâng dở)
             raise RuntimeError(f"số bảng lệch thiết kế: {lech}")

@@ -186,8 +186,9 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) 
     """che_do 'ngay': gửi lệnh luôn. 'cho': không có việc AI đang chạy thì gửi luôn; có thì chờ việc xong,
     tối đa 30 phút (lịch chạy nền gọi xu_ly_cho mỗi phút). Việc mới không nhận khi đang chờ: dang_cho().
     0.7.9 (QĐ213): lớp 1 ổ trống không đủ thì chặn; "gửi lệnh" = lớp 5 chụp bản sao, đẩy Drive rồi mới gửi."""
-    from maychu.hethong import antoan
+    from maychu.hethong import antoan, tiendo
     kq = kiem_tra()
+    luc_o_trong = tiendo._bay()   # QĐ251 bước 1: kiểm ổ trống
     if not kq["co_ban_moi"]:   # QĐ174 điểm 04: chỉ cập nhật khi gói bản mới đã đóng xong trên kho
         return {"loi": "Chưa có bản mới đóng gói xong, bạn chờ vài phút rồi bấm Kiểm tra lại"}
     o = antoan.o_trong(thumuc)
@@ -200,6 +201,8 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) 
         return {"loi": antoan.CHU["drive_chua_noi"], "can_chon": "drive_chua_noi"}
     # Y38c R4: chụp bản sao, đẩy Drive TRƯỚC; chế độ "cho" chờ việc AI xong (tối đa 30 phút) ngay trước khi gửi lệnh,
     # nên việc AI bắt đầu trong lúc chụp vẫn được chờ. Từ lúc bấm tới lúc gửi lệnh, dang_cho() = True để không nhận việc mới.
+    if not dang_cho():
+        tiendo.bat_dau(ban_dang_chay(), kq["ban_moi"], luc_o_trong, thumuc)   # bước 1 xong → bước 2 chụp 07 tệp
     return bat_dau(nguoi_id, kq["ban_moi"], thumuc, cho_viec=che_do == "cho")
 
 
@@ -235,6 +238,8 @@ def tiep_tuc(nguoi_id: str, van: bool, thumuc=None) -> dict:
         return {"loi": "Không có lượt cập nhật nào đang chờ chọn"}
     if not van:
         _SAO.update(buoc=None, loi=None)
+        from maychu.hethong import tiendo
+        tiendo.huy(thumuc)
         _ghi_f04("capnhat_ngay", ban_dang_chay(), "bichan", "bạn huỷ: bản sao Drive quá 10 phút", nguoi_id, thumuc)
         return {"ok": True, "huy": True}
     _SAO["buoc"] = "gui"
@@ -243,7 +248,8 @@ def tiep_tuc(nguoi_id: str, van: bool, thumuc=None) -> dict:
 
 
 def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> None:
-    from maychu.hethong import antoan
+    from maychu.hethong import antoan, tiendo
+    tiendo.sang("gui", thumuc)   # QĐ251 bước 4
     if _SAO.get("cho_viec"):   # Y38c R4: chế độ "Chờ xong rồi cập nhật"
         _SAO["buoc"] = "cho_viec"
         het = time.time() + CHO_TOIDA_GIAY
@@ -256,6 +262,9 @@ def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> No
         r = cap_nhat_ngay(nguoi_id, thumuc)
         if "loi" in r:
             _SAO.update(loi=r["loi"])
+            tiendo.loi("gui", thumuc, r.get("ngan"))   # QĐ255 điểm 4: lý do ngắn, không có thì bỏ ngoặc
+        else:
+            tiendo.sang("tai", thumuc)   # bước 5: watchtower kéo gói (ước tính, app không đo được)
     finally:
         _SAO.update(buoc="tai" if not _SAO["loi"] else None)
 
@@ -283,22 +292,27 @@ def _con_cho_drive(noi: Path, thumuc=None) -> int:
 
 def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
     from maychu.dulieu import saoluu
-    from maychu.hethong import antoan
+    from maychu.hethong import antoan, tiendo
     from maychu.ketnoi import drive
     dang = ban_dang_chay()
     try:
-        kq = saoluu.chay(thumuc, truoc_ban=ban_moi or "moi")
+        kq = saoluu.chay(thumuc, truoc_ban=ban_moi or "moi",
+                         bao=lambda i, n: tiendo.chi_tiet("chup", thumuc, da=i, tong=n, xong=i == n))   # bước 2: tệp i/07
         if kq["ketqua"] == "loi":
             loi = next((x for x in kq["file"] if x["ketqua"] == "loi"), {})
             lydo = (json.loads(loi.get("ketqua_tungbuoc_json") or "{}").get("loi") or "lỗi chụp")[:200]
             _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=lydo), buoc=None)
+            tiendo.loi("chup", thumuc, "tệp " + loi["file_dulieu"] if loi.get("file_dulieu") else None)
             _ghi_f04("capnhat_ngay", dang, "bichan", "chưa chụp được bản sao: " + lydo, nguoi_id, thumuc)
             return
         if drive.dang_noi(thumuc):
             _SAO["buoc"] = "day"
+            tong = _con_cho_drive(kq["noi"], thumuc)
+            tiendo.sang("drive", thumuc, da=0, tong=tong)   # bước 3: số tệp đã lên Drive / tổng
             het = time.time() + antoan.CHO_DRIVE_GIAY
             while _con_cho_drive(kq["noi"], thumuc) and time.time() < het:
                 drive.day_hang_cho(thumuc)
+                tiendo.chi_tiet("drive", thumuc, da=tong - _con_cho_drive(kq["noi"], thumuc), tong=tong)
                 if _con_cho_drive(kq["noi"], thumuc):
                     time.sleep(NGHI_DAY_GIAY)
             if _con_cho_drive(kq["noi"], thumuc):   # QĐ218 dòng 28: quá 10 phút thì chờ anh chọn (tiep_tuc)
@@ -308,6 +322,7 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
         _gui(nguoi_id, ban_moi, drive.dang_noi(thumuc), thumuc)
     except Exception as e:  # noqa: BLE001 - mọi lỗi đều báo lại, không gửi lệnh khi chưa có bản sao
         _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=type(e).__name__), buoc=None)
+        tiendo.loi(type(e).__name__, thumuc)
         _ghi_f04("capnhat_ngay", dang, "loi", "trước cập nhật: " + type(e).__name__, nguoi_id, thumuc)
 
 
@@ -317,13 +332,13 @@ NGHI_DAY_GIAY = 15
 def cap_nhat_ngay(nguoi_id: str, thumuc=None) -> dict:
     ma = os.environ.get("WATCHTOWER_TOKEN", "")
     if not ma:
-        return {"loi": "Máy chủ chưa có mã cập nhật"}
+        return {"loi": "Máy chủ chưa có mã cập nhật", "ngan": "thiếu mã cập nhật"}   # ngan: lý do ngắn ở thẻ tiến độ (QĐ255 điểm 4)
     try:
         httpx.post("http://watchtower:8080/v1/update", headers={"Authorization": f"Bearer {ma}"}, timeout=5)
     except httpx.TimeoutException:
         pass  # watchtower đang kéo bản mới và khởi động lại phần mềm: bình thường
     except httpx.HTTPError as loi:
         _ghi_f04("capnhat_ngay", ban_dang_chay(), "loi", type(loi).__name__, nguoi_id, thumuc)
-        return {"loi": "Chưa gửi được lệnh cập nhật"}
+        return {"loi": "Chưa gửi được lệnh cập nhật", "ngan": "máy chủ cập nhật không trả lời"}
     _ghi_f04("capnhat_ngay", ban_dang_chay(), "dat", None, nguoi_id, thumuc)
     return {"ok": True}

@@ -1,0 +1,1 @@
+Mã 0.7.9 (d369e42) chép bằng máy, KHÔNG sửa tay: bài kiểm Y41 chứng minh bản quay về 0.7.9 đọc tệp trạng thái có khoá phụ tien_do vẫn chạy (điều kiện CDA, QĐ251).
