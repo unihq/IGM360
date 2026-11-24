@@ -335,7 +335,7 @@ function veCapNhat(d) {
   if (d.nhip_phut) $('#cn-nhip').innerHTML = hai(d.nhip_phut) + '&nbsp;phút';   // QĐ174: nhịp lấy từ máy chủ (01 chỗ)
   $('#cn-loi').textContent = d.loi ? ' · ' + d.loi + '.' : '';   // Y17 (d): lỗi kiểm bản mới hiện cố định cạnh giờ kiểm
   const moi = d.thaydoi.find(m => m.ban === d.ban_moi) || d.thaydoi[0] || {dong: []};
-  $('#cn-thaydoi').innerHTML = moi.dong.slice(0, 5).map(x => '<div class="dong t13">' + ICON.check + '<span>' + cum(x) + '</span></div>').join('');
+  $('#cn-thaydoi').innerHTML = moi.dong.map(x => '<div class="dong t13">' + ICON.check + '<span>' + cum(x) + '</span></div>').join('');   // Y41e (CDO U18b L3): hiện đủ mọi dòng của bản, bỏ trần 05 dòng
   const tomTat = ban => (d.tomtat || {})[ban] || (ban === d.ban_dang ? 'Bản đang dùng' : 'Bản đã dùng');   // dòng "Tóm tắt:" ở THAYDOI.md (N07)
   const cot = 'grid-template-columns:120px 1fr 160px';
   const kiem = x => !x.kiem ? '' : '<span class="ks ' + (x.kiem.dat ? 'dat' : 'canh') + '">' + icoMau(ICON[x.kiem.dat ? 'circle-check' : 'circle-alert'],
@@ -423,7 +423,7 @@ function htmlTienDo(td, o) {   // o: {bay, cu (bản đang chạy), kiem (kiểm
   const so = (x, n) => hai(+x || 0) + '/' + hai(n);
   const kiem = o.kiem && o.kiem.chu ? cum(CHU_CN.kiem + o.kiem.chu) : '';   // QĐ255 điểm 5: kiểm chưa đạt thì phần này đỏ + circle-alert
   const dong = r.xong ? '<b>' + TD8.xongBuoc + '</b>' + (!kiem ? '' : o.kiem.dat === false ? ' · <span style="color:' + M.loi + '">'
-      + icoMau(ICON['circle-alert'], M.loi, 14) + ' ' + kiem + '</span>' : ' · ' + kiem)
+      + icoMau(ICON['circle-alert'], M.loi, 14).replace('vertical-align:middle', 'vertical-align:middle;margin-right:4px') + kiem + '</span>' : ' · ' + kiem)   // Y41e: khoảng hở bằng lề icon, không thêm dấu cách
     : td.loi ? '<b>' + TD8.dung(r.vi + 1) + '</b> ' + cum(ten + ' ' + TD8.chuaDuoc + (td.loi_ct ? ' (' + td.loi_ct + ')' : ''))
     : o.quaGio ? '<b>' + TD8.buoc(3) + '</b> ' + cum(TD8.quaChu)
     : '<b>' + TD8.buoc(r.vi + 1) + '</b> ' + cum(ten + (b === 'chup' && ct.tong ? ' · ' + so(ct.da, ct.tong) + TD8.tep : b === 'kiem' && ct.tong

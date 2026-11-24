@@ -213,6 +213,37 @@ class KiemTheTienDo(unittest.TestCase):
         h2 = self.the(_td("gui", moc, loi="gui", loi_luc=T0), 20)["html"]
         self.assertIn("<b>Dừng ở bước 4/8:</b> Gửi lệnh cập nhật chưa được</div>", h2)
 
+    def test_xong_kiem_chua_dat_khong_hai_dau_cach(self):
+        """Y41e (CDO U18b): dòng xong khi kiểm chưa đạt không còn 02 dấu cách liền nhau quanh icon."""
+        import re
+        td = _td("xong", {"o_trong": 0, "chup": 2, "gui": 11, "tai": 12}, xong="2026-11-24T10:05:58+07:00")
+        h = self.the(td, 999, kiem={"chu": "05/06 · lịch chạy nền chưa bật", "dat": False})["html"]
+        dong = h.split('<div class="td-buoc"', 1)[1].split("</div>", 1)[0]
+        chu = re.sub(r"<svg[\s\S]*?</svg>", "", dong)
+        chu = re.sub(r"<[^>]+>", "", chu.split(">", 1)[1])
+        self.assertEqual(chu, "Xong 08/08 bước · Kiểm sau cập nhật: 05/06 · lịch chạy nền chưa bật")
+        self.assertIn("margin-right:4px", dong)                       # khoảng hở bằng lề icon
+
+    def test_thaydoi_081_hien_du_06_dong(self):
+        """Y41e (CDO U18b L3, QĐ255 điểm 6): THAYDOI 0.8.1 có 06 dòng anh duyệt; thẻ Có bản mới hiện đủ, không cắt 05."""
+        from maychu.hethong import capnhat
+        muc = next(m for m in capnhat.phan_tich_thaydoi((GOC / "THAYDOI.md").read_text(encoding="utf-8")) if m["ban"] == "0.8.1")
+        self.assertEqual(muc["dong"], [
+            "Thẻ Đang cập nhật hiện % và 08 bước, đã chạy bao lâu, còn khoảng bao lâu.",
+            "Bước 5–7 ghi rõ \"ước tính\", tính theo các lần cập nhật trước.",
+            "Lỗi trước khi gửi lệnh cập nhật: thẻ ghi dừng ở bước nào, bản đang dùng và dữ liệu giữ nguyên, có nút Thử lại.",
+            "Cập nhật xong, thẻ hiện kết quả kiểm sau cập nhật rồi trang tự tải lại sau 03 giây.",
+            "Sửa lỗi thẻ Đang cập nhật quay mãi dù đã lên bản mới; nay trang tự tải lại khi bản mới chạy.",
+            "Chờ tải gói cài tối đa 30 phút (trước 10 phút), mạng chậm vẫn cập nhật được."])
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        dong = next(x for x in js.split("\n") if x.lstrip().startswith("$('#cn-thaydoi').innerHTML ="))
+        ma = ("const ICON = {check: '<i></i>'}, esc = s => String(s), cum = s => esc(s), phan = {innerHTML: ''}, $ = () => phan;\n"
+              f"const moi = {{dong: {json.dumps(muc['dong'], ensure_ascii=False)}}};\n" + dong.strip() + "\n"
+              "console.log(JSON.stringify({so: (phan.innerHTML.match(/class=\"dong t13\"/g) || []).length, html: phan.innerHTML}));\n")
+        kq = self.node(ma)
+        self.assertEqual(kq["so"], 6)
+        self.assertIn("Chờ tải gói cài tối đa 30 phút", kq["html"])  # dòng D6 trước bị cắt
+
     def test_xong_ma_kiem_chua_dat(self):
         """QĐ255 điểm 5: "Xong 08/08 bước" giữ xanh lá; phần kiểm sau cập nhật chưa đạt đỏ + circle-alert."""
         td = _td("xong", {"o_trong": 0, "chup": 2, "gui": 11, "tai": 12, "nang": 230, "kiem": 352},
