@@ -400,7 +400,8 @@ def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
                 if GO_MA_KHI_TRUNG:   # gỡ luôn mã của tài khoản trùng (câu 22)
                     go(goi, taikhoan)
                     return {"loi": madaihan.CHU_DAN["trung"].format(tk=tk), "trung_voi": tk, "chu_rieng": True}
-                return {"loi": madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=tk), "trung_voi": tk, "chu_rieng": True}
+                return {"loi": madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=tk), "trung_voi": tk, "chu_rieng": True,
+                        "lay_lai": True}   # Y38f L3: giao diện hiện ô báo lỗi kèm nút "Lấy tên, gói" ở đúng ô này
             _don(goi, taikhoan)
             return {"loi": f"Tài khoản này đã kết nối ở tài khoản {tk:02d}", "trung_voi": tk}
     if c and _co_ma(taikhoan):   # QĐ216 bước anh làm 01 lần: đăng nhập kiểu cũ để chụp tên, gói; chụp xong đăng xuất (Đ8)

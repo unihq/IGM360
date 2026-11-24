@@ -448,7 +448,8 @@ def _loi_dn(goi: str, taikhoan: int, kq: dict, p: dict) -> HTTPException:
         ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap(goi, taikhoan), ketqua="bichan",
                 lydo=f"trùng tài khoản {kq['trung_voi']:02d}", nguoi_id=p["nguoidung_id"])
         return HTTPException(409, {"loi": kq["loi"], "trung_voi": kq["trung_voi"],
-                                   **({"chu_rieng": True} if kq.get("chu_rieng") else {})})   # dải báo trùng; Y38d N41 câu riêng
+                                   **({"chu_rieng": True} if kq.get("chu_rieng") else {}),
+                                   **({"lay_lai": True} if kq.get("lay_lai") else {})})   # dải báo trùng; Y38d N41 câu riêng; Y38f L3
     return HTTPException(400, kq["loi"])
 
 

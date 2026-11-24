@@ -865,9 +865,79 @@ class KiemY38e(NenAT):
         self.assertFalse(dg.tep_chup(2).exists())
 
 
+class KiemY38f(NenAT):
+    """CDO U14: L1, L2 giữ liền cụm; L3 ô A8 kiểu báo lỗi kèm nút "Lấy tên, gói" (bản vẽ Z17_01, Z17_04)."""
+    A = KiemY38e.A
+
+    def chay_js(self, them):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8").split("\n")
+        dau = next(i for i, x in enumerate(js) if x.startswith("const esc ="))
+        cuoi = next(i for i, x in enumerate(js) if x.startswith("const cau ="))
+        z = next(i for i, x in enumerate(js) if x.startswith("const CHU_Z15 = {"))
+        z2 = next(i for i in range(z, len(js)) if js[i].rstrip().endswith("};"))
+        b = next(i for i, x in enumerate(js) if x.startswith("const baoLayLai ="))
+        ma = ("const NB = '&nbsp;'; const nbsp = s => String(s).replace(/ /g, NB);"
+              "const ICON = new Proxy({}, {get: (o, k) => '<svg data-i=\"' + String(k) + '\"/>'});"
+              "const icoMau = (svg, mau, co) => svg.replace('/>', ' stroke=\"' + mau + '\"/>');\n"
+              + "\n".join(js[dau:cuoi + 1] + js[z:z2 + 1] + js[b:b + 3]) + "\n" + them)
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "y38f.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_l1_l2_giu_lien_cum(self):
+        A = self.A
+        a7 = A[7] + " Dữ liệu đã trả về lúc 10:05."
+        ra = self.chay_js("console.log(JSON.stringify([" + ", ".join(json.dumps(s) for s in (A[1], A[6], a7)) + "].map(cum)));")
+        for s in ra:
+            for c in ("Khoá API", "khởi động", "chưa được", "dữ liệu", "Dữ liệu", "bản 0.7.8", "bản 0.7.9"):
+                self.assertNotIn(c, s)                                              # cụm nào có trong câu đều đã nối &nbsp;
+        self.assertEqual(ra[0].count("Khoá&nbsp;API"), 2)                            # L1: cả 02 chỗ
+        for c in ("khởi&nbsp;động", "chưa&nbsp;được", "bản&nbsp;0.7.8", "bản&nbsp;0.7.9", "Dữ&nbsp;liệu"):
+            self.assertIn(c, ra[2])
+        self.assertIn("dữ&nbsp;liệu", ra[1])
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_l3_o_bao_loi_a8_kem_nut(self):
+        h = self.chay_js("console.log(JSON.stringify(baoLayLai(" + json.dumps(self.A[8][:-1]) + ", 2)));")
+        self.assertTrue(h.startswith('<div class="bao-lai t13"><div class="loi-o"><svg data-i="circle-alert"/>'), h)
+        self.assertIn("<b>Lấy&nbsp;tên,&nbsp;gói</b>", h)
+        self.assertIn('<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="2"><svg data-i="log-in" stroke="#1F2329"/>Lấy&nbsp;tên,&nbsp;gói</button>', h)   # icon tối trên nút trắng
+        self.assertNotIn("user-round", h)
+        css = (GD / "index.html").read_text(encoding="utf-8")
+        o = css[css.index(".bao-lai{"):css.index("}", css.index(".bao-lai{"))]
+        self.assertIn("background:#fff", o)                                         # không nền đỏ
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertIn("D.trungTk = {...(D.trungTk || {}), claude: (e.ct || {}).lay_lai ? dn.tk : 0}", js)
+
+    def test_qd221_tro_chuyen_gui_ai_xung_ban(self):
+        from maychu.hethong.mohinh import trochuyen
+        cau = []
+        goi = mock.Mock(side_effect=lambda c, **k: cau.append(c) or {"chu": "Chào bạn", "nhatky_ai_id": None, "nguon": "thu"})
+        ng = maso.tao()
+        with mock.patch.object(trochuyen.congai, "goi", goi):
+            kq = trochuyen.gui(None, ng, "Câu 01")
+            trochuyen.gui(kq["hoithoai_id"], ng, "Câu 02")
+        self.assertEqual(trochuyen.VAI_CHU["nguoi"], "Bạn")
+        self.assertIn("Bạn: Câu 01", cau[1])
+        self.assertIn("\n\nBạn hỏi tiếp:\nCâu 02", cau[1])
+        self.assertIsNone(TU_ANH.search(cau[1]))
+
+    def test_l3_may_chu_bao_lay_lai(self):
+        kq = KiemY38dBoSung.lay_ten_trung(self, False)
+        self.assertTrue(kq["lay_lai"])
+        from maychu.web import api
+        e = api._loi_dn("claude", 2, kq, {"nguoidung_id": maso.tao()})
+        self.assertEqual((e.status_code, e.detail["lay_lai"], e.detail["loi"]), (409, True, kq["loi"]))
+
+
 TU_ANH = __import__("re").compile(r"(?<![\w-])[Aa]nh(?![\w-])")
-# Chuỗi trong mã có chữ "anh" nhưng người dùng không nhìn thấy: lời gửi cho AI ở Trò chuyện AI (CTO báo CPO, Y38e)
-CHO_PHEP_PY = {("maychu/hethong/mohinh/trochuyen.py", "Anh"), ("maychu/hethong/mohinh/trochuyen.py", "\n\nAnh hỏi tiếp:\n")}
+# QĐ221: lời gửi AI ở Trò chuyện AI cũng xưng "bạn" — không còn ngoại lệ nào
+CHO_PHEP_PY = set()
 
 
 def _chuoi_py(p):

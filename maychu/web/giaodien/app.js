@@ -26,6 +26,7 @@ const CUM = ['Việc nền', 'mục Chờ duyệt', 'mục Két khoá', 'mục B
   'tham khảo', 'ưu tiên', 'gì mới', 'Cài đặt', 'Thông số', 'dự phòng', 'cài máy',
   'Mở trang', 'TikTok Shop', 'mã sàn'];   // N12, T1
 CUM.push('trả về', 'giữ được', 'an toàn', 'bản sao Drive');   // Y38d N35: câu 25, 30, 40 không ngắt giữa cụm
+CUM.push('Khoá API', 'khởi động', 'chưa được', 'Dữ liệu', 'dữ liệu');   // Y38f U14 L1 (A1), L2 (A6, A7)
 // Số luôn đi liền chữ đứng sau (04 dòng, 1.240 dòng); "tài khoản 01", "ưu tiên 2", "bản 0.5.0", "02 lớp" không tách.
 const cum = s => { let r = esc(s).replace(/(?<![\p{L}\d])(\d+(?:[.,]\d+)*) (?=\p{L})/gu, '$1&nbsp;');
   CUM.forEach(c => { r = r.split(c).join(c.replace(/ /g, '&nbsp;')); });
@@ -504,6 +505,10 @@ const CHU_Z15 = {
   saiTienTo: 'Đây không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-).',   // QĐ219 A2
   chepLoi: 'Trình duyệt chặn chép. Bạn bôi đen lệnh rồi chép tay.',   // QĐ219 A14
   kiemHanMucRe: 'Mã đã lưu; lần gọi thử gặp hết hạn mức của gói nên chưa kiểm được mã.'};
+// Y38f L3 (Z17): A8 "Lấy tên, gói" đăng nhập nhầm, mã giữ nguyên: ô báo lỗi chữ đỏ + nút làm lại "Lấy tên, gói"
+const baoLayLai = (chu, tk) => '<div class="bao-lai t13"><div class="loi-o">' + ICON['circle-alert'] + '<span>'
+  + cum(cau(chu)).split(CHU_Z15.hdNut).join('<b>' + nbsp(CHU_Z15.hdNut) + '</b>') + '</span></div>'
+  + '<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="' + tk + '">' + icoMau(ICON['log-in'], '#1F2329', 16) + nbsp(CHU_Z15.hdNut) + '</button></div>';
 const giuTienTo = h => String(h).split('sk-ant-oat01-').join('<span class="nw">sk-ant-oat01-</span>');   // Y38d N42
 // N28 (a): làm sạch mã dán vào như máy chủ (bỏ khoảng trắng, xuống dòng, ký tự ẩn; nhận dạng TÊN=mã, dấu nháy)
 function lamSachMa(s) { let m = String(s || '').replace(/[\s\u200b\u200c\u200d\u2060\ufeff]+/g, '');
@@ -610,7 +615,8 @@ function theGoi(g, ds, nguon, uu) {
       + (cl ? '' : nutGo) + '</div>'
       + (mdHet ? '<span class="nhan n-canh"><i></i>Mã hết hạn</span>' : x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>'
         : '<span class="nhan n-xem"><i></i>' + (cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</span>') + '</div>'
-      + (cl ? '<div class="md-khoi">' + theMd(x, nutGo) + '</div>' : '');   // 0.7.8 (Z13, N11b): hàng riêng rộng hết thẻ; "Gỡ tài khoản" xoá cả mã
+      + (cl ? '<div class="md-khoi">' + theMd(x, nutGo) + '</div>' : '')   // 0.7.8 (Z13, N11b): hàng riêng rộng hết thẻ; "Gỡ tài khoản" xoá cả mã
+      + (cl && D.trung[g] && (D.trungTk || {})[g] === x.taikhoan && (D.trungChu || {})[g] ? baoLayLai(D.trungChu[g], x.taikhoan) : '');   // Y38f L3: A8
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio, n.ma + '|5') + thanhHm('Tuần này', n.tyle_tuan, n.ma + '|t')
       + (n.da_datlai_luc   // Z12 (3): qua giờ đặt lại
         ? '<div class="t12 phu" title="Qua giờ đặt lại: khung 05 giờ mới bắt đầu, số dùng về 0%">Đã đặt lại lúc ' + esc(gio(n.da_datlai_luc)) + '&nbsp;· số mới có sau lượt gọi AI kế&nbsp;tiếp</div>'
@@ -619,7 +625,7 @@ function theGoi(g, ds, nguon, uu) {
   if (g === 'claude') { ds.filter(x => x.ma_daihan && x.ma_daihan.het).forEach(x => { h += theMdHet(x, ds); });   // N13, N23
     mdMo.forEach(tk => { h += theMdKetNoi(tk, D.mdh[tk]); }); }
   // QĐ164 ý 1 (Z6-TK): đăng nhập trùng thì không tạo ô, dải xanh dưới ô đang có; số là số của ô đang giữ tài khoản đó
-  if (D.trung[g]) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>' + ((D.trungChu || {})[g] ? giuTienTo(cum(cau(D.trungChu[g])))   // Y38d N41: câu 22
+  if (D.trung[g] && !((D.trungTk || {})[g] && ds.some(x => x.taikhoan === D.trungTk[g]))) h += '<div class="bao-xanh t13">' + ICON['user-round'] + '<span>' + ((D.trungChu || {})[g] ? giuTienTo(cum(cau(D.trungChu[g])))   // Y38d N41: câu 22
     : 'Tài khoản ' + ten + ' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.') + '</span></div>';
   if (dn.url) {
     h += '<div class="dangnhap"><div class="b6 t13">Đăng nhập tài khoản ' + dn.tk + '</div>' + (dn.tk >= 2 ? canhTk(ten) : '')
@@ -711,7 +717,8 @@ async function danMaClaude() {
   if (!ma.trim()) { bao('Bạn dán mã trang Claude hiện ra.'); return; }
   try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.'); await napMoHinh(); }
   catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi;
-      D.trungChu = {...(D.trungChu || {}), claude: (e.ct || {}).chu_rieng ? (e.ct || {}).loi : ''}; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
+      D.trungChu = {...(D.trungChu || {}), claude: (e.ct || {}).chu_rieng ? (e.ct || {}).loi : ''};
+      D.trungTk = {...(D.trungTk || {}), claude: (e.ct || {}).lay_lai ? dn.tk : 0}; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
 }
 
 // ---- Ô chọn mô hình màn 08 + hộp "Đổi" màn 13 (QĐ178–QĐ183, PTD-08, bản vẽ Z10, Z10b): 01 danh sách G08 dùng chung

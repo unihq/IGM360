@@ -10,7 +10,7 @@ from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.mohinh import congai
 
 GIU_CHU = 24_000
-VAI_CHU = {"nguoi": "Anh", "ai": "Trợ lý"}
+VAI_CHU = {"nguoi": "Bạn", "ai": "Trợ lý"}   # QĐ221: lời gửi AI xưng "bạn"
 
 
 def _bay_gio() -> str:
@@ -50,7 +50,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
     finally:
         cn.close()
     lich_su = "\n\n".join(f"{VAI_CHU[v]}: {n}" for v, n in truoc)[-GIU_CHU:]
-    cau = (f"Các lượt trước của cuộc trò chuyện:\n{lich_su}\n\nAnh hỏi tiếp:\n{noidung}" if lich_su else noidung)
+    cau = (f"Các lượt trước của cuộc trò chuyện:\n{lich_su}\n\nBạn hỏi tiếp:\n{noidung}" if lich_su else noidung)
     kq = congai.goi(cau, thumuc=thumuc, loai_viec="trochuyen", mohinh_id=mohinh_id)
     cn = ketnoi.mo("Bot", thumuc)
     try:
