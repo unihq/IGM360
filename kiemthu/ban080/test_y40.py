@@ -330,7 +330,7 @@ class KiemY40b(Nen):
         finally:
             cn.close()
         self.assertFalse(antoan._luocdo_ban4_du(tt, ban, self.dl))                    # bản vừa nâng: lệch thì chưa đạt
-        self.assertTrue(antoan._luocdo_ban4_du(tt, "0.8.1", self.dl))                 # bản sau (không nâng lược đồ): không so
+        self.assertTrue(antoan._luocdo_ban4_du(tt, "99.0.0", self.dl))                # bản sau (không nâng lược đồ): không so. 0.8.1: không viết cứng số bản kế tiếp
 
     def test_l3_dung_lai_doc_theo_lo(self):
         khoitao.tao_het(self.dl)

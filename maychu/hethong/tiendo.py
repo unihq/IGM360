@@ -100,10 +100,11 @@ def chi_tiet(buoc: str, thumuc: Path | None = None, **so) -> None:
     _ghi(thumuc, td, bool(so.get("xong")))
 
 
-def loi(lydo: str, thumuc: Path | None = None) -> None:
+def loi(lydo: str, thumuc: Path | None = None, chi_tiet: str | None = None) -> None:
+    """Dừng ở bước đang chạy. `chi_tiet`: phần trong ngoặc của dòng "Dừng ở bước k/8: … chưa được (…)" (QĐ253)."""
     td = _hien_tai(thumuc)
     if td and not td.get("xong"):
-        _ghi(thumuc, {**td, "loi": lydo[:120], "loi_luc": _bay()}, True)
+        _ghi(thumuc, {**td, "loi": lydo[:120], "loi_luc": _bay(), **({"loi_ct": chi_tiet[:120]} if chi_tiet else {})}, True)
 
 
 def huy(thumuc: Path | None = None) -> None:
@@ -212,9 +213,11 @@ def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | 
     du = {b: max(0.0, float((td.get("du_kien") or {}).get(b, MAC_DINH_GIAY[b]))) for b in BUOC}
     tong = sum(du.values()) or 1.0
     buoc = td.get("buoc")
+    bay = (bay_gio or datetime.now(MUIGIO_VN)).isoformat(timespec="seconds")
+    chung = {"moc": td.get("moc", {}), "du_kien": du, "tu": td.get("tu"), "den": td.get("den"), "bat_dau": td.get("bat_dau"),
+             "luc": bay}   # luc: giờ máy chủ, trang tự tính % giữa 02 lần hỏi và lúc máy chủ đang thay bản (QĐ253)
     if td.get("xong"):
-        return {"buoc": "xong", "so_buoc": len(BUOC), "phan_tram": 100, "uoc_tinh": False, "moc": td.get("moc", {}),
-                "du_kien": du, "den": td.get("den"), "xong": td["xong"]}
+        return {"buoc": "xong", "so_buoc": len(BUOC), "phan_tram": 100, "uoc_tinh": False, "xong": td["xong"], **chung}
     vi_tri = BUOC.index(buoc) if buoc in BUOC else 0
     da = sum(du[b] for b in BUOC[:vi_tri])
     ct = (td.get("chi_tiet") or {}).get(buoc) or {}
@@ -222,9 +225,9 @@ def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | 
     if ct.get("tong"):
         phan = min(1.0, float(ct.get("da", 0)) / float(ct["tong"]))
     else:
-        troi = _giay((td.get("moc") or {}).get(buoc), (bay_gio or datetime.now(MUIGIO_VN)).isoformat(timespec="seconds")) or 0
+        troi = _giay((td.get("moc") or {}).get(buoc), bay) or 0
         phan = min(0.95, troi / du[buoc]) if du[buoc] else 0.95
         uoc = True
     pt = int(100 * (da + phan * du[buoc]) / tong)
-    return {"buoc": buoc, "so_buoc": vi_tri + 1, "phan_tram": max(0, min(99, pt)), "uoc_tinh": uoc, "chi_tiet": ct,
-            "moc": td.get("moc", {}), "du_kien": du, "den": td.get("den"), **({"loi": td["loi"]} if td.get("loi") else {})}
+    return {"buoc": buoc, "so_buoc": vi_tri + 1, "phan_tram": max(0, min(99, pt)), "uoc_tinh": uoc, "chi_tiet": ct, **chung,
+            **{k: td[k] for k in ("loi", "loi_ct", "loi_luc") if td.get(k)}}

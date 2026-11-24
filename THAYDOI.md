@@ -3,6 +3,15 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.1
+Tóm tắt: Tiến độ cập nhật theo 08 bước
+- Thẻ Đang cập nhật hiện % và 08 bước: kiểm ổ trống, chụp dữ liệu, bản sao Drive, gửi lệnh cập nhật, tải gói cài, thay bản chạy, nâng dữ liệu, kiểm sau cập nhật; ghi đã chạy bao lâu, còn khoảng bao lâu.
+- Bước tải gói cài, thay bản chạy, nâng dữ liệu ghi rõ "ước tính", tính theo thời gian các lần cập nhật trước.
+- Chưa gửi lệnh cập nhật mà gặp lỗi thì thẻ ghi rõ dừng ở bước nào, bản đang dùng và dữ liệu giữ nguyên, có nút Thử lại.
+- Cập nhật xong, thẻ hiện kết quả kiểm sau cập nhật rồi trang tự tải lại sau 03 giây.
+- Sửa lỗi thẻ Đang cập nhật quay mãi sau khi đã lên bản mới: trang hỏi lại máy chủ đều đặn và tự tải lại khi có bản mới.
+- Chờ tải gói cài tối đa 30 phút (trước là 10 phút) để mạng chậm vẫn cập nhật được.
+
 ## 0.8.0
 Tóm tắt: Nền dữ liệu bản 4
 - Dữ liệu nâng lên bản 4 trong 01 lần: dựng sẵn chỗ lưu cho trò chuyện AI (ghim, lưu trữ, mục Đã xoá, Project, chia sẻ), gia hạn gói AI, đã đọc thông báo theo người. Các tính năng này bật dần ở các bản sau.

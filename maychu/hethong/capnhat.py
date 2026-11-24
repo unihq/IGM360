@@ -262,7 +262,7 @@ def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> No
         r = cap_nhat_ngay(nguoi_id, thumuc)
         if "loi" in r:
             _SAO.update(loi=r["loi"])
-            tiendo.loi(r["loi"], thumuc)
+            tiendo.loi("gui", thumuc, r["loi"])
         else:
             tiendo.sang("tai", thumuc)   # bước 5: watchtower kéo gói (ước tính, app không đo được)
     finally:
@@ -302,7 +302,7 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
             loi = next((x for x in kq["file"] if x["ketqua"] == "loi"), {})
             lydo = (json.loads(loi.get("ketqua_tungbuoc_json") or "{}").get("loi") or "lỗi chụp")[:200]
             _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=lydo), buoc=None)
-            tiendo.loi("chup", thumuc)
+            tiendo.loi("chup", thumuc, "tệp " + loi["file_dulieu"] if loi.get("file_dulieu") else None)
             _ghi_f04("capnhat_ngay", dang, "bichan", "chưa chụp được bản sao: " + lydo, nguoi_id, thumuc)
             return
         if drive.dang_noi(thumuc):

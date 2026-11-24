@@ -78,6 +78,163 @@ class KiemChoCapNhat(unittest.TestCase):
                 self.assertNotRegex(dong.split("//", 1)[1], r"\b(const|let) het\b", dong)
 
 
+# ---------------- Phần 3: thẻ "Đang cập nhật" hiện % 08 bước (QĐ253, bản vẽ Z18) ----------------
+def _ma_the() -> str:
+    """Mã chạy được trong node: icon.js, 04 hàm phụ thật của app.js, khối <TD8> và choCapNhat."""
+    js = (GD / "app.js").read_text(encoding="utf-8")
+    dong = js.split("\n")
+    phu = [x for x in dong if x.startswith(("const hai =", "const esc =", "const icoMau ="))]
+    khoi = js[js.index("// <TD8>"):js.index("// </TD8>")]
+    a = next(i for i, x in enumerate(dong) if x.startswith("function choCapNhat("))
+    b = next(i for i in range(a, len(dong)) if dong[i] == "}")
+    icon = (GD / "icon.js").read_text(encoding="utf-8").replace("const ICON=", "var ICON=", 1)
+    return icon + "\n" + "\n".join(phu) + "\nconst cum = s => esc(s);\n" + khoi + "\n".join(dong[a:b + 1]).replace("Date.now()", "dongHo.now()")
+
+
+T0 = "2026-11-24T10:00:00+07:00"
+DU = {"o_trong": 1, "chup": 20, "drive": 0, "gui": 2, "tai": 300, "khoidong": 15, "nang": 30, "kiem": 40}
+
+
+def _td(buoc, giay_moc: dict, **them) -> dict:
+    """Tiến độ mẫu: giay_moc = {bước: số giây tính từ T0}."""
+    from datetime import datetime, timedelta
+    g = datetime.fromisoformat(T0)
+    moc = {k: (g + timedelta(seconds=v)).isoformat() for k, v in giay_moc.items()}
+    return {"buoc": buoc, "moc": moc, "du_kien": DU, "tu": "0.2.0", "den": "0.3.0", "bat_dau": T0, "luc": T0, "chi_tiet": {}, **them}
+
+
+@unittest.skipUnless(shutil.which("node"), "máy không có node")
+class KiemTheTienDo(unittest.TestCase):
+    def node(self, ma: str) -> dict:
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "the.js"
+            p.write_text(ma, encoding="utf-8")
+            r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def the(self, td: dict, giay: float, **o) -> dict:
+        nen = "const CHU_CN = {kiem: 'Kiểm sau cập nhật: '};\n"
+        chay = (f"const td = {json.dumps(td, ensure_ascii=False)};\n"
+                f"const o = {{...{json.dumps(o, ensure_ascii=False)}, bay: Date.parse('{T0}') + {giay} * 1000}};\n"
+                "console.log(JSON.stringify({html: htmlTienDo(td, o), r: tinhTienDo(td, o.bay)}));\n")
+        return self.node(_ma_the() + nen + chay)
+
+    def test_dang_chay_buoc_2_so_do_that(self):
+        k = self.the(_td("chup", {"o_trong": 0, "chup": 2}, chi_tiet={"da": 4, "tong": 7}), 8, cu="0.2.0")
+        h = k["html"]
+        for chu in ("Đang cập nhật lên 0.3.0", "<b>Bước 2/8:</b> Chụp dữ liệu · 04/07 tệp", "Đã chạy 00:08 · còn khoảng",
+                    "phút (ước tính)", "Trang tự tải lại khi xong. Bạn không cần bấm gì thêm.", "04/07 tệp</span>",
+                    "lucide-loader", "stroke=\"#1456F0\"", "1. Kiểm ổ trống</span><span class=\"td8-m\">00:02"):
+            self.assertIn(chu, h)
+        self.assertEqual(h.count("td8-dong"), 8)
+        self.assertNotIn("data-cnngay", h)
+
+    def test_buoc_5_uoc_tinh(self):
+        k = self.the(_td("tai", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23}), 23 + 100)
+        h = k["html"]
+        self.assertIn("<b>Bước 5/8:</b> Tải gói cài (ước tính)", h)
+        self.assertIn("5. Tải gói cài</span><span class=\"td8-m\">ước tính", h)
+        self.assertIn("3. Bản sao Drive</span><span class=\"td8-m\"></span>", h)   # Drive chưa nối: bỏ qua, % cộng ngay
+        self.assertFalse(k["r"]["cham"])
+
+    def test_lau_hon_uoc_tinh(self):
+        td = _td("tai", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23})
+        chua = self.the(td, 23 + 1.9 * 300)["r"]
+        self.assertFalse(chua["cham"])                                  # dưới 02 lần thời gian dự kiến: vẫn ước tính
+        k = self.the(td, 23 + 2.1 * 300)
+        h, r = k["html"], k["r"]
+        self.assertTrue(r["cham"])
+        for chu in ("Tải gói cài (ước tính) lâu hơn thường lệ", "chưa ước tính được thời gian còn lại",
+                    "Phần mềm vẫn đang chờ. Bạn không cần bấm gì thêm.", "lâu hơn ước tính</span>", "lucide-clock", "#8F5F00"):
+            self.assertIn(chu, h)
+        tong = sum(DU.values())
+        self.assertLessEqual(r["pt"], int(100 * (23 + 0.95 * 300) / tong))   # % dừng dưới mức cuối của bước 5
+        self.assertEqual(r["pt"], self.the(td, 23 + 9 * 300)["r"]["pt"])      # để lâu nữa vẫn đứng yên
+
+    def test_loi_buoc_2_co_nut_thu_lai(self):
+        td = _td("chup", {"o_trong": 0, "chup": 2}, chi_tiet={"da": 1, "tong": 7}, loi="chup", loi_ct="tệp Bot",
+                 loi_luc="2026-11-24T10:00:15+07:00")
+        h = self.the(td, 600, cu="0.2.0")["html"]
+        for chu in ("Chưa cập nhật được lên 0.3.0", "<b>Dừng ở bước 2/8:</b> Chụp dữ liệu chưa được (tệp Bot)", "Đã chạy 00:15<",
+                    "Chưa gửi lệnh cập nhật nên bản 0.2.0 và dữ liệu giữ nguyên. Lỗi ghi vào nhật ký.", "data-cnngay",
+                    "Thử lại</button>", "lucide-circle-alert", "chưa được</span>", "#E22E28"):
+            self.assertIn(chu, h)
+        self.assertNotIn("còn khoảng", h)
+
+    def test_drive_qua_10_phut(self):
+        td = _td("drive", {"o_trong": 0, "chup": 2, "drive": 11}, chi_tiet={"da": 2, "tong": 5})
+        h = self.the(td, 612, quaGio=True)["html"]
+        for chu in ("<b>Bước 3/8:</b> Bản sao Drive quá 10 phút, chờ bạn chọn", "Đã chạy 10:12<", "Bạn chọn ở hộp đang mở.",
+                    "quá 10 phút</span>", "lucide-clock"):
+            self.assertIn(chu, h)
+
+    def test_xong(self):
+        td = _td("xong", {"o_trong": 0, "chup": 2, "gui": 11, "tai": 12, "khoidong": 200, "nang": 230, "kiem": 352},
+                 xong="2026-11-24T10:05:58+07:00")
+        k = self.the(td, 999, kiem={"chu": "06/06 đạt", "dat": True})
+        h = k["html"]
+        for chu in ("Đã lên bản 0.3.0", "<b>Xong 08/08 bước</b> · Kiểm sau cập nhật: 06/06 đạt", "Tổng thời gian 05:58",
+                    "Trang tự tải lại sau 03 giây.", ">100%<", "8. Kiểm sau cập nhật</span><span class=\"td8-m\">00:06",
+                    "5. Tải gói cài</span><span class=\"td8-m\">xong"):
+            self.assertIn(chu, h)
+        self.assertEqual(h.count("td8-dong xong"), 8)
+
+    def luong(self, kich_ban: str) -> dict:
+        """Chạy choCapNhat với /suckhoe, /api/capnhat theo kịch bản (n: lần hỏi thứ n; null = máy chủ không trả lời)."""
+        nen = r"""
+let T = 0, hen = [], hoi = 0, taiLai = [], ve_ = 0;
+const S = {}, D = {capnhat: {}}, CHU_CN = {kiem: 'Kiểm sau cập nhật: ', sao: {tai: 'Bước 2/2 · Đang tải bản '}, cho: 'cho'};
+const phan = {textContent: '', innerHTML: '', dataset: {}, classList: {toggle() {}, remove() {}}};
+const $ = () => phan;
+const tieuDangCn = () => {}, ve = () => {}, veQuayVe = () => {}, moHopDrive = () => {};
+const location = {reload: () => { taiLai.push(T); }};
+const dongHo = {now: () => T};
+const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
+""" + kich_ban + r"""
+const fetch = async () => { hoi++; const b = BAN(hoi); if (!b) throw new Error('mất kết nối'); return {json: async () => ({phienban: b})}; };
+const api = async () => { const s = CN(hoi); if (!s) throw new Error('mất kết nối'); return s; };
+(async () => {
+  choCapNhat('0.2.0', '0.3.0');
+  for (let i = 0; i < 400 && hen.length; i++) { hen.sort((a, b) => a.luc - b.luc); const h = hen.shift(); T = h.luc; await h.f(); }
+  console.log(JSON.stringify({hoi, taiLai, cn: S.cn, html: phan.innerHTML, con: hen.length}));
+})().catch(e => console.log(JSON.stringify({loi: String(e)})));
+"""
+        kq = self.node(_ma_the() + nen)
+        self.assertNotIn("loi", kq, kq)
+        return kq
+
+    def test_luong_ban_moi_chay_buoc_7_8_roi_xong_tu_tai_lai(self):
+        cu, moi = (json.dumps(_td(b, m, **x), ensure_ascii=False) for b, m, x in (
+            ("tai", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23}, {}),
+            ("kiem", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23, "nang": 200, "kiem": 230}, {"chi_tiet": {"da": 3, "tong": 6}})))
+        xong = json.dumps(_td("xong", {"o_trong": 0, "chup": 1, "gui": 21, "tai": 23, "nang": 200, "kiem": 230},
+                              xong="2026-11-24T10:04:30+07:00"), ensure_ascii=False)
+        kq = self.luong(f"""
+const BAN = n => n <= 3 ? '0.2.0' : n <= 6 ? null : '0.3.0';      // 03 lần bản cũ · 03 lần đang thay bản · bản mới
+const CN = n => n <= 3 ? {{dang_sao: 'tai', tien_do: {cu}}} : n <= 6 ? null : n <= 8 ? {{tien_do: {moi}}}
+  : {{tien_do: {xong}, kiem_hien: {{chu: '06/06 đạt', dat: true}}}};
+""")
+        self.assertEqual(kq["hoi"], 9)
+        self.assertEqual(len(kq["taiLai"]), 1)                           # tải lại đúng 01 lần
+        self.assertEqual(kq["taiLai"][0], 9 * 5000 + 3000)                # sau khi hiện "xong" 03 giây
+        self.assertIn("Xong 08/08 bước", kq["html"])
+        self.assertEqual(kq["con"], 0)                                    # dừng hỏi
+
+    def test_luong_loi_dung_hoi_va_hien_thu_lai(self):
+        loi = json.dumps(_td("chup", {"o_trong": 0, "chup": 2}, loi="chup", loi_ct="tệp Bot", loi_luc=T0), ensure_ascii=False)
+        kq = self.luong(f"""
+const BAN = n => '0.2.0';
+const CN = n => n < 2 ? {{dang_sao: 'chup', tien_do: {loi}}} : {{dang_sao: null, sao_loi: 'chưa chụp được', tien_do: {loi}}};
+""")
+        self.assertEqual((kq["hoi"], kq["taiLai"], kq["cn"], kq["con"]), (2, [], "dangcn", 0))
+        self.assertIn("data-cnngay", kq["html"])
+
+    def test_luong_may_chu_khong_co_tien_do_van_nhu_cu(self):
+        kq = self.luong("const BAN = n => n < 3 ? '0.2.0' : '0.3.0';\nconst CN = n => ({dang_sao: 'tai'});\n")
+        self.assertEqual((kq["hoi"], len(kq["taiLai"])), (3, 1))         # bản 0.8.0 trở về trước: tải lại ngay như cũ
+
+
 # ---------------- Phần 2: tiến độ 08 bước ----------------
 class NenTD(unittest.TestCase):
     def setUp(self):
