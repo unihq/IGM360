@@ -36,6 +36,8 @@ LOAI = {
     "capnhat_kiem": ("do", "shield-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # 0.7.9 lớp 4
     "quayve_loi": ("do", "rotate-ccw", "capnhat", None, "Cài đặt › Cập nhật"),   # Y38d: quay về hỏng
     "drive_nen": ("xem", "cloud-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ261, QĐ262: Bản sao Drive lỗi
+    "cli_nang": ("tin", "wrench", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ271 Z20 dòng 14: Nâng công cụ AI
+    "cli_loi": ("xem", "circle-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ271 Z20 dòng 15: Công cụ AI lỗi (vàng)
 }
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
@@ -236,6 +238,17 @@ def quet_drive_nen(thumuc: Path | None = None) -> None:
                          "loi", "đẩy Drive nền lỗi", thumuc=thumuc)
 
 
+def bao_cli(goi: str, loai: str, sau: str, thumuc: Path | None = None) -> None:
+    """Y46: mở chuông công cụ AI. Khóa "<loại>:<gói>:<bản>[:<bản giữ>]"; 01 gói chỉ 01 chuông còn mở mỗi loại; nâng
+    xong thì đóng chuông lỗi cũ của gói đó."""
+    khoa = f"{loai}:{goi}:{sau}"
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, f"{loai}:{goi}:") + (_khoa_mo(w, f"cli_loi:{goi}:") if loai == "cli_nang" else []):
+            if k != khoa:
+                _dong(w, k, "Đã có lượt nâng công cụ AI mới")
+        _mo(w, khoa, None, None)
+
+
 def quet_saoluu(thumuc: Path | None = None) -> None:
     """Lượt sao lưu hằng ngày gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút).
     0.8.0 (QĐ227): chỉ đọc `loai` = 'hangngay'; lượt trước cập nhật (`truoc_capnhat`) không che lần sao lưu hằng ngày hỏng."""
@@ -382,6 +395,13 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         from maychu.hethong import antoan
         q = antoan.quay_ve_loi_gan(luc=sau)
         return q["chu_chuong"] if q else "Quay về bản trước chưa được"
+    if loai in ("cli_nang", "cli_loi"):   # QĐ271 Z20 dòng 14, 15 (chữ đã duyệt)
+        from maychu.hethong.mohinh import nangcli
+        goi, ban, *giu = sau.split(":")
+        ten = nangcli.TEN_GOI.get(goi, goi)
+        if loai == "cli_nang":
+            return f"Đã nâng {ten} lên {ban}"
+        return f"{ten} {ban} chưa đạt kiểm thử, đã về bản {giu[0] if giu and giu[0] != 'None' else 'trong gói'}"
     if loai == "drive_nen":   # QĐ262 nguyên văn: "Bản sao Drive sau cập nhật {bản} chưa lên: {k}/07 tệp, đã thử 03 lần"
         return (f"Bản sao Drive sau cập nhật {sau} chưa lên: {_so(gt):02d}/{_so(ng):02d} tệp,"
                 f" đã thử {_nb(f'{SO_LAN_BAO_DRIVE:02d} lần')}")

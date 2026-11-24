@@ -31,6 +31,7 @@ GOI_CLI = {
 }
 CHO_GIAY = 24 * 3600          # chỉ nhận bản hãng đã ra từ 24 giờ (QĐ263)
 CONG_TAC = "tunang_congcu_ai"  # thông số P01, mặc định bật (QĐ263)
+TEN_GOI = {"claude": "Claude · Code", "chatgpt": "ChatGPT · Codex"}   # từ điển thuật ngữ (Z20)
 GIO_KIEM = 3                  # 03:00 mỗi ngày (QĐ271)
 _KHOA = threading.Lock()       # 01 lượt nâng / về bản trước tại 01 lúc
 _KHOA_TT = threading.Lock()    # CDA P1: đọc – sửa – ghi tệp trạng thái (tạm dừng giữa lúc đang nâng không bị mất)
@@ -256,6 +257,8 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         bay = bay or _bay()
         moi = hoi_npm(goi, client)
         ban = moi["ban"]
+        g.update(hang={"ban": ban, "ra_luc": moi["ra_luc"]}, hoi_luc=bay.isoformat(timespec="seconds"))
+        _sua_goi(goi, g, thumuc)
         goc_ban = ban_trong_goi(goi, chay)
         dang = max((x for x in (g.get("dang"), goc_ban) if x), key=_khoa_so, default=None)   # CDA P2: bản cao hơn
         _don_ban_cu(goi, tuple(x for x in (g.get("dang"), g.get("truoc")) if x), thumuc)   # P5: bản sót lượt trước
@@ -299,16 +302,50 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
             shutil.rmtree(dich, ignore_errors=True)
             _sua_goi(goi, g, thumuc)
             _f04("loi", f"{goi} {ban}: kiểm thử chưa đạt, giữ bản {dang}", "loi", nguoi, thumuc)
+            _bao(goi, "cli_loi", f"{ban}:{dang}", thumuc)
             return {"kq": "hong", "ban": ban, "giu": dang}
         cu = g.get("dang")
         g.update(truoc=cu, dang=ban, ket_qua="dat", nang_luc=g["lan_cuoi"])
         _sua_goi(goi, g, thumuc)
         _don_ban_cu(goi, tuple(x for x in (ban, cu) if x), thumuc)
         _f04("nang", f"{goi} {cu or 'trong gói ' + str(dang)} → {ban}", "dat", nguoi, thumuc)
+        _bao(goi, "cli_nang", ban, thumuc)
         return {"kq": "dat", "ban": ban, "truoc": cu or dang}
     finally:
         _DANG["goi"] = None
         _KHOA.release()
+
+
+def _bao(goi: str, loai: str, sau: str, thumuc: Path | None = None) -> None:
+    """Chuông Z20 dòng 14 (nâng xong) và 15 (Công cụ AI lỗi, vàng – QĐ271). Lỗi chuông không làm hỏng lượt nâng."""
+    try:
+        from maychu.hethong.giamsat import thongbao
+        thongbao.bao_cli(goi, loai, sau, thumuc)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("chuông công cụ AI lỗi")
+
+
+def da_kiem_hom_nay(bay: datetime | None = None, thumuc: Path | None = None) -> bool:
+    return doc_trangthai(thumuc).get("kiem_ngay") == (bay or _bay()).strftime("%Y-%m-%d")
+
+
+def luot_hang_ngay(thumuc: Path | None = None, bay: datetime | None = None) -> dict:
+    """QĐ271: tự kiểm bản mới 03:00 mỗi ngày (lịch gọi khi đã qua 03:00 mà hôm nay chưa kiểm, nên máy tắt lúc 03:00 thì
+    kiểm khi bật lại). Ghi ngày kiểm trước (01 lần/ngày dù lỗi mạng). Lỗi 01 gói không dừng gói kia."""
+    bay = bay or _bay()
+    with _KHOA_TT:
+        d = doc_trangthai(thumuc)
+        d["kiem_ngay"] = bay.strftime("%Y-%m-%d")
+        ghi_trangthai(d, thumuc)
+    ra = {}
+    for goi in GOI_CLI:
+        try:
+            ra[goi] = nang(goi, thumuc, bay=bay)
+        except Exception as e:  # noqa: BLE001 - mất mạng, npm lỗi: ghi F04, mai thử lại
+            ra[goi] = {"kq": "loi", "loi": type(e).__name__}
+            _f04("hoi_loi", f"{goi}: không hỏi được bản mới ({type(e).__name__})", "loi", None, thumuc)
+    return ra
 
 
 def ve_ban_truoc(goi: str, thumuc: Path | None = None, nguoi: str | None = None) -> dict:

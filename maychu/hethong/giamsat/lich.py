@@ -16,6 +16,7 @@ from maychu.dulieu import saoluu
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.giamsat import domay, thongbao
+from maychu.hethong.mohinh import nangcli
 from maychu.hethong.mohinh import congai
 from maychu.ketnoi import drive
 
@@ -42,6 +43,10 @@ async def chay_mai() -> None:
                 kq = await asyncio.to_thread(saoluu.chay)
                 log.info("sao lưu: %s", kq["ketqua"])
                 await asyncio.to_thread(saoluu.don_truoc_nangcap)   # D1 (QĐ281): mốc 30 ngày tự đến
+            # Y46 (QĐ271): công cụ AI tự kiểm bản mới từ 03:00 mỗi ngày; máy tắt lúc đó thì kiểm khi bật lại
+            if bay_gio.hour >= nangcli.GIO_KIEM and not nangcli.da_kiem_hom_nay(bay_gio):
+                kq = await asyncio.to_thread(nangcli.luot_hang_ngay)
+                log.info("công cụ AI: %s", kq)
                 await asyncio.to_thread(thongbao.quet_saoluu)
             if lan_tb_cuoi is None or asyncio.get_running_loop().time() - lan_tb_cuoi >= NHIP_THONGBAO_GIAY:
                 lan_tb_cuoi = asyncio.get_running_loop().time()

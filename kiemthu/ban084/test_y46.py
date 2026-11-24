@@ -316,6 +316,57 @@ class KiemSoatCDA(Nen):
         self.assertEqual(con, ["2.1.341", "2.1.342"])
 
 
+class KiemLichChuong(Nen):
+    """Việc 7 (QĐ271): 03:00 mỗi ngày, kiểm khi bật lại; chuông Z20 dòng 14, 15."""
+
+    def doc_chuong(self):
+        from maychu.hethong.giamsat import thongbao
+        for ten in ketnoi.CAC_FILE:
+            cn = ketnoi.mo(ten, self.dl)
+            try:
+                co = cn.execute("SELECT 1 FROM sqlite_master WHERE name = 'canhbao'").fetchone()
+                if co:
+                    ds = [r[0] for r in cn.execute("SELECT khoa_chongtrung FROM canhbao WHERE khoa_chongtrung LIKE 'cli_%'"
+                                                   " AND trangthai IN ('moi', 'dabao', 'dagiao_task')")]
+                    return ds, {k: thongbao._chu(k.split(":")[0], k, {"giatri": None, "nguong": None}, {}, {}) for k in ds}
+            finally:
+                cn.close()
+        return [], {}
+
+    def test_chuong_nang_xong_va_loi_dung_chu_z20(self):
+        from maychu.hethong.giamsat import thongbao
+        self.assertEqual(thongbao.LOAI["cli_loi"][:2], ("xem", "circle-alert"))   # QĐ271: vàng
+        self.assertEqual(thongbao.LOAI["cli_nang"][:2], ("tin", "wrench"))
+        self.nang(npm={"ban": "2.1.340"}, ngay=True)
+        ds, chu = self.doc_chuong()
+        self.assertEqual(list(chu.values()), ["Đã nâng Claude · Code lên 2.1.340"])
+        self.nang(npm={"ban": "2.1.341"}, ngay=True, chay=ChayGia(ban_cai="2.1.0"))
+        ds, chu = self.doc_chuong()
+        self.assertIn("Claude · Code 2.1.341 chưa đạt kiểm thử, đã về bản 2.1.340", chu.values())
+        self.nang(npm={"ban": "2.1.342"}, ngay=True)
+        ds, chu = self.doc_chuong()
+        self.assertEqual(list(chu.values()), ["Đã nâng Claude · Code lên 2.1.342"])  # lỗi cũ, nâng cũ tự đóng
+
+    def test_luot_hang_ngay_01_lan_moi_ngay_loi_mang_khong_dung_goi_kia(self):
+        self.assertFalse(nangcli.da_kiem_hom_nay(BAY, self.dl))
+
+        def hoi(goi, client=None):
+            if goi == "claude":
+                raise httpx.ConnectError("mất mạng")
+            return {"ban": "0.172.0", "ra_luc": (BAY - timedelta(days=3)).isoformat(), "co_giai_nen": 0}
+        with mock.patch.object(nangcli, "hoi_npm", side_effect=hoi):
+            ra = nangcli.luot_hang_ngay(self.dl, BAY)
+        self.assertEqual((ra["claude"]["kq"], ra["chatgpt"]["kq"]), ("loi", "moi_nhat"))
+        self.assertTrue(nangcli.da_kiem_hom_nay(BAY, self.dl))
+        self.assertFalse(nangcli.da_kiem_hom_nay(BAY + timedelta(days=1), self.dl))
+        self.assertEqual(len(self.f04("hoi_loi")), 1)
+
+    def test_lich_goi_tu_03_gio_va_khi_bat_lai(self):
+        lich = (Path(__file__).resolve().parents[2] / "maychu/hethong/giamsat/lich.py").read_text(encoding="utf-8")
+        self.assertIn("if bay_gio.hour >= nangcli.GIO_KIEM and not nangcli.da_kiem_hom_nay(bay_gio):", lich)
+        self.assertEqual(nangcli.GIO_KIEM, 3)
+
+
 class KiemConTroCu(Nen):
     def test_duong_cli_va_k3_ban_trong_goi_cao_hon(self):
         self.assertIsNone(nangcli.duong_cli("claude", self.dl))                   # chưa nâng: bản trong gói
