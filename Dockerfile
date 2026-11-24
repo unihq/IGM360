@@ -9,7 +9,7 @@ ARG ANH_TRUOC=ghcr.io/unihq/igm360:latest
 FROM ${ANH_TRUOC} AS anh_truoc
 
 # Nguồn Node.js 22: lấy từ image chính thức, ghim bản vá bảo mật (22.23.4, phát hành 21/10/2026).
-FROM node:22.23.4-bookworm-slim AS nguon_node
+FROM node:22.23.5-bookworm-slim AS nguon_node
 
 # 0.8.0 (QĐ229): ghim nhãn Debian trixie để giữ SQLite ≥ 3.43 (cụm tìm chữ H08 dùng `contentless_delete`).
 FROM python:3.12-slim-trixie
