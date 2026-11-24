@@ -18,12 +18,24 @@ def _bay_gio() -> str:
 
 
 def _ghi_tin(cn, hoithoai_id: str, vai: str, noidung: str, nhatky_ai_id=None) -> dict:
+    """Hàm ghi H08 duy nhất (thiết kế 0.8 Q5). Y40b L1: tin + bảng nối + bảng ảo + `cap_nhat_luc` trong 01 giao dịch; người gọi
+    chưa mở giao dịch thì hàm tự mở `BEGIN IMMEDIATE`, lỗi ở bước nào thì `ROLLBACK` (không còn tin thiếu chỉ mục)."""
     t = {"id": maso.tao(), "hoithoai_id": hoithoai_id, "vai": vai, "noidung": noidung, "nhatky_ai_id": nhatky_ai_id,
          "luc": _bay_gio()}
-    cn.execute("INSERT INTO tinnhan (id, hoithoai_id, vai, noidung, nhatky_ai_id, luc) VALUES (?, ?, ?, ?, ?, ?)",
-               (t["id"], hoithoai_id, vai, noidung, nhatky_ai_id, t["luc"]))
-    timchu.ghi_tin(cn, t["id"], noidung)   # 0.8.0 (QĐ229; thiết kế 0.8 Q5): chỉ mục tìm chữ cùng giao dịch, hàm ghi duy nhất
-    cn.execute("UPDATE hoithoai SET cap_nhat_luc = ? WHERE id = ?", (t["luc"], hoithoai_id))
+    tu_mo = not cn.in_transaction
+    if tu_mo:
+        cn.execute("BEGIN IMMEDIATE")
+    try:
+        cn.execute("INSERT INTO tinnhan (id, hoithoai_id, vai, noidung, nhatky_ai_id, luc) VALUES (?, ?, ?, ?, ?, ?)",
+                   (t["id"], hoithoai_id, vai, noidung, nhatky_ai_id, t["luc"]))
+        timchu.ghi_tin(cn, t["id"], noidung)   # 0.8.0 (QĐ229): chỉ mục tìm chữ cùng giao dịch
+        cn.execute("UPDATE hoithoai SET cap_nhat_luc = ? WHERE id = ?", (t["luc"], hoithoai_id))
+        if tu_mo:
+            cn.execute("COMMIT")
+    except Exception:
+        if tu_mo:
+            cn.execute("ROLLBACK")
+        raise
     return t
 
 
@@ -38,6 +50,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
         raise ValueError("Chưa có nội dung")
     cn = ketnoi.mo("Bot", thumuc)
     try:
+        cn.execute("BEGIN IMMEDIATE")   # Y40b L1: tạo cuộc (nếu mới) + tin hỏi + chỉ mục: 01 giao dịch
         if hoithoai_id is None:
             hoithoai_id = maso.tao()
             bay = _bay_gio()
@@ -48,6 +61,11 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
         truoc = cn.execute("SELECT vai, noidung FROM tinnhan WHERE hoithoai_id = ? AND vai IN ('nguoi', 'ai') ORDER BY luc, rowid",
                            (hoithoai_id,)).fetchall()
         hoi = _ghi_tin(cn, hoithoai_id, "nguoi", noidung)
+        cn.execute("COMMIT")
+    except BaseException:
+        if cn.in_transaction:
+            cn.execute("ROLLBACK")
+        raise
     finally:
         cn.close()
     lich_su = "\n\n".join(f"{VAI_CHU[v]}: {n}" for v, n in truoc)[-GIU_CHU:]

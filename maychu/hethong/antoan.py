@@ -176,12 +176,15 @@ def _kiem_cli(goi: str) -> bool:
 
 
 def _luocdo_ban4_du(tt: dict, ban: str, thumuc: Path) -> bool:
-    """K4 (0.8.0): điểm "lược đồ" phủ bản 4. Bản này đã nâng lược đồ thì số dòng các bảng ghi lúc nâng (`nang_luocdo.so_dong`)
-    không được ít đi; chỉ mục tìm chữ H08 (bảng nối) đủ dòng như H08. Không thêm điểm, không thêm câu."""
+    """K4 (0.8.0): điểm "lược đồ" phủ bản 4, chỉ ở lần kiểm của bản vừa nâng lược đồ (`nang_luocdo.ban` = bản đang chạy):
+    số dòng các bảng ghi lúc nâng (`nang_luocdo.so_dong`) không được ít đi; chỉ mục tìm chữ H08 (bảng nối) đủ dòng như H08.
+    Không thêm điểm, không thêm câu."""
     import sqlite3
     try:
         n = tt.get("nang_luocdo") or {}
-        for khoa, so in ((n.get("so_dong") or {}) if n.get("ban") == ban else {}).items():
+        if n.get("ban") != ban:   # Y40b L2: chỉ so ở lần kiểm của bản vừa nâng; lệch 01 tin về sau không làm mọi lần kiểm báo lỗi
+            return True
+        for khoa, so in (n.get("so_dong") or {}).items():
             ten, bang = khoa.split(".", 1)
             cn = ketnoi.mo(ten, thumuc)
             try:

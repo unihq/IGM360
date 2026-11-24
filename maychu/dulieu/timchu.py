@@ -7,6 +7,8 @@ Chỉ dùng thư viện chuẩn.
 """
 import sqlite3
 
+LO_DUNG_LAI = 500   # số tin đọc mỗi lô khi dựng lại chỉ mục
+
 
 def chuanhoa(chu) -> str:
     """Q1: đổi đ → d, Đ → D; các dấu khác để FTS5 (`remove_diacritics 2`) bỏ. Dùng ở cả 02 phía (Q2)."""
@@ -37,9 +39,11 @@ def dung_lai(cn: sqlite3.Connection) -> int:
     cn.execute("INSERT INTO tinnhan_tim (tinnhan_tim) VALUES ('delete-all')")
     cn.execute("DELETE FROM tinnhan_tim_noi")
     so = 0
-    for tin_id, noidung in cn.execute("SELECT id, noidung FROM tinnhan ORDER BY luc, id").fetchall():
-        ghi_tin(cn, tin_id, noidung)
-        so += 1
+    doc = cn.execute("SELECT id, noidung FROM tinnhan ORDER BY luc, id")
+    while lo := doc.fetchmany(LO_DUNG_LAI):   # Y40b L3: đọc theo lô, không nạp cả H08 vào bộ nhớ (máy chủ 4 GB)
+        for tin_id, noidung in lo:
+            ghi_tin(cn, tin_id, noidung)
+        so += len(lo)
     return so
 
 

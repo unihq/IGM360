@@ -290,6 +290,67 @@ class KiemV1K4(Nen):
         self.assertTrue(antoan._luocdo_ban4_du(tt, ban, self.dl))
 
 
+class KiemY40b(Nen):
+    """CDA KT-Y40 (PTD-10 mục 15): L1 ghi tin + chỉ mục 01 giao dịch; L2 so chỉ mục chỉ ở lần kiểm bản vừa nâng; L3 đọc theo lô."""
+
+    def test_l1_chi_muc_loi_thi_khong_them_tin(self):
+        from maychu.hethong.mohinh import trochuyen
+        khoitao.tao_het(self.dl)
+        dem = lambda: (self.lay("Bot", "SELECT count(*) FROM hoithoai")[0][0], self.lay("Bot", "SELECT count(*) FROM tinnhan")[0][0])   # noqa: E731
+        truoc = dem()
+        with mock.patch.object(timchu, "ghi_tin", side_effect=sqlite3.OperationalError("chỉ mục lỗi giả")), \
+                mock.patch.object(trochuyen.congai, "goi") as goi:
+            with self.assertRaises(sqlite3.OperationalError):
+                trochuyen.gui(None, maso.tao(), "Câu thử 01")                          # cuộc mới + tin hỏi
+        goi.assert_not_called()
+        self.assertEqual(dem(), truoc)                                                 # không thêm cuộc, không thêm tin
+        h = maso.tao()
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            cn.execute("INSERT INTO hoithoai (id, loai, trangthai) VALUES (?, 'troly', 'dung')", (h,))
+            with mock.patch.object(timchu, "ghi_tin", side_effect=sqlite3.OperationalError("chỉ mục lỗi giả")):
+                with self.assertRaises(sqlite3.OperationalError):
+                    trochuyen._ghi_tin(cn, h, "ai", "Trả lời thử")                       # lượt trả lời (tự mở giao dịch)
+            self.assertFalse(cn.in_transaction)
+            self.assertEqual(cn.execute("SELECT count(*) FROM tinnhan WHERE hoithoai_id = ?", (h,)).fetchone()[0], 0)
+            trochuyen._ghi_tin(cn, h, "ai", "Trả lời thử")                               # bình thường: tin + chỉ mục cùng chốt
+            self.assertEqual(cn.execute("SELECT count(*) FROM tinnhan").fetchone()[0],
+                             cn.execute("SELECT count(*) FROM tinnhan_tim_noi").fetchone()[0])
+        finally:
+            cn.close()
+
+    def test_l2_chi_so_chi_muc_o_lan_kiem_ban_vua_nang(self):
+        dung_ban3(self.dl)
+        khoitao.tao_het(self.dl)
+        tt = antoan.doc(self.dl)
+        ban = capnhat.ban_dang_chay()
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            cn.execute("DELETE FROM tinnhan_tim_noi WHERE so = (SELECT max(so) FROM tinnhan_tim_noi)")
+        finally:
+            cn.close()
+        self.assertFalse(antoan._luocdo_ban4_du(tt, ban, self.dl))                    # bản vừa nâng: lệch thì chưa đạt
+        self.assertTrue(antoan._luocdo_ban4_du(tt, "0.8.1", self.dl))                 # bản sau (không nâng lược đồ): không so
+
+    def test_l3_dung_lai_doc_theo_lo(self):
+        khoitao.tao_het(self.dl)
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            h = maso.tao()
+            cn.execute("BEGIN IMMEDIATE")
+            cn.execute("INSERT INTO hoithoai (id, loai, trangthai) VALUES (?, 'troly', 'dung')", (h,))
+            so = timchu.LO_DUNG_LAI * 2 + 7
+            cn.executemany("INSERT INTO tinnhan (id, hoithoai_id, vai, noidung, luc) VALUES (?, ?, 'nguoi', ?, ?)",
+                           [(maso.tao(), h, f"Đơn hàng số {i}", f"2026-11-24T10:{i % 60:02d}:00+07:00") for i in range(so)])
+            self.assertEqual(timchu.dung_lai(cn), so)
+            cn.execute("COMMIT")
+            self.assertEqual(cn.execute("SELECT count(*) FROM tinnhan_tim_noi").fetchone()[0], so)
+            self.assertEqual(len(timchu.tim(cn, "don hang", gioi_han=so)), so)
+        finally:
+            cn.close()
+        self.assertNotIn("fetchall", Path(timchu.__file__).read_text(encoding="utf-8").split("def dung_lai", 1)[1].split("def tim", 1)[0])
+
+
 class KiemImage(unittest.TestCase):
     def test_ghim_trixie_va_buoc_kiem_sqlite(self):
         self.assertIn("\nFROM python:3.12-slim-trixie\n", (GOC / "Dockerfile").read_text(encoding="utf-8"))
