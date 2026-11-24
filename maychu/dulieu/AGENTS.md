@@ -15,7 +15,7 @@ Lớp dữ liệu: mở 07 tệp SQLite, tạo và nâng lược đồ, mã dòn
 
 - Không ghi số bảng, tên cột ra ngoài mã; đọc ở `ketnoi.SO_BANG` và tệp `.sql`.
 - Mã dòng tạo bằng `maso.tao()`; cột người thao tác nhận giá trị qua `aibam.kiem()`.
-- Danh mục có phiên bản: chỉ thêm phiên bản (`phienban.them`, `phienban.phienban_moi`), không sửa đè, không xóa dòng cũ.
+- Danh mục có phiên bản: nội dung có ngày hiệu lực dùng `phienban.phienban_moi` (thêm phiên bản, không sửa đè, không xóa dòng cũ); cột trạng thái (không mang nghĩa phiên bản) sửa tại chỗ bằng `phienban.sua`.
 - Ghi nhiều dòng dùng `BEGIN IMMEDIATE`, lỗi thì `ROLLBACK`.
 - Sao lưu: không chép thẳng tệp đang chạy; dùng lệnh sao lưu trực tuyến, kiểm `integrity_check`, đổi tên 01 lần, mã hóa.
 - Dòng hàng chờ Drive loại `saoluu` đi theo tệp: xóa tệp thì xóa dòng chờ (QĐ279); không đụng tệp gốc Hồ thô (QĐ54).

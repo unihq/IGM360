@@ -28,7 +28,7 @@ Cổng AI 03 nguồn (`congai.py`: gói Claude, gói ChatGPT, khóa API), đăng
 
 - QĐ110, QĐ113: cứu việc AI kẹt (ngắt bước treo rồi tiếp phiên cũ), nhắc lại 01 lần sau 30 phút.
 - QĐ178, QĐ184: ô chọn mô hình theo nguồn.
-- QĐ216: đăng nhập gói bằng mã dài hạn.
+- QĐ198: đăng nhập gói Claude bằng mã dài hạn.
 
 ## 6. Kiểm trước bàn giao
 

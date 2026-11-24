@@ -27,7 +27,7 @@ Két khóa: khóa chủ (`khoachu.py`), cất – đọc – đổi – xóa kh�
 ## 5. Quyết định đã chốt – không tự đảo
 
 - QĐ89: khóa chủ, mã hóa két khóa.
-- QĐ216, PTD-09 Đ3: che mã dài hạn ở mọi lớp ghi.
+- PTD-09 Đ3: che mã dài hạn ở mọi lớp ghi.
 
 ## 6. Kiểm trước bàn giao
 

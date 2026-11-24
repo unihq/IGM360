@@ -23,7 +23,8 @@ CAM = {
     "tên tài khoản": re.compile("Mr" + "-Jin|Mr" + r"\. ?Đạt|@" + "[A-Za-z]"),
     "chữ cấm": re.compile("|".join(["ja" + "vis", "uni" + "mate", "uni" + r"[ _\-]" + "mate"]), re.I),
     # QĐ304: chữ mới viết dấu kiểu mới (vần mở oa, oe, uy không phụ âm cuối, không sau "q")
-    "dấu kiểu cũ": re.compile(r"(?<![qQ])[oO][àáảãạèéẻẽẹ](?![\wà-ỹ])|(?<![qQ])[uU][ỳýỷỹỵ](?![\wà-ỹ])"),
+    # CDA KT-Y47 N3: bắt cả chữ IN HOA ("KHOÁ") – không phân biệt hoa thường
+    "dấu kiểu cũ": re.compile(r"(?<!q)o[àáảãạèéẻẽẹ](?!\w)|(?<!q)u[ỳýỷỹỵ](?!\w)", re.I),
 }
 
 
@@ -58,6 +59,13 @@ class KiemTepHuongDanAI(unittest.TestCase):
             for ten, mau in CAM.items():
                 with self.subTest(tm=tm, loai=ten):
                     self.assertEqual([m.group(0) for m in mau.finditer(doc(tm))], [])
+
+    def test_mau_dau_kieu_cu_bat_ca_chu_in_hoa(self):
+        mau = CAM["dấu kiểu cũ"]
+        for tu in ("khoá", "KHOÁ", "Khoá", "xoá", "XOÁ", "huỷ", "HUỶ", "khoẻ", "hoạ"):
+            self.assertTrue(mau.search(tu), tu)
+        for tu in ("khóa", "KHÓA", "hoán", "thoát", "toàn", "loại", "quý", "QUÝ", "hoạt"):
+            self.assertFalse(mau.search(tu), tu)                                  # kiểu mới, có phụ âm cuối, sau "q"
 
     def test_thu_muc_khong_co_tep_rieng_ghi_o_tep_cha(self):
         """CDA (Y47 bổ sung): thư mục không có tệp riêng ghi tên ở tệp thư mục cha gần nhất có tệp."""

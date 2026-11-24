@@ -29,7 +29,7 @@ Tệp luồng máy GitHub: `dongimage.yml` (kiểm mọi nhánh, chỉ main đó
 - QĐ229: SQLite trong ảnh phải từ 3.43 trở lên, thấp hơn thì không đẩy ảnh.
 - QĐ215: thử khởi động bản này và bản trước trong ảnh rồi mới đẩy.
 - QĐ258: main đẩy nhãn `latest`, nhãn commit và nhãn số bản; đọc thêm bộ nhớ đệm gắn trong ảnh `latest`.
-- QĐ259, QĐ266, QĐ270: danh sách chặn 14 đường dẫn + 06 luật nội dung; mục THAYDOI khuôn "Sửa lỗi …".
+- QĐ259, QĐ266, QĐ270: danh sách chặn ở `.github/cua/kiem_sualoi.py`; mục THAYDOI khuôn "Sửa lỗi …".
 - QĐ293: chủ mã giữ `/.github/`.
 
 ## 6. Kiểm trước bàn giao

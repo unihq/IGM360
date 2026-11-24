@@ -26,7 +26,7 @@
 
 ## 5. Quyết định đã chốt – không tự đảo
 
-- QĐ88, QĐ90: đăng nhập, chặn đoán.
+- QĐ88 (màn Đăng nhập), QĐ90 (bảo mật đăng nhập).
 - QĐ218 dòng 37: chế độ an toàn chỉ mở được Cập nhật.
 - QĐ266: `api.py` không nằm trong danh sách chặn tự gộp; giữ bộ bài kiểm đăng nhập, tài khoản, két khóa.
 
