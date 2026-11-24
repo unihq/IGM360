@@ -38,10 +38,14 @@ PHIENBAN = doc_phienban()
 @contextlib.asynccontextmanager
 async def vongdoi(_app: FastAPI):
     viec = None
+    from maychu.hethong import tiendo
+    cua_luot = tiendo.vao_ban_moi(PHIENBAN)   # QĐ251: lượt cập nhật lên đúng bản này → bước 7 nâng lược đồ
     try:
-        khoitao.tao_het()
+        khoitao.tao_het(bao=(lambda i, n: tiendo.chi_tiet("nang", None, da=i, tong=n, xong=i == n)) if cua_luot else None)
     except Exception as e:  # noqa: BLE001 - 0.7.9 lớp 2: nâng dữ liệu không thành → chế độ an toàn, không khởi động lại mãi
         antoan.vao_an_toan(e)
+        if cua_luot:
+            tiendo.loi("an_toan")
     if not antoan.CHE_DO["an_toan"]:
         nguoidung.tao_quantri_tu_env()
         thongso.khoi_tao()
@@ -55,7 +59,11 @@ async def vongdoi(_app: FastAPI):
         if viec is not None and antoan.can_kiem():   # 0.7.9 lớp 4: bản mới lần đầu chạy → kiểm 06 điểm (chạy nền, không chặn
             # khởi động). Chỉ khi lịch chạy nền bật (máy chủ thật): bài kiểm tắt lịch nên không bao giờ chạm CLI của máy kiểm.
             # Y38c R6: chờ 30 giây rồi chấm điểm lịch theo việc lịch còn chạy thật
+            if cua_luot:
+                tiendo.sang("kiem", None, da=0, tong=6)   # QĐ251 bước 8: điểm k/06
             asyncio.get_running_loop().run_in_executor(None, antoan.kiem_sau_khi_chay, viec)
+        elif cua_luot:
+            tiendo.xong(PHIENBAN)   # không chạy kiểm (lịch tắt): lượt kết thúc sau bước 7
     try:
         yield
     finally:

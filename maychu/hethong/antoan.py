@@ -225,12 +225,16 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
         except sqlite3.Error:
             tot = luocdo = False
     luocdo = luocdo and _luocdo_ban4_du(tt, ban, thumuc)
+    from maychu.hethong import tiendo
+    tiendo.chi_tiet("kiem", thumuc, da=3, tong=6)   # QĐ251: đã chấm bản, tệp dữ liệu, lược đồ
     diem.update(dulieu=tot, luocdo=luocdo, lich=bool(lich_bat),
                 cli=_kiem_cli("claude") and _kiem_cli("chatgpt"), o_trong=o_trong(thumuc)["du"])
     dat = sum(diem.values())
     loi = [TEN_DIEM[k] for k, v in diem.items() if not v]
     tom = f"{ban} · {dat:02d}/{len(diem):02d} đạt" if not loi else f"{ban} · {dat:02d}/{len(diem):02d} · " + ", ".join(loi)   # 45, 46
     capnhat._ghi_f04("kiem_saunang", tom, "dat" if not loi else "loi", thumuc=thumuc)
+    tiendo.chi_tiet("kiem", thumuc, da=6, tong=6, xong=True)
+    tiendo.xong(ban, thumuc)   # QĐ251: hết lượt cập nhật → 01 dòng F04 tóm tắt thời gian từng bước
     ghi(thumuc, yeu_cau=None, kiem_ban=ban)
     from maychu.hethong.giamsat import thongbao
     thongbao.quet_kiem_capnhat(ban, loi, thumuc)

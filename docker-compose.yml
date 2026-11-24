@@ -83,6 +83,9 @@ services:
     environment:
       WATCHTOWER_HTTP_API_ENDPOINTS: update
       WATCHTOWER_HTTP_API_TOKEN: ${WATCHTOWER_TOKEN:?Thiếu WATCHTOWER_TOKEN trong tệp .env}
+      # QĐ252 (0.8.1): giới hạn chờ của lệnh cập nhật 30 phút (mặc định 10 phút; quá giờ watchtower trả 503 và bỏ dở).
+      # Có từ watchtower v1.20.0 (tài liệu docs/configuration/http-api, mục HTTP API Update Timeout). Bài học kho tham khảo 13/11.
+      WATCHTOWER_HTTP_API_UPDATE_TIMEOUT: 30m
       WATCHTOWER_HTTP_API_PERIODIC_POLLS: "false"
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_LABEL_ENABLE: "true"

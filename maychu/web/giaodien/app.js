@@ -370,7 +370,8 @@ async function capNhat(cheDo, van) {
   choCapNhat(cu, moi);
 }
 function choCapNhat(cu, moi) {
-  S.cn = 'dangcn'; tieuDangCn(); ve(); veQuayVe(D.capnhat || {});   // N33: khoá quay về const het = Date.now() + 5 * 60e3 + 10 * 60e3;   // 0.7.9: cộng 10 phút chờ bản sao lên Drive
+  S.cn = 'dangcn'; tieuDangCn(); ve(); veQuayVe(D.capnhat || {});   // N33: khoá quay về
+  const het = Date.now() + 5 * 60e3 + 10 * 60e3;   // 0.7.9: cộng 10 phút chờ bản sao lên Drive. 0.8.1 GAP-080: tách dòng (trước bị nối vào chú thích)
   const cho = async () => {
     try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
       if (k.phienban && k.phienban !== cu) { location.reload(); return; }

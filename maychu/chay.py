@@ -348,8 +348,25 @@ def canh_ban_truoc(noi: Path, tep: Path, cho_len: float = CHO_LEN_GIAY, hoi=da_l
     return ma
 
 
+def moc_khoidong(dl: Path, goc: Path = GOC) -> None:
+    """QĐ251: vùng chứa bản mới bắt đầu chạy = hết bước 5 (watchtower kéo gói, thay vùng chứa), vào bước 6.
+    Chỉ ghi khi lượt cập nhật đang chờ đúng bản trong ảnh này, 01 lần. Lỗi thì bỏ qua."""
+    try:
+        tep = dl / TEN_TEP
+        tt = _doc(tep)
+        td = tt.get("tien_do")
+        if isinstance(td, dict) and not td.get("xong") and not td.get("loi") and td.get("den") == _so(goc / "VERSION") \
+                and "khoidong" not in (td.get("moc") or {}):
+            td["moc"] = {**(td.get("moc") or {}), "khoidong": _bay()}
+            td["buoc"] = "khoidong"
+            _ghi(tep, tt)
+    except Exception:  # noqa: BLE001 - tiến độ không chặn khởi động
+        pass
+
+
 def main() -> None:   # pragma: no cover - chạy trong ảnh
     dl = Path(os.environ.get("IGM360_THUMUC_DULIEU", "/dulieu"))
+    moc_khoidong(dl)
     noi = chon(dl)
     os.chdir(noi)   # `python -m` đặt thư mục hiện tại lên đầu đường tìm mã: chạy đúng mã của bản đã chọn
     if noi == GOC:

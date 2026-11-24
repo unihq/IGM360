@@ -113,10 +113,10 @@ def _don_truoc_capnhat(goc: Path, thumuc: Path) -> None:
             shutil.rmtree(p, ignore_errors=True)
 
 
-def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban: str | None = None) -> dict:
+def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban: str | None = None, bao=None) -> dict:
     """Sao lưu lần lượt 07 file. Trả về {'ketqua': 'xong_tren_may' | 'loi', 'file': [...], 'noi': thư mục}.
     `truoc_ban` (0.7.9 lớp 5, QĐ213): lượt chụp ngay trước khi gửi lệnh cập nhật lên bản đó, vào thư mục riêng
-    (không đè bản hằng ngày, không làm `da_co_hom_nay` đúng)."""
+    (không đè bản hằng ngày, không làm `da_co_hom_nay` đúng). `bao(i, n)`: 0.8.1 (QĐ251) báo đã chụp xong tệp i/n."""
     thumuc = thumuc or ketnoi.thumuc_dulieu()
     luc = bay_gio or datetime.now(MUIGIO_VN)
     goc = thumuc_saoluu(thumuc)
@@ -170,6 +170,11 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
             "noi_luu": str(chinh) if ketqua != "loi" else None,
             "ketqua_tungbuoc_json": json.dumps(buoc, ensure_ascii=False), "ketqua": ketqua,
         })
+        if bao and ketqua != "loi":
+            try:
+                bao(len(dong_n01), len(ketnoi.CAC_FILE))
+            except Exception:  # noqa: BLE001 - báo tiến độ lỗi không chặn sao lưu
+                pass
         if ketqua == "loi":
             break
     _ghi_n01(thumuc, dong_n01)

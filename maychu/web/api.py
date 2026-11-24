@@ -220,7 +220,17 @@ def _them_antoan() -> dict:
         noi = False
     return {"o_trong": {"du": o["du"], "chu": o["chu"], "lam": None if o["du"] else antoan.CHU["o_thieu_lam"]}, "drive_noi": noi, "chu_drive": None if noi else antoan.CHU["drive_chua_noi"], "chu_qua_gio": antoan.CHU["drive_qua_gio"],
             **capnhat.trang_thai_sao(), "an_toan": antoan.chu_an_toan(), "quay_ve": antoan.thong_tin_quayve(),
-            "quayve_loi": antoan.quay_ve_loi_gan(), "kiem_hien": next((x.get("kiem") for x in capnhat.lich_su() if x["ban"] == capnhat.ban_dang_chay()), None)}
+            "quayve_loi": antoan.quay_ve_loi_gan(), "kiem_hien": next((x.get("kiem") for x in capnhat.lich_su() if x["ban"] == capnhat.ban_dang_chay()), None),
+            "tien_do": _tien_do()}
+
+
+def _tien_do() -> dict | None:
+    """QĐ251: tiến độ 08 bước của lượt cập nhật (bước 5–7 là ước tính). Đọc lỗi thì không trả, không chặn màn."""
+    try:
+        from maychu.hethong import tiendo
+        return tiendo.hien()
+    except Exception:  # noqa: BLE001
+        return None
 
 
 @router.get("/capnhat")
