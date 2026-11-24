@@ -457,11 +457,21 @@ function veTienDo(td, o) {   // td = null: thẻ cũ (quay về bản trước, 
 function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (mở trang giữa lúc đang cập nhật)
   S.cn = 'dangcn'; tieuDangCn(); ve(); veQuayVe(D.capnhat || {});   // N33: khoá quay về
   const PHUT_CHO = 35;   // QĐ255 điểm 1: watchtower chờ tối đa 30 phút (QĐ252) + dư. 0.8.1 GAP-080: `het` ở dòng riêng
-  const het = Date.now() + PHUT_CHO * 60e3;
+  const DU_PHUT = PHUT_CHO - 30;   // phần dư 05 phút của QĐ255, dùng chung cho giới hạn riêng bước 3, 4
+  const GIOI_HAN_PHUT = {day: 10, cho_viec: 30};   // giới hạn chờ của máy chủ: đẩy Drive (CHO_DRIVE_GIAY), chờ việc AI (CHO_TOIDA_GIAY)
+  let het = Date.now() + PHUT_CHO * 60e3;   // cách cũ: tính từ lúc bấm, khi máy chủ chưa có tiến độ
   let moiChay = false;   // QĐ253: bản mới đã chạy thì hiện tiếp bước 7–8, xong mới tải lại trang
+  const datHet = (t, dang) => {   // Y41d (CDA N6): mốc hết giờ theo bước, không báo hỏng oan lúc chờ việc AI, chờ Drive
+    const moc = t.moc || {}, may = x => Date.parse(x) - ((Date.parse(t.luc) - Date.now()) || 0);   // giờ máy chủ → giờ trang
+    const h = moc.tai ? may(moc.tai) + PHUT_CHO * 60e3                                             // bước 5–8: 35 phút từ bước 5
+      : dang === 'qua_gio' ? Infinity                                                                // chờ bạn chọn ở hộp Drive
+      : GIOI_HAN_PHUT[dang] ? may(moc[dang === 'day' ? 'drive' : 'gui']) + (GIOI_HAN_PHUT[dang] + DU_PHUT) * 60e3
+      : moc[t.buoc] ? may(moc[t.buoc]) + PHUT_CHO * 60e3   // bước khác (chụp, gửi lệnh): 35 phút từ đầu bước, như cách cũ
+      : NaN;
+    if (!Number.isNaN(h)) het = h; };   // không tính được thì giữ mốc đang có
   const hien = (s, them) => { const t = s.tien_do; if (!t) return false;
     D.td = {t, lech: (Date.parse(t.luc) - Date.now()) || 0, o: {cu, kiem: s.kiem_hien, ...them}};
-    veTienDo(t, {...D.td.o, bay: Date.now() + D.td.lech}); return true; };
+    datHet(t, s.dang_sao); veTienDo(t, {...D.td.o, bay: Date.now() + D.td.lech}); return true; };
   if (s0) hien(s0, {});
   const cho = async () => {
     try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();

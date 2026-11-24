@@ -241,8 +241,8 @@ const fetch = async () => { hoi++; const b = BAN(hoi); if (!b) throw new Error('
 const api = async () => { const s = CN(hoi); if (!s) throw new Error('mất kết nối'); return s; };
 (async () => {
   choCapNhat('0.2.0', '0.3.0');
-  for (let i = 0; i < 400 && hen.length; i++) { hen.sort((a, b) => a.luc - b.luc); const h = hen.shift(); T = h.luc; await h.f(); }
-  console.log(JSON.stringify({hoi, taiLai, cn: S.cn, html: phan.innerHTML, con: hen.length}));
+  for (let i = 0; i < 3000 && hen.length; i++) { hen.sort((a, b) => a.luc - b.luc); const h = hen.shift(); T = h.luc; await h.f(); }
+  console.log(JSON.stringify({hoi, taiLai, cn: S.cn, html: phan.innerHTML, con: hen.length, phut: Math.round(T / 60e3), lydo: phan.textContent}));
 })().catch(e => console.log(JSON.stringify({loi: String(e)})));
 """
         kq = self.node(_ma_the() + nen)
@@ -274,6 +274,47 @@ const CN = n => n < 2 ? {{dang_sao: 'chup', tien_do: {loi}}} : {{dang_sao: null,
 """)
         self.assertEqual((kq["hoi"], kq["taiLai"], kq["cn"], kq["con"]), (2, [], "dangcn", 0))
         self.assertIn("data-cnngay", kq["html"])
+
+    # Y41d (CDA N6): 35 phút tính từ bước 5; bước 3, 4 theo giới hạn riêng (Drive 10 phút + chờ bạn chọn, chờ việc AI 30 phút)
+    TD_DONG = f"""
+const G0 = Date.parse('{T0}'), P = 60e3;
+const TD = (buoc, moc, them) => ({{buoc, du_kien: {json.dumps(DU)}, tu: '0.2.0', den: '0.3.0', bat_dau: '{T0}', chi_tiet: {{}},
+  luc: new Date(G0 + T).toISOString(), moc: Object.fromEntries(Object.entries(moc).map(([k, v]) => [k, new Date(G0 + v * P).toISOString()])), ...them}});
+"""
+
+    def test_luong_cho_viec_ai_25_phut_roi_tai_20_phut_khong_bao_hong(self):
+        kq = self.luong(self.TD_DONG + """
+const BAN = n => T < 45 * P ? '0.2.0' : '0.3.0';
+const CN = n => T < 25 * P ? {dang_sao: 'cho_viec', tien_do: TD('gui', {o_trong: 0, chup: 0, gui: 0.5})}
+  : T < 45 * P ? {dang_sao: 'tai', tien_do: TD('tai', {o_trong: 0, chup: 0, gui: 0.5, tai: 25})}
+  : {tien_do: TD('xong', {o_trong: 0, chup: 0, gui: 0.5, tai: 25, nang: 44, kiem: 44.5}, {xong: new Date(G0 + 45 * P).toISOString()}),
+     kiem_hien: {chu: '06/06 đạt', dat: true}};
+""")
+        self.assertNotEqual(kq["cn"], "hong")                            # cách cũ (35 phút từ lúc bấm) báo hỏng ở phút 35
+        self.assertEqual(len(kq["taiLai"]), 1)
+        self.assertIn("Xong 08/08 bước", kq["html"])
+
+    def test_luong_tai_qua_35_phut_thi_bao_hong(self):
+        kq = self.luong(self.TD_DONG + """
+const BAN = n => '0.2.0';
+const CN = n => T < 25 * P ? {dang_sao: 'cho_viec', tien_do: TD('gui', {o_trong: 0, chup: 0, gui: 0.5})}
+  : {dang_sao: 'tai', tien_do: TD('tai', {o_trong: 0, chup: 0, gui: 0.5, tai: 25})};
+""")
+        self.assertEqual((kq["cn"], kq["taiLai"], kq["con"]), ("hong", [], 0))
+        self.assertEqual(kq["phut"], 25 + 35)                            # 35 phút tính từ bước 5
+        self.assertEqual(kq["lydo"], "Lý do: sau 35 phút máy chủ vẫn chạy bản 0.2.0. Phần mềm vẫn chạy bình thường bằng bản này.")
+
+    def test_luong_cho_ban_chon_drive_khong_bao_hong(self):
+        kq = self.luong(self.TD_DONG + """
+const BAN = n => T < 50 * P ? '0.2.0' : '0.3.0';
+const CN = n => T < 10 * P ? {dang_sao: 'day', tien_do: TD('drive', {o_trong: 0, chup: 0, drive: 0.2}, {chi_tiet: {da: 1, tong: 5}})}
+  : T < 45 * P ? {dang_sao: 'qua_gio', tien_do: TD('drive', {o_trong: 0, chup: 0, drive: 0.2}, {chi_tiet: {da: 1, tong: 5}})}
+  : T < 50 * P ? {dang_sao: 'tai', tien_do: TD('tai', {o_trong: 0, chup: 0, drive: 0.2, gui: 45, tai: 45})}
+  : {tien_do: TD('xong', {o_trong: 0, chup: 0, drive: 0.2, gui: 45, tai: 45, nang: 49}, {xong: new Date(G0 + 50 * P).toISOString()})};
+const moHopDrive = () => {};
+""".replace("const moHopDrive = () => {};", ""))
+        self.assertNotEqual(kq["cn"], "hong")                            # chờ bạn chọn 35 phút: không tính giờ
+        self.assertEqual(len(kq["taiLai"]), 1)
 
     def test_luong_may_chu_khong_co_tien_do_van_nhu_cu(self):
         kq = self.luong("const BAN = n => n < 3 ? '0.2.0' : '0.3.0';\nconst CN = n => ({dang_sao: 'tai'});\n")
