@@ -210,7 +210,9 @@ class Do24Gio(CoSo):
                 mock.patch.object(lich.capnhat, "xu_ly_cho"), mock.patch.object(lich.saoluu, "da_co_hom_nay", return_value=True), \
                 mock.patch.object(lich.thongbao, "quet", thua), mock.patch.object(lich.drive, "day_hang_cho", return_value={}), \
                 mock.patch.object(thongbao, "_Ghi"), \
-                mock.patch.object(lich.nangcli, "da_kiem_hom_nay", return_value=True):   # Y46: bài này chỉ đo dò bản mới
+                mock.patch.object(lich.nangcli, "da_kiem_hom_nay", return_value=True), \
+                mock.patch.object(lich.thongso, "drive_bat", return_value=False), \
+                mock.patch.object(lich.congai, "quet_codex"):   # Y46 móc /dulieu: bài này chỉ đo dò bản mới, không mở dữ liệu
             try:
                 asyncio.run(chinh())
             except asyncio.CancelledError:
