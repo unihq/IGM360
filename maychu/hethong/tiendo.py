@@ -136,13 +136,14 @@ def drive_nen(td: dict | None, thumuc: Path | None = None) -> dict | None:
     dau = os.path.join(str(noi), "")
     cn = ketnoi.mo("Hotho", thumuc)
     try:
-        tong, da, loi, lan = cn.execute(
+        tong, da, loi, lan, hen = cn.execute(
             "SELECT count(*), coalesce(sum(trangthai = 'xong'), 0), coalesce(sum(trangthai = 'loi'), 0),"
-            " coalesce(max(CASE WHEN trangthai != 'xong' THEN so_lan_thu END), 0)"
+            " coalesce(max(CASE WHEN trangthai != 'xong' THEN so_lan_thu END), 0),"
+            " min(CASE WHEN trangthai = 'loi' THEN lan_thu_ke END)"   # QĐ273: giờ hẹn đẩy lại sớm nhất (giờ Việt Nam)
             " FROM cho_day_drive WHERE substr(duongdan_tam, 1, ?) = ?", (len(dau), dau)).fetchone()
     finally:
         cn.close()
-    return {"da": da, "tong": tong, "loi": bool(loi), "lan": lan or 0}
+    return {"da": da, "tong": tong, "loi": bool(loi), "lan": lan or 0, "hen": hen}
 
 
 def vao_ban_moi(ban: str, thumuc: Path | None = None) -> bool:

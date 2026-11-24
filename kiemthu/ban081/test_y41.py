@@ -27,6 +27,7 @@ const S = {}, D = {capnhat: {}}, CHU_CN = {sao: {tai: 'Bước 2/2 · Đang tả
 const phan = {textContent: ''}, $ = () => phan;
 const tieuDangCn = () => {}, ve = () => {}, veQuayVe = () => {}, moHopDrive = () => {};
 const location = {reload: () => { taiLai++; }};
+const DAU_SAU_CN = '#sau-capnhat';   // 0.8.2 (CDO U21 G1): hằng của app.js mà choCapNhat dùng
 const dongHo = {now: () => T};
 const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
@@ -265,6 +266,7 @@ const phan = {textContent: '', innerHTML: '', dataset: {}, classList: {toggle() 
 const $ = () => phan;
 const tieuDangCn = () => {}, ve = () => {}, veQuayVe = () => {}, moHopDrive = () => {};
 const location = {reload: () => { taiLai.push(T); }};
+const DAU_SAU_CN = '#sau-capnhat';   // 0.8.2 (CDO U21 G1): hằng của app.js mà choCapNhat dùng
 const dongHo = {now: () => T};
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
 """ + kich_ban + r"""

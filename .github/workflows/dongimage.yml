@@ -21,6 +21,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 0.8.2 (CDA KT-Y43 N1): bài kiểm so PHIENBAN_LUOCDO của nhánh với origin/main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -35,10 +37,9 @@ jobs:
 
   dongimage:
     needs: kiemthu
-    # Nhánh riêng chỉ chạy bài kiểm, không đóng image.
-    # Y43 (QĐ258, CPO đồng ý 24/11/2026): riêng nhánh capnhat-nhanh đóng ảnh nhãn `thu-<sha>` để đo lớp đổi trên GHCR;
-    # không đẩy `latest`, không đẩy nhãn số bản. BỎ dòng này sau khi gộp.
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/capnhat-nhanh'
+    # Nhánh riêng chỉ chạy bài kiểm, không đóng image. (Y43 đã đo lớp bằng nhãn thu-<sha> trên nhánh capnhat-nhanh, xong
+    # 24/11/2026: 1,29 MB; CDA KT-Y43 N5: bỏ đường đo trước khi gộp.)
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -52,18 +53,12 @@ jobs:
       - name: Đọc số phiên bản
         run: echo "PHIENBAN=$(tr -d ' \n\r' < VERSION)" >> "$GITHUB_ENV"
 
-      # 0.8.2 (QĐ258): số bản 02 CLI ghim trong Dockerfile (không lấy bản mới nhất lúc đóng); main đẩy latest + số bản,
-      # nhánh capnhat-nhanh chỉ đẩy nhãn thu-<sha> (đo lớp, Y43).
+      # 0.8.2 (QĐ258): số bản 02 CLI ghim trong Dockerfile (không lấy bản mới nhất lúc đóng); main đẩy latest + sha + số bản.
       - name: Chọn nhãn đẩy
         shell: bash
         run: |
-          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            { echo "NHAN<<HET"; echo "${IMAGE}:latest"; echo "${IMAGE}:${GITHUB_SHA}"; echo "${IMAGE}:${PHIENBAN}"; echo "HET"; } >> "$GITHUB_ENV"
-            echo "NHAN_KT=${GITHUB_SHA}" >> "$GITHUB_ENV"
-          else
-            { echo "NHAN<<HET"; echo "${IMAGE}:thu-${GITHUB_SHA}"; echo "HET"; } >> "$GITHUB_ENV"
-            echo "NHAN_KT=thu-${GITHUB_SHA}" >> "$GITHUB_ENV"
-          fi
+          { echo "NHAN<<HET"; echo "${IMAGE}:latest"; echo "${IMAGE}:${GITHUB_SHA}"; echo "${IMAGE}:${PHIENBAN}"; echo "HET"; } >> "$GITHUB_ENV"
+          echo "NHAN_KT=${GITHUB_SHA}" >> "$GITHUB_ENV"
           grep -o 'ARG [A-Z_]*_CLI_VERSION=.*' Dockerfile | tee -a "$GITHUB_STEP_SUMMARY"
 
       - uses: docker/setup-buildx-action@v3
