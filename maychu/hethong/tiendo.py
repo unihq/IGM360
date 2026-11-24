@@ -11,6 +11,7 @@ tiến trình IGM360 nào đo được (app không có quyền Docker): % bướ
   QĐ237); trọng số các bước = trung bình 05 lần gần nhất; chưa có thì dùng số mặc định (ước lượng, chưa đo).
 """
 import logging
+import os
 import re
 import threading
 import time
@@ -119,6 +120,31 @@ def huy(thumuc: Path | None = None) -> None:
         _ghi(thumuc, None, True)
 
 
+def dat(thumuc: Path | None = None, **muc) -> None:
+    """Gộp thêm khoá vào tiến độ đang chạy (ví dụ `drive_noi`: thư mục bản chụp chờ đẩy Drive nền, QĐ258). Không hiện ra trang."""
+    td = _hien_tai(thumuc)
+    if td and not td.get("xong") and not td.get("loi"):
+        _ghi(thumuc, {**td, **muc}, True)
+
+
+def drive_nen(td: dict | None, thumuc: Path | None = None) -> dict | None:
+    """QĐ258, QĐ261: bản chụp trước cập nhật đẩy Drive nền sau khi bản mới lên. Đọc hàng chờ cho_day_drive đúng thư mục bản
+    chụp: số tệp đã lên, tổng, có lần đẩy lỗi chưa (đang chờ thử lại), số lần thử nhiều nhất. Không trả đường dẫn."""
+    noi = (td or {}).get("drive_noi")
+    if not noi:
+        return None
+    dau = os.path.join(str(noi), "")
+    cn = ketnoi.mo("Hotho", thumuc)
+    try:
+        tong, da, loi, lan = cn.execute(
+            "SELECT count(*), coalesce(sum(trangthai = 'xong'), 0), coalesce(sum(trangthai = 'loi'), 0),"
+            " coalesce(max(CASE WHEN trangthai != 'xong' THEN so_lan_thu END), 0)"
+            " FROM cho_day_drive WHERE substr(duongdan_tam, 1, ?) = ?", (len(dau), dau)).fetchone()
+    finally:
+        cn.close()
+    return {"da": da, "tong": tong, "loi": bool(loi), "lan": lan or 0}
+
+
 def vao_ban_moi(ban: str, thumuc: Path | None = None) -> bool:
     """Bản mới khởi động (trước khi nâng lược đồ): lượt cập nhật đang chờ đúng bản này thì sang bước 7. Trả True khi có lượt.
     Mốc bước 6 do lệnh chạy `chay.py` ghi lúc vùng chứa bắt đầu; thiếu thì lấy lúc này."""
@@ -222,6 +248,13 @@ def trong_so(thumuc: Path | None = None) -> dict:
     return {k: round(v, 1) for k, v in du.items()}
 
 
+def _drive_nen_an_toan(td: dict, thumuc: Path | None) -> dict | None:
+    try:
+        return drive_nen(td, thumuc)
+    except Exception:  # noqa: BLE001 - đọc hàng chờ lỗi thì không hiện dòng Drive, không chặn thẻ
+        return None
+
+
 def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | None:
     """Cho trang: bước đang chạy (01–08), % tổng thể, có phải ước tính không. Bước có số đo (tệp i/n, điểm k/6, tệp chờ
     Drive) tính theo số đo; bước không đo được tính theo thời gian đã trôi / thời gian dự kiến (tối đa 95% của bước)."""
@@ -235,6 +268,7 @@ def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | 
     chung = {"moc": td.get("moc", {}), "du_kien": du, "tu": td.get("tu"), "den": td.get("den"), "bat_dau": td.get("bat_dau"),
              "luc": bay,   # luc: giờ máy chủ, trang tự tính % giữa 02 lần hỏi và lúc máy chủ đang thay bản (QĐ253)
              "drive": (td.get("chi_tiet") or {}).get("drive"),   # QĐ255 điểm 3: số tệp đã lên Drive / tổng, kể cả khi đã qua bước 3
+             "drive_nen": _drive_nen_an_toan(td, thumuc),          # QĐ261: Drive đẩy nền sau khi lên bản (số sống từ hàng chờ)
              # QĐ255 điểm 2 (CDA N5-B): máy chủ là nguồn duy nhất của ngưỡng treo; trang chỉ đọc cờ này
              "treo": not td.get("xong") and (_giay(td.get("bat_dau"), bay) or 0) > TOI_DA_LUOT_GIAY}
     if td.get("xong"):

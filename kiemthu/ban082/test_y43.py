@@ -132,6 +132,71 @@ class KiemDriveNen(NenTD):
         self.assertRegex(dong[0], r" · chay_moi=\d+ · bat_dau=")
 
 
+class KiemChuongDrive(NenTD):
+    """QĐ261, QĐ262: số đẩy Drive nền sau khi lên bản; chuông "Bản sao Drive lỗi" sau 03 lần lỗi; tự đóng khi lên đủ."""
+    def chuan_bi(self, lan: int, xong: int = 0):
+        from maychu.dulieu import ketnoi, maso
+        from maychu.hethong import tiendo
+        noi = self.dl / "saoluu" / "truoc_0.9.9"
+        tiendo.bat_dau("0.8.1", "0.9.9", tiendo._bay(), self.dl)
+        tiendo.sang("drive", self.dl, nen=True, da=0, tong=7)
+        tiendo.dat(self.dl, drive_noi=str(noi))
+        cn = ketnoi.mo("Hotho", self.dl)
+        try:
+            cn.execute("BEGIN IMMEDIATE")
+            for i in range(7):
+                cn.execute("INSERT INTO cho_day_drive (id, loai, duongdan_tam, dungluong_byte, trangthai, so_lan_thu, tao_luc)"
+                           " VALUES (?, 'saoluu', ?, 1, ?, ?, ?)", (maso.tao(), str(noi / f"tep{i}.mahoa"),
+                                                                     "xong" if i < xong else "loi", 0 if i < xong else lan, tiendo._bay()))
+            cn.execute("COMMIT")
+        finally:
+            cn.close()
+
+    def dat_het_xong(self):
+        from maychu.dulieu import ketnoi
+        cn = ketnoi.mo("Hotho", self.dl)
+        try:
+            cn.execute("UPDATE cho_day_drive SET trangthai = 'xong'")
+        finally:
+            cn.close()
+
+    def chuong(self):
+        from maychu.hethong.giamsat import thongbao
+        return [x for x in thongbao.danh_sach(None, self.dl)["ds"] if x["loai"] == "drive_nen"]
+
+    def test_hien_tra_so_drive_nen_khong_tra_duong_dan(self):
+        from maychu.hethong import tiendo
+        self.chuan_bi(lan=1, xong=3)
+        h = tiendo.hien(self.dl)
+        self.assertEqual(h["drive_nen"], {"da": 3, "tong": 7, "loi": True, "lan": 1})
+        self.assertNotIn("drive_noi", h)
+        self.assertNotIn(str(self.dl), json.dumps(h, ensure_ascii=False))
+
+    def test_chuong_sau_03_lan_va_tu_dong(self):
+        from maychu.hethong.giamsat import thongbao
+        self.chuan_bi(lan=2, xong=1)
+        thongbao.quet_drive_nen(self.dl)
+        self.assertEqual(self.chuong(), [])                              # 02 lần: chưa báo
+        self.dat_het_xong()
+        from maychu.dulieu import ketnoi
+        cn = ketnoi.mo("Hotho", self.dl)
+        try:
+            cn.execute("UPDATE cho_day_drive SET trangthai = 'loi', so_lan_thu = 3 WHERE rowid > 1")
+        finally:
+            cn.close()
+        thongbao.quet_drive_nen(self.dl)
+        thongbao.quet_drive_nen(self.dl)                                 # quét lại: không mở đôi, không ghi F04 đôi
+        ds = self.chuong()
+        self.assertEqual(len(ds), 1)
+        x = ds[0]
+        self.assertEqual((x["muc"], x["icon"], x["di"], x["noi"]), ("xem", "cloud-alert", "capnhat", "Cài đặt › Cập nhật"))
+        self.assertEqual(x["chu"].replace(" ", " "), "Bản sao Drive sau cập nhật 0.9.9 chưa lên: 01/07 tệp, đã thử 03 lần")
+        self.assertEqual(len(self.f04("drive_nen_loi")), 1)
+        self.dat_het_xong()
+        thongbao.quet_drive_nen(self.dl)
+        self.assertEqual(self.chuong(), [])                              # đẩy đủ tệp thì tự đóng
+
+
 @unittest.skipUnless(shutil.which("node"), "máy không có node")
 class KiemTrang(unittest.TestCase):
     def node(self, ma: str) -> dict:
@@ -142,45 +207,108 @@ class KiemTrang(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout.strip().splitlines()[-1])
 
-    def test_buoc_3_drive_nen_icon_xam_khong_chu(self):
+    def test_buoc_3_drive_nen_va_buoc_8_sau_khi_tai_lai(self):
+        """QĐ261 dòng 2, 3: bước 3 icon cloud-upload xám "sau khi lên bản"; bước 8 chưa tới "sau khi tải lại"."""
         from kiemthu.ban081.test_y41 import T0, _td
         td = _td("tai", {"o_trong": 0, "chup": 2, "drive": 11, "gui": 12, "tai": 13}, drive={"nen": True, "da": 0, "tong": 5})
         ma = (_ma_the() + "const CHU_CN = {kiem: 'Kiểm sau cập nhật: '};\n"
               f"console.log(JSON.stringify({{h: htmlTienDo({json.dumps(td, ensure_ascii=False)}, {{bay: Date.parse('{T0}') + 60e3}})}}));\n")
         h = self.node(ma)["h"]
-        dong = h.split('3. Bản sao Drive</span>', 1)
-        self.assertIn("lucide-circle-minus", dong[0][-700:])
-        self.assertTrue(dong[1].startswith('<span class="td8-m"></span>'))   # chữ chờ CDO U19
-        self.assertNotIn("chưa lên hết", h)
-        self.assertNotIn("chưa nối Drive", h)
+        d3 = h.split('3. Bản sao Drive</span>', 1)
+        self.assertIn('<div class="td8-dong cho">', d3[0][-900:])
+        self.assertIn("lucide-cloud-upload", d3[0][-700:])
+        self.assertIn('stroke="#646A73"', d3[0][-700:])
+        self.assertTrue(d3[1].startswith('<span class="td8-m">sau khi lên bản</span>'))
+        self.assertIn('8. Kiểm sau cập nhật</span><span class="td8-m">sau khi tải lại</span>', h)
+        self.assertNotIn("undefined", h)
 
-    def test_theo_kiem_hoi_den_khi_xong_roi_ve_lai(self):
+    def sau_len(self, d: dict) -> dict:
+        """Chạy veSauLen với phần tử giả; trả html khung #cn-saulen, lớp viền, kết quả hàm."""
+        js = GD.joinpath("app.js").read_text(encoding="utf-8").replace("\r\n", "\n").split("\n")
+        a = next(i for i, x in enumerate(js) if x.startswith("const SL = {"))
+        b = next(i for i in range(a, len(js)) if js[i].endswith("};"))
+        c = next(i for i, x in enumerate(js) if x.startswith("function veSauLen("))
+        e = next(i for i in range(c, len(js)) if js[i] == "}")
+        ma = (_ma_the() + "const CHU_CN = {kiem: 'Kiểm sau cập nhật: '};\n" + "\n".join(js[a:b + 1]) + "\n" + "\n".join(js[c:e + 1]) + r"""
+const lop = new Set(), khung = {innerHTML: ''}, the = {classList: {remove: x => lop.delete(x), toggle: (x, v) => v ? lop.add(x) : lop.delete(x)}};
+const $ = s => s === '#cn-saulen' ? khung : the;
+""" + f"const r = veSauLen({json.dumps(d, ensure_ascii=False)});\n"
+              "console.log(JSON.stringify({h: khung.innerHTML, lop: [...lop], r}));\n")
+        return self.node(ma)
+
+    def tien_do(self, buoc, **them):
+        moc = {"o_trong": "2026-11-24T14:19:00+07:00", "nang": "2026-11-24T14:19:50+07:00", "kiem": "2026-11-24T14:20:05+07:00"}
+        return {"tu": "0.2.0", "den": "0.3.0", "buoc": buoc, "bat_dau": "2026-11-24T14:19:00+07:00", "moc": moc, **them}
+
+    def test_sau_tai_lai_dang_kiem_va_dang_day_drive(self):
+        kq = self.sau_len({"ban_dang": "0.3.0", "tien_do": self.tien_do("kiem", chi_tiet={"da": 3, "tong": 6},
+                                                                         drive_nen={"da": 3, "tong": 7, "loi": False})})
+        h = kq["h"]
+        for chu in ("Vừa lên bản 0.3.0 lúc 14:20 · tổng thời gian 01:05", "Kiểm sau cập nhật: đang kiểm 03/06",
+                    "Bản sao Drive: đang đẩy 03/07 tệp", "lucide-loader", "lucide-cloud-upload"):
+            self.assertIn(chu, h)
+        self.assertEqual((kq["lop"], kq["r"]["loiKiem"], kq["r"]["keoDrive"]), ([], False, True))
+
+    def test_sau_tai_lai_kiem_dat_drive_da_len(self):
+        kq = self.sau_len({"ban_dang": "0.3.0", "kiem_hien": {"dat": True, "chu": "06/06 đạt"},
+                           "tien_do": self.tien_do("xong", xong="2026-11-24T14:20:45+07:00", drive_nen={"da": 7, "tong": 7, "loi": False})})
+        for chu in ("Kiểm sau cập nhật: 06/06 đạt", "Bản sao Drive: đã lên 07/07 tệp", "lucide-cloud-check"):
+            self.assertIn(chu, kq["h"])
+        self.assertEqual((kq["lop"], kq["r"]["keoDrive"]), ([], False))
+
+    def test_sau_tai_lai_kiem_chua_dat_va_drive_loi(self):
+        kq = self.sau_len({"ban_dang": "0.3.0", "kiem_hien": {"dat": False, "chu": "05/06 · lịch chạy nền chưa bật"},
+                           "tien_do": self.tien_do("xong", xong="2026-11-24T14:20:45+07:00", drive_nen={"da": 3, "tong": 7, "loi": True})})
+        h = kq["h"]
+        for chu in ('class="ks canh"', "Kiểm sau cập nhật: 05/06 · lịch chạy nền chưa bật",
+                    "Bản 0.3.0 vẫn chạy. Lỗi đã ghi nhật ký và báo chuông.",
+                    "Bản sao Drive: chưa lên hết 03/07 tệp · tự đẩy lại sau 05 phút", "lucide-cloud-alert", 'class="ks xem"'):
+            self.assertIn(chu, h)
+        self.assertEqual((kq["lop"], kq["r"]["loiKiem"], kq["r"]["keoDrive"]), (["vien-loi"], True, False))
+
+    def test_khong_hien_khi_khong_phai_luot_vua_len(self):
+        for td in (None, self.tien_do("tai"), {**self.tien_do("xong"), "den": "0.2.9"}, {**self.tien_do("kiem"), "treo": True}):
+            kq = self.sau_len({"ban_dang": "0.3.0", "tien_do": td})
+            self.assertEqual((kq["h"], kq["lop"]), ("", []))
+
+    def test_chu_the_co_ban_moi_va_quay_ve(self):
+        js = GD.joinpath("app.js").read_text(encoding="utf-8")
+        for chu in ("ndKhong: 'Không nâng dữ liệu: bản sao Drive đẩy sau khi lên bản mới.'",
+                    "ndCo: 'Có nâng dữ liệu: đẩy bản sao Drive xong mới cập nhật.'", "typeof d.nang_dulieu === 'boolean'",
+                    "b.className = sl.loiKiem ? 'btn btn-phu' : 'btn-chu';"):
+            self.assertTrue(chu in js, chu)
+        self.assertIn('<div id="cn-saulen"></div>', GD.joinpath("index.html").read_text(encoding="utf-8"))
+
+    def test_theo_kiem_hoi_den_khi_xong_roi_thoi(self):
         js = GD.joinpath("app.js").read_text(encoding="utf-8").replace("\r\n", "\n").split("\n")
         a = next(i for i, x in enumerate(js) if x.startswith("function theoKiem("))
         b = next(i for i in range(a, len(js)) if js[i] == "}")
         ham = "\n".join(js[a:b + 1]).replace("Date.now()", "dongHo.now()")
         ma = r"""
-let T = 0, hen = [], hoi = 0, ve = [];
+let T = 1, hen = [], hoi = 0, ve = [];
 const D = {}, dongHo = {now: () => T};
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
-const api = async () => { hoi++; return {tien_do: hoi < 4 ? {buoc: 'kiem', den: '0.9.9'} : {buoc: 'xong', den: '0.9.9'}, lan: hoi}; };
-const veCapNhat = s => { ve.push(s.lan); };
+const api = async () => { hoi++; const dn = {da: Math.min(7, hoi), tong: 7, loi: false};
+  return {tien_do: {buoc: hoi < 4 ? 'kiem' : 'xong', den: '0.9.9', drive_nen: dn}, lan: hoi}; };
+const veCapNhat = s => { ve.push(s.lan); theoKiem(); };
 """ + ham + r"""
 (async () => {
   theoKiem(); theoKiem();   // gọi 02 lần: chỉ 01 vòng hỏi
   for (let i = 0; i < 500 && hen.length; i++) { hen.sort((a, b) => a.luc - b.luc); const h = hen.shift(); T = h.luc; await h.f(); }
-  console.log(JSON.stringify({hoi, ve, dang: D.theoKiem, giay: T / 1000}));
+  console.log(JSON.stringify({hoi, ve, dang: D.theoKiem, giay: Math.round(T / 1000)}));
 })();
 """
         kq = self.node(ma)
-        self.assertEqual((kq["hoi"], kq["ve"], kq["dang"]), (4, [4], False))   # vẽ lại 01 lần khi kiểm xong
-        self.assertEqual(kq["giay"], 40)                                       # mỗi 10 giây
+        self.assertEqual(kq["hoi"], 7)                                   # kiểm xong lượt 4, Drive lên đủ 07/07 lượt 7
+        self.assertEqual(kq["ve"], [1, 2, 3, 4, 5, 6, 7])                # vẽ lại mỗi lượt
+        self.assertEqual((kq["dang"], kq["giay"]), (False, 70))         # mỗi 10 giây, rồi thôi hỏi
 
     def test_tai_lai_ngay_va_khong_con_cho_xong(self):
         js = GD.joinpath("app.js").read_text(encoding="utf-8")
-        self.assertIn("if (k.phienban && k.phienban !== cu) { location.reload(); return; }", js)
-        self.assertNotIn("moiChay", js)
-        self.assertIn("else if (dangLuot && t.den === d.ban_dang) theoKiem();", js)
+        for chu in ("if (k.phienban && k.phienban !== cu) { location.reload(); return; }",
+                    "else if ((dangLuot && t.den === d.ban_dang) || sl.keoDrive) theoKiem();"):
+            self.assertTrue(chu in js, chu)
+        self.assertFalse("moiChay" in js)
 
 
 if __name__ == "__main__":

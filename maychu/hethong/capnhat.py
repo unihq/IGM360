@@ -327,6 +327,7 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
         noi_drive = drive.dang_noi(thumuc)
         if noi_drive and not _SAO.get("day_truoc", True):   # QĐ258: không nâng dữ liệu → Drive đẩy nền sau khi bản mới lên
             tiendo.sang("drive", thumuc, nen=True, da=0, tong=_con_cho_drive(kq["noi"], thumuc))
+            tiendo.dat(thumuc, drive_noi=str(kq["noi"]))   # QĐ261: thẻ sau khi tải lại, chuông đọc hàng chờ đúng thư mục này
             noi_drive = False   # bản sao chưa lên Drive lúc gửi lệnh
         elif noi_drive:
             _SAO["buoc"] = "day"
