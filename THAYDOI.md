@@ -3,6 +3,11 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.3
+Tóm tắt: Sửa lỗi thử cửa chặn
+Nâng dữ liệu: không
+- Sửa lỗi thử cửa chặn tự gộp.
+
 ## 0.8.2
 Tóm tắt: Cập nhật nhanh hơn
 Nâng dữ liệu: không

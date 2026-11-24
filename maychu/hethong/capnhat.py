@@ -30,7 +30,7 @@ def _khoa_so(b: str):
     return tuple(int(x) for x in b.split("."))
 
 
-def ban_dang_chay() -> str:
+def ban_dang_chay() -> str:   # Y44h lượt thử 1: dòng chú thích để thử cửa chặn (không gộp)
     try:
         return (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
     except OSError:
