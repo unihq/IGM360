@@ -175,6 +175,30 @@ def _kiem_cli(goi: str) -> bool:
         return False
 
 
+def _luocdo_ban4_du(tt: dict, ban: str, thumuc: Path) -> bool:
+    """K4 (0.8.0): điểm "lược đồ" phủ bản 4. Bản này đã nâng lược đồ thì số dòng các bảng ghi lúc nâng (`nang_luocdo.so_dong`)
+    không được ít đi; chỉ mục tìm chữ H08 (bảng nối) đủ dòng như H08. Không thêm điểm, không thêm câu."""
+    import sqlite3
+    try:
+        n = tt.get("nang_luocdo") or {}
+        for khoa, so in ((n.get("so_dong") or {}) if n.get("ban") == ban else {}).items():
+            ten, bang = khoa.split(".", 1)
+            cn = ketnoi.mo(ten, thumuc)
+            try:
+                if cn.execute(f"SELECT count(*) FROM {bang}").fetchone()[0] < int(so):
+                    return False
+            finally:
+                cn.close()
+        cn = ketnoi.mo("Bot", thumuc)
+        try:
+            return cn.execute("SELECT count(*) FROM tinnhan").fetchone()[0] == \
+                cn.execute("SELECT count(*) FROM tinnhan_tim_noi").fetchone()[0]
+        finally:
+            cn.close()
+    except (sqlite3.Error, ValueError):
+        return False
+
+
 def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
     """06 điểm sau khi lên bản mới. Trả {diem: {ma: bool}, dat, tong, ban}; ghi F04 `kiem_saunang`, mở chuông khi lỗi."""
     import sqlite3
@@ -197,6 +221,7 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
                 cn.close()
         except sqlite3.Error:
             tot = luocdo = False
+    luocdo = luocdo and _luocdo_ban4_du(tt, ban, thumuc)
     diem.update(dulieu=tot, luocdo=luocdo, lich=bool(lich_bat),
                 cli=_kiem_cli("claude") and _kiem_cli("chatgpt"), o_trong=o_trong(thumuc)["du"])
     dat = sum(diem.values())

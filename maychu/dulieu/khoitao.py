@@ -1,4 +1,4 @@
-"""Tạo 07 file dữ liệu và 108 bảng theo lược đồ trong `luocdo/`, nâng cấp file đã có lên bản mới.
+"""Tạo 07 file dữ liệu và 118 bảng (+ cụm tìm chữ H08) theo lược đồ trong `luocdo/`, nâng cấp file đã có lên bản mới.
 
 Chạy lại nhiều lần không sao. Số phiên bản lược đồ ghi ở PRAGMA user_version của từng file
 (không thêm bảng phụ).
@@ -8,6 +8,10 @@ Chạy lại nhiều lần không sao. Số phiên bản lược đồ ghi ở P
   (tạo bảng theo lược đồ hiện hành, chép dữ liệu cột trùng tên, xoá bảng cũ, đổi tên), chạy bước điền dữ liệu.
   Cột bị bỏ mà còn dữ liệu thì dừng, không bỏ im lặng. Lỗi ở bất kỳ file nào: trả CẢ 07 file về bản sao
   (điều kiện CDA, QĐ108) rồi báo lỗi.
+- Bản 4 (0.8.0; QĐ204 PTD-10, QĐ227, QĐ229; thiết kế mục 1.3): thêm cột thuần bằng `ALTER TABLE ADD COLUMN` (THEM_COT,
+  F2: H08); câu `CREATE VIRTUAL TABLE`, `CREATE INDEX` của lược đồ chạy riêng sau bước dựng lại, thêm cột (V4: dựng lại
+  bảng làm mất chỉ mục của bảng đó); H07 có `trangthai` lạ thì dừng nâng (K4b); N01 đổi dòng trước cập nhật của 0.7.9
+  (QĐ227); dựng chỉ mục tìm chữ H08 từ tin cũ bằng đúng hàm đổi đ/Đ của phần mềm (`timchu`).
 """
 import os
 import re
@@ -15,10 +19,10 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import aibam, dsmorong, ketnoi, phienban, songuoi
+from maychu.dulieu import aibam, dsmorong, ketnoi, phienban, songuoi, timchu
 from maychu.dulieu.saoluu import MUIGIO_VN
 
-PHIENBAN_LUOCDO = 3
+PHIENBAN_LUOCDO = 4
 THUMUC_LUOCDO = Path(__file__).resolve().parent / "luocdo"
 
 # Bảng phải dựng lại khi nâng lên từng bản (tên theo bản đó).
@@ -50,10 +54,29 @@ NANGCAP = {
                 'chatbot', 'chude_nhom'],             # Y18
         'Baomat': ['nguoidung'],
     },
+    # Bản 4 (0.8.0, QĐ204 PTD-10; thiết kế mục 1.3): G06 +07 cột (PTD-07 A); H07 +09 cột + CHECK `trangthai`;
+    # N01 CHECK `loai` thêm 'truoc_capnhat' (QĐ227). H08 không dựng lại: thêm cột ở THEM_COT (F2).
+    4: {
+        'Viecnen': ['nguon_ai'],
+        'Bot': ['hoithoai'],
+        'Nhatky': ['saoluu'],
+    },
 }
 # Bảng mới của từng bản (tạo theo lược đồ hiện hành trước khi dựng lại bảng khác).
 BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi'],
-                'Baomat': ['vaitro', 'quyen_vaitro', 'gan_vaitro']}}   # Y20c (QĐ144, QĐ155): F07-F09 rỗng
+                'Baomat': ['vaitro', 'quyen_vaitro', 'gan_vaitro']},   # Y20c (QĐ144, QĐ155): F07-F09 rỗng
+            # Bản 4: D05, H14, H13, H15–H21 rỗng; bảng nối cụm tìm chữ H08 (QĐ229). H15 trước H07, H16, H17 (khoá ngoại).
+            4: {'Dulieu_Chinh': ['canhbao_doc'],
+                'Viecnen': ['phien_cli'],
+                'Bot': ['nhom_trochuyen', 'tinnhan_dau', 'tailieu_gan', 'nhom_dahoc', 'chiase_lienket', 'muctieu',
+                        'tacdong_ai', 'tinnhan_camxuc', 'tinnhan_tim_noi']}}
+# Cột thêm bằng `ALTER TABLE ADD COLUMN` (F2, PTD-10 mục 13.3): chỉ khi thêm cột cho phép trống ở cuối bảng, không đổi
+# ràng buộc cột cũ; giữ `rowid`, không chép bảng. {bản: {(file, bảng): [cột theo đúng thứ tự cuối lược đồ]}}
+THEM_COT = {4: {('Bot', 'tinnhan'): ['trangthai', 'phu_json', 'tra_loi_cho', 'kenh_nguon']}}
+# K4b: giá trị H07 `trangthai` nhận ở bản 4; dòng cũ ngoài danh sách thì dừng nâng, không đổi im lặng (như QĐ143).
+TRANGTHAI_H07 = ('dung', 'luutru', 'daxoa')
+# Số dòng ghi lại lúc nâng để "Kiểm sau cập nhật" so (K4): {file: [bảng]}.
+SO_DONG_KIEM = {'Bot': ['hoithoai', 'tinnhan'], 'Viecnen': ['nguon_ai'], 'Nhatky': ['saoluu']}
 # Điền cột mới bắt buộc cho dòng cũ khi nâng bản 3: {(file, bảng): {cột: biểu thức}}. Biểu thức ra NULL thì dòng đó
 # không nhận ra được: dừng nâng, không đoán (QĐ143). Y22a (QĐ161, PTD-05 mục 4 câu 06): G06 theo tiền tố mã cũ.
 DIEN_BAN3 = {("Viecnen", "nguon_ai"): {
@@ -76,6 +99,46 @@ def _lay_ddl(ten: str, bang: str) -> str:
     if not m:
         raise RuntimeError(f"lược đồ {ten} không có bảng {bang}")
     return m.group(0)
+
+
+def _cot_ddl(ten: str, bang: str, cot: str) -> str:
+    """Phần khai báo 01 cột (`<cột> <kiểu, ràng buộc>`) lấy ở câu tạo bảng của lược đồ hiện hành."""
+    m = re.search(rf"^\s+({cot} [^\n]*?),?$", _lay_ddl(ten, bang), re.M)
+    if not m:
+        raise RuntimeError(f"lược đồ {ten}.{bang} không có cột {cot}")
+    return m.group(1)
+
+
+def _cau_phu(ten: str) -> list[str]:
+    """V4: câu `CREATE VIRTUAL TABLE`, `CREATE INDEX` của lược đồ (`_lay_ddl` chỉ đọc `CREATE TABLE`)."""
+    sql = (THUMUC_LUOCDO / f"{ten}.sql").read_text(encoding="utf-8")
+    return re.findall(r"^CREATE (?:VIRTUAL TABLE|UNIQUE INDEX|INDEX) IF NOT EXISTS [^;]*;", sql, re.M)
+
+
+def _them_cot(cn: sqlite3.Connection, ten: str, bang: str, cac_cot: list[str]) -> None:
+    """F2: thêm cột cuối bảng, bỏ qua cột đã có (chạy lại không sao)."""
+    co = {r[1] for r in cn.execute(f"PRAGMA table_info({bang})")}
+    for cot in cac_cot:
+        if cot not in co:
+            cn.execute(f"ALTER TABLE {bang} ADD COLUMN {_cot_ddl(ten, bang, cot)}")
+
+
+def _ban4_truoc(cn: sqlite3.Connection, ten: str) -> None:
+    """Chạy trong giao dịch nâng bản 4, trước khi dựng lại bảng. K4b: H07 `trangthai` lạ thì dừng (không in giá trị)."""
+    if ten == "Bot":
+        ds = ", ".join(f"'{g}'" for g in TRANGTHAI_H07)
+        so = cn.execute(f"SELECT count(*) FROM hoithoai WHERE trangthai IS NOT NULL AND trangthai NOT IN ({ds})").fetchone()[0]
+        if so:
+            raise RuntimeError(f"Bot.hoithoai: {so} dòng trangthai ngoài {', '.join(TRANGTHAI_H07)}; dừng nâng (K4b)")
+
+
+def _ban4_sau(cn: sqlite3.Connection, ten: str) -> None:
+    """Chạy trong giao dịch nâng bản 4, sau khi dựng lại, thêm cột, tạo bảng ảo, chỉ mục."""
+    if ten == "Nhatky":   # QĐ227: dòng trước cập nhật của 0.7.9 (`hangngay` + `dip`) đổi sang `truoc_capnhat`
+        cn.execute("UPDATE saoluu SET loai = 'truoc_capnhat' WHERE loai = 'hangngay'"
+                   " AND json_valid(ketqua_tungbuoc_json) AND json_extract(ketqua_tungbuoc_json, '$.dip') = 'truoc_capnhat'")
+    if ten == "Bot":      # QĐ229, V5: chỉ mục tìm chữ dựng từ H08 cũ bằng đúng hàm đổi đ/Đ (PTD-02 Q8)
+        timchu.dung_lai(cn)
 
 
 def _ten_moi(ten: str, bang: str, tu_ban: int) -> str:
@@ -192,6 +255,8 @@ def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int, chu: t
                     raise RuntimeError(f"{ten}: {sum(trong.values())} dòng mã trống ở bảng "
                                        + ", ".join(f"{b} ({so})" for b, so in trong.items()) + "; dừng nâng (QĐ142)")
             dien = _ban3_truoc(cn, ten, co_bm) if tu_ban < 3 else {}
+            if tu_ban < 4:
+                _ban4_truoc(cn, ten)
             can = []
             for ban in range(tu_ban + 1, PHIENBAN_LUOCDO + 1):
                 for bang in NANGCAP.get(ban, {}).get(ten, []):
@@ -205,8 +270,16 @@ def nang_cap(cn: sqlite3.Connection, ten: str, thumuc: Path, tu_ban: int, chu: t
                         duoc_bo.setdefault(b, []).extend(ds)
             for bang in can:
                 _dung_lai(cn, ten, bang, dien.get(bang), tuple(duoc_bo.get(bang, ())))
+            for ban in range(tu_ban + 1, PHIENBAN_LUOCDO + 1):
+                for (t, b), cot in THEM_COT.get(ban, {}).items():
+                    if t == ten:
+                        _them_cot(cn, ten, b, cot)
+            for cau in _cau_phu(ten):   # V4: bảng ảo, chỉ mục (kể cả chỉ mục của bảng vừa dựng lại)
+                cn.execute(cau)
             if tu_ban < 3:
                 _doi_aibam(cn, ten, chu)
+            if tu_ban < 4:
+                _ban4_sau(cn, ten)
             loi_noi = cn.execute("PRAGMA foreign_key_check").fetchall()
             if loi_noi:
                 raise RuntimeError(f"{ten}: {len(loi_noi)} dòng trỏ tới dòng không có")
@@ -335,6 +408,23 @@ def _noi_tiep_lan_bi_ngat(thumuc: Path) -> None:
     antoan.ghi(thumuc, dang_nang=None)
 
 
+def _dem_dong(thumuc: Path, ban: dict) -> dict:
+    """K4: số dòng các bảng ở SO_DONG_KIEM trước khi nâng (file chưa có hoặc bảng chưa có: bỏ qua)."""
+    ra = {}
+    for ten, cac_bang in SO_DONG_KIEM.items():
+        if not ban.get(ten):
+            continue
+        cn = ketnoi.mo(ten, thumuc)
+        try:
+            co = {r[0] for r in cn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            for bang in cac_bang:
+                if bang in co:
+                    ra[f"{ten}.{bang}"] = cn.execute(f"SELECT count(*) FROM {bang}").fetchone()[0]
+        finally:
+            cn.close()
+    return ra
+
+
 def tao_het(thumuc: Path | None = None) -> dict:
     """Tạo đủ 07 file. Trả về {tên file: số bảng}; lệch thiết kế thì trả nguyên trạng rồi báo lỗi.
     0.7.9 lớp 2: trước khi nâng ghi cờ "đang nâng" (tệp trạng thái, không phải bảng); nâng xong bỏ cờ."""
@@ -346,6 +436,7 @@ def tao_het(thumuc: Path | None = None) -> dict:
     can_nang = any(0 < b < PHIENBAN_LUOCDO for b in ban.values())
     co_san = [t for t, b in ban.items() if b > 0]
     chu = _doc_chu(thumuc) if can_nang else None
+    so_dong = _dem_dong(thumuc, ban) if can_nang else {}
     if can_nang:
         _chup_het(thumuc, co_san)
         luc = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
@@ -363,5 +454,6 @@ def tao_het(thumuc: Path | None = None) -> dict:
         raise
     if can_nang:   # lớp 3: ghi lại bản nào đã nâng lược đồ, để nút quay về biết phải trả bản chụp (mất dữ liệu mới)
         from maychu.hethong import capnhat
-        antoan.ghi(thumuc, dang_nang=None, nang_luocdo={"den": PHIENBAN_LUOCDO, "ban": capnhat.ban_dang_chay(), "luc": luc})
+        antoan.ghi(thumuc, dang_nang=None, nang_luocdo={"den": PHIENBAN_LUOCDO, "ban": capnhat.ban_dang_chay(), "luc": luc,
+                                                        "so_dong": so_dong})   # K4: kiểm sau cập nhật so số dòng
     return ketqua

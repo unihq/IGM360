@@ -212,11 +212,13 @@ def quet_quayve_loi(thumuc: Path | None = None) -> None:
 
 
 def quet_saoluu(thumuc: Path | None = None) -> None:
-    """Lượt sao lưu gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút)."""
+    """Lượt sao lưu hằng ngày gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút).
+    0.8.0 (QĐ227): chỉ đọc `loai` = 'hangngay'; lượt trước cập nhật (`truoc_capnhat`) không che lần sao lưu hằng ngày hỏng."""
     cn = ketnoi.mo("Nhatky", thumuc)
     try:
-        gan = cn.execute("SELECT chup_luc FROM saoluu ORDER BY chup_luc DESC, rowid DESC LIMIT 1").fetchone()
-        loi = cn.execute("SELECT id FROM saoluu WHERE chup_luc = ? AND ketqua = 'loi' LIMIT 1", gan).fetchone() if gan else None
+        gan = cn.execute("SELECT chup_luc FROM saoluu WHERE loai = 'hangngay' ORDER BY chup_luc DESC, rowid DESC LIMIT 1").fetchone()
+        loi = cn.execute("SELECT id FROM saoluu WHERE chup_luc = ? AND loai = 'hangngay' AND ketqua = 'loi' LIMIT 1",
+                         gan).fetchone() if gan else None
     finally:
         cn.close()
     if not gan:

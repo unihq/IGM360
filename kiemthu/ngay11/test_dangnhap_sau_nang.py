@@ -34,7 +34,7 @@ class KiemDangNhapSauNang(CoThuMuc):
     def test_nang_roi_dang_nhap_du_02_lop(self):
         self.assertEqual(set(self.lay(t, "PRAGMA user_version")[0][0] for t in ketnoi.CAC_FILE), {2})
         khoitao.tao_het(self.thumuc)
-        self.assertEqual(set(self.lay(t, "PRAGMA user_version")[0][0] for t in ketnoi.CAC_FILE), {3})
+        self.assertEqual(set(self.lay(t, "PRAGMA user_version")[0][0] for t in ketnoi.CAC_FILE), {khoitao.PHIENBAN_LUOCDO})   # 0.8.0: nâng thẳng 2 → 4
         # "ai bấm" đã đổi; két 02 lớp vẫn giải được bằng khoá chủ cũ
         self.assertEqual(self.lay("Baomat", "SELECT nguoi_nhap FROM kekhoa"), [(self.chu,)])
         self.assertEqual(self.lay("Baomat", "SELECT nguoi_khai FROM nguoidung"), [("hethong",)])

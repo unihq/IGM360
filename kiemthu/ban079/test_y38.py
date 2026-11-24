@@ -105,7 +105,7 @@ class KiemLop5(NenAT):
         finally:
             cn.close()
         self.assertEqual(len(d), 7)
-        self.assertTrue(all(x[0] == "hangngay" and json.loads(x[1])["dip"] == "truoc_capnhat" for x in d))   # CDA C1
+        self.assertTrue(all(x[0] == "truoc_capnhat" and json.loads(x[1])["dip"] == "truoc_capnhat" for x in d))   # QĐ227 (bản 4); CDA C1 giữ "dip"
         self.assertEqual(antoan.doc()["yeu_cau"]["den"], "0.7.10")
         self.assertEqual(capnhat.trang_thai_sao()["dang_sao"], "tai")                # dòng 29: Bước 2/2 · Đang tải bản
 

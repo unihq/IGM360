@@ -81,6 +81,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # 0.8.0 (QĐ229): cụm tìm chữ H08 cần SQLite ≥ 3.43 (`contentless_delete`); thấp hơn thì không đẩy image.
+      - name: Kiểm bản SQLite trong image
+        shell: bash
+        run: |
+          docker run --rm --entrypoint python "igm360-thu:${GITHUB_SHA}" -c "import sqlite3, sys; v = tuple(map(int, sqlite3.sqlite_version.split('.'))); print('SQLite', sqlite3.sqlite_version); sys.exit(0 if v >= (3, 43, 0) else 1)" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Thử bản trước khởi động được
         shell: bash
         run: |

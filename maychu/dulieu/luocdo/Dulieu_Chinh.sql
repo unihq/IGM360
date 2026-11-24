@@ -1088,3 +1088,12 @@ CREATE TABLE IF NOT EXISTS dieukien_2nhanh (
   thongso_lienquan TEXT,
   cap_nhat_luc TEXT
 );
+
+-- D05 Đã đọc cảnh báo theo người (bản 4, PTD-06 B'): 01 dòng = 01 người đã đọc 01 cảnh báo
+CREATE TABLE IF NOT EXISTS canhbao_doc (
+  id TEXT PRIMARY KEY NOT NULL,
+  canhbao_id TEXT REFERENCES canhbao(id),
+  nguoi_id TEXT REFERENCES nguoi(id),
+  doc_luc TEXT,
+  UNIQUE (canhbao_id, nguoi_id)
+);

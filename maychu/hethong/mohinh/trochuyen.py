@@ -5,7 +5,7 @@ Mỗi lượt gửi kèm các tin trước của cùng cuộc trò chuyện (t�
 """
 from datetime import datetime
 
-from maychu.dulieu import ketnoi, maso
+from maychu.dulieu import ketnoi, maso, timchu
 from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.mohinh import congai
 
@@ -22,6 +22,7 @@ def _ghi_tin(cn, hoithoai_id: str, vai: str, noidung: str, nhatky_ai_id=None) ->
          "luc": _bay_gio()}
     cn.execute("INSERT INTO tinnhan (id, hoithoai_id, vai, noidung, nhatky_ai_id, luc) VALUES (?, ?, ?, ?, ?, ?)",
                (t["id"], hoithoai_id, vai, noidung, nhatky_ai_id, t["luc"]))
+    timchu.ghi_tin(cn, t["id"], noidung)   # 0.8.0 (QĐ229; thiết kế 0.8 Q5): chỉ mục tìm chữ cùng giao dịch, hàm ghi duy nhất
     cn.execute("UPDATE hoithoai SET cap_nhat_luc = ? WHERE id = ?", (t["luc"], hoithoai_id))
     return t
 

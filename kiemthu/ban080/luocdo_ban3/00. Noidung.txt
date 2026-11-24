@@ -1,0 +1,1 @@
+Lược đồ bản 3 đúng như mã 0.7.9 (d369e42), chép bằng máy: dữ liệu kiểm R5, V1 (0.8.0) và bài kiểm công cụ kiemtruoc_ban3 (ngày 10). Không sửa tay.

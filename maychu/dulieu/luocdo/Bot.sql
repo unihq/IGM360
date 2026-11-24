@@ -96,9 +96,18 @@ CREATE TABLE IF NOT EXISTS hoithoai (
   kenhnhan_id TEXT REFERENCES kenh_nhan(id),
   tieude TEXT,
   tomtat TEXT,
-  trangthai TEXT,
+  trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('dung', 'luutru', 'daxoa')),
   tao_luc TEXT,
-  cap_nhat_luc TEXT
+  cap_nhat_luc TEXT,
+  ghim_luc TEXT,
+  ghim_thutu INTEGER,
+  doc_luc TEXT,
+  xoa_luc TEXT,
+  luutru_luc TEXT,
+  mohinh_ghim TEXT,
+  nhom_id TEXT REFERENCES nhom_trochuyen(id),
+  tomtat_den_tin_id TEXT REFERENCES tinnhan(id),
+  tuychon_ghim_json TEXT
 );
 
 -- H08 Tin nhắn: 01 dòng = 01 tin trong 01 cuộc trò chuyện
@@ -110,7 +119,11 @@ CREATE TABLE IF NOT EXISTS tinnhan (
   tep_json TEXT,
   giongnoi_id TEXT REFERENCES giongnoi_luot(id),
   nhatky_ai_id TEXT,
-  luc TEXT
+  luc TEXT,
+  trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('xong', 'dung', 'loi')),
+  phu_json TEXT,
+  tra_loi_cho TEXT REFERENCES tinnhan(id),
+  kenh_nguon TEXT
 );
 
 -- H09 Chatbot: 01 dòng = 01 chatbot × phiên bản
@@ -175,3 +188,125 @@ CREATE TABLE IF NOT EXISTS cuoc_goi (
   tien_ma TEXT,
   trangthai TEXT
 );
+
+-- ---------- Lược đồ bản 4 (0.8.0; QĐ204 PTD-10, QĐ229) ----------
+
+-- H15 Project trò chuyện (gói 2): 01 dòng = 01 Project
+CREATE TABLE IF NOT EXISTS nhom_trochuyen (
+  id TEXT PRIMARY KEY NOT NULL,
+  ten TEXT,
+  icon TEXT,
+  huongdan TEXT,
+  ghim_luc TEXT,
+  thutu INTEGER,
+  nguoidung_id TEXT,
+  trangthai TEXT,
+  tao_luc TEXT,
+  cap_nhat_luc TEXT
+);
+
+-- H13 Dấu trên tin (gói 1): 01 dòng = 01 dấu trên 01 tin. Chỉ ghi thêm, gỡ = điền `go_luc`
+CREATE TABLE IF NOT EXISTS tinnhan_dau (
+  id TEXT PRIMARY KEY NOT NULL,
+  tinnhan_id TEXT REFERENCES tinnhan(id),
+  loai TEXT CHECK (loai IS NULL OR loai IN ('ghim', 'an_tua')),
+  dat_luc TEXT,
+  go_luc TEXT,
+  nguoi_id TEXT
+);
+
+-- H16 Tài liệu gắn (gói 2): 01 dòng = 01 tài liệu gắn vào 01 Project hoặc 01 cuộc
+CREATE TABLE IF NOT EXISTS tailieu_gan (
+  id TEXT PRIMARY KEY NOT NULL,
+  nhom_id TEXT REFERENCES nhom_trochuyen(id),
+  hoithoai_id TEXT REFERENCES hoithoai(id),
+  loai TEXT,
+  filegoc_id TEXT,
+  duongdan TEXT,
+  mota TEXT,
+  vai TEXT,
+  ghim_luc TEXT,
+  them_luc TEXT,
+  go_luc TEXT
+);
+
+-- H17 Project đã học (gói 2): 01 dòng = 01 ghi chú Project đã học
+CREATE TABLE IF NOT EXISTS nhom_dahoc (
+  id TEXT PRIMARY KEY NOT NULL,
+  nhom_id TEXT REFERENCES nhom_trochuyen(id),
+  loai TEXT,
+  noidung TEXT,
+  nguon TEXT,
+  hoithoai_id TEXT REFERENCES hoithoai(id),
+  trangthai TEXT,
+  tao_luc TEXT,
+  cap_nhat_luc TEXT
+);
+
+-- H18 Link chia sẻ cuộc trò chuyện (gói 3): 01 dòng = 01 link công khai của 01 cuộc
+CREATE TABLE IF NOT EXISTS chiase_lienket (
+  id TEXT PRIMARY KEY NOT NULL,
+  hoithoai_id TEXT REFERENCES hoithoai(id),
+  ma_lienket TEXT UNIQUE,
+  duongdan_tuchon TEXT,
+  nhan TEXT,
+  moc_tin_id TEXT REFERENCES tinnhan(id),
+  luotxem_json TEXT,
+  nguoi_tao TEXT,
+  tao_luc TEXT,
+  cap_nhat_luc TEXT,
+  thuhoi_luc TEXT
+);
+
+-- H19 Mục tiêu /goal (gói 3): 01 dòng = 01 mục tiêu; mỗi vòng là 01 việc nền G02
+CREATE TABLE IF NOT EXISTS muctieu (
+  id TEXT PRIMARY KEY NOT NULL,
+  hoithoai_id TEXT REFERENCES hoithoai(id),
+  noidung TEXT,
+  trangthai TEXT CHECK (trangthai IS NULL OR trangthai IN ('dangchay', 'tamdung', 'dat', 'dung_tran', 'xoa')),
+  so_vong INTEGER,
+  tran_vong INTEGER,
+  lydo_dung TEXT,
+  tao_luc TEXT,
+  cap_nhat_luc TEXT
+);
+
+-- H20 Việc AI tự làm, hoàn tác được (gói 3): 01 dòng = 01 việc AI làm trong 01 lượt
+CREATE TABLE IF NOT EXISTS tacdong_ai (
+  id TEXT PRIMARY KEY NOT NULL,
+  tinnhan_id TEXT REFERENCES tinnhan(id),
+  loai TEXT,
+  doituong_bang TEXT,
+  doituong_id TEXT,
+  truoc_json TEXT,
+  sau_json TEXT,
+  luc TEXT,
+  hoantac_luc TEXT,
+  hoantac_boi TEXT
+);
+
+-- H21 Cảm xúc, phản hồi trên tin (gói 3): 01 dòng = 01 cảm xúc của 01 người trên 01 tin
+CREATE TABLE IF NOT EXISTS tinnhan_camxuc (
+  id TEXT PRIMARY KEY NOT NULL,
+  tinnhan_id TEXT REFERENCES tinnhan(id),
+  nguoidung_id TEXT,
+  bieutuong TEXT,
+  ghichu TEXT,
+  trangthai_xuly TEXT CHECK (trangthai_xuly IS NULL OR trangthai_xuly IN ('moi', 'dadieuchinh', 'khongcandoi')),
+  xuly_ghichu TEXT,
+  caitien_id TEXT,
+  tao_luc TEXT,
+  cap_nhat_luc TEXT
+);
+
+-- Cụm tìm chữ H08 (QĐ229, PTD-02 cách C): bảng nối số ↔ `id` tin (nối bằng `id`, không dựa `rowid` H08)
+CREATE TABLE IF NOT EXISTS tinnhan_tim_noi (
+  so INTEGER PRIMARY KEY,
+  tin_id TEXT NOT NULL UNIQUE REFERENCES tinnhan(id)
+);
+
+-- Bảng ảo không giữ chữ: chỉ giữ từ đã tách; `rowid` = `tinnhan_tim_noi.so`. Ghi trong hàm ghi duy nhất (thiết kế 0.8 Q5)
+CREATE VIRTUAL TABLE IF NOT EXISTS tinnhan_tim USING fts5(noidung, content='', contentless_delete=1, tokenize='unicode61 remove_diacritics 2');
+
+-- Chỉ mục H08: đếm tin, đọc theo cuộc (TC95)
+CREATE INDEX IF NOT EXISTS tinnhan_cuoc ON tinnhan (hoithoai_id, luc);

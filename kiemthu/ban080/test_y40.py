@@ -1,0 +1,306 @@
+"""Bài kiểm 0.8.0 (Y40; QĐ231, QĐ204 PTD-10, QĐ227, QĐ229, QĐ230): lược đồ bản 4, 01 lần nâng 3 → 4.
+
+R5 nâng giữ dữ liệu · V3 số bảng 124 · V4 tệp nâng = tệp mới (so bằng PRAGMA) · V5 tìm đúng `id` sau VACUUM ·
+F2 H08 thêm cột giữ `rowid` · K4b H07 `trangthai` lạ thì dừng, trả nguyên trạng · C4 N01 `truoc_capnhat` ·
+V1, V1b chế độ an toàn trên dữ liệu bản 3 · K4 kiểm sau cập nhật phủ bản 4 · cụm tìm chữ PTD-02 Q10 (09 câu).
+Dữ liệu bản 3 dựng từ `luocdo_ban3/` (đúng lược đồ 0.7.9 `d369e42`). Tên giả, 0 gọi CLI thật.
+"""
+import json
+import secrets
+import os
+import sqlite3
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from maychu.dulieu import ketnoi, khoitao, maso, saoluu, timchu
+from maychu.hethong import antoan, capnhat
+from maychu.hethong.giamsat import thongbao
+
+BAN3 = Path(__file__).resolve().parent / "luocdo_ban3"
+MK_THU = secrets.token_urlsafe(18)   # mật khẩu giả sinh mỗi lần chạy, không ghi chữ trong mã
+GOC = Path(__file__).resolve().parents[2]
+# 07 tin mẫu (tên giả) và 09 câu tìm PTD-02 Q10: chữ gõ → các tin phải ra
+TIN = {"t1": "Đơn hàng mới của khách", "t2": "Khách xin đổi địa chỉ giao", "t3": "Giảm giá 10% cho người mua",
+       "t4": "Sương ơi kiểm lại đơn", "t5": "Đặt hàng thêm 05 thùng", "t6": "Lương thưởng tháng 11", "t7": "Gửi hoá đơn hàng tuần"}
+CAU = {"don hang": {"t1", "t7"}, "doi dia chi": {"t2"}, "giam gia": {"t3"}, "nguoi mua": {"t3"}, "suong oi": {"t4"},
+       "dat hang": {"t5"}, "luong thuong": {"t6"}, "đơn hàng": {"t1", "t7"}, "Don": {"t1", "t4", "t7"}}
+
+
+def dung_ban3(dl: Path, trangthai_h07: str = "dung") -> dict:
+    """07 tệp đúng lược đồ bản 3 + dòng mẫu ở H07, H08, G06, N01 (có dòng trước cập nhật của 0.7.9). Trả {tin_id: id}."""
+    dl.mkdir(parents=True, exist_ok=True)
+    for ten in ketnoi.CAC_FILE:
+        cn = ketnoi.mo(ten, dl)
+        try:
+            cn.executescript((BAN3 / f"{ten}.sql").read_text(encoding="utf-8"))
+            cn.execute("PRAGMA user_version=3")
+            khoitao._dong_khoitao(cn, ten)
+        finally:
+            cn.close()
+    ma = {k: maso.tao() for k in TIN}
+    cn = ketnoi.mo("Bot", dl)
+    try:
+        h1, h2 = maso.tao(), maso.tao()
+        cn.execute("INSERT INTO hoithoai (id, loai, tieude, trangthai) VALUES (?, 'troly', 'Cuộc thử 01', ?)", (h1, trangthai_h07))
+        cn.execute("INSERT INTO hoithoai (id, loai, tieude, trangthai) VALUES (?, 'troly', 'Cuộc thử 02', 'dung')", (h2,))
+        for i, (k, chu) in enumerate(TIN.items()):
+            cn.execute("INSERT INTO tinnhan (id, hoithoai_id, vai, noidung, luc) VALUES (?, ?, 'nguoi', ?, ?)",
+                       (ma[k], h1, chu, f"2026-11-2{i}T10:00:00+07:00"))
+    finally:
+        cn.close()
+    cn = ketnoi.mo("Viecnen", dl)
+    try:
+        cn.execute("INSERT INTO nguon_ai (id, ma, ten, trangthai, hang, cach_goi) VALUES (?, 'goi_claude_01', 'Gói thử', 'dung',"
+                   " 'anthropic', 'cli')", (maso.tao(),))
+    finally:
+        cn.close()
+    cn = ketnoi.mo("Nhatky", dl)
+    try:
+        for luc, buoc in (("2026-11-23T02:00:00+07:00", {}), ("2026-11-24T10:05:00+07:00", {"dip": "truoc_capnhat", "ban": "0.7.9"})):
+            cn.execute("INSERT INTO saoluu (id, loai, file_dulieu, chup_luc, ketqua_tungbuoc_json, ketqua) VALUES (?, 'hangngay',"
+                       " 'Bot', ?, ?, 'xong_tren_may')", (maso.tao(), luc, json.dumps(buoc)))
+    finally:
+        cn.close()
+    return ma
+
+
+class Nen(unittest.TestCase):
+    def setUp(self):
+        self.tam = tempfile.TemporaryDirectory()
+        self.g = Path(self.tam.name)
+        self.dl = self.g / "dulieu"
+        bien = mock.patch.dict(os.environ, {"IGM360_THUMUC_DULIEU": str(self.dl), "IGM360_LICH": "tat",
+                                            "IGM360_CLAUDE_CLI": str(self.g / "khong_co_cli_claude"),
+                                            "IGM360_CODEX_CLI": str(self.g / "khong_co_cli_codex")})
+        bien.start()
+        self.addCleanup(bien.stop)
+        antoan.CHE_DO.update(an_toan=False, den=None, luc=None, lydo=None)
+        self.addCleanup(antoan.CHE_DO.update, an_toan=False, den=None, luc=None, lydo=None)
+
+    def tearDown(self):
+        self.tam.cleanup()
+
+    def lay(self, ten, sql, ts=(), dl=None):
+        cn = ketnoi.mo(ten, dl or self.dl)
+        try:
+            return cn.execute(sql, ts).fetchall()
+        finally:
+            cn.close()
+
+    def ban(self, dl=None):
+        return {t: self.lay(t, "PRAGMA user_version", dl=dl)[0][0] for t in ketnoi.CAC_FILE}
+
+
+class KiemNangBan4(Nen):
+    def test_r5_nang_giu_du_lieu_dung_so_bang(self):
+        ma = dung_ban3(self.dl)
+        truoc = {}
+        for k in ("Bot.hoithoai", "Bot.tinnhan", "Viecnen.nguon_ai", "Nhatky.saoluu"):
+            ten, bang = k.split(".", 1)
+            truoc[k] = self.lay(ten, f"SELECT count(*) FROM {bang}")[0][0]
+        kq = khoitao.tao_het(self.dl)
+        self.assertEqual(kq, ketnoi.SO_BANG)
+        self.assertEqual(sum(kq.values()), 124)                                       # V3: 118 bảng + cụm tìm chữ
+        self.assertEqual(set(self.ban().values()), {4})
+        for k, so in truoc.items():
+            ten, bang = k.split(".", 1)
+            self.assertEqual(self.lay(ten, f"SELECT count(*) FROM {bang}")[0][0], so, k)
+            self.assertEqual(self.lay(ten, "PRAGMA foreign_key_check"), [], ten)
+        self.assertEqual(self.lay("Bot", "SELECT count(*) FROM tinnhan WHERE trangthai IS NOT NULL OR phu_json IS NOT NULL"
+                                         " OR tra_loi_cho IS NOT NULL OR kenh_nguon IS NOT NULL")[0][0], 0)
+        self.assertEqual(self.lay("Viecnen", "SELECT goi_ten, giahan_ngay, giahan_trangthai, chuky, phi_ky, phi_tien_ma,"
+                                             " khoanchi_ma, ma, hang FROM nguon_ai"),
+                         [(None,) * 7 + ("goi_claude_01", "anthropic")])
+        self.assertEqual(len(self.lay("Viecnen", "PRAGMA table_info(nguon_ai)")), 30)   # G06 23 → 30 cột
+        self.assertEqual(len(self.lay("Bot", "PRAGMA table_info(hoithoai)")), 20)
+        self.assertEqual(len(self.lay("Bot", "PRAGMA table_info(tinnhan)")), 12)
+        self.assertEqual(sorted(r[0] for r in self.lay("Nhatky", "SELECT loai FROM saoluu")), ["hangngay", "truoc_capnhat"])   # C4
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            self.assertEqual(set(timchu.tim(cn, "don hang")), {ma["t1"], ma["t7"]})
+        finally:
+            cn.close()
+        n = antoan.doc(self.dl)["nang_luocdo"]
+        self.assertEqual((n["den"], n["so_dong"]), (4, truoc))                       # K4: số dòng lúc nâng
+        self.assertTrue((self.dl / "saoluu" / "truoc_nangcap_v04" / "Bot.sqlite3").exists())
+
+    def test_v4_tep_nang_giong_tep_moi_theo_pragma(self):
+        dung_ban3(self.dl)
+        khoitao.tao_het(self.dl)
+        moi = self.g / "moi"
+        khoitao.tao_het(moi)
+
+        def hinh(dl):
+            ra = {}
+            for ten in ketnoi.CAC_FILE:
+                cn = ketnoi.mo(ten, dl)
+                try:
+                    ten_bang = sorted(cn.execute("SELECT type, name, tbl_name FROM sqlite_master").fetchall())
+                    for _loai, ten_dt, _b in ten_bang:
+                        if _loai == "table":
+                            ra[f"{ten}.{ten_dt}.cot"] = cn.execute(f"PRAGMA table_info('{ten_dt}')").fetchall()
+                            ra[f"{ten}.{ten_dt}.khoangoai"] = sorted(cn.execute(f"PRAGMA foreign_key_list('{ten_dt}')").fetchall())
+                            ds = sorted(cn.execute(f"PRAGMA index_list('{ten_dt}')").fetchall(), key=lambda r: r[1])
+                            ra[f"{ten}.{ten_dt}.chimuc"] = [(r[1], r[2], r[3], cn.execute(f"PRAGMA index_info('{r[1]}')").fetchall())
+                                                           for r in ds]
+                    ra[f"{ten}.ten"] = ten_bang
+                finally:
+                    cn.close()
+            return ra
+        a, b = hinh(self.dl), hinh(moi)
+        self.assertEqual(sorted(a), sorted(b))
+        for k in a:
+            self.assertEqual(a[k], b[k], k)
+        self.assertIn(("index", "tinnhan_cuoc", "tinnhan"), a["Bot.ten"])                # V4: chỉ mục có ở tệp nâng
+        self.assertIn(("table", "tinnhan_tim", "tinnhan_tim"), a["Bot.ten"])             # V4: bảng ảo có ở tệp nâng
+
+    def test_f2_h08_them_cot_giu_rowid(self):
+        dung_ban3(self.dl)
+        truoc = self.lay("Bot", "SELECT rowid, id FROM tinnhan ORDER BY rowid")
+        khoitao.tao_het(self.dl)
+        self.assertEqual(self.lay("Bot", "SELECT rowid, id FROM tinnhan ORDER BY rowid"), truoc)
+        cot = [r[1] for r in self.lay("Bot", "PRAGMA table_info(tinnhan)")]
+        self.assertEqual(cot[-4:], ["trangthai", "phu_json", "tra_loi_cho", "kenh_nguon"])
+        with self.assertRaises(sqlite3.IntegrityError):                              # CHECK cột thêm còn chặn
+            cn = ketnoi.mo("Bot", self.dl)
+            try:
+                cn.execute("UPDATE tinnhan SET trangthai = 'la' WHERE rowid = 1")
+            finally:
+                cn.close()
+
+    def test_k4b_h07_trangthai_la_thi_dung_tra_nguyen_trang(self):
+        dung_ban3(self.dl, trangthai_h07="cu_la")
+        with self.assertRaises(RuntimeError) as loi:
+            khoitao.tao_het(self.dl)
+        self.assertIn("K4b", str(loi.exception))
+        self.assertNotIn("cu_la", str(loi.exception))                                 # không in giá trị
+        self.assertEqual(set(self.ban().values()), {3})                               # cả 07 tệp về bản 3
+        self.assertEqual(self.lay("Nhatky", "SELECT count(*) FROM saoluu WHERE loai = 'hangngay'")[0][0], 2)
+        self.assertNotIn("dang_nang", antoan.doc(self.dl))
+
+    def test_v5_tim_dung_id_sau_vacuum_va_q10(self):
+        ma = dung_ban3(self.dl)
+        khoitao.tao_het(self.dl)
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            cn.execute("VACUUM")
+            nguoc = {v: k for k, v in ma.items()}
+            for chu, mong in CAU.items():
+                self.assertEqual({nguoc[i] for i in timchu.tim(cn, chu)}, mong, chu)   # 09/09 câu PTD-02 Q10
+            self.assertEqual(timchu.tim(cn, 'don" OR "khach'), [])                    # Q7: chữ gõ không thành lệnh
+            self.assertEqual(cn.execute("SELECT count(*) FROM tinnhan_tim_noi").fetchone()[0], 7)
+        finally:
+            cn.close()
+
+    def test_ghi_tin_ghi_chi_muc_va_xoa_tin(self):
+        from maychu.hethong.mohinh import trochuyen
+        dung_ban3(self.dl)
+        khoitao.tao_het(self.dl)
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            h = cn.execute("SELECT id FROM hoithoai LIMIT 1").fetchone()[0]
+            cn.execute("BEGIN IMMEDIATE")
+            t = trochuyen._ghi_tin(cn, h, "nguoi", "Đổi đơn hàng sang tuần sau")
+            cn.execute("COMMIT")
+            self.assertIn(t["id"], timchu.tim(cn, "doi don hang"))
+            self.assertEqual(cn.execute("SELECT count(*) FROM tinnhan").fetchone()[0],
+                             cn.execute("SELECT count(*) FROM tinnhan_tim_noi").fetchone()[0])
+            timchu.xoa_tin(cn, t["id"])                                               # X3 (lúc bật): xoá cụm tìm chữ của tin
+            self.assertNotIn(t["id"], timchu.tim(cn, "doi don hang"))
+        finally:
+            cn.close()
+
+    def test_moi_tao_du_124(self):
+        kq = khoitao.tao_het(self.dl)
+        self.assertEqual((kq, set(self.ban().values())), (ketnoi.SO_BANG, {4}))
+        self.assertEqual(sum(ketnoi.SO_BANG.values()), 124)
+
+
+class KiemC4V1b(Nen):
+    def test_v1b_nhatky_ban3_ghi_nhu_079(self):
+        dung_ban3(self.dl)
+        self.assertEqual(saoluu._loai_n01(self.dl, "0.8.0"), "hangngay")
+        kq = saoluu.chay(self.dl, truoc_ban="0.8.0")                                  # CHECK bản 3 không chặn
+        self.assertEqual(kq["ketqua"], "xong_tren_may")
+        d = self.lay("Nhatky", "SELECT loai, ketqua_tungbuoc_json FROM saoluu WHERE ketqua_tungbuoc_json LIKE '%0.8.0%'")
+        self.assertEqual(len(d), len(ketnoi.CAC_FILE))
+        self.assertTrue(all(x[0] == "hangngay" and json.loads(x[1])["dip"] == "truoc_capnhat" for x in d))
+
+    def test_c4_ban4_ghi_truoc_capnhat_chuong_bo_qua(self):
+        khoitao.tao_het(self.dl)
+        self.assertEqual((saoluu._loai_n01(self.dl, "0.8.1"), saoluu._loai_n01(self.dl, None)), ("truoc_capnhat", "hangngay"))
+        cn = ketnoi.mo("Nhatky", self.dl)
+        try:   # sao lưu hằng ngày hỏng lúc 02:00, rồi lượt trước cập nhật đạt lúc 10:05: chuông vẫn báo đỏ
+            cn.execute("INSERT INTO saoluu (id, loai, file_dulieu, chup_luc, ketqua) VALUES (?, 'hangngay', 'Bot',"
+                       " '2026-11-24T02:00:00+07:00', 'loi')", (maso.tao(),))
+            cn.execute("INSERT INTO saoluu (id, loai, file_dulieu, chup_luc, ketqua) VALUES (?, 'truoc_capnhat', 'Bot',"
+                       " '2026-11-24T10:05:00+07:00', 'xong_tren_may')", (maso.tao(),))
+        finally:
+            cn.close()
+        thongbao.quet_saoluu(self.dl)
+        self.assertTrue([d for d in thongbao.danh_sach(thumuc=self.dl)["ds"] if d["loai"] == "saoluu_loi" and d.get("mo", True)])
+
+
+class KiemV1K4(Nen):
+    def test_v1_che_do_an_toan_tren_du_lieu_ban3(self):
+        from fastapi.testclient import TestClient
+        from maychu import khoidong
+        dung_ban3(self.dl)
+        with mock.patch.dict(os.environ, {"IGM360_ADMIN_USER": "chu_thu", "IGM360_ADMIN_PASSWORD": MK_THU}):
+            from maychu.hethong.taikhoan import nguoidung
+            self.assertTrue(nguoidung.tao_quantri_tu_env(self.dl))                    # tài khoản có sẵn trên dữ liệu bản 3
+        that = khoitao.tao_mot
+
+        def hong(ten, thumuc, chu=None):
+            if ten == "Baomat":                                                       # tệp cuối nâng hỏng → trả cả 07 tệp
+                raise RuntimeError("nâng hỏng ở tệp cuối")
+            return that(ten, thumuc, chu)
+        with mock.patch.object(khoitao, "tao_mot", side_effect=hong):
+            with TestClient(khoidong.app) as c:
+                self.assertTrue(c.get("/suckhoe").json()["an_toan"])
+                self.assertEqual(set(self.ban().values()), {3})                       # mã 0.8.0 chạy trên dữ liệu bản 3
+                r = c.post("/api/dangnhap", json={"ten": "chu_thu", "matkhau": MK_THU}, headers={"X-IGM360": "1"})
+                self.assertEqual(r.status_code, 200, r.text)                           # F01, F05, F04 bản 3 dùng được
+                self.assertEqual(c.get("/api/capnhat").status_code, 401)              # không bị chặn, không lỗi 500
+                kq = saoluu.chay(self.dl, truoc_ban="0.8.1")                          # V1b: sao lưu trước cập nhật được
+                self.assertEqual(kq["ketqua"], "xong_tren_may")
+
+    def test_k4_kiem_sau_capnhat_phu_ban_4(self):
+        dung_ban3(self.dl)
+        khoitao.tao_het(self.dl)
+        tt = antoan.doc(self.dl)
+        ban = capnhat.ban_dang_chay()
+        self.assertTrue(antoan._luocdo_ban4_du(tt, ban, self.dl))
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            cn.execute("DELETE FROM tinnhan_tim_noi WHERE so = (SELECT max(so) FROM tinnhan_tim_noi)")   # chỉ mục thiếu 01 tin
+        finally:
+            cn.close()
+        self.assertFalse(antoan._luocdo_ban4_du(tt, ban, self.dl))
+        tt["nang_luocdo"]["so_dong"]["Viecnen.nguon_ai"] = 5                         # số dòng sau nâng ít hơn lúc nâng
+        cn = ketnoi.mo("Bot", self.dl)
+        try:
+            timchu.dung_lai(cn)
+        finally:
+            cn.close()
+        self.assertFalse(antoan._luocdo_ban4_du(tt, ban, self.dl))
+        tt["nang_luocdo"]["so_dong"]["Viecnen.nguon_ai"] = 1
+        self.assertTrue(antoan._luocdo_ban4_du(tt, ban, self.dl))
+
+
+class KiemImage(unittest.TestCase):
+    def test_ghim_trixie_va_buoc_kiem_sqlite(self):
+        self.assertIn("\nFROM python:3.12-slim-trixie\n", (GOC / "Dockerfile").read_text(encoding="utf-8"))
+        ci = (GOC / ".github/workflows/dongimage.yml").read_text(encoding="utf-8")
+        self.assertIn("Kiểm bản SQLite trong image", ci)
+        self.assertIn("(3, 43, 0)", ci)
+        self.assertLess(ci.index("Kiểm bản SQLite trong image"), ci.index("- name: Đẩy image"))
+
+    def test_sqlite_may_kiem_co_contentless_delete(self):
+        self.assertGreaterEqual(tuple(map(int, sqlite3.sqlite_version.split("."))), (3, 43, 0))
+
+
+if __name__ == "__main__":
+    unittest.main()
