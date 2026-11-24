@@ -545,6 +545,16 @@ button.o-bam:hover{border-color:var(--xanh)}
 /* Y38d (Z16): dòng ổ trống, kiểm sau cập nhật, nút trong thẻ cập nhật, danh sách thẻ an toàn */
 .ot-dong{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:6px}.ot-dong.dat{color:var(--dat)}.ot-dong.canh{color:var(--canh)}
 .ks{display:flex;align-items:center;gap:4px;font-size:12px;margin-top:4px}.ks.dat{color:var(--dat)}.ks.canh{color:var(--canh)}.ks.xem{color:var(--xem)}
+/* Y46 (Z20): khối Công cụ AI – bảng 05 cột, điện thoại 02 cột có nhãn */
+.cl-hang{display:grid;grid-template-columns:150px 1fr 1fr 1fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--ke);font-size:13px}
+.cl-hang.tieu-de{font-size:12px;color:#646A73;border-top:0;padding-top:0}
+.cl-hang.cl5{grid-template-columns:140px 1fr 1fr 1fr 120px}.cl-hang .phai{text-align:right}
+.cl-chan{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--ke)}.cl-chan .f1{min-width:200px}
+.btn.khoa{background:var(--ke);color:var(--phu);cursor:not-allowed}
+body.dien-thoai .cl-hang,body.dien-thoai .cl-hang.cl5{grid-template-columns:1fr 1fr}body.dien-thoai .cl-hang.tieu-de{display:none}
+body.dien-thoai .cl-hang [data-l]::before{content:attr(data-l);display:block;font-size:11px;color:#646A73}body.dien-thoai .cl-hang .phai{text-align:left;grid-column:1/-1}
+body.dien-thoai #khoi-cl .btn-chu,body.dien-thoai #khoi-cl .nut-gat{min-height:44px;min-width:44px;align-items:center}   /* AGENTS.md: ô bấm điện thoại cao từ 44 điểm ảnh */
+@media (max-width:600px){.cl-hang,.cl-hang.cl5{grid-template-columns:1fr 1fr}.cl-hang.tieu-de{display:none}.cl-hang [data-l]::before{content:attr(data-l);display:block;font-size:11px;color:#646A73}.cl-hang .phai{text-align:left;grid-column:1/-1}#khoi-cl .btn-chu,#khoi-cl .nut-gat{min-height:44px;min-width:44px;align-items:center}}
 .vien-loi{border-color:var(--canh)}
 .cn-nut{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.mb .cn-nut{align-items:flex-start}
 .at-ds{margin:6px 0 0 18px;padding:0;font-size:13px}.at-ds li{margin:2px 0}
@@ -1702,6 +1712,7 @@ button.o-bam:hover{border-color:var(--xanh)}
 </svg><small></small></b></div>
       <div class="f1"><div class="t20 b7">Đang cập nhật lên <span class="cn-moi"></span></div><div class="phu">Trang tự tải lại khi xong. Bạn không cần bấm gì thêm.</div>
       <div class="td" style="height:10px;margin-top:10px"><div class="tdf chay"></div></div></div></div>
+    <div class="the o" data-s="cn:moinhat coban" id="khoi-cl"></div>
     <div class="the o" data-s="cn:coban"><div class="cau"><svg
   style="flex:none;vertical-align:middle" class="lucide lucide-list-checks"
   xmlns="http://www.w3.org/2000/svg"

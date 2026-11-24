@@ -35,7 +35,8 @@ TEN_GOI = {"claude": "Claude · Code", "chatgpt": "ChatGPT · Codex"}   # từ �
 GIO_KIEM = 3                  # 03:00 mỗi ngày (QĐ271)
 _KHOA = threading.Lock()       # 01 lượt nâng / về bản trước tại 01 lúc
 _KHOA_TT = threading.Lock()    # CDA P1: đọc – sửa – ghi tệp trạng thái (tạm dừng giữa lúc đang nâng không bị mất)
-_DANG = {"goi": None}
+_DANG = {"goi": None, "ban": None, "cu": None, "cu_goi": None}   # lượt đang nâng (Z20 dòng 8)
+_LUONG = {"t": None}           # luồng nâng của nút "Nâng công cụ AI" (bài kiểm chờ luồng này)
 CAU_THU = "Trả lời đúng 01 chữ: OK"   # P3: lượt gọi ngắn kiểm thử bản mới (gửi cho AI, không hiện trên màn)
 SO_BAN_RE = re.compile(r"(\d+\.\d+\.\d+)")
 
@@ -126,6 +127,21 @@ def duong_cli(goi: str, thumuc: Path | None = None) -> str | None:
         return str(_bin(goi, dang, thumuc))
     except Exception:  # noqa: BLE001 - lỗi đọc con trỏ thì về bản trong gói, không làm hỏng lượt gọi AI
         return None
+
+
+def _ban_dung(goi: str, g: dict, d: dict | None = None) -> tuple[str | None, bool]:
+    """(số bản, là bản trong gói) mà lượt AI mới sẽ dùng – cùng quy tắc `duong_cli` (K3, QĐ264)."""
+    goc = ban_trong_goi(goi)
+    dang = g.get("dang")
+    if dang and not (d or {}).get("tam_dung") and (not goc or _khoa_so(dang) > _khoa_so(goc)):
+        return dang, False
+    return goc, True
+
+
+def _sau_giu(ban: str, giu: tuple) -> str:
+    """Khóa chuông cli_loi: "<bản hỏng>:<bản giữ>" hoặc "<bản hỏng>:goi:<bản trong gói hoặc trống>" (QĐ307 dòng 15b)."""
+    so, trong_goi = giu
+    return f"{ban}:goi:{so or ''}" if trong_goi else f"{ban}:{so}"
 
 
 def hoi_npm(goi: str, client=None) -> dict:
@@ -256,7 +272,14 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         d = doc_trangthai(thumuc)
         g = _goi_tt(d, goi)
         bay = bay or _bay()
-        moi = hoi_npm(goi, client)
+        try:
+            moi = hoi_npm(goi, client)
+        except Exception as e:
+            import httpx
+            if isinstance(e, httpx.HTTPError):   # QĐ307 Z20 dòng 19: mở 01 lần, hỏi lại được thì tự đóng
+                _bao_khac("mo_mang", thumuc)
+            raise
+        _bao_khac("dong_mang", thumuc)
         ban = moi["ban"]
         g.update(hang={"ban": ban, "ra_luc": moi["ra_luc"]}, hoi_luc=bay.isoformat(timespec="seconds"))
         _sua_goi(goi, g, thumuc)
@@ -264,9 +287,12 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         dang = max((x for x in (g.get("dang"), goc_ban) if x), key=_khoa_so, default=None)   # CDA P2: bản cao hơn
         _don_ban_cu(goi, tuple(x for x in (g.get("dang"), g.get("truoc")) if x), thumuc)   # P5: bản sót lượt trước
         if _khoa_so(ban) <= _khoa_so(dang):
+            _bao_khac("dong_o", thumuc, goi)   # không còn bản để nâng: chuông thiếu ổ của gói này hết đúng
             return {"kq": "moi_nhat", "ban": dang}
         if ban in (g.get("hong") or []):
             return {"kq": "da_hong", "ban": ban}
+        g["hang"]["uoc"] = _uoc_giai_nen(goi, moi["co_giai_nen"])   # hộp "Nâng công cụ AI": "tải khoảng …"
+        _sua_goi(goi, g, thumuc)
         if not ngay:
             try:
                 ra = datetime.fromisoformat(str(moi["ra_luc"]).replace("Z", "+00:00"))
@@ -276,12 +302,16 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
                 return {"kq": "chua_du_24_gio", "ban": ban, "ra_luc": moi["ra_luc"]}
         goc = thumuc_cli(thumuc)
         goc.mkdir(parents=True, exist_ok=True)
-        can = antoan.o_trong(thumuc)["can"] + _uoc_giai_nen(goi, moi["co_giai_nen"])
-        if shutil.disk_usage(goc).free < can:   # K1b
+        can = antoan.o_trong(thumuc)["can"] + g["hang"]["uoc"]
+        trong = shutil.disk_usage(goc).free
+        if trong < can:   # K1b
             _f04("thieu_o", f"{goi} {ban}: thiếu chỗ trống, cần {can} byte", "bichan", nguoi, thumuc)
             g.update(lan_cuoi=bay.isoformat(timespec="seconds"), ket_qua="thieu_o")
             _sua_goi(goi, g, thumuc)
+            _bao_khac("mo_o", thumuc, goi, ban, trong, can)   # QĐ307 Z20 dòng 18
             return {"kq": "thieu_o", "ban": ban, "can": can}
+        _bao_khac("dong_o", thumuc, goi)   # ổ đủ thì tự đóng
+        _DANG.update(ban=ban, cu=dang, cu_goi=_ban_dung(goi, g)[1])
         dich, dem = goc / goi / ban, goc / ".npm_dem"
         lenh = ["npm", "install", "--prefix", str(dich), "--registry", REGISTRY, "--cache", str(dem),
                 "--no-audit", "--no-fund", "--omit=dev"] + (["--ignore-scripts"] if GOI_CLI[goi]["bo_cai_kem"] else []) \
@@ -299,8 +329,10 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         thu = _kiem_goi_ngan(goi, duong_moi) if dat else "loi"
         g["lan_cuoi"] = bay.isoformat(timespec="seconds")
         g.pop("hoan_ban", None)
+        giu = _ban_dung(goi, g)
         if thu == "hoan":   # QĐ306: không đổi con trỏ, không ghi bản hỏng; lượt sau (03:00 hoặc bấm nút) thử lại
-            g.update(ket_qua="hoan", hoan_ban=ban)
+            g.update(ket_qua="hoan", hoan_ban=ban,
+                     su_kien={"loai": "hoan", "luc": g["lan_cuoi"], "ban": ban, "giu": giu[0], "giu_goi": giu[1]})
             shutil.rmtree(dich, ignore_errors=True)
             _sua_goi(goi, g, thumuc)
             _f04("hoan", f"{goi} {ban}: hoãn: hết hạn mức, giữ bản {dang}", "bichan", nguoi, thumuc)
@@ -308,20 +340,22 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         if thu != "dat":
             g["hong"] = sorted(set(g.get("hong") or []) | {ban}, key=_khoa_so)
             g["ket_qua"] = "hong"
+            g["su_kien"] = {"loai": "hong", "luc": g["lan_cuoi"], "ban": ban, "giu": giu[0], "giu_goi": giu[1]}
             shutil.rmtree(dich, ignore_errors=True)
             _sua_goi(goi, g, thumuc)
             _f04("loi", f"{goi} {ban}: kiểm thử chưa đạt, giữ bản {dang}", "loi", nguoi, thumuc)
-            _bao(goi, "cli_loi", f"{ban}:{dang}", thumuc)
+            _bao(goi, "cli_loi", _sau_giu(ban, giu), thumuc)
             return {"kq": "hong", "ban": ban, "giu": dang}
         cu = g.get("dang")
-        g.update(truoc=cu, dang=ban, ket_qua="dat", nang_luc=g["lan_cuoi"])
+        g.update(truoc=cu, dang=ban, ket_qua="dat", nang_luc=g["lan_cuoi"],
+                 su_kien={"loai": "dat", "luc": g["lan_cuoi"], "ban": ban})
         _sua_goi(goi, g, thumuc)
         _don_ban_cu(goi, tuple(x for x in (ban, cu) if x), thumuc)
         _f04("nang", f"{goi} {cu or 'trong gói ' + str(dang)} → {ban}", "dat", nguoi, thumuc)
         _bao(goi, "cli_nang", ban, thumuc)
         return {"kq": "dat", "ban": ban, "truoc": cu or dang}
     finally:
-        _DANG["goi"] = None
+        _DANG.update(goi=None, ban=None, cu=None, cu_goi=None)
         _KHOA.release()
 
 
@@ -330,6 +364,24 @@ def _bao(goi: str, loai: str, sau: str, thumuc: Path | None = None) -> None:
     try:
         from maychu.hethong.giamsat import thongbao
         thongbao.bao_cli(goi, loai, sau, thumuc)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("chuông công cụ AI lỗi")
+
+
+def _bao_khac(viec: str, thumuc: Path | None = None, *doi) -> None:
+    """Chuông Z20 dòng 18 (thiếu ổ trống) và 19 (không kết nối được máy chủ của hãng), QĐ307. Lỗi chuông không làm
+    hỏng lượt nâng."""
+    try:
+        from maychu.hethong.giamsat import thongbao
+        if viec == "mo_o":
+            thongbao.bao_cli_o(*doi, thumuc=thumuc)
+        elif viec == "dong_o":
+            thongbao.dong_cli(f"cli_o:{doi[0]}:", "Ổ trống đủ hoặc không còn bản để nâng", thumuc)
+        elif viec == "mo_mang":
+            thongbao.bao_cli_mang(thumuc)
+        elif viec == "dong_mang":
+            thongbao.dong_cli("cli_mang", "Đã hỏi lại được máy chủ của hãng", thumuc)
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("chuông công cụ AI lỗi")
@@ -360,18 +412,66 @@ def luot_hang_ngay(thumuc: Path | None = None, bay: datetime | None = None) -> d
 def ve_ban_truoc(goi: str, thumuc: Path | None = None, nguoi: str | None = None) -> dict:
     """Nút "Về bản trước" (Z20 dòng 11): dùng bản trước (hoặc bản trong gói); bản đang dùng không tự nâng lại."""
     thumuc = thumuc or ketnoi.thumuc_dulieu()
-    with _KHOA:
+    if not _KHOA.acquire(blocking=False):   # đang nâng: không chờ (nút đã ẩn trong lúc nâng)
+        return {"kq": "khong_chay", "ly_do": "dang_nang"}
+    try:
         d = doc_trangthai(thumuc)
         g = _goi_tt(d, goi)
         dang, truoc = g.get("dang"), g.get("truoc")
-        if not dang:
+        if not dang or d.get("tam_dung"):
             return {"kq": "khong_co"}
         g["hong"] = sorted(set(g.get("hong") or []) | {dang}, key=_khoa_so)
+        g["ve_tay"] = sorted(set(g.get("ve_tay") or []) | {dang}, key=_khoa_so)   # ô bản mới: "không tự nâng lại"
         g.update(dang=truoc if truoc and _bin(goi, truoc, thumuc).exists() else None, truoc=None, ket_qua="ve",
                  lan_cuoi=_bay().isoformat(timespec="seconds"))
+        giu = _ban_dung(goi, g, d)
+        g["su_kien"] = {"loai": "ve", "luc": g["lan_cuoi"], "ban": dang, "giu": giu[0], "giu_goi": giu[1]}
         _sua_goi(goi, g, thumuc)
         _f04("ve", f"{goi} {dang} → {g['dang'] or 'trong gói'}", "dat", nguoi, thumuc)
         return {"kq": "ve", "tu": dang, "ve": g["dang"]}
+    finally:
+        _KHOA.release()
+
+
+def nang_nen(goi: str, thumuc: Path | None = None, nguoi: str | None = None) -> dict:
+    """Nút "Nâng công cụ AI" (Z20 dòng 7, K2): chạy lượt nâng ở luồng riêng (npm tải lâu), trả ngay. Bị chặn thì trả
+    {"loi": lý do} và không chạy."""
+    ly_do = chan_vi(thumuc) or ("dang_nang" if _DANG["goi"] or (_LUONG["t"] and _LUONG["t"].is_alive()) else None)
+    if ly_do:
+        return {"loi": ly_do}
+
+    def chay():
+        try:
+            nang(goi, thumuc, ngay=True, nguoi=nguoi)
+        except Exception as e:  # noqa: BLE001 - mất mạng, npm lỗi: ghi F04 (chuông dòng 19 đã mở nếu lỗi mạng)
+            _f04("hoi_loi", f"{goi}: không hỏi được bản mới ({type(e).__name__})", "loi", nguoi, thumuc)
+    _LUONG.update(t=threading.Thread(target=chay, name="nang_congcu_ai", daemon=True), goi=goi)
+    _LUONG["t"].start()
+    return {"bat_dau": True, "goi": goi}
+
+
+def xem(thumuc: Path | None = None) -> dict:
+    """Dữ liệu khối "Công cụ AI" ở màn Cập nhật (Z20). Chữ do giao diện ghép (app.js, khối CA)."""
+    from maychu.hethong import antoan
+    from maychu.hethong.caidat import thongso
+    d = doc_trangthai(thumuc)
+    dang = dict(_DANG) if _DANG["goi"] else None
+    if not dang and _LUONG["t"] and _LUONG["t"].is_alive():   # nút vừa bấm, luồng nâng chưa tới bước khóa
+        dang = {"goi": _LUONG.get("goi"), "ban": None, "cu": None, "cu_goi": None}
+    ra = {"bat": thongso.cong_tac_bat(CONG_TAC, thumuc), "tam_dung": bool(d.get("tam_dung")),
+          "tam_dung_ban": d.get("tam_dung_ban"), "kiem_ngay": d.get("kiem_ngay"), "gio_kiem": GIO_KIEM,
+          "cho_gio": CHO_GIAY // 3600, "chan": chan_vi(thumuc), "dang_nang": dang, "goi": []}
+    for goi in GOI_CLI:
+        g = d.get(goi) or {}
+        so, trong_goi = _ban_dung(goi, g, d)
+        hang = dict(g.get("hang") or {}) or None
+        if hang and hang.get("uoc"):
+            hang["uoc_chu"] = antoan.chu_dungluong(hang["uoc"])
+        ra["goi"].append({"goi": goi, "ten": TEN_GOI[goi], "ban": so, "trong_goi": trong_goi, "ban_goi": ban_trong_goi(goi),
+                          "truoc": None if trong_goi else g.get("truoc"), "hang": hang, "hong": g.get("hong") or [],
+                          "ve_tay": g.get("ve_tay") or [], "nang_luc": g.get("nang_luc"), "lan_cuoi": g.get("lan_cuoi"),
+                          "su_kien": g.get("su_kien")})
+    return ra
 
 
 def tam_dung(ban_igm: str, thumuc: Path | None = None) -> None:

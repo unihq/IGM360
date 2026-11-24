@@ -62,8 +62,34 @@ def _boc_run():
     unittest.TestCase.run = run
 
 
+GOI_NPM_THAT: list[tuple[str, str]] = []   # (bài kiểm, lệnh): bài kiểm không được chạy npm thật (Y46, QĐ263)
+
+
+def _la_npm(lenh) -> str | None:
+    if isinstance(lenh, (list, tuple)) and lenh:
+        lenh = lenh[0]
+    if not isinstance(lenh, (str, bytes, os.PathLike)):
+        return None
+    s = os.fsdecode(os.fspath(lenh)).strip()
+    if isinstance(lenh, (str, bytes)) and (" " in s or s.startswith('"')):   # Windows: danh sách đã ghép thành 01 dòng lệnh
+        s = s[1:].split('"', 1)[0] if s.startswith('"') else s.split(" ", 1)[0]
+    ten = os.path.basename(s).lower()
+    return ten if ten.split(".")[0] in ("npm", "npx") else None
+
+
 def _moc(su_kien: str, doi_so: tuple) -> None:
     if _TRONG[0]:
+        return
+    if su_kien == "subprocess.Popen":   # (executable, args, cwd, env): ghi lại trước khi hệ điều hành chạy
+        _TRONG[0] = True
+        try:
+            ten = _la_npm(doi_so[1] if len(doi_so) > 1 else None) or _la_npm(doi_so[0] if doi_so else None)
+            if ten:
+                GOI_NPM_THAT.append((_bai_dang_chay(), ten))
+        except Exception:  # noqa: BLE001
+            pass
+        finally:
+            _TRONG[0] = False
         return
     if su_kien == "open":
         duong, che_do, co = (tuple(doi_so) + (None, None, None))[:3]

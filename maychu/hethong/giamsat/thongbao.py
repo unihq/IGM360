@@ -38,6 +38,8 @@ LOAI = {
     "drive_nen": ("xem", "cloud-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ261, QĐ262: Bản sao Drive lỗi
     "cli_nang": ("tin", "wrench", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ271 Z20 dòng 14: Nâng công cụ AI
     "cli_loi": ("xem", "circle-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ271 Z20 dòng 15: Công cụ AI lỗi (vàng)
+    "cli_o": ("xem", "hard-drive", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ307 Z20 dòng 18: thiếu ổ trống (vàng)
+    "cli_mang": ("xem", "wifi-off", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ307 Z20 dòng 19: không kết nối được hãng
 }
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
@@ -249,6 +251,28 @@ def bao_cli(goi: str, loai: str, sau: str, thumuc: Path | None = None) -> None:
         _mo(w, khoa, None, None)
 
 
+def bao_cli_o(goi: str, ban: str, trong: int, can: int, thumuc: Path | None = None) -> None:
+    """QĐ307 Z20 dòng 18: mở 01 chuông cho 01 gói (bản mới hơn thay chuông cũ); số đo cập nhật mỗi lượt."""
+    khoa = f"cli_o:{goi}:{ban}"
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, f"cli_o:{goi}:"):
+            if k != khoa:
+                _dong(w, k, "Đã có lượt nâng công cụ AI mới")
+        _mo(w, khoa, None, None, nguong=int(can), giatri=int(trong))
+
+
+def bao_cli_mang(thumuc: Path | None = None) -> None:
+    """QĐ307 Z20 dòng 19: 01 chuông chung cho cả 02 gói."""
+    with _Ghi(thumuc) as w:
+        _mo(w, "cli_mang", None, None)
+
+
+def dong_cli(tien_to: str, lydo: str, thumuc: Path | None = None) -> None:
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, tien_to):
+            _dong(w, k, lydo)
+
+
 def quet_saoluu(thumuc: Path | None = None) -> None:
     """Lượt sao lưu hằng ngày gần nhất có file lỗi (đỏ). 01 dòng còn mở cho mọi lượt lỗi liên tiếp (lịch thử lại mỗi phút).
     0.8.0 (QĐ227): chỉ đọc `loai` = 'hangngay'; lượt trước cập nhật (`truoc_capnhat`) không che lần sao lưu hằng ngày hỏng."""
@@ -401,7 +425,21 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         ten = nangcli.TEN_GOI.get(goi, goi)
         if loai == "cli_nang":
             return f"Đã nâng {ten} lên {ban}"
-        return f"{ten} {ban} chưa đạt kiểm thử, đã về bản {giu[0] if giu and giu[0] != 'None' else 'trong gói'}"
+        if giu and giu[0] == "goi":   # QĐ307 dòng 15b: về bản trong gói; không đọc được số thì câu không số
+            ve = f"{giu[1]} trong gói" if len(giu) > 1 and giu[1] else "trong gói"
+        else:
+            ve = giu[0] if giu and giu[0] not in ("", "None") else "trong gói"
+        return f"{ten} {ban} chưa đạt kiểm thử, đã về bản {ve}"
+    if loai == "cli_o":   # QĐ307 dòng 18 (số đo lúc kiểm, cách ghi như lớp 1 ổ trống)
+        from maychu.hethong import antoan
+        from maychu.hethong.mohinh import nangcli
+        goi, ban = (sau.split(":") + [""])[:2]
+        return (f"Chưa nâng {nangcli.TEN_GOI.get(goi, goi)} lên {ban}: ổ trống còn {antoan.chu_dungluong(_so(gt))},"
+                f" cần {antoan.chu_dungluong(_so(ng))}. Dọn ổ máy chủ; phần mềm tự thử lại lúc {nangcli.GIO_KIEM:02d}:00.")
+    if loai == "cli_mang":   # QĐ307 dòng 19
+        from maychu.hethong.mohinh import nangcli
+        return ("Chưa kiểm được bản mới của công cụ AI: không kết nối được máy chủ của hãng. Công cụ AI vẫn chạy bản"
+                f" đang dùng; phần mềm tự thử lại lúc {nangcli.GIO_KIEM:02d}:00.")
     if loai == "drive_nen":   # QĐ262 nguyên văn: "Bản sao Drive sau cập nhật {bản} chưa lên: {k}/07 tệp, đã thử 03 lần"
         return (f"Bản sao Drive sau cập nhật {sau} chưa lên: {_so(gt):02d}/{_so(ng):02d} tệp,"
                 f" đã thử {_nb(f'{SO_LAN_BAO_DRIVE:02d} lần')}")

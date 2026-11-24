@@ -40,6 +40,23 @@ class KiemKhongGhiDulieuThat(unittest.TestCase):
         self.assertEqual(sum(1 for x in moi if x[1] == "open" and x[2].endswith("a.json")), 1)   # lần đọc không tính
         self.assertTrue(all(x[0].endswith("test_moc_bat_duoc_lan_ghi_that") for x in moi))
 
+    def test_moc_bat_duoc_lan_chay_npm(self):
+        """Móc bắt lần chạy npm (ghi lại trước khi chạy): thử bằng tên không có trên máy nên không chạy gì."""
+        import subprocess
+        truoc = len(kiemthu.GOI_NPM_THAT)
+        with tempfile.TemporaryDirectory() as tam:
+            gia = os.path.join(tam, "khongco", "npm")
+            with self.assertRaises(OSError):
+                subprocess.run([gia, "--version"], capture_output=True)
+        moi = kiemthu.GOI_NPM_THAT[truoc:]
+        del kiemthu.GOI_NPM_THAT[truoc:]
+        self.assertEqual([x[1] for x in moi], ["npm"])
+        self.assertTrue(moi[0][0].endswith("test_moc_bat_duoc_lan_chay_npm"))
+
+    def test_zz_khong_bai_nao_chay_npm_that(self):
+        ds = sorted(set(kiemthu.GOI_NPM_THAT))
+        self.assertEqual(ds, [], "Bài kiểm chạy npm thật:\n" + "\n".join(f"  {b} · {t}" for b, t in ds))
+
     def test_zz_khong_bai_nao_ghi_dulieu_that(self):
         ds = sorted(set(kiemthu.GHI_DULIEU_THAT))
         self.assertEqual(ds, [], "Bài kiểm ghi vào thư mục dữ liệu mặc định /dulieu:\n"

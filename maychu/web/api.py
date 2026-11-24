@@ -267,6 +267,41 @@ def kiem_lai(p: dict = Depends(can_dang_nhap)):
             **_them_antoan()}
 
 
+class GoiCli(BaseModel):
+    goi: str
+
+
+@router.get("/capnhat/congcu_ai")
+def xem_congcu_ai(p: dict = Depends(can_dang_nhap)):
+    """Y46 (Z20): khối Công cụ AI ở màn Cập nhật."""
+    from maychu.hethong.mohinh import nangcli
+    return nangcli.xem()
+
+
+@router.post("/capnhat/congcu_ai/nang")
+def nang_congcu_ai(body: GoiCli, p: dict = Depends(can_dang_nhap)):
+    """Nút "Nâng công cụ AI" (Z20 dòng 7): chạy nền, F04 ghi trong bộ nâng (người bấm)."""
+    from maychu.hethong.mohinh import nangcli
+    if body.goi not in nangcli.GOI_CLI:
+        raise HTTPException(400, "Không có công cụ này")
+    kq = nangcli.nang_nen(body.goi, nguoi=p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(409, {"loi": kq["loi"]})
+    return kq
+
+
+@router.post("/capnhat/congcu_ai/ve")
+def ve_congcu_ai(body: GoiCli, p: dict = Depends(can_dang_nhap)):
+    """Nút "Về bản trước" (Z20 dòng 11)."""
+    from maychu.hethong.mohinh import nangcli
+    if body.goi not in nangcli.GOI_CLI:
+        raise HTTPException(400, "Không có công cụ này")
+    kq = nangcli.ve_ban_truoc(body.goi, nguoi=p["nguoidung_id"])
+    if kq["kq"] != "ve":
+        raise HTTPException(409, {"loi": kq.get("ly_do") or kq["kq"]})
+    return kq
+
+
 class QuayVe(BaseModel):
     dong_y_mat: bool = False
 

@@ -480,6 +480,127 @@ ICON['archive-x'] = ICON['archive-x'] || svgLucide('archive-x', ['<rect width="2
   'M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8', 'm9.5 17 5-5', 'm9.5 12 5 5']);
 ICON.lock = ICON.lock || svgLucide('lock', ['<rect width="18" height="11" x="3" y="11" rx="2" ry="2" />', 'M7 11V7a5 5 0 0 1 10 0v4']);
 ICON['cloud-alert'] = ICON['cloud-alert'] || svgLucide('cloud-alert', ['M12 12v4', 'M12 20h.01', 'M17 18h.5a1 1 0 0 0 0-9h-1.79A7 7 0 1 0 7 17.708']);
+// <CA> Y46 (QĐ263, QĐ264, QĐ271, QĐ306, QĐ307; bản vẽ Z20): khối "Công cụ AI" ở màn Cập nhật. Chữ anh duyệt nguyên văn
+// ở bảng màn 09 (Bangdulieu_Manhinh_GD1, Z20 dòng 1–13, 15b, 20), viết ở 01 chỗ này. Số bản, giờ lấy từ máy chủ.
+const CA = {tieu: 'Công cụ AI', gat: 'Tự nâng mỗi ngày',
+  moTa: 'Công cụ chạy gói Claude, gói ChatGPT trên máy chủ. Chỉ nhận bản hãng đã ra từ 24 giờ, kiểm thử đạt mới dùng; chưa đạt thì tự về bản trước.',
+  cot: ['Công cụ', 'Bản đang dùng', 'Bản mới của hãng', 'Nâng gần nhất'],
+  truoc: b => 'bản trước ' + b, oGoi: b => b + ' · trong gói', moiNhat: 'Đã mới nhất', raLuc: r => 'ra lúc ' + r,
+  chuaDat: 'chưa đạt, không dùng', khongLai: 'không tự nâng lại',
+  thuong: k => 'Đang dùng bản mới nhất. Lần kiểm tới: ' + k + '.',
+  cho: (t, b, ra, sau) => t + ' có bản ' + b + ' (ra lúc ' + ra + '). Tự nâng khi bản ra đủ 24 giờ, sau ' + sau + '.',
+  choPhu: 'Muốn có ngay thì bấm Nâng công cụ AI.',
+  nut: 'Nâng công cụ AI', nutKhoa: 'Đang dùng bản mới nhất', dangNut: 'Đang nâng…',
+  hopTieu: (t, b) => 'Nâng ' + t + ' lên ' + b + '?',
+  hopChu: (chua24, co, y) => (chua24 ? 'Bản này ra chưa đủ 24 giờ. ' : '') + 'Phần mềm tải khoảng ' + co
+    + ', kiểm thử rồi mới dùng; chưa đạt thì tự về bản ' + y + '. AI vẫn chạy trong lúc nâng.',
+  dang: (t, b) => 'Đang nâng ' + t + ' lên ' + b + ': tải và kiểm thử.', dangPhu: y => 'AI vẫn chạy bằng bản ' + y + ' trong lúc nâng.',
+  dat: (t, b, l) => 'Đã nâng ' + t + ' lên ' + b + ' lúc ' + l + ' · kiểm thử đạt.',
+  lui: (t, b, y) => t + ' ' + b + ' kiểm thử chưa đạt, đã tự về bản ' + y + '.',
+  luiPhu: b => 'AI vẫn chạy bình thường. Bản ' + b + ' không thử lại. Lỗi đã ghi nhật ký và báo chuông.',
+  ve: 'Về bản trước', veTieu: (t, y) => 'Về ' + t + ' bản ' + y + '?', veChu: (x, y) => 'Bản ' + x + ' không tự nâng lại. Lượt AI mới dùng bản ' + y + ' ngay.',
+  daVe: (t, y, l, x) => 'Đã về ' + t + ' bản ' + y + ' lúc ' + l + '. Bản ' + x + ' không tự nâng lại.',
+  tat: 'Tự nâng đang tắt. Hãng có bản mới thì hiện ở đây; bạn bấm Nâng công cụ AI để nâng.',
+  tamDung: b => 'Tự nâng tạm dừng: bạn đã quay về bản ' + b + ', công cụ AI dùng bản trong gói của bản này.',
+  tamDungPhu: 'Bật lại: gạt công tắc Tự nâng mỗi ngày, hoặc cập nhật lên bản mới.',
+  hoan: (t, b, g, y) => 'Hoãn nâng ' + t + ' ' + b + ': gói ' + g + ' đang hết hạn mức nên chưa kiểm thử được. Vẫn dùng bản ' + y
+    + '; lượt kiểm 03:00 ngày mai thử lại.',   // QĐ307 dòng 20 (QĐ306): dòng xám, không chuông
+  goiTen: {claude: 'Claude', chatgpt: 'ChatGPT'}, homNay: 'hôm nay', ngayMai: 'ngày mai',
+  mau: {dat: '#258832', xem: '#8F5F00', xam: '#646A73', xanh: '#1456F0'}};
+ICON['circle-pause'] = ICON['circle-pause'] || svgLucide('circle-pause', ['<circle cx="12" cy="12" r="10" />',
+  '<line x1="10" x2="10" y1="15" y2="9" />', '<line x1="14" x2="14" y1="15" y2="9" />']);
+ICON['circle-arrow-up'] = ICON['circle-arrow-up'] || svgLucide('circle-arrow-up', ['<circle cx="12" cy="12" r="10" />', 'm16 12-4-4-4 4', 'M12 16V8']);
+const caVn = t => new Date((typeof t === 'number' ? t : Date.parse(t)) + 7 * 3600e3).toISOString();   // giờ Việt Nam
+const caSo = b => String(b || '0.0.0').split('.').map(x => parseInt(x, 10) || 0);
+const caCao = (a, b) => { const x = caSo(a), y = caSo(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
+const caBan = (so, goi) => goi ? (so ? so + ' trong gói' : 'trong gói') : so;   // QĐ307 dòng 10, 11, 15b: bản trong gói
+function caLuc(t, bay) {   // "10:00 hôm nay" · "10:00 ngày mai" · ngày khác: "10:00 ngày 23/11/2026"
+  const v = caVn(t), n = v.slice(0, 10);
+  const ngayChu = n === caVn(bay).slice(0, 10) ? CA.homNay : n === caVn(bay + 864e5).slice(0, 10) ? CA.ngayMai : 'ngày ' + ngay(v);
+  return (v.slice(11, 16) + ' ' + ngayChu).replace(/ /g, '\u00a0');   // giờ và ngày không tách khi xuống dòng
+}
+const caHomNay = (t, bay) => !!t && caVn(t).slice(0, 10) === caVn(bay).slice(0, 10);
+function caMoi(x) {   // bản mới của hãng còn nâng được (chưa hỏng, chưa về tay)
+  const h = x.hang; return !!(h && h.ban && caCao(h.ban, x.ban) && !(x.hong || []).includes(h.ban)) ? h : null;
+}
+function caDich(c) {   // gói nút "Nâng công cụ AI" nâng (gói đầu tiên có bản mới nâng được)
+  if (c.dang_nang || c.tam_dung || c.chan) return null;
+  return c.goi.find(x => { const h = caMoi(x); return h && h.uoc_chu; }) || null;
+}
+function htmlCongCu(c, bay) {
+  const dong = (mau, ico, chu, phu) => '<span class="ks"' + (mau ? ' style="color:' + mau + '"' : '') + '>' + icoMau(ICON[ico], mau || '#1F2329', 14)
+    + '<span>' + cum(chu) + '</span></span>' + (phu ? '<div class="t12 phu" style="margin-top:4px">' + cum(phu) + '</div>' : '');
+  const bat = c.bat && !c.tam_dung, dn = c.dang_nang;
+  let h = '<div class="dong" style="gap:8px;align-items:center">' + ICON.wrench + '<span class="t16 b7 f1">' + CA.tieu + '</span><span class="t13">'
+    + CA.gat + '</span><button class="gat-o nut-gat" data-cagat role="switch" aria-checked="' + bat + '" aria-label="' + CA.gat + '">'
+    + '<input type="checkbox" tabindex="-1"' + (bat ? ' checked' : '') + '><span class="gat"></span></button></div>'
+    + '<div class="phu t12" style="margin:4px 0 8px">' + cum(CA.moTa) + '</div>'
+    + '<div class="cl-hang cl5 tieu-de">' + CA.cot.map(x => '<span>' + x + '</span>').join('') + '<span></span></div>';
+  c.goi.forEach(x => {
+    const hg = x.hang, gan = [x.nang_luc, (x.su_kien || {}).luc].filter(Boolean).sort().pop();
+    let o3 = '';
+    if (hg && hg.ban) {
+      if (!caCao(hg.ban, x.ban)) o3 = '<span class="so" style="color:' + CA.mau.dat + '">' + CA.moiNhat + '</span>';
+      else if ((x.ve_tay || []).includes(hg.ban)) o3 = '<span class="so" style="color:' + CA.mau.xam + '">' + esc(hg.ban) + '</span><div class="t12 phu">' + CA.khongLai + '</div>';
+      else if ((x.hong || []).includes(hg.ban)) o3 = '<span class="so" style="color:' + CA.mau.xem + '">' + esc(hg.ban) + '</span><div class="t12" style="color:' + CA.mau.xem + '">' + CA.chuaDat + '</div>';
+      else o3 = '<span class="so" style="color:' + CA.mau.xanh + '">' + esc(hg.ban) + '</span>' + (hg.ra_luc && caHomNay(hg.ra_luc, bay) ? '<div class="t12 phu">' + cum(CA.raLuc(caLuc(hg.ra_luc, bay))) + '</div>' : '');
+    }
+    const coVe = !x.trong_goi && !dn && !c.tam_dung;
+    h += '<div class="cl-hang cl5"><b>' + esc(x.ten) + '</b><span data-l="' + CA.cot[1] + '"><span class="so">' + esc(x.trong_goi ? CA.oGoi(x.ban || '') : x.ban) + '</span>'
+      + (x.truoc ? '<div class="t12 phu">' + cum(CA.truoc(x.truoc)) + '</div>' : '') + '</span><span data-l="' + CA.cot[2] + '">' + o3 + '</span>'
+      + '<span data-l="' + CA.cot[3] + '">' + (gan ? ngay(caVn(gan)) + ' ' + caVn(gan).slice(11, 16) : '–') + '</span><span class="phai">'
+      + (coVe ? '<button class="btn-chu nho" data-cave="' + esc(x.goi) + '">' + icoMau(ICON['rotate-ccw'], '#1456F0', 14) + CA.ve + '</button>' : '') + '</span></div>';
+  });
+  // dòng trạng thái (01 dòng): đang nâng > tạm dừng > việc vừa xảy ra hôm nay > tắt > hãng có bản mới > mới nhất
+  let tt;
+  const sk = c.goi.map(x => ({x, s: x.su_kien})).filter(o => o.s && caHomNay(o.s.luc, bay)).sort((a, b) => a.s.luc < b.s.luc ? 1 : -1)[0];
+  const cho = c.goi.map(x => ({x, m: caMoi(x)})).find(o => o.m);
+  if (dn) { const x = c.goi.find(g => g.goi === dn.goi) || c.goi[0];
+    tt = dong('', 'loader', CA.dang(x.ten, dn.ban || (x.hang || {}).ban), CA.dangPhu(dn.cu ? caBan(dn.cu, dn.cu_goi) : caBan(x.ban, x.trong_goi)))
+      + '<div class="td" style="height:8px;margin-top:6px"><div class="tdf chay"></div></div>'; }
+  else if (c.tam_dung) tt = dong(CA.mau.xem, 'circle-pause', CA.tamDung(c.tam_dung_ban || ''), CA.tamDungPhu);
+  else if (sk) { const {x, s} = sk, y = caBan(s.giu, s.giu_goi), l = caVn(s.luc).slice(11, 16);
+    tt = s.loai === 'dat' ? dong(CA.mau.dat, 'circle-check', CA.dat(x.ten, s.ban, l))
+      : s.loai === 'hong' ? dong(CA.mau.xem, 'circle-alert', CA.lui(x.ten, s.ban, y), CA.luiPhu(s.ban))
+      : s.loai === 've' ? dong('', 'rotate-ccw', CA.daVe(x.ten, y, l, s.ban))
+      : dong(CA.mau.xam, 'clock', CA.hoan(x.ten, s.ban, CA.goiTen[x.goi] || x.ten, y)); }
+  else if (!c.bat) tt = dong('', 'circle-pause', CA.tat);
+  else if (cho) { const r = Date.parse(cho.m.ra_luc);
+    tt = Number.isFinite(r) ? dong('', 'circle-arrow-up', CA.cho(cho.x.ten, cho.m.ban, caLuc(r, bay), caLuc(r + (c.cho_gio || 24) * 3600e3, bay)), CA.choPhu) : ''; }
+  else tt = dong(CA.mau.dat, 'circle-check', CA.thuong(hai(c.gio_kiem ?? 3) + ':00 ' + (c.kiem_ngay === caVn(bay).slice(0, 10) ? CA.ngayMai : CA.homNay)));
+  const dich = caDich(c);
+  const nut = dn ? '<button class="btn khoa" disabled>' + ICON.loader + CA.dangNut + '</button>'
+    : dich ? '<button class="btn btn-chinh" data-canang="' + esc(dich.goi) + '">' + icoMau(ICON['circle-arrow-up'], '#FFFFFF', 16) + CA.nut + '</button>'
+    : '<button class="btn khoa" disabled' + (c.tam_dung || c.chan ? '' : ' title="' + CA.nutKhoa + '"') + '>' + icoMau(ICON['circle-arrow-up'], '#646A73', 16) + CA.nut + '</button>';
+  return h + '<div class="cl-chan"><div class="f1">' + tt + '</div>' + nut + '</div>';
+}
+// </CA>
+async function napCongCu() {
+  const e = $('#khoi-cl'); if (!e) return;
+  try { D.ca = await api('/capnhat/congcu_ai'); } catch (er) { return; }
+  e.innerHTML = htmlCongCu(D.ca, Date.now());
+  clearTimeout(napCongCu.h);
+  if (D.ca.dang_nang && S.tab === 'capnhat' && S.trang === '09') napCongCu.h = setTimeout(napCongCu, 3000);   // đang nâng: xem tiếp
+}
+function moNangCongCu(goi) {
+  const c = D.ca, x = c && c.goi.find(g => g.goi === goi), h = x && caMoi(x); if (!h) return;
+  const chua24 = !(Date.now() - Date.parse(h.ra_luc) >= (c.cho_gio || 24) * 3600e3);
+  xacnhan(CA.hopTieu(x.ten, h.ban), cum(CA.hopChu(chua24, h.uoc_chu, caBan(x.ban, x.trong_goi))), CA.nut, async () => {
+    try { await api('/capnhat/congcu_ai/nang', {goi}); } catch (er) { /* bị chặn: vẽ lại theo trạng thái máy chủ */ }
+    await napCongCu(); if (!D.ca.dang_nang) setTimeout(napCongCu, 1500); }, 'circle-arrow-up');
+}
+function moVeCongCu(goi) {
+  const x = D.ca && D.ca.goi.find(g => g.goi === goi); if (!x || x.trong_goi) return;
+  const y = x.truoc || caBan(x.ban_goi, true);
+  xacnhan(CA.veTieu(x.ten, y), cum(CA.veChu(x.ban, y)), CA.ve, async () => {
+    try { await api('/capnhat/congcu_ai/ve', {goi}); } catch (er) { /* bị chặn: vẽ lại */ }
+    await napCongCu(); }, 'rotate-ccw');
+}
+async function gatCongCu() {
+  const c = D.ca; if (!c) return;
+  try { await api('/thongso/tunang_congcu_ai/gat', {bat: !(c.bat && !c.tam_dung)}); } catch (er) { if (er.status) bao(er.message + '.'); }
+  await napCongCu();
+}
 const mmss = g => { g = Math.max(0, Math.floor(g || 0)); return hai(Math.floor(g / 60)) + ':' + hai(g % 60); };
 function tinhTienDo(td, bay) {   // bay: giờ máy chủ (ms). Cùng cách tính với maychu/hethong/tiendo.hien
   const t = s => s ? Date.parse(s) : NaN, moc = td.moc || {}, ct = td.chi_tiet || {}, xong = td.buoc === 'xong';
@@ -1113,7 +1234,7 @@ async function napTab() {
   try {
     if (S.tab === 'thongso') await napThongSo();
     else if (S.tab === 'taikhoan') await napTaiKhoan();
-    else if (S.tab === 'capnhat') veCapNhat(await api('/capnhat'));
+    else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }   // Y46: khối Công cụ AI
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
 }
 
@@ -1144,6 +1265,9 @@ document.addEventListener('click', async ev => {
   else if ('dong' in d) dongHop();
   else if (d.sua) { await moSua(d.sua); }
   else if (d.gat) { await gatCongTac(d.gat); }   // QĐ278: công tắc Thông số
+  else if ('cagat' in d) { await gatCongCu(); }   // Y46 (Z20 dòng 1, 12, 13): công tắc Tự nâng mỗi ngày
+  else if (d.canang) moNangCongCu(d.canang);   // Z20 dòng 7
+  else if (d.cave) moVeCongCu(d.cave);   // Z20 dòng 11
   else if ('luusua' in d) { await luuSua(); }
   else if ('locChua' in d) { $('#ds-thongso').classList.toggle('chi-chua'); t.classList.toggle('on'); }
   else if (d.thuhoi) xacnhan('Thu hồi phiên này?', 'Máy đó phải đăng nhập lại mới dùng tiếp được.', 'Thu hồi', async () => {

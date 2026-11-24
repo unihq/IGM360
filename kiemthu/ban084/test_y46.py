@@ -345,9 +345,10 @@ class KiemLichChuong(Nen):
             try:
                 co = cn.execute("SELECT 1 FROM sqlite_master WHERE name = 'canhbao'").fetchone()
                 if co:
-                    ds = [r[0] for r in cn.execute("SELECT khoa_chongtrung FROM canhbao WHERE khoa_chongtrung LIKE 'cli_%'"
-                                                   " AND trangthai IN ('moi', 'dabao', 'dagiao_task')")]
-                    return ds, {k: thongbao._chu(k.split(":")[0], k, {"giatri": None, "nguong": None}, {}, {}) for k in ds}
+                    dong = cn.execute("SELECT khoa_chongtrung, giatri, nguong FROM canhbao WHERE khoa_chongtrung LIKE 'cli_%'"
+                                      " AND trangthai IN ('moi', 'dabao', 'dagiao_task')").fetchall()
+                    return [r[0] for r in dong], {k: thongbao._chu(k.split(":")[0], k, {"giatri": gt, "nguong": ng}, {}, {})
+                                                  for k, gt, ng in dong}
             finally:
                 cn.close()
         return [], {}
@@ -447,6 +448,242 @@ class KiemConTroCu(Nen):
         self.assertEqual(kq, {"kq": "ve", "tu": "2.1.341", "ve": "2.1.340"})
         self.assertIn("2.1.341", nangcli.doc_trangthai(self.dl)["claude"]["hong"])   # Z20 dòng 11: không tự nâng lại
         self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl)["ve"], None)     # về tiếp: bản trong gói
+
+
+class KiemChuongQd307(KiemLichChuong):
+    """QĐ307 (anh "Duyệt A"): chữ nguyên văn bảng chữ Z20 dòng 15b, 18, 19; dòng 20 không mở chuông."""
+
+    def test_15b_ve_ban_trong_goi_co_so_va_khong_so(self):
+        kq, _ = self.nang(chay=ChayGia(ban_cai="2.1.0"), ngay=True)              # chưa nâng lần nào: giữ bản trong gói
+        self.assertEqual(kq["kq"], "hong")
+        _, chu = self.doc_chuong()
+        self.assertEqual(list(chu.values()), ["Claude · Code 2.1.340 chưa đạt kiểm thử, đã về bản 2.1.331 trong gói"])
+        with mock.patch.object(nangcli, "ban_trong_goi", return_value=None):  # không đọc được số bản trong gói
+            self.nang(npm={"ban": "2.1.341"}, chay=ChayGia(ban_cai="2.1.0"), ngay=True)
+            _, chu = self.doc_chuong()
+        self.assertEqual(list(chu.values()), ["Claude · Code 2.1.341 chưa đạt kiểm thử, đã về bản trong gói"])
+
+    def test_18_thieu_o_trong_so_do_that_mo_01_lan_o_du_tu_dong(self):
+        gb = 1024 ** 3
+        with mock.patch.object(antoan, "o_trong", return_value={"can": int(1.5 * gb) - 1000}), \
+                mock.patch.object(nangcli.shutil, "disk_usage", return_value=shutil._ntuple_diskusage(10 * gb, 9 * gb, int(1.1 * gb))):
+            self.assertEqual(self.nang(ngay=True)[0]["kq"], "thieu_o")
+            self.assertEqual(self.nang(ngay=True)[0]["kq"], "thieu_o")         # lần 02: không mở thêm chuông
+            ds, chu = self.doc_chuong()
+        self.assertEqual(list(chu.values()), ["Chưa nâng Claude · Code lên 2.1.340: ổ trống còn 1,1 GB, cần 1,5 GB."
+                                              " Dọn ổ máy chủ; phần mềm tự thử lại lúc 03:00."])
+        from maychu.hethong.giamsat import thongbao
+        self.assertEqual(thongbao.LOAI[ds[0].split(":")[0]][:2], ("xem", "hard-drive"))   # vàng, icon hard-drive
+        self.assertEqual(self.nang(ngay=True)[0]["kq"], "dat")                  # ổ đủ: chuông tự đóng
+        self.assertEqual([c for c in self.doc_chuong()[1].values() if c.startswith("Chưa nâng")], [])
+
+    def test_19_khong_ket_noi_duoc_hang_mo_01_chuong_hoi_lai_duoc_thi_dong(self):
+        def mat_mang(goi, client=None):
+            raise httpx.ConnectError("mất mạng")
+        with mock.patch.object(nangcli, "hoi_npm", side_effect=mat_mang):
+            nangcli.luot_hang_ngay(self.dl, BAY)
+        ds, chu = self.doc_chuong()
+        self.assertEqual(list(chu.values()), ["Chưa kiểm được bản mới của công cụ AI: không kết nối được máy chủ của hãng."
+                                              " Công cụ AI vẫn chạy bản đang dùng; phần mềm tự thử lại lúc 03:00."])   # 01 chuông cho 02 gói
+        from maychu.hethong.giamsat import thongbao
+        self.assertEqual(thongbao.LOAI["cli_mang"][:2], ("xem", "wifi-off"))
+        self.nang(npm={"ban": "2.1.331"})                                         # hỏi lại được: tự đóng
+        self.assertEqual(self.doc_chuong()[0], [])
+
+    def test_20_hoan_khong_mo_chuong(self):
+        from maychu.hethong.mohinh import congai
+        self.trang_thai.return_value = {"da_noi": True}
+        with mock.patch.object(congai, "_goi_claude", side_effect=congai.HetHanMuc("hết hạn mức", {})):
+            self.assertEqual(self.nang(ngay=True)[0]["kq"], "hoan")
+        self.assertEqual(self.doc_chuong()[0], [])
+        sk = nangcli.doc_trangthai(self.dl)["claude"]["su_kien"]
+        self.assertEqual((sk["loai"], sk["ban"], sk["giu"], sk["giu_goi"]), ("hoan", "2.1.340", "2.1.331", True))
+
+
+class KiemDuongGoiKhoi(Nen):
+    """Việc 8: dữ liệu khối Công cụ AI, nút Nâng công cụ AI chạy nền, nút Về bản trước."""
+
+    def test_xem_du_truong_va_ban_dang_dung(self):
+        c = nangcli.xem(self.dl)
+        self.assertEqual((c["bat"], c["tam_dung"], c["gio_kiem"], c["cho_gio"], c["dang_nang"], c["chan"]), (True, False, 3, 24, None, None))
+        g = c["goi"][0]
+        self.assertEqual((g["goi"], g["ten"], g["ban"], g["trong_goi"], g["ban_goi"]), ("claude", "Claude · Code", "2.1.331", True, "2.1.331"))
+        self.nang(ngay=True)
+        g = nangcli.xem(self.dl)["goi"][0]
+        self.assertEqual((g["ban"], g["trong_goi"], g["hang"]["ban"], g["hang"]["uoc_chu"], g["su_kien"]["loai"]),
+                         ("2.1.340", False, "2.1.340", antoan.chu_dungluong(1000), "dat"))
+
+    def test_nut_nang_chay_nen_va_bi_chan(self):
+        goc = nangcli.nang                                                         # luồng nền gọi nang(): trỏ npm, CLI giả
+
+        def nang_gia(goi, thumuc=None, **kw):
+            return goc(goi, thumuc, chay=ChayGia(), client=npm_gia(ra=BAY - timedelta(hours=2)), bay=BAY, **kw)
+        with mock.patch.object(nangcli, "nang", nang_gia):
+            kq = nangcli.nang_nen("claude", self.dl, nguoi=None)
+            self.assertEqual(kq, {"bat_dau": True, "goi": "claude"})
+            nangcli._LUONG["t"].join(10)
+        self.assertEqual(nangcli.doc_trangthai(self.dl)["claude"]["dang"], "2.1.340")   # bỏ qua 24 giờ, bỏ qua công tắc
+        with mock.patch.object(capnhat, "dang_cho", return_value=True):
+            self.assertEqual(nangcli.nang_nen("claude", self.dl), {"loi": "dang_cap_nhat"})
+        nangcli._KHOA.acquire()
+        try:
+            nangcli._DANG["goi"] = "claude"
+            self.assertEqual(nangcli.nang_nen("claude", self.dl), {"loi": "dang_nang"})
+            self.assertEqual(nangcli.xem(self.dl)["dang_nang"]["goi"], "claude")
+            self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl), {"kq": "khong_chay", "ly_do": "dang_nang"})   # không chờ
+        finally:
+            nangcli._DANG["goi"] = None
+            nangcli._KHOA.release()
+
+    def test_ve_ban_truoc_ghi_su_kien_khong_tu_nang_lai(self):
+        self.nang(ngay=True)
+        kq = nangcli.ve_ban_truoc("claude", self.dl)
+        self.assertEqual(kq, {"kq": "ve", "tu": "2.1.340", "ve": None})
+        g = nangcli.xem(self.dl)["goi"][0]
+        self.assertEqual((g["ban"], g["trong_goi"], g["ve_tay"], g["su_kien"]["giu"], g["su_kien"]["giu_goi"]),
+                         ("2.1.331", True, ["2.1.340"], "2.1.331", True))
+        self.assertEqual(self.nang(ngay=True)[0]["kq"], "da_hong")               # không tự nâng lại
+        self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl), {"kq": "khong_co"})
+
+    def test_duong_goi_api(self):
+        api = (Path(__file__).resolve().parents[2] / "maychu/web/api.py").read_text(encoding="utf-8")
+        for x in ('@router.get("/capnhat/congcu_ai")', '@router.post("/capnhat/congcu_ai/nang")', '@router.post("/capnhat/congcu_ai/ve")',
+                  "nangcli.nang_nen(body.goi, nguoi=p[\"nguoidung_id\"])", "nangcli.ve_ban_truoc(body.goi, nguoi=p[\"nguoidung_id\"])"):
+            self.assertIn(x, api)
+        self.assertTrue(antoan.duoc_mo("/api/capnhat/congcu_ai"))                 # chế độ an toàn: xem được (nâng bị K1 chặn)
+
+
+class KiemGiaoDienKhoi(unittest.TestCase):
+    """Việc 8 (Z20 dòng 1–13, 20; QĐ307 dòng 10, 11): chạy hàm vẽ khối bằng node, so nguyên văn chữ đã duyệt."""
+    BAY = "2026-11-24T14:30:00+07:00"
+
+    @classmethod
+    def setUpClass(cls):
+        if not shutil.which("node"):
+            raise unittest.SkipTest("máy không có node")
+        app = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
+        cls.ma = app[app.index("// <CA>"):app.index("// </CA>")]
+        cls.app = app
+
+    def ve(self, *ca):
+        dau = ("const esc = x => String(x ?? ''), cum = x => String(x);\n"
+               "const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);\n"
+               "const ngay = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };\n"
+               "const icoMau = (s, mau, co) => '<i ' + s + ' m=' + mau + '></i>';\n"
+               "const svgLucide = t => t;\n"
+               "const ICON = {wrench: 'wrench', loader: 'loader', 'rotate-ccw': 'rotate-ccw', clock: 'clock', 'circle-check': 'circle-check', 'circle-alert': 'circle-alert'};\n")
+        chay = dau + self.ma + f"const bay = Date.parse('{self.BAY}');\nconsole.log(JSON.stringify({json.dumps(list(ca))}.map(c => htmlCongCu(c, bay))));\n"
+        ra = subprocess.run(["node", "-e", chay], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(ra.returncode, 0, ra.stderr)
+        h = [x.replace("\u00a0", " ") for x in json.loads(ra.stdout)]   # dấu cách không ngắt: so như dấu cách
+        for x in h:
+            self.assertNotIn("undefined", x)
+            self.assertNotIn("null", x)
+        return h
+
+    def chu(self, cau):
+        ra = subprocess.run(["node", "-e", "const hai = n => String(n), ngay = x => x;\nconst svgLucide = t => t, ICON = {};\n" + self.ma
+                             + f"console.log(JSON.stringify({cau}));"], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(ra.returncode, 0, ra.stderr)
+        return json.loads(ra.stdout.replace("\u00a0", " "))
+
+    @staticmethod
+    def goi(**kw):
+        g = {"goi": "claude", "ten": "Claude · Code", "ban": "2.1.331", "trong_goi": False, "ban_goi": "2.1.300", "truoc": "2.1.329",
+             "hang": {"ban": "2.1.331", "ra_luc": "2026-11-20T03:00:00Z", "uoc": 193986560, "uoc_chu": "185 MB"}, "hong": [], "ve_tay": [],
+             "nang_luc": "2026-11-23T06:00:00+07:00", "lan_cuoi": "2026-11-24T03:00:00+07:00", "su_kien": None}
+        g.update(kw)
+        return g
+
+    def khoi(self, *goi, **kw):
+        c = {"bat": True, "tam_dung": False, "tam_dung_ban": None, "kiem_ngay": "2026-11-24", "gio_kiem": 3, "cho_gio": 24, "chan": None,
+             "dang_nang": None, "goi": list(goi) or [self.goi(), self.goi(goi="chatgpt", ten="ChatGPT · Codex", ban="0.172.0", truoc="0.171.0",
+                                                                  hang={"ban": "0.172.0", "ra_luc": "2026-11-20T00:00:00Z"})]}
+        c.update(kw)
+        return c
+
+    def test_dong_1_den_5_moi_nhat(self):
+        h, = self.ve(self.khoi())
+        for x in ("Công cụ AI", "Tự nâng mỗi ngày", "Công cụ chạy gói Claude, gói ChatGPT trên máy chủ. Chỉ nhận bản hãng đã ra từ 24 giờ,"
+                  " kiểm thử đạt mới dùng; chưa đạt thì tự về bản trước.", "<span>Công cụ</span><span>Bản đang dùng</span><span>Bản mới của hãng</span>"
+                  "<span>Nâng gần nhất</span>", "bản trước 2.1.329", ">Đã mới nhất<", "23/11/2026 06:00", "Về bản trước",
+                  "Đang dùng bản mới nhất. Lần kiểm tới: 03:00 ngày mai.", 'title="Đang dùng bản mới nhất"', 'aria-checked="true"'):
+            self.assertIn(x, h)
+        self.assertNotIn("data-canang", h)                                        # mới nhất: nút khoá
+
+    def test_dong_6_7_hang_co_ban_moi(self):
+        moi = self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})
+        h, = self.ve(self.khoi(moi))
+        self.assertIn("Claude · Code có bản 2.1.332 (ra lúc 10:00 hôm nay). Tự nâng khi bản ra đủ 24 giờ, sau 10:00 ngày mai.", h)
+        self.assertIn("Muốn có ngay thì bấm Nâng công cụ AI.", h)
+        self.assertIn("ra lúc 10:00 hôm nay", h)
+        self.assertIn('data-canang="claude"', h)
+        hop = self.chu("[CA.hopTieu('Claude · Code', '2.1.332'), CA.hopChu(true, '185 MB', '2.1.331')]")
+        self.assertEqual(hop, ["Nâng Claude · Code lên 2.1.332?", "Bản này ra chưa đủ 24 giờ. Phần mềm tải khoảng 185 MB, kiểm thử rồi mới dùng;"
+                               " chưa đạt thì tự về bản 2.1.331. AI vẫn chạy trong lúc nâng."])
+        self.assertIn("xacnhan(CA.hopTieu(x.ten, h.ban), cum(CA.hopChu(chua24, h.uoc_chu, caBan(x.ban, x.trong_goi))), CA.nut,", self.app)
+
+    def test_dong_8_dang_nang(self):
+        moi = self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})
+        h, = self.ve(self.khoi(moi, dang_nang={"goi": "claude", "ban": "2.1.332", "cu": "2.1.331", "cu_goi": False}))
+        self.assertIn("Đang nâng Claude · Code lên 2.1.332: tải và kiểm thử.", h)
+        self.assertIn("AI vẫn chạy bằng bản 2.1.331 trong lúc nâng.", h)
+        self.assertIn('<div class="tdf chay"></div>', h)
+        self.assertIn("disabled>loaderĐang nâng…</button>", h)
+        self.assertNotIn("data-cave", h)
+
+    def test_dong_9_10_11_su_kien_hom_nay(self):
+        sk = lambda **k: {"luc": "2026-11-24T14:20:00+07:00", "ban": "2.1.332", **k}
+        dat, lui, lui_goi, lui_khong_so, ve, ve_goi = self.ve(
+            self.khoi(self.goi(ban="2.1.332", truoc="2.1.331", su_kien=sk(loai="dat"))),
+            self.khoi(self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z"}, hong=["2.1.332"], su_kien=sk(loai="hong", giu="2.1.331", giu_goi=False))),
+            self.khoi(self.goi(ban="2.1.300", trong_goi=True, truoc=None, su_kien=sk(loai="hong", giu="2.1.300", giu_goi=True))),
+            self.khoi(self.goi(ban="2.1.300", trong_goi=True, truoc=None, su_kien=sk(loai="hong", giu=None, giu_goi=True))),
+            self.khoi(self.goi(truoc=None, hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z"}, hong=["2.1.332"], ve_tay=["2.1.332"],
+                               su_kien=sk(loai="ve", luc="2026-11-24T14:25:00+07:00", giu="2.1.331", giu_goi=False))),
+            self.khoi(self.goi(ban="2.1.300", trong_goi=True, truoc=None, su_kien=sk(loai="ve", luc="2026-11-24T14:25:00+07:00", giu="2.1.300", giu_goi=True))))
+        self.assertIn("Đã nâng Claude · Code lên 2.1.332 lúc 14:20 · kiểm thử đạt.", dat)
+        self.assertIn("Claude · Code 2.1.332 kiểm thử chưa đạt, đã tự về bản 2.1.331.", lui)
+        self.assertIn("AI vẫn chạy bình thường. Bản 2.1.332 không thử lại. Lỗi đã ghi nhật ký và báo chuông.", lui)
+        self.assertIn("chưa đạt, không dùng", lui)
+        self.assertIn("Claude · Code 2.1.332 kiểm thử chưa đạt, đã tự về bản 2.1.300 trong gói.", lui_goi)     # QĐ307 dòng 10
+        self.assertIn("Claude · Code 2.1.332 kiểm thử chưa đạt, đã tự về bản trong gói.", lui_khong_so)
+        self.assertIn("Đã về Claude · Code bản 2.1.331 lúc 14:25. Bản 2.1.332 không tự nâng lại.", ve)
+        self.assertIn("không tự nâng lại", ve)
+        self.assertIn("Đã về Claude · Code bản 2.1.300 trong gói lúc 14:25. Bản 2.1.332 không tự nâng lại.", ve_goi)   # QĐ307 dòng 11
+        self.assertIn("2.1.300 · trong gói", ve_goi)
+        self.assertNotIn("data-cave", ve_goi)                                     # đang dùng bản trong gói: không còn bản để về
+        hop = self.chu("[CA.veTieu('Claude · Code', '2.1.331'), CA.veChu('2.1.332', '2.1.331'), CA.veTieu('Claude · Code', caBan('2.1.300', true)),"
+                       " CA.veChu('2.1.332', caBan('2.1.300', true)), caBan(null, true)]")
+        self.assertEqual(hop, ["Về Claude · Code bản 2.1.331?", "Bản 2.1.332 không tự nâng lại. Lượt AI mới dùng bản 2.1.331 ngay.",
+                               "Về Claude · Code bản 2.1.300 trong gói?", "Bản 2.1.332 không tự nâng lại. Lượt AI mới dùng bản 2.1.300 trong gói ngay.",
+                               "trong gói"])
+
+    def test_dong_12_13_20(self):
+        moi = self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})
+        tat, tam, hoan = self.ve(
+            self.khoi(moi, bat=False),
+            self.khoi(self.goi(ban="2.1.300", trong_goi=True, truoc=None, hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"}),
+                      tam_dung=True, tam_dung_ban="0.2.0"),
+            self.khoi(self.goi(su_kien={"loai": "hoan", "luc": "2026-11-24T03:01:00+07:00", "ban": "2.1.332", "giu": "2.1.331", "giu_goi": False})))
+        self.assertIn("Tự nâng đang tắt. Hãng có bản mới thì hiện ở đây; bạn bấm Nâng công cụ AI để nâng.", tat)
+        self.assertIn('aria-checked="false"', tat)
+        self.assertIn('data-canang="claude"', tat)                                # tắt: vẫn bấm nâng được
+        self.assertIn("Tự nâng tạm dừng: bạn đã quay về bản 0.2.0, công cụ AI dùng bản trong gói của bản này.", tam)
+        self.assertIn("Bật lại: gạt công tắc Tự nâng mỗi ngày, hoặc cập nhật lên bản mới.", tam)
+        self.assertIn("2.1.300 · trong gói", tam)
+        self.assertIn('aria-checked="false"', tam)
+        self.assertNotIn("data-canang", tam)                                      # nút nâng khoá
+        self.assertIn("Hoãn nâng Claude · Code 2.1.332: gói Claude đang hết hạn mức nên chưa kiểm thử được. Vẫn dùng bản 2.1.331;"
+                      " lượt kiểm 03:00 ngày mai thử lại.", hoan)
+        self.assertIn("<i clock m=#646A73>", hoan)                                # dòng xám, icon clock
+
+    def test_icon_dung_net_ban_ve_va_khung(self):
+        for net in ('<line x1="10" x2="10" y1="15" y2="9" />', "'m16 12-4-4-4 4', 'M12 16V8'"):
+            self.assertIn(net, self.app)
+        html = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
+        self.assertIn('<div class="the o" data-s="cn:moinhat coban" id="khoi-cl"></div>', html)
+        self.assertIn("else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }", self.app)
 
 
 if __name__ == "__main__":
