@@ -435,7 +435,7 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
     except Exception as e:  # noqa: BLE001 - mọi lỗi gọi thử đều báo lại
         dat, loi = False, che(str(e))[:200]
         kiem["het_hanmuc"] = isinstance(e, congai.HetHanMuc)   # Y38d N37: hỏng vì hết hạn mức, không phải do mã
-    giu_cu = not dat and ma_cu is not None
+    giu_cu = not dat and ma_cu is not None and not kiem.get("het_hanmuc")   # QĐ222 (N43): hết hạn mức không phải lỗi mã → lưu mã mới
     if giu_cu:   # Y38d N29 (B): mã mới chưa gọi được thì trả mã cũ (giữ hạn cũ), không đụng tệp chụp, đăng nhập kiểu cũ
         kho.doi(kho.tim(dichvu(tk), thumuc), ma_cu, thumuc, han=cu_md["han"])
         tt = thong_tin(tk, thumuc)
@@ -463,7 +463,8 @@ def ket_noi(tk: int, ma: str, nguoi: str = "hethong", thumuc=None) -> dict:
            + (" · hết hạn mức" if kiem.get("het_hanmuc") else "") + (" · giữ mã cũ" if giu_cu else ""))   # Y38d N37, N29
     nhatky.ghi("mohinh", "kiem_madaihan", tom, ketqua="dat" if dat else "loi", nguoi_id=None if nguoi == "hethong" else nguoi,
                lydo=loi or None, thumuc=thumuc)
-    return {"xong": True, "goi_thu": dat, **({"loi_goi_thu": loi} if loi else {}), **({"giu_ma_cu": True} if giu_cu else {}), **(tt or {})}
+    return {"xong": True, "goi_thu": dat, **({"loi_goi_thu": loi} if loi else {}), **({"giu_ma_cu": True} if giu_cu else {}),
+            **({"het_hanmuc": True} if kiem.get("het_hanmuc") else {}), **(tt or {})}   # QĐ222: giao diện báo câu A15
 
 
 def kiem_gan_nhat(tk: int, thumuc=None) -> dict | None:

@@ -591,6 +591,7 @@ async function mdLay(tk) {   // 0.7.8: máy chủ chạy lệnh lấy mã của 
 async function mdXong(tk, kq) { D.mdh[tk] = null;
   if (kq.giu_ma_cu) { bao(CHU_Z15.kiemLoiRe); await napMoHinh(); return; }   // Y38d N29: giữ mã cũ
   bao(kq.goi_thu ? 'Đã lưu ' + CHU_MDH.toLowerCase() + ' cho tài khoản ' + tk + ', hết hạn ' + ngay(kq.han) + '.'
+    : kq.het_hanmuc ? CHU_Z15.kiemHanMucRe   // QĐ222 (N43): hết hạn mức → câu A15, không hiện lời gốc của Claude
     : 'Đã lưu ' + CHU_MDH.toLowerCase() + ' nhưng gọi thử chưa được: ' + (kq.loi_goi_thu || 'chưa rõ lý do') + '.');
   await napMoHinh(); }
 function theGoi(g, ds, nguon, uu) {

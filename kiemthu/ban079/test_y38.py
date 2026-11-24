@@ -935,6 +935,74 @@ class KiemY38f(NenAT):
         self.assertEqual((e.status_code, e.detail["lay_lai"], e.detail["loi"]), (409, True, kq["loi"]))
 
 
+class KiemY38g(NenAT):
+    """QĐ222 (N43, cách B): gọi thử hỏng vì hết hạn mức thì vẫn lưu mã mới; chỉ giữ mã cũ khi lỗi khác (N29)."""
+    HHM = congai.HetHanMuc("hết hạn mức")
+
+    def chuan_bi(self, co_ma_cu):
+        self.nguon("goi_claude_01", "goi", 1, "anthropic")
+        if co_ma_cu:
+            madaihan.luu(1, MA_GIA)
+            self.han(days=200)
+        return madaihan.thong_tin(1)
+
+    def test_a_co_ma_cu_het_han_muc_thi_luu_ma_moi(self):
+        cu = self.chuan_bi(True)
+        kq = KiemY38d.ket_noi(self, 1, MA_MOI, goi_ok=False, loi=self.HHM)
+        self.assertEqual((kq["goi_thu"], kq.get("het_hanmuc"), kq.get("giu_ma_cu")), (False, True, None))
+        self.assertEqual(madaihan.lay(1), MA_MOI)                                   # lưu mã mới
+        self.assertNotEqual(madaihan.thong_tin(1)["han"], cu["han"])                # hạn mới
+        tom = self.f04("kiem_madaihan")[-1][0]
+        self.assertIn("hết hạn mức", tom)
+        self.assertNotIn("giữ mã cũ", tom)
+        k = madaihan.kiem_gan_nhat(1)
+        self.assertEqual((k["het_hanmuc"], k["giu_ma_cu"]), (True, False))          # rê chuột: câu A15
+
+    def test_b_co_ma_cu_ma_sai_thi_giu_ma_cu(self):
+        cu = self.chuan_bi(True)
+        kq = KiemY38d.ket_noi(self, 1, MA_MOI, goi_ok=False)
+        self.assertEqual((kq["goi_thu"], kq.get("giu_ma_cu"), kq.get("het_hanmuc")), (False, True, None))
+        self.assertEqual((madaihan.lay(1), madaihan.thong_tin(1)["han"]), (MA_GIA, cu["han"]))
+        self.assertIn("giữ mã cũ", self.f04("kiem_madaihan")[-1][0])
+
+    def test_c_chua_co_ma_cu_het_han_muc_nhu_cu(self):
+        self.chuan_bi(False)
+        kq = KiemY38d.ket_noi(self, 1, MA_MOI, goi_ok=False, loi=self.HHM)
+        self.assertEqual((kq["goi_thu"], kq.get("het_hanmuc"), kq.get("giu_ma_cu")), (False, True, None))
+        self.assertEqual(madaihan.lay(1), MA_MOI)
+        self.assertNotIn("giữ mã cũ", self.f04("kiem_madaihan")[-1][0])
+
+    def test_d_goi_thu_dat_nhu_cu(self):
+        self.chuan_bi(True)
+        kq = KiemY38d.ket_noi(self, 1, MA_MOI)
+        self.assertEqual((kq["goi_thu"], kq.get("het_hanmuc"), kq.get("giu_ma_cu")), (True, None, None))
+        self.assertEqual(madaihan.lay(1), MA_MOI)
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_bao_nhanh_dung_cau_a15(self):
+        import subprocess as sp
+        js = (GD / "app.js").read_text(encoding="utf-8").split("\n")
+        a = next(i for i, x in enumerate(js) if x.startswith("async function mdXong("))
+        b = next(i for i in range(a, len(js)) if js[i].rstrip().endswith("await napMoHinh(); }"))
+        z = next(i for i, x in enumerate(js) if x.startswith("const CHU_Z15 = {"))
+        z2 = next(i for i in range(z, len(js)) if js[i].rstrip().endswith("};"))
+        ma = ("const NB = '&nbsp;'; const nbsp = s => String(s).replace(/ /g, NB); const D = {mdh: {}}; const ra = [];"
+              "const bao = s => ra.push(s); const napMoHinh = async () => {}; const ngay = s => s; const CHU_MDH = 'Mã dài hạn';\n"
+              + "\n".join(js[z:z2 + 1] + js[a:b + 1])
+              + "\n(async () => { await mdXong(1, {goi_thu: false, het_hanmuc: true, loi_goi_thu: 'API Error: 429 rate limit'});"
+              "await mdXong(1, {goi_thu: false, loi_goi_thu: 'lỗi khác'}); await mdXong(1, {goi_thu: false, giu_ma_cu: true});"
+              "console.log(JSON.stringify(ra)); })();")
+        with tempfile.TemporaryDirectory() as tm:
+            p = Path(tm) / "y38g.js"
+            p.write_text(ma, encoding="utf-8")
+            r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ra = json.loads(r.stdout)
+        self.assertEqual(ra[0], KiemY38e.A[15])                                     # A15, không hiện lời gốc tiếng Anh
+        self.assertEqual(ra[1], "Đã lưu mã dài hạn nhưng gọi thử chưa được: lỗi khác.")   # ca khác giữ nguyên
+        self.assertNotIn("429", "".join(ra))
+
+
 TU_ANH = __import__("re").compile(r"(?<![\w-])[Aa]nh(?![\w-])")
 # QĐ221: lời gửi AI ở Trò chuyện AI cũng xưng "bạn" — không còn ngoại lệ nào
 CHO_PHEP_PY = set()
