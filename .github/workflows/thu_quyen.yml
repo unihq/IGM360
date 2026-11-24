@@ -1,0 +1,17 @@
+name: Thử quyền tệp luồng (Y44h lượt 3)
+
+# Nhánh thử, không gộp (CDA KT-Y44d mục 11.7 điều (1)): tệp luồng do nhánh tự thêm chỉ xin packages: read.
+# Đọc quyền thật GitHub cấp ở mục "GITHUB_TOKEN Permissions" của bước "Set up job". Không thử quyền ghi.
+on:
+  push:
+    branches: ["thu/quyen-tepluong"]
+
+permissions:
+  packages: read
+
+jobs:
+  xem_quyen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ghi chú
+        run: echo "Xem mục GITHUB_TOKEN Permissions ở bước Set up job"
