@@ -194,6 +194,64 @@ class KiemQuetChung(NenKho):
         self.assertEqual((ma, ra.strip()), (0, "KẾT QUẢ: ĐẠT 0"))
 
 
+class KiemSuaY44c(NenKho):
+    """CDA KT-Y44c: N1 so từ điểm rẽ nhánh (main đi trước không chặn nhầm), N2 số bài lấy từ dòng tổng kết cuối."""
+
+    def main_di_truoc(self):   # sau khi rẽ nhánh, main có thêm 01 commit chạm tệp bị chặn và 01 địa chỉ IP công cộng
+        self.git("switch", "-q", "main")
+        ip = ".".join(["8", "8", "4", "4"])
+        self.ghi("Dockerfile", MA_GOC["Dockerfile"] + "# main doi\n")
+        self.ghi("maychu/dulieu/ketnoi.py", MA_GOC["maychu/dulieu/ketnoi.py"] + f'MAY = "{ip}"\n')
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "main di truoc")
+        self.git("switch", "-q", "sualoi/tong")
+
+    def test_n1_main_di_truoc_khong_chan_nham(self):
+        self.ban_hop_le()
+        self.ghi("maychu/hethong/mohinh/tinh.py", MA_GOC["maychu/hethong/mohinh/tinh.py"].replace("return a + b", "return int(a) + int(b)"))
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "sua")
+        self.main_di_truoc()
+        ma, ra = self.chay("kiem_sualoi.py", "sualoi/tong")
+        self.assertEqual((ma, ra.strip().splitlines()[-1]), (0, "KẾT QUẢ: ĐẠT 0"), ra)
+        ma, ra = self.chay("quet_chung.py")
+        self.assertEqual((ma, ra.strip()), (0, "KẾT QUẢ: ĐẠT 0"), ra)
+
+    def test_n1_van_chan_phan_doi_cua_nhanh(self):
+        self.ban_hop_le()
+        self.ghi("requirements.txt", MA_GOC["requirements.txt"] + "# doi\n")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "sua")
+        self.main_di_truoc()
+        ma, ra = self.chay("kiem_sualoi.py", "sualoi/tong")
+        self.assertEqual(ma, 1, ra)
+        self.assertIn("Luật 11: chạm requirements.txt", ra)
+        self.assertNotIn("Dockerfile", ra)                                       # phần đổi của main không tính vào nhánh
+
+    def test_n2_lay_dong_tong_ket_cuoi(self):
+        sys.path.insert(0, str(CUA))
+        self.addCleanup(sys.path.remove, str(CUA))
+        import kiem_sualoi
+        gia = "Ran 9999 tests in 0s OK (skipped=0) Ran 11 tests in 1.2s OK (skipped=2)"
+        self.assertEqual(kiem_sualoi.doc_so_bai(gia), (11, 2))
+        self.assertEqual(kiem_sualoi.doc_so_bai("Ran 11 tests in 1s OK OK (skipped=7)"), (11, 7))
+        self.assertEqual(kiem_sualoi.doc_so_bai("Ran 5 tests in 1s OK (skipped=3) Ran 11 tests in 1s OK"), (11, 0))
+        self.assertEqual(kiem_sualoi.doc_so_bai(""), (None, 0))
+        self.ban_hop_le()
+        ma, ra = self.chay("kiem_sualoi.py", "sualoi/tong", "--kiem-goc", "Ran 10 tests in 1s OK",
+                           "--kiem-dau", "Ran 99 tests in 0s OK Ran 9 tests in 1s OK")
+        self.assertEqual(ma, 1, ra)
+        self.assertIn("Luật 18: số bài chạy 9 ít hơn main 10", ra)
+
+    def test_n2_tugop_loc_tieu_de_lay_cuoi(self):
+        lenh = (GOC / ".github/workflows/tugop.yml").read_text(encoding="utf-8")
+        self.assertIn('select(.title == "Ket qua bai kiem")', lenh)
+        self.assertIn("| last // empty", lenh)
+        self.assertNotIn("grep -m1", lenh)
+        dg = (GOC / ".github/workflows/dongimage.yml").read_text(encoding="utf-8")
+        self.assertIn("::notice title=Ket qua bai kiem::", dg)                    # đúng tiêu đề bước "Chạy bài kiểm" ghi
+
+
 class KiemTepLuongTuGop(unittest.TestCase):
     def test_tugop_chay_ban_main_va_khong_chay_ma_nhanh(self):
         import yaml

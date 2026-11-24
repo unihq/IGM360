@@ -32,7 +32,7 @@ def ip_nhay_cam(chu: str) -> bool:
 
 def quet(goc: str, dau: str) -> list[str]:
     loi, duong, so = [], "", 0
-    out = subprocess.run(["git", "diff", "-U0", "--no-color", goc, dau], capture_output=True, text=True,
+    out = subprocess.run(["git", "diff", "-U0", "--no-color", f"{goc}...{dau}"], capture_output=True, text=True,   # KT-Y44c N1
                          encoding="utf-8", errors="replace", check=True).stdout
     for d in out.splitlines():
         if d.startswith("+++ "):

@@ -1,7 +1,8 @@
 """Cửa chặn tự gộp bản sửa lỗi (QĐ259, QĐ266; danh sách chặn do CDA lập, KT-Y44: 14 đường dẫn + 06 luật).
 
 Chạy trên máy GitHub bằng tệp luồng tugop.yml (bản của main, không chạy mã của nhánh sửa lỗi): chỉ đọc phần đổi giữa
-`--goc` (main) và `--dau` (nhánh sualoi/*). Có vi phạm thì in từng dòng "Luật …" và trả mã 1: không tự gộp, chuyển loại 2
+`--goc` (main) và `--dau` (nhánh sualoi/*), tính từ điểm rẽ nhánh (`goc...dau`, CDA KT-Y44c N1: main đi trước nhánh
+không bị chặn nhầm); số bản, mục THAYDOI vẫn so với main mới nhất. Có vi phạm thì in từng dòng "Luật …" và trả mã 1: không tự gộp, chuyển loại 2
 (CDA, CDO soát, anh duyệt). Chỉ dùng thư viện chuẩn Python.
 
 Luật (số theo Phần 11):
@@ -57,7 +58,7 @@ def dong_doi(goc: str, dau: str, duong: str) -> tuple[list[tuple[int, str]], lis
     """(dòng thêm ở bản đầu, dòng bớt ở bản gốc), mỗi dòng (số dòng, chữ)."""
     them, bot = [], []
     so_goc = so_dau = 0
-    for d in git("diff", "-U0", "--no-color", goc, dau, "--", duong).splitlines():
+    for d in git("diff", "-U0", "--no-color", f"{goc}...{dau}", "--", duong).splitlines():
         m = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", d)
         if m:
             so_goc, so_dau = int(m.group(1)), int(m.group(2))
@@ -124,7 +125,7 @@ def kiem(goc: str, dau: str, nhanh: str, so_bai: dict | None = None) -> list[str
     if not nhanh.startswith("sualoi/"):
         loi.append(f"Nhánh: chỉ nhánh sualoi/* được tự gộp (đang là {nhanh})")
     tep_doi = []
-    for d in git("diff", "--name-status", "-M", goc, dau).splitlines():
+    for d in git("diff", "--name-status", "-M", f"{goc}...{dau}").splitlines():
         p = d.split("\t")
         trang, duong = p[0], p[1:]
         tep_doi.append((trang[0], duong[-1]))
@@ -212,10 +213,13 @@ def kiem(goc: str, dau: str, nhanh: str, so_bai: dict | None = None) -> list[str
 
 
 def doc_so_bai(chu: str | None) -> tuple[int | None, int]:
-    """Từ dòng chú thích CI "Ran N tests in …s OK (skipped=K)"."""
-    m = re.search(r"Ran (\d+) tests?", chu or "")
-    k = re.search(r"skipped=(\d+)", chu or "")
-    return (int(m.group(1)) if m else None), (int(k.group(1)) if k else 0)
+    """Từ chú thích CI "Ran N tests in …s OK (skipped=K)". CDA KT-Y44c N2: lấy dòng "Ran" CUỐI (dòng tổng kết thật của
+    unittest in sau cùng; bài kiểm in sẵn 01 dòng "Ran …" ở đầu không giả được), số bỏ qua chỉ đọc sau dòng đó."""
+    cac = list(re.finditer(r"Ran (\d+) tests?", chu or ""))
+    if not cac:
+        return None, 0
+    k = re.search(r"skipped=(\d+)", (chu or "")[cac[-1].end():])
+    return int(cac[-1].group(1)), (int(k.group(1)) if k else 0)
 
 
 def main() -> int:

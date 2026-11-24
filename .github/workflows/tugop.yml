@@ -54,8 +54,10 @@ jobs:
         shell: bash
         run: |
           so_bai() {   # chú thích "Ran N tests … OK (skipped=K)" của việc kiemthu trên 01 commit
+            # CDA KT-Y44c N2: chỉ chú thích tiêu đề "Ket qua bai kiem" (bước "Chạy bài kiểm" ghi), lấy chú thích CUỐI;
+            # kiem_sualoi.py lấy dòng "Ran" cuối trong đó. Bài kiểm tự in ::notice:: hay dòng "Ran …" không giả được số.
             id="$(gh api "repos/$GITHUB_REPOSITORY/commits/$1/check-runs" --jq '[.check_runs[] | select(.name == "kiemthu" and .conclusion == "success")][0].id')"
-            [ -n "$id" ] && [ "$id" != "null" ] && gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" --jq '.[].message' | grep -m1 -o 'Ran [0-9]* tests.*' || true
+            [ -n "$id" ] && [ "$id" != "null" ] && gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" --jq '[.[] | select(.title == "Ket qua bai kiem") | .message] | last // empty' | tr '\n' ' ' || true
           }
           { echo "KIEM_GOC=$(so_bai "$GOC")"; echo "KIEM_DAU=$(so_bai "$DAU")"; } >> "$GITHUB_ENV"
 
