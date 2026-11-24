@@ -28,6 +28,7 @@ const phan = {textContent: ''}, $ = () => phan;
 const tieuDangCn = () => {}, ve = () => {}, veQuayVe = () => {}, moHopDrive = () => {};
 const location = {reload: () => { taiLai++; }};
 const dongHo = {now: () => T};
+const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);
 const setTimeout = (f, ms) => { hen.push({luc: T + ms, f}); };
 const fetch = async () => ({json: async () => { hoi++; return {phienban: KICH_BAN(hoi)}; }});
 const api = async () => ({dang_sao: 'tai'});
@@ -35,10 +36,10 @@ const api = async () => ({dang_sao: 'tai'});
 CHAY_JS = r"""
 (async () => {
   choCapNhat('0.8.0', '0.8.1');
-  for (let i = 0; i < 400 && hen.length; i++) {
+  for (let i = 0; i < 2000 && hen.length; i++) {
     hen.sort((a, b) => a.luc - b.luc); const h = hen.shift(); T = h.luc; await h.f();
   }
-  console.log(JSON.stringify({hoi, taiLai, cn: S.cn, phut: Math.round(T / 60e3)}));
+  console.log(JSON.stringify({hoi, taiLai, cn: S.cn, phut: Math.round(T / 60e3), lydo: phan.textContent}));
 })().catch(e => console.log(JSON.stringify({loi: String(e)})));
 """
 
@@ -68,8 +69,16 @@ class KiemChoCapNhat(unittest.TestCase):
     def test_qua_gio_thi_bao_hong(self):
         kq = self.chay("n => '0.8.0'")                                # không bao giờ lên bản mới
         self.assertEqual((kq["taiLai"], kq["cn"]), (0, "hong"))
-        self.assertGreater(kq["hoi"], 100)                            # hỏi suốt 15 phút (mỗi 05 giây), không dừng sau 01 lần
-        self.assertEqual(kq["phut"], 15)
+        self.assertGreater(kq["hoi"], 400)                            # hỏi suốt 35 phút (mỗi 05 giây), không dừng sau 01 lần
+        self.assertEqual(kq["phut"], 35)                              # QĐ255 điểm 1: chờ 35 phút
+        self.assertEqual(kq["lydo"], "Lý do: sau 35 phút máy chủ vẫn chạy bản 0.8.0. Phần mềm vẫn chạy bình thường bằng bản này.")
+
+    def test_so_phut_va_so_ban_theo_bien(self):
+        """QĐ255 điểm 1, 2: số phút, số bản không viết cứng; trang không còn ngưỡng 60 phút riêng (máy chủ trả cờ treo)."""
+        js = (GD / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn("sau 35 phút", js)
+        self.assertNotIn("60 * 60e3", js)
+        self.assertIn("!t.treo", js)
 
     def test_khong_con_khai_bao_nam_trong_chu_thich(self):
         js = (GD / "app.js").read_text(encoding="utf-8")
@@ -118,7 +127,9 @@ class KiemTheTienDo(unittest.TestCase):
         chay = (f"const td = {json.dumps(td, ensure_ascii=False)};\n"
                 f"const o = {{...{json.dumps(o, ensure_ascii=False)}, bay: Date.parse('{T0}') + {giay} * 1000}};\n"
                 "console.log(JSON.stringify({html: htmlTienDo(td, o), r: tinhTienDo(td, o.bay)}));\n")
-        return self.node(_ma_the() + nen + chay)
+        kq = self.node(_ma_the() + nen + chay)
+        self.assertNotIn("undefined", kq["html"])                       # Y41c: chữ thiếu (khoá TD8 bị nuốt vào chú thích)
+        return kq
 
     def test_dang_chay_buoc_2_so_do_that(self):
         k = self.the(_td("chup", {"o_trong": 0, "chup": 2}, chi_tiet={"da": 4, "tong": 7}), 8, cu="0.2.0")
@@ -135,7 +146,7 @@ class KiemTheTienDo(unittest.TestCase):
         h = k["html"]
         self.assertIn("<b>Bước 5/8:</b> Tải gói cài (ước tính)", h)
         self.assertIn("5. Tải gói cài</span><span class=\"td8-m\">ước tính", h)
-        self.assertIn("3. Bản sao Drive</span><span class=\"td8-m\"></span>", h)   # Drive chưa nối: bỏ qua, % cộng ngay
+        self.assertIn("3. Bản sao Drive</span><span class=\"td8-m\">chưa nối Drive", h)   # Drive chưa nối: bỏ qua, % cộng ngay (QĐ255 điểm 3)
         self.assertFalse(k["r"]["cham"])
 
     def test_lau_hon_uoc_tinh(self):
@@ -178,7 +189,41 @@ class KiemTheTienDo(unittest.TestCase):
                     "Trang tự tải lại sau 03 giây.", ">100%<", "8. Kiểm sau cập nhật</span><span class=\"td8-m\">00:06",
                     "5. Tải gói cài</span><span class=\"td8-m\">xong"):
             self.assertIn(chu, h)
-        self.assertEqual(h.count("td8-dong xong"), 8)
+        self.assertEqual(h.count("td8-dong xong"), 7)                     # bước 3: chưa nối Drive (QĐ255 điểm 3)
+
+    def test_drive_chua_noi_va_chua_len_het(self):
+        """QĐ255 điểm 3: bước 3 bỏ qua dùng circle-minus xám; Drive chưa nối / Vẫn cập nhật khi quá giờ."""
+        moc = {"o_trong": 0, "chup": 2, "gui": 11, "tai": 12}
+        h = self.the(_td("tai", moc), 100)["html"]
+        self.assertIn('lucide-circle-minus', h)
+        self.assertIn('<div class="td8-dong cho">', h.split("3. Bản sao Drive")[0][-1200:])
+        self.assertIn("3. Bản sao Drive</span><span class=\"td8-m\">chưa nối Drive", h)
+        moc2 = {"o_trong": 0, "chup": 2, "drive": 11, "gui": 640, "tai": 641}
+        h2 = self.the(_td("tai", moc2, drive={"da": 2, "tong": 5}), 700)["html"]
+        self.assertIn("3. Bản sao Drive</span><span class=\"td8-m\">chưa lên hết", h2)
+        h3 = self.the(_td("tai", moc2, drive={"da": 5, "tong": 5}), 700)["html"]
+        self.assertIn("3. Bản sao Drive</span><span class=\"td8-m\">10:29", h3)    # lên đủ: ghi thời gian
+        self.assertNotIn("lucide-circle-minus", h3)
+
+    def test_loi_buoc_4_ly_do_ngan_hoac_bo_ngoac(self):
+        """QĐ255 điểm 4: hết lặp chữ "Gửi lệnh cập nhật chưa được (Chưa gửi được lệnh cập nhật)"."""
+        moc = {"o_trong": 0, "chup": 2, "gui": 11}
+        h = self.the(_td("gui", moc, loi="gui", loi_ct="máy chủ cập nhật không trả lời", loi_luc=T0), 20)["html"]
+        self.assertIn("<b>Dừng ở bước 4/8:</b> Gửi lệnh cập nhật chưa được (máy chủ cập nhật không trả lời)", h)
+        h2 = self.the(_td("gui", moc, loi="gui", loi_luc=T0), 20)["html"]
+        self.assertIn("<b>Dừng ở bước 4/8:</b> Gửi lệnh cập nhật chưa được</div>", h2)
+
+    def test_xong_ma_kiem_chua_dat(self):
+        """QĐ255 điểm 5: "Xong 08/08 bước" giữ xanh lá; phần kiểm sau cập nhật chưa đạt đỏ + circle-alert."""
+        td = _td("xong", {"o_trong": 0, "chup": 2, "gui": 11, "tai": 12, "nang": 230, "kiem": 352},
+                 xong="2026-11-24T10:05:58+07:00")
+        h = self.the(td, 999, kiem={"chu": "05/06 · lịch chạy nền chưa bật", "dat": False})["html"]
+        self.assertIn('<div class="td-buoc" style="color:#258832"><b>Xong 08/08 bước</b> · <span style="color:#E22E28">', h)
+        do = h.split('<span style="color:#E22E28">', 1)[1].split("</span>", 1)[0]
+        self.assertIn("lucide-circle-alert", do)
+        self.assertIn("Kiểm sau cập nhật: 05/06 · lịch chạy nền chưa bật", do)
+        h2 = self.the(td, 999, kiem={"chu": "06/06 đạt", "dat": True})["html"]
+        self.assertNotIn('<span style="color:#E22E28">', h2)
 
     def luong(self, kich_ban: str) -> dict:
         """Chạy choCapNhat với /suckhoe, /api/capnhat theo kịch bản (n: lần hỏi thứ n; null = máy chủ không trả lời)."""
@@ -402,6 +447,35 @@ class KiemTienDo(NenTD):
             tiendo.sang("gui", self.dl)
             tiendo.xong("0.8.9", self.dl)
         self.assertIsNone(tiendo.doc(self.dl))
+
+    def test_co_treo_tu_may_chu(self):
+        """QĐ255 điểm 2 (CDA N5-B): hien() trả cờ treo theo cùng ngưỡng 02 giờ của máy chủ."""
+        from datetime import datetime, timedelta
+        from maychu.dulieu.saoluu import MUIGIO_VN
+        from maychu.hethong import tiendo
+        tiendo.bat_dau("0.8.0", "0.8.9", tiendo._bay(), self.dl)
+        self.assertFalse(tiendo.hien(self.dl)["treo"])
+        cu = (datetime.now(MUIGIO_VN) - timedelta(seconds=tiendo.TOI_DA_LUOT_GIAY + 60)).isoformat(timespec="seconds")
+        tiendo.bat_dau("0.8.0", "0.8.9", cu, self.dl)
+        self.assertTrue(tiendo.hien(self.dl)["treo"])
+
+    def test_loi_gui_lenh_ghi_ly_do_ngan(self):
+        """QĐ255 điểm 4: thiếu mã cập nhật / máy chủ cập nhật không trả lời."""
+        import httpx
+        from maychu.dulieu import maso
+        from maychu.hethong import capnhat, tiendo
+        for gia, ngan in ((None, "thiếu mã cập nhật"), (httpx.ConnectError("giả"), "máy chủ cập nhật không trả lời")):
+            tiendo._NHO.update(td=None, ghi_luc=0.0)
+            capnhat._SAO.update(buoc=None, loi=None)
+            env = {"WATCHTOWER_TOKEN": ""} if gia is None else {"WATCHTOWER_TOKEN": "khoa-gia-kiem-thu"}
+            with mock.patch.dict(os.environ, env),                     mock.patch.object(capnhat, "kiem_tra", return_value={"co_ban_moi": True, "ban_moi": "0.8.9"}),                     mock.patch("maychu.ketnoi.drive.dang_noi", return_value=False),                     mock.patch("httpx.post", side_effect=gia):
+                capnhat.yeu_cau(maso.tao(), "ngay", thumuc=self.dl, van_capnhat=True)
+                het = time.time() + 30
+                while not capnhat._SAO["loi"] and time.time() < het:
+                    time.sleep(0.1)
+                time.sleep(0.3)
+            td = tiendo.doc(self.dl)
+            self.assertEqual((td["buoc"], td["loi"], td.get("loi_ct")), ("gui", "gui", ngan))
 
     def test_api_tra_tien_do(self):
         from maychu.hethong import tiendo

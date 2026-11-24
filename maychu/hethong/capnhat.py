@@ -262,7 +262,7 @@ def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> No
         r = cap_nhat_ngay(nguoi_id, thumuc)
         if "loi" in r:
             _SAO.update(loi=r["loi"])
-            tiendo.loi("gui", thumuc, r["loi"])
+            tiendo.loi("gui", thumuc, r.get("ngan"))   # QĐ255 điểm 4: lý do ngắn, không có thì bỏ ngoặc
         else:
             tiendo.sang("tai", thumuc)   # bước 5: watchtower kéo gói (ước tính, app không đo được)
     finally:
@@ -332,13 +332,13 @@ NGHI_DAY_GIAY = 15
 def cap_nhat_ngay(nguoi_id: str, thumuc=None) -> dict:
     ma = os.environ.get("WATCHTOWER_TOKEN", "")
     if not ma:
-        return {"loi": "Máy chủ chưa có mã cập nhật"}
+        return {"loi": "Máy chủ chưa có mã cập nhật", "ngan": "thiếu mã cập nhật"}   # ngan: lý do ngắn ở thẻ tiến độ (QĐ255 điểm 4)
     try:
         httpx.post("http://watchtower:8080/v1/update", headers={"Authorization": f"Bearer {ma}"}, timeout=5)
     except httpx.TimeoutException:
         pass  # watchtower đang kéo bản mới và khởi động lại phần mềm: bình thường
     except httpx.HTTPError as loi:
         _ghi_f04("capnhat_ngay", ban_dang_chay(), "loi", type(loi).__name__, nguoi_id, thumuc)
-        return {"loi": "Chưa gửi được lệnh cập nhật"}
+        return {"loi": "Chưa gửi được lệnh cập nhật", "ngan": "máy chủ cập nhật không trả lời"}
     _ghi_f04("capnhat_ngay", ban_dang_chay(), "dat", None, nguoi_id, thumuc)
     return {"ok": True}

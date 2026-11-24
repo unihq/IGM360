@@ -5,12 +5,12 @@ Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử
 
 ## 0.8.1
 Tóm tắt: Tiến độ cập nhật theo 08 bước
-- Thẻ Đang cập nhật hiện % và 08 bước: kiểm ổ trống, chụp dữ liệu, bản sao Drive, gửi lệnh cập nhật, tải gói cài, thay bản chạy, nâng dữ liệu, kiểm sau cập nhật; ghi đã chạy bao lâu, còn khoảng bao lâu.
-- Bước tải gói cài, thay bản chạy, nâng dữ liệu ghi rõ "ước tính", tính theo thời gian các lần cập nhật trước.
-- Chưa gửi lệnh cập nhật mà gặp lỗi thì thẻ ghi rõ dừng ở bước nào, bản đang dùng và dữ liệu giữ nguyên, có nút Thử lại.
+- Thẻ Đang cập nhật hiện % và 08 bước, đã chạy bao lâu, còn khoảng bao lâu.
+- Bước 5–7 ghi rõ "ước tính", tính theo các lần cập nhật trước.
+- Lỗi trước khi gửi lệnh cập nhật: thẻ ghi dừng ở bước nào, bản đang dùng và dữ liệu giữ nguyên, có nút Thử lại.
 - Cập nhật xong, thẻ hiện kết quả kiểm sau cập nhật rồi trang tự tải lại sau 03 giây.
-- Sửa lỗi thẻ Đang cập nhật quay mãi sau khi đã lên bản mới: trang hỏi lại máy chủ đều đặn và tự tải lại khi có bản mới.
-- Chờ tải gói cài tối đa 30 phút (trước là 10 phút) để mạng chậm vẫn cập nhật được.
+- Sửa lỗi thẻ Đang cập nhật quay mãi dù đã lên bản mới; nay trang tự tải lại khi bản mới chạy.
+- Chờ tải gói cài tối đa 30 phút (trước 10 phút), mạng chậm vẫn cập nhật được.
 
 ## 0.8.0
 Tóm tắt: Nền dữ liệu bản 4

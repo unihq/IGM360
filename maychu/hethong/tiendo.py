@@ -229,7 +229,10 @@ def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | 
     buoc = td.get("buoc")
     bay = (bay_gio or datetime.now(MUIGIO_VN)).isoformat(timespec="seconds")
     chung = {"moc": td.get("moc", {}), "du_kien": du, "tu": td.get("tu"), "den": td.get("den"), "bat_dau": td.get("bat_dau"),
-             "luc": bay}   # luc: giờ máy chủ, trang tự tính % giữa 02 lần hỏi và lúc máy chủ đang thay bản (QĐ253)
+             "luc": bay,   # luc: giờ máy chủ, trang tự tính % giữa 02 lần hỏi và lúc máy chủ đang thay bản (QĐ253)
+             "drive": (td.get("chi_tiet") or {}).get("drive"),   # QĐ255 điểm 3: số tệp đã lên Drive / tổng, kể cả khi đã qua bước 3
+             # QĐ255 điểm 2 (CDA N5-B): máy chủ là nguồn duy nhất của ngưỡng treo; trang chỉ đọc cờ này
+             "treo": not td.get("xong") and (_giay(td.get("bat_dau"), bay) or 0) > TOI_DA_LUOT_GIAY}
     if td.get("xong"):
         return {"buoc": "xong", "so_buoc": len(BUOC), "phan_tram": 100, "uoc_tinh": False, "xong": td["xong"], **chung}
     vi_tri = BUOC.index(buoc) if buoc in BUOC else 0
