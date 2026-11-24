@@ -116,10 +116,12 @@ def _bay() -> str:
 
 # ---------------- Lớp 1: ổ trống ----------------
 def chu_dungluong(so_byte: float) -> str:
+    """Cách ghi số đã duyệt: chấm ngăn nghìn, phẩy thập phân, bỏ số 0 thừa (1,2 GB · 1.250 GB · 819 MB · 1.023 MB)."""
     gb = so_byte / 1024 ** 3
     if gb >= 1:
-        return f"{gb:.1f}".replace(".", ",").replace(",0", "") + " GB"
-    return f"{round(so_byte / 1024 ** 2)} MB"
+        nguyen, thap = f"{gb:.1f}".split(".")
+        return f"{int(nguyen):,}".replace(",", ".") + ("," + thap if thap != "0" else "") + " GB"
+    return f"{round(so_byte / 1024 ** 2):,}".replace(",", ".") + " MB"
 
 
 def o_trong(thumuc: Path | None = None) -> dict:

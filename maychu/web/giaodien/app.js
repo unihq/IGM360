@@ -503,9 +503,10 @@ const CA = {tieu: 'Công cụ AI', gat: 'Tự nâng mỗi ngày',
   tat: 'Tự nâng đang tắt. Hãng có bản mới thì hiện ở đây; bạn bấm Nâng công cụ AI để nâng.',
   tamDung: b => 'Tự nâng tạm dừng: bạn đã quay về bản ' + b + ', công cụ AI dùng bản trong gói của bản này.',
   tamDungPhu: 'Bật lại: gạt công tắc Tự nâng mỗi ngày, hoặc cập nhật lên bản mới.',
-  hoan: (t, b, g, y) => 'Hoãn nâng ' + t + ' ' + b + ': gói ' + g + ' đang hết hạn mức nên chưa kiểm thử được. Vẫn dùng bản ' + y
-    + '; lượt kiểm 03:00 ngày mai thử lại.',   // QĐ307 dòng 20 (QĐ306): dòng xám, không chuông
+  hoan: (t, b, g, y, n) => 'Hoãn nâng ' + t + ' ' + b + ': gói ' + g + ' đang hết hạn mức nên chưa kiểm thử được. Vẫn dùng bản ' + y
+    + '; lượt kiểm 03:00 ' + n + ' thử lại.',   // QĐ307 dòng 20 (QĐ306): dòng xám, không chuông; n theo QĐ308 điểm 11
   goiTen: {claude: 'Claude', chatgpt: 'ChatGPT'}, homNay: 'hôm nay', ngayMai: 'ngày mai',
+  chuaNang: 'Chưa nâng',   // QĐ308 điểm 4: cột "Nâng gần nhất" khi chưa nâng lần nào
   mau: {dat: '#258832', xem: '#8F5F00', xam: '#646A73', xanh: '#1456F0'}};
 ICON['circle-pause'] = ICON['circle-pause'] || svgLucide('circle-pause', ['<circle cx="12" cy="12" r="10" />',
   '<line x1="10" x2="10" y1="15" y2="9" />', '<line x1="14" x2="14" y1="15" y2="9" />']);
@@ -516,9 +517,14 @@ const caCao = (a, b) => { const x = caSo(a), y = caSo(b); for (let i = 0; i < 3;
 const caBan = (so, goi) => goi ? (so ? so + ' trong gói' : 'trong gói') : so;   // QĐ307 dòng 10, 11, 15b: bản trong gói
 function caLuc(t, bay) {   // "10:00 hôm nay" · "10:00 ngày mai" · ngày khác: "10:00 ngày 23/11/2026"
   const v = caVn(t), n = v.slice(0, 10);
-  const ngayChu = n === caVn(bay).slice(0, 10) ? CA.homNay : n === caVn(bay + 864e5).slice(0, 10) ? CA.ngayMai : 'ngày ' + ngay(v);
+  const ngayChu = n === caVn(bay).slice(0, 10) ? CA.homNay : n === caVn(bay + 864e5).slice(0, 10) ? CA.ngayMai
+    : 'ngày ' + ngay(v).slice(0, n.slice(0, 4) === caVn(bay).slice(0, 4) ? 5 : 10);   // cùng năm thì bỏ năm
   return (v.slice(11, 16) + ' ' + ngayChu).replace(/ /g, '\u00a0');   // giờ và ngày không tách khi xuống dòng
 }
+const caCum = s => cum(s).replace(/(ngày|hôm) (mai|nay)|kiểm thử( đạt)?/g, x => x.replace(/ /g, '&nbsp;'));
+const caKiemToi = (t, gk) => {   // lượt kiểm 03:00 kế tiếp sau lúc t (ms)
+  const v = caVn(t), moc = Date.parse(v.slice(0, 10) + 'T' + hai(gk) + ':00:00+07:00');
+  return Date.parse(t) < moc ? moc : moc + 864e5; };
 const caHomNay = (t, bay) => !!t && caVn(t).slice(0, 10) === caVn(bay).slice(0, 10);
 function caMoi(x) {   // bản mới của hãng còn nâng được (chưa hỏng, chưa về tay)
   const h = x.hang; return !!(h && h.ban && caCao(h.ban, x.ban) && !(x.hong || []).includes(h.ban)) ? h : null;
@@ -529,7 +535,7 @@ function caDich(c) {   // gói nút "Nâng công cụ AI" nâng (gói đầu ti�
 }
 function htmlCongCu(c, bay) {
   const dong = (mau, ico, chu, phu) => '<span class="ks"' + (mau ? ' style="color:' + mau + '"' : '') + '>' + icoMau(ICON[ico], mau || '#1F2329', 14)
-    + '<span>' + cum(chu) + '</span></span>' + (phu ? '<div class="t12 phu" style="margin-top:4px">' + cum(phu) + '</div>' : '');
+    + '<span>' + caCum(chu) + '</span></span>' + (phu ? '<div class="t12 phu" style="margin-top:4px">' + caCum(phu) + '</div>' : '');
   const bat = c.bat && !c.tam_dung, dn = c.dang_nang;
   let h = '<div class="dong" style="gap:8px;align-items:center">' + ICON.wrench + '<span class="t16 b7 f1">' + CA.tieu + '</span><span class="t13">'
     + CA.gat + '</span><button class="gat-o nut-gat" data-cagat role="switch" aria-checked="' + bat + '" aria-label="' + CA.gat + '">'
@@ -545,39 +551,44 @@ function htmlCongCu(c, bay) {
       else if ((x.hong || []).includes(hg.ban)) o3 = '<span class="so" style="color:' + CA.mau.xem + '">' + esc(hg.ban) + '</span><div class="t12" style="color:' + CA.mau.xem + '">' + CA.chuaDat + '</div>';
       else o3 = '<span class="so" style="color:' + CA.mau.xanh + '">' + esc(hg.ban) + '</span>' + (hg.ra_luc && caHomNay(hg.ra_luc, bay) ? '<div class="t12 phu">' + cum(CA.raLuc(caLuc(hg.ra_luc, bay))) + '</div>' : '');
     }
-    const coVe = !x.trong_goi && !dn && !c.tam_dung;
+    const coVe = !x.trong_goi && !dn && !c.tam_dung && !c.chan;
     h += '<div class="cl-hang cl5"><b>' + esc(x.ten) + '</b><span data-l="' + CA.cot[1] + '"><span class="so">' + esc(x.trong_goi ? CA.oGoi(x.ban || '') : x.ban) + '</span>'
-      + (x.truoc ? '<div class="t12 phu">' + cum(CA.truoc(x.truoc)) + '</div>' : '') + '</span><span data-l="' + CA.cot[2] + '">' + o3 + '</span>'
-      + '<span data-l="' + CA.cot[3] + '">' + (gan ? ngay(caVn(gan)) + ' ' + caVn(gan).slice(11, 16) : '–') + '</span><span class="phai">'
+      + (x.truoc || x.truoc_goi ? '<div class="t12 phu">' + cum(CA.truoc(x.truoc || caBan(x.ban_goi, true))) + '</div>' : '')
+      + '</span><span data-l="' + CA.cot[2] + '">' + o3 + '</span>'
+      + '<span data-l="' + CA.cot[3] + '">' + (gan ? ngay(caVn(gan)) + ' ' + caVn(gan).slice(11, 16) : CA.chuaNang) + '</span><span class="phai">'
       + (coVe ? '<button class="btn-chu nho" data-cave="' + esc(x.goi) + '">' + icoMau(ICON['rotate-ccw'], '#1456F0', 14) + CA.ve + '</button>' : '') + '</span></div>';
   });
   // dòng trạng thái (01 dòng): đang nâng > tạm dừng > việc vừa xảy ra hôm nay > tắt > hãng có bản mới > mới nhất
   let tt;
-  const sk = c.goi.map(x => ({x, s: x.su_kien})).filter(o => o.s && caHomNay(o.s.luc, bay)).sort((a, b) => a.s.luc < b.s.luc ? 1 : -1)[0];
+  const sk = c.goi.map(x => ({x, s: x.su_kien})).filter(o => o.s && bay < caKiemToi(o.s.luc, c.gio_kiem ?? 3))
+    .sort((a, b) => a.s.luc < b.s.luc ? 1 : -1)[0];
   const cho = c.goi.map(x => ({x, m: caMoi(x)})).find(o => o.m);
   if (dn) { const x = c.goi.find(g => g.goi === dn.goi) || c.goi[0];
     tt = dong('', 'loader', CA.dang(x.ten, dn.ban || (x.hang || {}).ban), CA.dangPhu(dn.cu ? caBan(dn.cu, dn.cu_goi) : caBan(x.ban, x.trong_goi)))
       + '<div class="td" style="height:8px;margin-top:6px"><div class="tdf chay"></div></div>'; }
   else if (c.tam_dung) tt = dong(CA.mau.xem, 'circle-pause', CA.tamDung(c.tam_dung_ban || ''), CA.tamDungPhu);
+  else if (!c.bat) tt = dong('', 'circle-pause', CA.tat);
   else if (sk) { const {x, s} = sk, y = caBan(s.giu, s.giu_goi), l = caVn(s.luc).slice(11, 16);
     tt = s.loai === 'dat' ? dong(CA.mau.dat, 'circle-check', CA.dat(x.ten, s.ban, l))
       : s.loai === 'hong' ? dong(CA.mau.xem, 'circle-alert', CA.lui(x.ten, s.ban, y), CA.luiPhu(s.ban))
       : s.loai === 've' ? dong('', 'rotate-ccw', CA.daVe(x.ten, y, l, s.ban))
-      : dong(CA.mau.xam, 'clock', CA.hoan(x.ten, s.ban, CA.goiTen[x.goi] || x.ten, y)); }
-  else if (!c.bat) tt = dong('', 'circle-pause', CA.tat);
+      : dong(CA.mau.xam, 'clock', CA.hoan(x.ten, s.ban, CA.goiTen[x.goi] || x.ten, y,
+        +caVn(s.luc).slice(11, 13) < (c.gio_kiem ?? 3) ? CA.homNay : CA.ngayMai)); }
   else if (cho) { const r = Date.parse(cho.m.ra_luc);
     tt = Number.isFinite(r) ? dong('', 'circle-arrow-up', CA.cho(cho.x.ten, cho.m.ban, caLuc(r, bay), caLuc(r + (c.cho_gio || 24) * 3600e3, bay)), CA.choPhu) : ''; }
   else tt = dong(CA.mau.dat, 'circle-check', CA.thuong(hai(c.gio_kiem ?? 3) + ':00 ' + (c.kiem_ngay === caVn(bay).slice(0, 10) ? CA.ngayMai : CA.homNay)));
   const dich = caDich(c);
   const nut = dn ? '<button class="btn khoa" disabled>' + ICON.loader + CA.dangNut + '</button>'
     : dich ? '<button class="btn btn-chinh" data-canang="' + esc(dich.goi) + '">' + icoMau(ICON['circle-arrow-up'], '#FFFFFF', 16) + CA.nut + '</button>'
-    : '<button class="btn khoa" disabled' + (c.tam_dung || c.chan ? '' : ' title="' + CA.nutKhoa + '"') + '>' + icoMau(ICON['circle-arrow-up'], '#646A73', 16) + CA.nut + '</button>';
+    : '<button class="btn khoa" disabled' + (c.chan_chu ? ' title="' + esc(c.chan_chu) + '"' : c.tam_dung || c.chan ? '' : ' title="' + CA.nutKhoa + '"') + '>' + icoMau(ICON['circle-arrow-up'], '#646A73', 16) + CA.nut + '</button>';
   return h + '<div class="cl-chan"><div class="f1">' + tt + '</div>' + nut + '</div>';
 }
 // </CA>
 async function napCongCu() {
   const e = $('#khoi-cl'); if (!e) return;
   try { D.ca = await api('/capnhat/congcu_ai'); } catch (er) { return; }
+  D.ca.chan_chu = D.ca.chan === 'che_do_an_toan' ? CHU_CN.chan   // QĐ308 điểm 10: 0 chữ mới
+    : D.ca.chan === 'dang_cap_nhat' ? TD8.dang(D.ca.cap_nhat_len || (D.capnhat || {}).ban_moi || '') : '';
   e.innerHTML = htmlCongCu(D.ca, Date.now());
   clearTimeout(napCongCu.h);
   if (D.ca.dang_nang && S.tab === 'capnhat' && S.trang === '09') napCongCu.h = setTimeout(napCongCu, 3000);   // đang nâng: xem tiếp
@@ -1119,6 +1130,9 @@ function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 
 const chonDang = noi => noi === 'chat' ? dangChonChat() : (MH.dich && mdLoai(MH.dich)) || {g: nhomChinh(), m: null};
 const CHU_MD = 'Mặc định của nguồn';
 const CHU_VN = 'Việc nền chưa đặt riêng và bot nền sau này dùng dòng này. Trò chuyện AI không theo.';   // Z12 nút (i)
+// Y46 phần D (QĐ265; bản vẽ Z20 dòng 16, 17, chữ anh duyệt QĐ271): mô hình mới theo tài khoản cần công cụ AI cao hơn
+const CHU_D = {can: 'Cần nâng công cụ AI', moi: 'mới',
+  re: (can, dang) => 'Mô hình mới theo tài khoản. Cần Claude · Code từ ' + can + ', bản đang dùng ' + dang + '. Tự dùng được khi công cụ AI nâng xong.'};
 const nhomDangMo = noi => { const c = chonDang(noi); return MH.mo !== null ? MH.mo : c.g ? c.g.nhom : (nhomChinh() || {}).nhom; };
 function dsMhHtml(noi) { const q = MH.tim.trim().toLowerCase(), nh = D.dsmh ? D.dsmh.nhom : [], dang = chonDang(noi), moId = nhomDangMo(noi);
   let h = '', co = 0;
@@ -1139,7 +1153,10 @@ function dsMhHtml(noi) { const q = MH.tim.trim().toLowerCase(), nh = D.dsmh ? D.
     if (g.dang_tai) { h += '<div class="mh-tai">' + icoMau(ICON.loader, '#1456F0', 14) + 'Đang tải danh sách mô hình…</div>'; continue; }
     if (!hien.length) { h += '<div class="mh-tai">Chưa có danh sách: dùng mô hình mặc định của nguồn</div>'; continue; }
     for (const m of hien) { const on = !!dang.m && dang.m.khoa === m.khoa;   // U10b F1: ✓ đúng mô hình nút đang ghi (cả khi chưa ghim)
-      h += '<button type="button" class="mh-dong' + (on ? ' on' : '') + '" data-mhchon="' + esc(m.khoa) + '" title="Bản cụ thể: ' + esc(m.ma) + '"><span class="f1">' + esc(ten(m)) + '</span>'
+      if (m.can_nang) { h += '<div class="mh-dong mh-xam" title="' + esc(CHU_D.re(m.can_nang, m.ban_dang)) + '"><span class="f1">' + esc(ten(m))   // Z20 dòng 16
+        + '<span class="mh-phu">' + CHU_D.can + '</span></span></div>'; continue; }
+      h += '<button type="button" class="mh-dong' + (on ? ' on' : '') + '" data-mhchon="' + esc(m.khoa) + '" title="Bản cụ thể: ' + esc(m.ma) + '"><span class="f1">' + esc(ten(m))
+        + (m.moi ? ' <span class="mh-moi">' + CHU_D.moi + '</span>' : '') + '</span>'   // Z20 dòng 17
         + (on ? icoMau(ICON.check, '#1456F0', 16) : '') + '</button>'; } }
   if (!co) h += q ? '<div class="mh-rong">Không có nguồn hoặc mô hình khớp "' + esc(MH.tim) + '"</div>' : '<div class="mh-rong">Chưa có nguồn AI nào đã kết nối</div>';
   return h; }

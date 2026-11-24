@@ -512,6 +512,7 @@ class KiemDuongGoiKhoi(Nen):
         g = nangcli.xem(self.dl)["goi"][0]
         self.assertEqual((g["ban"], g["trong_goi"], g["hang"]["ban"], g["hang"]["uoc_chu"], g["su_kien"]["loai"]),
                          ("2.1.340", False, "2.1.340", antoan.chu_dungluong(1000), "dat"))
+        self.assertEqual((g["truoc"], g["truoc_goi"], g["ban_goi"]), (None, True, "2.1.331"))   # CDO U36 chỗ 12
 
     def test_nut_nang_chay_nen_va_bi_chan(self):
         goc = nangcli.nang                                                         # luồng nền gọi nang(): trỏ npm, CLI giả
@@ -535,6 +536,37 @@ class KiemDuongGoiKhoi(Nen):
             nangcli._DANG["goi"] = None
             nangcli._KHOA.release()
 
+    def test_a1_dang_nang_tinh_ca_luong_vua_bam(self):
+        """CDA KT-Y46-4 A1: nút vừa bấm, luồng nâng chưa tới bước khóa → dang_nang() đã báo (cập nhật phần mềm chờ)."""
+        cho = threading.Event()
+        t = threading.Thread(target=cho.wait, args=(10,), daemon=True)
+        cu = dict(nangcli._LUONG)
+        nangcli._LUONG.update(t=t, goi="chatgpt")
+        t.start()
+        try:
+            self.assertIsNone(nangcli._DANG["goi"])
+            self.assertEqual(nangcli.dang_nang(), "chatgpt")
+        finally:
+            cho.set()
+            t.join(5)
+            nangcli._LUONG.clear()
+            nangcli._LUONG.update(cu)
+        self.assertIsNone(nangcli.dang_nang())
+
+    def test_a2_ve_ban_truoc_bi_chan_o_che_do_an_toan_va_co_quay_ve(self):
+        """CDA KT-Y46-4 A2 (QĐ218 dòng 37: chế độ an toàn chỉ mở Cập nhật, việc ghi khác bị chặn)."""
+        self.nang(ngay=True)
+        truoc = nangcli.doc_trangthai(self.dl)
+        antoan.CHE_DO["an_toan"] = True
+        self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl), {"kq": "khong_chay", "ly_do": "che_do_an_toan"})
+        antoan.CHE_DO["an_toan"] = False
+        antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.8.4", "ban_truoc": "0.8.3"})
+        self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl), {"kq": "khong_chay", "ly_do": "co_quay_ve"})
+        self.assertEqual(nangcli.doc_trangthai(self.dl), truoc)                   # không ghi gì
+        self.assertEqual(self.f04("ve"), [])
+        antoan.ghi(self.dl, chay_ban_truoc=None)
+        self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl)["kq"], "ve")    # hết chặn: về được
+
     def test_ve_ban_truoc_ghi_su_kien_khong_tu_nang_lai(self):
         self.nang(ngay=True)
         kq = nangcli.ve_ban_truoc("claude", self.dl)
@@ -544,6 +576,13 @@ class KiemDuongGoiKhoi(Nen):
                          ("2.1.331", True, ["2.1.340"], "2.1.331", True))
         self.assertEqual(self.nang(ngay=True)[0]["kq"], "da_hong")               # không tự nâng lại
         self.assertEqual(nangcli.ve_ban_truoc("claude", self.dl), {"kq": "khong_co"})
+
+    def test_qd308_10_xem_tra_ban_dang_cap_nhat_len(self):
+        from maychu.hethong import tiendo
+        with mock.patch.object(nangcli, "chan_vi", return_value="dang_cap_nhat"), \
+                mock.patch.object(tiendo, "doc", return_value={"den": "0.8.4"}):
+            c = nangcli.xem(self.dl)
+        self.assertEqual((c["chan"], c["cap_nhat_len"]), ("dang_cap_nhat", "0.8.4"))
 
     def test_duong_goi_api(self):
         api = (Path(__file__).resolve().parents[2] / "maychu/web/api.py").read_text(encoding="utf-8")
@@ -565,24 +604,25 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         cls.ma = app[app.index("// <CA>"):app.index("// </CA>")]
         cls.app = app
 
-    def ve(self, *ca):
+    def ve(self, *ca, bay=None):
         dau = ("const esc = x => String(x ?? ''), cum = x => String(x);\n"
                "const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);\n"
                "const ngay = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };\n"
                "const icoMau = (s, mau, co) => '<i ' + s + ' m=' + mau + '></i>';\n"
                "const svgLucide = t => t;\n"
                "const ICON = {wrench: 'wrench', loader: 'loader', 'rotate-ccw': 'rotate-ccw', clock: 'clock', 'circle-check': 'circle-check', 'circle-alert': 'circle-alert'};\n")
-        chay = dau + self.ma + f"const bay = Date.parse('{self.BAY}');\nconsole.log(JSON.stringify({json.dumps(list(ca))}.map(c => htmlCongCu(c, bay))));\n"
+        chay = dau + self.ma + f"const bay = Date.parse('{bay or self.BAY}');\nconsole.log(JSON.stringify({json.dumps(list(ca))}.map(c => htmlCongCu(c, bay))));\n"
         ra = subprocess.run(["node", "-e", chay], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(ra.returncode, 0, ra.stderr)
-        h = [x.replace("\u00a0", " ") for x in json.loads(ra.stdout)]   # dấu cách không ngắt: so như dấu cách
+        self.tho = json.loads(ra.stdout)                                          # bản gốc (có dấu cách không ngắt)
+        h = [x.replace("\u00a0", " ").replace("&nbsp;", " ") for x in self.tho]   # so chữ như dấu cách thường
         for x in h:
             self.assertNotIn("undefined", x)
             self.assertNotIn("null", x)
         return h
 
     def chu(self, cau):
-        ra = subprocess.run(["node", "-e", "const hai = n => String(n), ngay = x => x;\nconst svgLucide = t => t, ICON = {};\n" + self.ma
+        ra = subprocess.run(["node", "-e", "const hai = n => String(n), ngay = iso => { const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };\nconst svgLucide = t => t, ICON = {};\n" + self.ma
                              + f"console.log(JSON.stringify({cau}));"], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(ra.returncode, 0, ra.stderr)
         return json.loads(ra.stdout.replace("\u00a0", " "))
@@ -678,12 +718,155 @@ class KiemGiaoDienKhoi(unittest.TestCase):
                       " lượt kiểm 03:00 ngày mai thử lại.", hoan)
         self.assertIn("<i clock m=#646A73>", hoan)                                # dòng xám, icon clock
 
+    def test_cdo_u36_cho_1_ngay_khac_va_khac_nam(self):
+        h = self.chu("[caLuc(Date.parse('2026-11-23T03:00:00Z'), Date.parse('2026-11-24T14:30:00+07:00')),"
+                     " caLuc(Date.parse('2025-12-30T03:00:00Z'), Date.parse('2026-01-02T14:30:00+07:00')),"
+                     " caLuc(Date.parse('2026-11-25T03:00:00Z'), Date.parse('2026-11-24T14:30:00+07:00'))]")
+        self.assertEqual(h, ["10:00 ngày 23/11", "10:00 ngày 30/12/2025", "10:00 ngày mai"])
+
+    def test_cdo_u36_cho_12_ban_truoc_trong_goi(self):
+        h, = self.ve(self.khoi(self.goi(ban="2.1.340", truoc=None, truoc_goi=True)))
+        self.assertIn("bản trước 2.1.300 trong gói", h)
+
+    def test_cdo_u36_l1_l3_khong_ngat_cum(self):
+        sk = {"loai": "hoan", "luc": "2026-11-24T03:01:00+07:00", "ban": "2.1.332", "giu": "2.1.331", "giu_goi": False}
+        self.ve(self.khoi(self.goi(su_kien=sk)), self.khoi(self.goi(ban="2.1.332", su_kien={"loai": "dat", "luc": "2026-11-24T14:20:00+07:00", "ban": "2.1.332"})),
+                self.khoi(self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})))
+        hoan, dat, cho = self.tho
+        self.assertIn("lượt kiểm 03:00 ngày&nbsp;mai thử lại.", hoan)                 # L1
+        self.assertIn("lúc 14:20 · kiểm&nbsp;thử&nbsp;đạt.", dat)                        # L3
+        self.assertIn("10:00 hôm nay", cho)
+        self.assertIn("10:00 ngày mai", cho)
+
+    def test_cdo_u36_l2_nut_chinh_44_diem_anh_tren_dien_thoai(self):
+        html = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
+        self.assertIn("body.dien-thoai #khoi-cl .btn-chu,body.dien-thoai #khoi-cl .nut-gat,body.dien-thoai #khoi-cl .btn{min-height:44px", html)
+        self.assertIn("#khoi-cl .btn-chu,#khoi-cl .nut-gat,#khoi-cl .btn{min-height:44px;min-width:44px;align-items:center}}", html)
+
+    def test_so_ngan_nghin(self):
+        g, m = 1024 ** 3, 1024 ** 2
+        self.assertEqual([antoan.chu_dungluong(x) for x in (1.2 * g, 1.0 * g, 1250.5 * g, 1250 * g, 819 * m, 1023 * m)],
+                         ["1,2 GB", "1 GB", "1.250,5 GB", "1.250 GB", "819 MB", "1.023 MB"])
+
+    def test_qd308_4_chua_nang(self):
+        h, = self.ve(self.khoi(self.goi(nang_luc=None, su_kien=None)))
+        self.assertIn('<span data-l="Nâng gần nhất">Chưa nâng</span>', h)
+
+    def test_qd308_6_dong_ket_qua_hien_toi_luot_kiem_03_gio_ke_tiep(self):
+        sk = {"loai": "dat", "luc": "2026-11-23T14:20:00+07:00", "ban": "2.1.332"}
+        k = self.khoi(self.goi(ban="2.1.332", su_kien=sk), kiem_ngay="2026-11-23")
+        truoc, sau = self.ve(k, bay="2026-11-24T02:59:00+07:00")[0], self.ve(k, bay="2026-11-24T03:01:00+07:00")[0]
+        self.assertIn("Đã nâng Claude · Code lên 2.1.332 lúc 14:20 · kiểm thử đạt.", truoc)   # qua ngày, chưa tới 03:00: còn
+        self.assertNotIn("Đã nâng", sau)                                               # qua lượt 03:00: về dòng 5
+        self.assertIn("Đang dùng bản mới nhất.", sau)
+
+    def test_qd308_10_nut_khoa_re_chuot_cau_san_co(self):
+        moi = self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})
+        at, cn = self.ve(self.khoi(moi, chan="che_do_an_toan", chan_chu="Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn."),
+                         self.khoi(moi, chan="dang_cap_nhat", chan_chu="Đang cập nhật lên 0.8.4"))
+        self.assertIn('<button class="btn khoa" disabled title="Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.">', at)
+        self.assertIn('<button class="btn khoa" disabled title="Đang cập nhật lên 0.8.4">', cn)
+        for h in (at, cn):
+            self.assertNotIn("data-canang", h)
+            self.assertNotIn("data-cave", h)                                        # CDA A2: không về bản trước lúc bị chặn
+        self.assertIn("D.ca.chan_chu = D.ca.chan === 'che_do_an_toan' ? CHU_CN.chan", self.app)
+        self.assertIn(": D.ca.chan === 'dang_cap_nhat' ? TD8.dang(D.ca.cap_nhat_len || (D.capnhat || {}).ban_moi || '') : '';", self.app)
+        self.assertIn("chan: 'Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.',", self.app)   # câu sẵn có QĐ218 dòng 37
+        self.assertIn("dang: b => 'Đang cập nhật lên ' + b,", self.app)                                       # câu sẵn có QĐ249
+
+    def test_qd308_11_hoan_truoc_03_gio_hom_nay(self):
+        sk = lambda luc: {"loai": "hoan", "luc": luc, "ban": "2.1.332", "giu": "2.1.331", "giu_goi": False}
+        som, muon = self.ve(self.khoi(self.goi(su_kien=sk("2026-11-24T02:10:00+07:00"))),
+                            self.khoi(self.goi(su_kien=sk("2026-11-24T03:01:00+07:00"))), bay="2026-11-24T02:30:00+07:00")
+        self.assertIn("Vẫn dùng bản 2.1.331; lượt kiểm 03:00 hôm nay thử lại.", som)
+        self.assertIn("Vẫn dùng bản 2.1.331; lượt kiểm 03:00 ngày mai thử lại.", muon)
+
+    def test_qd308_13_gat_tat_cau_dong_12_hien_ngay(self):
+        h, = self.ve(self.khoi(self.goi(ban="2.1.332", su_kien={"loai": "dat", "luc": "2026-11-24T14:20:00+07:00", "ban": "2.1.332"}), bat=False))
+        self.assertIn("Tự nâng đang tắt. Hãng có bản mới thì hiện ở đây; bạn bấm Nâng công cụ AI để nâng.", h)
+        self.assertNotIn("Đã nâng Claude · Code", h)
+
     def test_icon_dung_net_ban_ve_va_khung(self):
         for net in ('<line x1="10" x2="10" y1="15" y2="9" />', "'m16 12-4-4-4 4', 'M12 16V8'"):
             self.assertIn(net, self.app)
         html = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
         self.assertIn('<div class="the o" data-s="cn:moinhat coban" id="khoi-cl"></div>', html)
         self.assertIn("else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }", self.app)
+
+
+class KiemPhanD(Nen):
+    """Việc 9, phần D (QĐ265; Z20 dòng 16, 17): danh mục mô hình Claude Code theo tài khoản + bản tối thiểu."""
+
+    def setUp(self):
+        super().setUp()
+        from maychu.dulieu import maso
+        from maychu.hethong.mohinh import danhmuc_mohinh, dangnhap_goi
+        self.dm = danhmuc_mohinh
+        self.cfg = self.dl / "claude01"
+        self.enterContext(mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(self.cfg)}))
+        self.nid = maso.tao()
+        cn = ketnoi.mo("Viecnen", self.dl)
+        cn.execute("INSERT INTO nguon_ai (id, ma, ten, loai, uutien, hang, cach_goi, trangthai) VALUES (?, 'goi_claude_01',"
+                   " 'Gói Claude · tài khoản 01', 'goi', 1, 'anthropic', 'cli', 'dung')", (self.nid,))
+        cn.commit()
+        cn.close()
+        self.enterContext(mock.patch.object(dangnhap_goi, "danh_sach", return_value=[
+            {"id": self.nid, "ma": "goi_claude_01", "ten": "Gói Claude · tài khoản 01", "loai": "goi", "hang": "anthropic",
+             "goi": "claude", "da_noi": True, "trangthai": "dung"}]))
+        danhmuc_mohinh._NHO.clear()
+        self.addCleanup(danhmuc_mohinh._NHO.clear)
+
+    def tep(self, ten, surface, models):
+        p = self.cfg / "cache" / "model-catalog" / ten
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"version": 2, "catalog": {"surface": surface, "config": {"id": surface, "models": [
+            {"id": i, "name": i, "section": "main", "min_claude_code_version": v} for i, v in models]}}}), encoding="utf-8")
+
+    def mohinh(self):
+        g = next(x for x in self.dm.danh_sach(self.dl)["nhom"] if x["nhom"] == "goi_claude")
+        return {m["ma"]: {k: m.get(k) for k in ("can_nang", "ban_dang", "moi")} for m in g["mohinh"]}
+
+    def test_doc_danh_muc_cc_them_vao_g08_va_xam_khi_can_ban_cao_hon(self):
+        self.tep("a-cc.json", "cc", [("claude-opus-5-5", "2.1.280"), ("claude-opus-5-6", "2.1.340"), ("claude-sonnet-5-5", None)])
+        self.tep("a-ccd.json", "ccd", [("claude-opus-5-6", "9.9.9"), ("claude-chi-o-ccd", None)])   # có tệp cc: bỏ tệp khác
+        self.assertEqual(self.dm._danhmuc_claude(1), {"claude-opus-5-5": "2.1.280", "claude-opus-5-6": "2.1.340", "claude-sonnet-5-5": None})
+        mh = self.mohinh()
+        self.assertEqual(list(mh), ["haiku", "sonnet", "opus", "fable", "claude-opus-5-5", "claude-opus-5-6", "claude-sonnet-5-5"])
+        self.assertEqual(mh["claude-opus-5-6"], {"can_nang": "2.1.340", "ban_dang": "2.1.331", "moi": None})   # Z20 dòng 16
+        self.assertEqual(mh["claude-opus-5-5"], {"can_nang": None, "ban_dang": None, "moi": None})
+        self.assertEqual(mh["claude-sonnet-5-5"], {"can_nang": None, "ban_dang": None, "moi": None})   # tài liệu 2.1.284 ≤ 2.1.331
+        self.assertEqual(mh["opus"], {"can_nang": None, "ban_dang": None, "moi": None})
+        self.nang(npm={"ban": "2.1.340"}, ngay=True)                              # công cụ AI nâng xong: tự sáng, nhãn "mới"
+        mh = self.mohinh()
+        self.assertEqual(mh["claude-opus-5-6"], {"can_nang": None, "ban_dang": None, "moi": True})   # Z20 dòng 17
+        self.assertIsNone(mh["claude-opus-5-5"]["moi"])                           # đã dùng được từ trước
+        cn = ketnoi.mo("Viecnen", self.dl)
+        try:
+            self.assertEqual(cn.execute("SELECT count(*) FROM mohinh_ai WHERE nguon_ai_id = ?", (self.nid,)).fetchone()[0], 7)
+        finally:
+            cn.close()
+
+    def test_truong_trong_dung_bang_tai_lieu_du_phong(self):
+        nangcli._GOC["claude"] = "2.1.300"
+        self.tep("a-cc.json", "cc", [("claude-fable-5-2", None), ("claude-moi-chua-ro", None)])
+        mh = self.mohinh()
+        self.assertEqual(mh["claude-fable-5-2"]["can_nang"], "2.1.321")          # tài liệu Anthropic (PTD-14 mục 8.1)
+        self.assertIsNone(mh["claude-moi-chua-ro"]["can_nang"])                   # trống cả 02 nơi: dùng được
+
+    def test_chua_co_tep_chi_04_bi_danh_khong_hoi_so_ban(self):
+        with mock.patch.object(nangcli, "ban_cli", side_effect=AssertionError("không được hỏi số bản")):
+            self.assertEqual(list(self.mohinh()), ["haiku", "sonnet", "opus", "fable"])
+
+    def test_giao_dien_dong_xam_va_nhan_moi(self):
+        app = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
+        for x in ("can: 'Cần nâng công cụ AI', moi: 'mới'",
+                  "re: (can, dang) => 'Mô hình mới theo tài khoản. Cần Claude · Code từ ' + can + ', bản đang dùng ' + dang"
+                  " + '. Tự dùng được khi công cụ AI nâng xong.'",
+                  "if (m.can_nang) { h += '<div class=\"mh-dong mh-xam\" title=\"' + esc(CHU_D.re(m.can_nang, m.ban_dang))",
+                  "(m.moi ? ' <span class=\"mh-moi\">' + CHU_D.moi + '</span>' : '')"):
+            self.assertIn(x, app)
+        html = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
+        self.assertIn(".mh-moi{font-size:11px;color:#258832;border:1px solid #258832;border-radius:8px;padding:0 6px;margin-left:4px}", html)
 
 
 if __name__ == "__main__":

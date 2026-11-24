@@ -34,6 +34,10 @@ LOAI_VIEC = {"trochuyen": "Trò chuyện AI", "trichvanban": "Trích văn bản 
 VIEC_NEN = ("trichvanban", "dexuat", "baocaosang")
 VIEC_NEN_CHUNG = "viecnen_chung"
 BI_DANH_CLAUDE = ("haiku", "sonnet", "opus", "fable")
+# Y46 phần D (QĐ265, PTD-14 mục 8.1): bản Claude Code tối thiểu theo tài liệu Anthropic code.claude.com/docs/en/model-config
+# (đọc 24/11/2026). CHỈ dùng dự phòng khi tệp danh mục để trống trường `min_claude_code_version`.
+BAN_TOI_THIEU_TAILIEU = {"claude-opus-5-5": "2.1.280", "claude-sonnet-5-5": "2.1.284", "claude-haiku-5-5": "2.1.293",
+                         "claude-fable-5-2": "2.1.321"}
 NHO_GIAY = 24 * 3600
 URL_DS = {"anthropic": "https://api.anthropic.com/v1/models", "openai": "https://api.openai.com/v1/models"}
 _BO_OPENAI = ("audio", "tts", "embedding", "image", "realtime", "transcribe", "search", "moderation", "whisper", "dall-e")
@@ -89,6 +93,69 @@ def _ds_khoa(d: dict, thumuc=None, client=None) -> list[str] | None:
     return ids
 
 
+def _thumuc_claude(taikhoan: int) -> Path:
+    tm = dangnhap_goi.thu_muc("claude", taikhoan)
+    return tm or Path(os.environ.get("CLAUDE_CONFIG_DIR") or os.environ.get("IGM360_THUMUC_CLAUDE",
+                                                                            dangnhap_goi.GOI["claude"]["thumuc"]))
+
+
+def _danhmuc_claude(taikhoan: int) -> dict[str, str | None]:
+    """Y46 phần D (QĐ265): {mã mô hình: bản Claude Code tối thiểu hoặc None} đọc từ tệp danh mục Claude Code tự tải theo
+    tài khoản (`<thư mục đăng nhập>/cache/model-catalog/*.json`, chỉ có tên mô hình, không có khoá). Ưu tiên
+    tệp của Claude Code dòng lệnh (`surface` = "cc"); không có thì dùng tệp khác. Chưa có tệp: {} (chỉ còn 04 bí danh)."""
+    cc: dict[str, str | None] = {}
+    khac: dict[str, str | None] = {}
+    try:
+        tep = sorted((_thumuc_claude(taikhoan) / "cache" / "model-catalog").glob("*.json"))
+    except OSError:
+        return {}
+    for p in tep:
+        try:
+            c = (json.loads(p.read_text(encoding="utf-8")) or {}).get("catalog")
+            ms = (c.get("config") or {}).get("models")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if not isinstance(ms, list):
+            continue
+        dich = cc if c.get("surface") == "cc" else khac
+        for m in ms:
+            if isinstance(m, dict) and isinstance(m.get("id"), str) and m["id"]:
+                v = m.get("min_claude_code_version")
+                if not dich.get(m["id"]):
+                    dich[m["id"]] = v if isinstance(v, str) and v else None
+    return cc or khac
+
+
+def _danh_dau_claude(nhom: dict, nguon: list[dict], thumuc=None) -> None:
+    """QĐ265 (Z20 dòng 16, 17): mô hình cần Claude Code cao hơn bản đang dùng → `can_nang` (dòng xám, không chọn được);
+    vừa dùng được nhờ lần nâng gần nhất → `moi` (nhãn "mới"). Trường trống mà tài liệu cũng không ghi: dùng được."""
+    toi_thieu: dict[str, str | None] = {}
+    for d in nguon:
+        g = _goi_cua(d)
+        if g and g[0] == "claude":
+            for k, v in _danhmuc_claude(g[1]).items():
+                if not toi_thieu.get(k):
+                    toi_thieu[k] = v
+    from maychu.hethong.mohinh import nangcli
+    ban = None
+    for k, nh in nhom.items():
+        if k != "goi_claude":   # mã loại nguồn gói Claude (dangnhap_goi.loai_nguon)
+            continue
+        for m in nh["mohinh"]:
+            can = toi_thieu.get(m["ma"]) or BAN_TOI_THIEU_TAILIEU.get(m["ma"])
+            if not can:
+                continue
+            if ban is None:
+                ban = nangcli.ban_cli("claude", thumuc)   # hỏi số bản 01 lần, chỉ khi có mô hình ghi bản tối thiểu
+            dang, truoc = ban
+            if not dang:
+                continue
+            if nangcli._khoa_so(can) > nangcli._khoa_so(dang):
+                m.update(can_nang=can, ban_dang=dang)
+            elif truoc and nangcli._khoa_so(truoc) < nangcli._khoa_so(can):
+                m["moi"] = True
+
+
 # ---------------- Ghi G08 ----------------
 def _them(cn, nguon_id: str, ds: list[str]) -> int:
     co = {r[0] for r in cn.execute("SELECT ma_mohinh FROM mohinh_ai WHERE nguon_ai_id = ?", (nguon_id,))}
@@ -101,8 +168,8 @@ def _them(cn, nguon_id: str, ds: list[str]) -> int:
 def nap(d: dict, thumuc=None, client=None) -> bool:
     """Nạp danh sách mô hình của 01 nguồn vào G08. Trả True khi lấy được danh sách (kể cả rỗng)."""
     g = _goi_cua(d)
-    if g and g[0] == "claude":
-        ds = list(BI_DANH_CLAUDE)
+    if g and g[0] == "claude":   # 04 bí danh + danh mục theo tài khoản (phần D, QĐ265); G08 chỉ thêm dòng
+        ds = list(BI_DANH_CLAUDE) + [m for m in _danhmuc_claude(g[1]) if m not in BI_DANH_CLAUDE]
     elif g:
         ds = _ds_codex(g[1])
     elif d.get("loai") == "khoa_api":
@@ -286,6 +353,7 @@ def danh_sach(thumuc=None, nap_nen: bool = True) -> dict:
                     g["_ma"][ma] = {"khoa": khoa_mh(k, ma), "ma": ma, "id": i, "ids": [i]}
                     g["mohinh"].append(g["_ma"][ma])
             g["dang_tai"] = g["dang_tai"] or d["id"] in _DANG_TAI
+        _danh_dau_claude(nhom, nguon, thumuc)
         nhom = [{**{k: v for k, v in g.items() if k != "_ma"}, "dang_tai": g["dang_tai"] and not g["mohinh"]} for g in nhom.values()]
     finally:
         cn.close()

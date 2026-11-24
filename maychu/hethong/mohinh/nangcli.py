@@ -144,6 +144,15 @@ def _sau_giu(ban: str, giu: tuple) -> str:
     return f"{ban}:goi:{so or ''}" if trong_goi else f"{ban}:{so}"
 
 
+def ban_cli(goi: str, thumuc: Path | None = None) -> tuple[str | None, str | None]:
+    """(bản lượt AI mới dùng, bản dùng trước lần nâng gần nhất) – phần D (QĐ265): so với bản tối thiểu của mô hình.
+    Đang dùng bản trong gói thì không có "bản trước"."""
+    d = doc_trangthai(thumuc)
+    g = d.get(goi) or {}
+    so, trong_goi = _ban_dung(goi, g, d)
+    return so, None if trong_goi else (g.get("truoc") or ban_trong_goi(goi))
+
+
 def hoi_npm(goi: str, client=None) -> dict:
     """{ban, ra_luc, co_giai_nen} của bản mới nhất (dist-tags.latest) trên npm."""
     import httpx
@@ -245,8 +254,12 @@ def chan_vi(thumuc: Path | None = None) -> str | None:
 
 
 def dang_nang() -> str | None:
-    """Gói đang nâng dở (K1: cập nhật phần mềm chờ)."""
-    return _DANG["goi"]
+    """Gói đang nâng dở (K1: cập nhật phần mềm chờ). CDA KT-Y46-4 A1: tính cả luồng nút "Nâng công cụ AI" vừa bấm,
+    chưa tới bước khóa (như xem())."""
+    if _DANG["goi"]:
+        return _DANG["goi"]
+    t = _LUONG["t"]
+    return _LUONG.get("goi") if t is not None and t.is_alive() else None
 
 
 def _f04(lenhcon: str, tom: str, ketqua: str = "dat", nguoi: str | None = None, thumuc: Path | None = None) -> None:
@@ -412,6 +425,9 @@ def luot_hang_ngay(thumuc: Path | None = None, bay: datetime | None = None) -> d
 def ve_ban_truoc(goi: str, thumuc: Path | None = None, nguoi: str | None = None) -> dict:
     """Nút "Về bản trước" (Z20 dòng 11): dùng bản trước (hoặc bản trong gói); bản đang dùng không tự nâng lại."""
     thumuc = thumuc or ketnoi.thumuc_dulieu()
+    ly_do = chan_vi(thumuc)   # CDA KT-Y46-4 A2 (QĐ218 dòng 37: chế độ an toàn chặn việc ghi khác Cập nhật), K1
+    if ly_do and ly_do != "tam_dung":   # tạm dừng: không có bản nâng để về (trả khong_co như cũ)
+        return {"kq": "khong_chay", "ly_do": ly_do}
     if not _KHOA.acquire(blocking=False):   # đang nâng: không chờ (nút đã ẩn trong lúc nâng)
         return {"kq": "khong_chay", "ly_do": "dang_nang"}
     try:
@@ -461,6 +477,9 @@ def xem(thumuc: Path | None = None) -> dict:
     ra = {"bat": thongso.cong_tac_bat(CONG_TAC, thumuc), "tam_dung": bool(d.get("tam_dung")),
           "tam_dung_ban": d.get("tam_dung_ban"), "kiem_ngay": d.get("kiem_ngay"), "gio_kiem": GIO_KIEM,
           "cho_gio": CHO_GIAY // 3600, "chan": chan_vi(thumuc), "dang_nang": dang, "goi": []}
+    if ra["chan"] == "dang_cap_nhat":   # QĐ308 điểm 10: "Đang cập nhật lên <bản>"
+        from maychu.hethong import tiendo
+        ra["cap_nhat_len"] = (tiendo.doc(thumuc) or {}).get("den")
     for goi in GOI_CLI:
         g = d.get(goi) or {}
         so, trong_goi = _ban_dung(goi, g, d)
@@ -468,7 +487,8 @@ def xem(thumuc: Path | None = None) -> dict:
         if hang and hang.get("uoc"):
             hang["uoc_chu"] = antoan.chu_dungluong(hang["uoc"])
         ra["goi"].append({"goi": goi, "ten": TEN_GOI[goi], "ban": so, "trong_goi": trong_goi, "ban_goi": ban_trong_goi(goi),
-                          "truoc": None if trong_goi else g.get("truoc"), "hang": hang, "hong": g.get("hong") or [],
+                          "truoc": None if trong_goi else g.get("truoc"), "truoc_goi": not trong_goi and not g.get("truoc"),
+                          "hang": hang, "hong": g.get("hong") or [],
                           "ve_tay": g.get("ve_tay") or [], "nang_luc": g.get("nang_luc"), "lan_cuoi": g.get("lan_cuoi"),
                           "su_kien": g.get("su_kien")})
     return ra
