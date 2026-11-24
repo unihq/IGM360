@@ -184,7 +184,7 @@ class KiemChuGiaoDien(unittest.TestCase):
         self.assertIn("ChatGPT&nbsp;·&nbsp;Codex", self.html)                                 # T2 → QĐ172 (Z9)
         # U4 (CDO, S1–S3): không tách cụm "mục Két khoá ·", "tài khoản Claude", "mục Bộ mã chung"
         self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # Y31 G2: tối đa 02 dòng
-        self.assertIn("tài&nbsp;khoản&nbsp;Claude của anh.", self.js)
+        self.assertIn("tài&nbsp;khoản&nbsp;Claude của bạn.", self.js)   # QĐ220
         self.assertIn("mục&nbsp;Bộ&nbsp;mã&nbsp;chung", self.html)
         self.assertIn("'mục Chờ duyệt', 'mục Két khoá', 'mục Bộ mã chung'", self.js)
         self.assertIn("chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'", self.js)               # QĐ172 (Z9)

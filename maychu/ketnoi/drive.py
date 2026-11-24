@@ -9,6 +9,7 @@ Gọi API bằng httpx (thư viện đã duyệt, QĐ80); không thêm thư vi�
 """
 import json
 import secrets
+import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -126,7 +127,7 @@ def _ma(thumuc, c) -> str:
     r = c.post(URL_MA, data={"client_id": ud["client_id"], "client_secret": ud["client_secret"],
                              "refresh_token": kho.doc(ma_lammoi, thumuc), "grant_type": "refresh_token"})
     if r.status_code != 200:
-        _ghi_loi(thumuc, "Google từ chối quyền đẩy file (có thể anh đã gỡ quyền); bấm Kết nối lại", "mat_quyen")
+        _ghi_loi(thumuc, "Google từ chối quyền đẩy file (có thể bạn đã gỡ quyền); bấm Kết nối lại", "mat_quyen")
         raise PermissionError("mat_quyen")
     kq = r.json()
     _MA_TRUYCAP.update(ma=kq["access_token"], het=time.time() + int(kq.get("expires_in", 3600)) - 60)
@@ -168,8 +169,17 @@ def dang_noi(thumuc: Path | None = None) -> bool:
     return bool(d and d[0] == "dung" and kho.tim(DV_LAMMOI, thumuc))
 
 
+_KHOA_DAY = threading.Lock()
+
+
 def day_hang_cho(thumuc: Path | None = None, client=None, gioi_han: int = 20) -> dict:
-    """Đẩy các dòng M01 đến lượt. Trả về số tệp đã đẩy, lỗi."""
+    """Đẩy các dòng M01 đến lượt. Trả về số tệp đã đẩy, lỗi. 0.7.9: lịch chạy nền và lượt sao trước cập nhật
+    có thể cùng gọi, nên đẩy lần lượt (không đẩy 01 tệp 02 lần)."""
+    with _KHOA_DAY:
+        return _day_hang_cho(thumuc, client, gioi_han)
+
+
+def _day_hang_cho(thumuc: Path | None, client, gioi_han: int) -> dict:
     if not dang_noi(thumuc):
         return {"day": 0, "loi": 0, "lydo": "chua_ket_noi"}
     bay = _bay_gio()

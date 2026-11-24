@@ -68,7 +68,47 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Đóng và đẩy image
+      # 0.7.9 lớp 3 (QĐ215): đóng trước (chưa đẩy), thử khởi động cả bản này lẫn bản trước để sẵn trong ảnh, đạt mới đẩy.
+      - name: Đóng image (chưa đẩy)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          build-args: |
+            CLAUDE_CLI_VERSION=${{ env.CLAUDE_CLI_VERSION }}
+            CODEX_CLI_VERSION=${{ env.CODEX_CLI_VERSION }}
+          tags: igm360-thu:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Thử bản trước khởi động được
+        shell: bash
+        run: |
+          anh="igm360-thu:${GITHUB_SHA}"
+          thu() {   # $1: tệp trạng thái (rỗng = chạy bình thường); in số bản /suckhoe trả
+            d="$(mktemp -d)"; chmod 777 "$d"
+            [ -z "$1" ] || { printf '%s' "$1" > "$d/capnhat_trangthai.json"; chmod 666 "$d/capnhat_trangthai.json"; }
+            t0="$(date +%s)"
+            docker run -d --name thu -e IGM360_LICH=tat -v "$d:/dulieu" "$anh" >/dev/null
+            ra=""
+            for i in $(seq 1 45); do
+              ra="$(docker exec thu python -c "import urllib.request,json;print(json.load(urllib.request.urlopen('http://127.0.0.1:8360/suckhoe',timeout=3))['phienban'])" 2>/dev/null || true)"
+              [ -n "$ra" ] && break; sleep 2
+            done
+            echo "$(( $(date +%s) - t0 ))" > /tmp/giay_khoidong   # QĐ218 dòng 43: số giây thật để thay "khoảng 30 giây"
+            [ -n "$ra" ] || docker logs thu 2>&1 | tail -30 >&2
+            docker rm -f thu >/dev/null
+            echo "$ra"
+          }
+          [ "$(thu '')" = "$PHIENBAN" ] || { echo "Bản $PHIENBAN chưa khởi động được"; exit 1; }
+          bt="$(docker run --rm --entrypoint cat "$anh" /app/ban_truoc/VERSION 2>/dev/null | tr -d ' \n\r' || true)"
+          if [ -z "$bt" ]; then echo "Ảnh $PHIENBAN chưa có bản trước (lần đầu)" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          [ "$bt" != "$PHIENBAN" ] || { echo "Bản trước trùng bản này: $bt"; exit 1; }
+          ra="$(thu "{\"chay_ban_truoc\": {\"ban_anh\": \"$PHIENBAN\", \"ban_truoc\": \"$bt\"}}")"
+          [ "$ra" = "$bt" ] || { echo "Bản trước $bt chưa khởi động được trên ảnh $PHIENBAN (trả: $ra)"; exit 1; }
+          echo "Bản $PHIENBAN và bản trước $bt khởi động được; bản trước lên trong $(cat /tmp/giay_khoidong) giây (máy CI, chưa tính Docker bật lại vùng chứa)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Đẩy image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -81,7 +121,6 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:${{ env.PHIENBAN }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Ghi kích thước image
         shell: bash

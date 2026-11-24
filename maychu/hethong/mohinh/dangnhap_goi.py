@@ -28,6 +28,8 @@ mã viết mới).
   ghi hồ sơ (tên, tên gói, email) vào ổ lưu. Email có lại thì chặn trùng tài khoản (Y24) so được với tài khoản 01.
 """
 import base64
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -264,8 +266,8 @@ def _dinh_danh(goi: str, taikhoan: int) -> tuple | None:
     try:
         if goi == "claude":
             r = subprocess.run([_cli(goi), "auth", "status", "--json"], capture_output=True, text=True, encoding="utf-8",
-                               errors="replace", timeout=15, env=_env(goi, taikhoan, tao=False))
-            d = json.loads((r.stdout or "").strip() or "{}")
+                               errors="replace", timeout=15, env=_env(goi, taikhoan, tao=False, ma_daihan=False))
+            d = json.loads((r.stdout or "").strip() or "{}")   # B' N1: định danh của đăng nhập kiểu cũ
             email, to_chuc = d.get("email"), d.get("orgId")
         else:
             goc = tm or Path(os.environ.get("CODEX_HOME") or os.environ.get("IGM360_THUMUC_CHATGPT", GOI[goi]["thumuc"]))
@@ -278,6 +280,86 @@ def _dinh_danh(goi: str, taikhoan: int) -> tuple | None:
     if not isinstance(email, str) or not email.strip():
         return None
     return email.strip().lower(), to_chuc if isinstance(to_chuc, str) and to_chuc else None
+
+
+# ---------------- QĐ216 (B', PTD-09 mục 8.4 N1–N8): tệp chụp tên, gói, dấu băm định danh ----------------
+TEP_CHUP = "igm360_hoso.json"   # mỗi tài khoản Claude 01 tệp, trong thư mục tài khoản (ổ lưu QĐ173), quyền 600
+# Y38d N40, QĐ219 A8 (anh chốt KHÔNG gỡ mã): "Lấy tên, gói" mà đăng nhập trùng tài khoản khác.
+#   True  = gỡ mã của tài khoản đang lấy tên (cách cũ Y38c R10; câu 22).
+#   False = giữ mã, chỉ đăng xuất kiểu cũ và báo đăng nhập lại đúng tài khoản (câu A8).
+GO_MA_KHI_TRUNG = False
+
+
+def _khoa_bam() -> bytes:
+    """Khoá băm suy ra từ khoá chủ (HMAC-SHA256, thư viện có sẵn): dấu băm không dò ngược ra email."""
+    from maychu.hethong.kekhoa import khoachu
+    return hmac.new(khoachu.lay(), b"igm360-dinhdanh-v1", hashlib.sha256).digest()
+
+
+def _bam(v: str | None) -> str | None:
+    return hmac.new(_khoa_bam(), v.strip().lower().encode("utf-8"), hashlib.sha256).hexdigest() if v else None
+
+
+def tep_chup(taikhoan: int) -> Path:
+    return _tep_hoso_claude(taikhoan).with_name(TEP_CHUP)
+
+
+def doc_chup(taikhoan: int) -> dict | None:
+    try:
+        d = json.loads(tep_chup(taikhoan).read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) and d.get("email_bam") else None
+    except (OSError, ValueError):
+        return None
+
+
+def chup_song(taikhoan: int) -> dict | None:
+    """N1, N2: tên hiện, tên gói, dấu băm email và mã tổ chức đọc từ đăng nhập kiểu cũ của thư mục này.
+    None khi không có đăng nhập kiểu cũ (N6). Không có mã, không có email rõ chữ."""
+    dd = _dinh_danh("claude", taikhoan)
+    if not dd:
+        return None
+    hs = ho_so("claude", taikhoan, song=True)
+    return {"ten_hien": hs["ten_hien"], "goi_ten": hs["goi_ten"], "email_bam": _bam(dd[0]), "tochuc_bam": _bam(dd[1]),
+            "chup_luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds")}
+
+
+def ghi_chup(taikhoan: int, c: dict) -> None:
+    p = tep_chup(taikhoan)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tam = p.with_name(p.name + ".tam")
+    fd = os.open(tam, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump({k: c.get(k) for k in ("ten_hien", "goi_ten", "email_bam", "tochuc_bam", "chup_luc")}, f, ensure_ascii=False)
+    os.replace(tam, p)
+
+
+def xoa_chup(taikhoan: int) -> None:
+    tep_chup(taikhoan).unlink(missing_ok=True)   # N5: tài khoản 01 dùng thư mục gốc nên xoá đích danh tệp
+
+
+def _co_ma(taikhoan: int) -> bool:
+    from maychu.hethong.mohinh import madaihan
+    md = madaihan.thong_tin(taikhoan)
+    return bool(md and not md["het"])
+
+
+def dinh_danh_bam(goi: str, taikhoan: int) -> tuple | None:
+    """Định danh dùng để chặn trùng (N3): Claude có mã còn hạn thì đọc tệp chụp; còn lại đọc sống rồi băm."""
+    if goi == "claude" and _co_ma(taikhoan):
+        c = doc_chup(taikhoan)
+        return (c["email_bam"], c.get("tochuc_bam")) if c else None
+    dd = _dinh_danh(goi, taikhoan)
+    return (_bam(dd[0]), _bam(dd[1])) if dd else None
+
+
+def tim_trung(goi: str, taikhoan: int, moi: tuple | None) -> int | None:
+    """N4: tài khoản đã kết nối khác có cùng định danh (so dấu băm)."""
+    if not moi:
+        return None
+    for tk in range(1, SO_TAIKHOAN_TOIDA + 1):
+        if tk != taikhoan and trang_thai(goi, tk)["da_noi"] and trung(moi, dinh_danh_bam(goi, tk)):
+            return tk
+    return None
 
 
 def trung(a: tuple | None, b: tuple | None) -> bool:
@@ -308,13 +390,25 @@ def _ket_thuc(goi: str, taikhoan: int, nguoi: str = "hethong") -> dict:
     tt = trang_thai(goi, taikhoan, bo_nho=True)
     if not tt["da_noi"]:
         return {"loi": "CLI báo xong nhưng kiểm lại vẫn chưa đăng nhập: bấm Đăng nhập lại"}
-    if taikhoan > 1:   # QĐ164 ý 1: chặn nối trùng
-        moi = _dinh_danh(goi, taikhoan)
-        for tk in range(1, SO_TAIKHOAN_TOIDA + 1):
-            if tk != taikhoan and trang_thai(goi, tk)["da_noi"] and trung(moi, _dinh_danh(goi, tk)):
-                _dang_xuat(goi, taikhoan)
-                _don(goi, taikhoan)
-                return {"loi": f"Tài khoản này đã kết nối ở tài khoản {tk:02d}", "trung_voi": tk}
+    c = chup_song(taikhoan) if goi == "claude" else None
+    if taikhoan >= 1:   # QĐ164 ý 1: chặn nối trùng (QĐ216 N4: so dấu băm, kể cả tài khoản đang dùng mã dài hạn); Y38i G1: cả ô 1
+        tk = tim_trung(goi, taikhoan, (c["email_bam"], c["tochuc_bam"]) if c else dinh_danh_bam(goi, taikhoan))
+        if tk:
+            _dang_xuat(goi, taikhoan)
+            if _co_ma(taikhoan):   # Y38c R10 / Y38d N40: "Lấy tên, gói" thấy trùng
+                from maychu.hethong.mohinh import madaihan
+                if GO_MA_KHI_TRUNG:   # gỡ luôn mã của tài khoản trùng (câu 22)
+                    go(goi, taikhoan)
+                    return {"loi": madaihan.CHU_DAN["trung"].format(tk=tk), "trung_voi": tk, "chu_rieng": True}
+                return {"loi": madaihan.CHU_DAN["trung_dang_nhap_lai"].format(tk=tk), "trung_voi": tk, "chu_rieng": True,
+                        "lay_lai": True}   # Y38f L3: giao diện hiện ô báo lỗi kèm nút "Lấy tên, gói" ở đúng ô này
+            _don(goi, taikhoan)
+            return {"loi": f"Tài khoản này đã kết nối ở tài khoản {tk:02d}", "trung_voi": tk}
+    if c and _co_ma(taikhoan):   # QĐ216 bước anh làm 01 lần: đăng nhập kiểu cũ để chụp tên, gói; chụp xong đăng xuất (Đ8)
+        ghi_chup(taikhoan, c)
+        _dang_xuat(goi, taikhoan)
+        _NHO_TRANGTHAI.pop((goi, taikhoan), None)
+        return {"xong": True, "chup": True, **trang_thai(goi, taikhoan, bo_nho=True)}
     ghi_nguon(goi, taikhoan, nguoi=nguoi)
     return {"xong": True, **tt}
 
@@ -329,9 +423,10 @@ def go(goi: str, taikhoan: int, thumuc: Path | None = None) -> dict:
         from maychu.hethong.mohinh import madaihan
         madaihan.huy_lay(taikhoan)
         madaihan.xoa(taikhoan, thumuc)
+        xoa_chup(taikhoan)   # QĐ216 N5
         _NHO_TRANGTHAI.pop((goi, taikhoan), None)
     if trang_thai(goi, taikhoan, bo_nho=True)["da_noi"] and not _dang_xuat(goi, taikhoan):
-        return {"loi": f"Chưa đăng xuất được tài khoản {taikhoan:02d}: anh thử lại sau ít phút"}
+        return {"loi": f"Chưa đăng xuất được tài khoản {taikhoan:02d}: bạn thử lại sau ít phút"}
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         so = cn.execute("UPDATE nguon_ai SET trangthai = 'ngung' WHERE ma = ?", (ma_nguon(goi, taikhoan),)).rowcount
@@ -403,9 +498,16 @@ def _tep_auth_codex(taikhoan: int) -> Path:
     return (tm or Path(os.environ.get("CODEX_HOME") or os.environ.get("IGM360_THUMUC_CHATGPT", GOI["chatgpt"]["thumuc"]))) / "auth.json"
 
 
-def ho_so(goi: str, taikhoan: int, goi_dang_dung: str | None = None) -> dict:
+def ho_so(goi: str, taikhoan: int, goi_dang_dung: str | None = None, song: bool = False) -> dict:
     """{"ten_hien", "goi_ten", "mota_goi"} đọc sống; trường nào không đọc được thì None (giao diện lùi về
-    "Tài khoản N"). `goi_dang_dung`: họ gói CLI trả (Claude `subscriptionType`), dùng khi không có tên gói."""
+    "Tài khoản N"). `goi_dang_dung`: họ gói CLI trả (Claude `subscriptionType`), dùng khi không có tên gói.
+    QĐ216 N3: Claude có mã dài hạn còn hạn thì đọc tệp chụp (01 nguồn); chưa chụp thì `chua_kiem_trung` (N6)."""
+    if goi == "claude" and not song and _co_ma(taikhoan):
+        c = doc_chup(taikhoan)
+        if not c:
+            return {"ten_hien": None, "goi_ten": None, "mota_goi": None, "chua_kiem_trung": True}
+        return {"ten_hien": c.get("ten_hien"), "goi_ten": c.get("goi_ten"), "mota_goi": MOTA_GOI.get((goi, c.get("goi_ten"))),
+                "chup_luc": c.get("chup_luc")}
     ten = ten_goi = None
     try:
         if goi == "claude":
@@ -559,7 +661,7 @@ def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
                 ghi_nguon(goi, tk, thumuc)
             hs = ho_so(goi, tk, tt.get("goi_dang_dung")) if tt["da_noi"] else {"ten_hien": None, "goi_ten": None, "mota_goi": None}
             them = {"ma_daihan": madaihan.thong_tin(tk, thumuc), "dang_lay_ma": madaihan.dang_lay(tk),
-                    "lay_ma_tudong": madaihan.ho_tro()} if goi == "claude" else {}
+                    "lay_ma_tudong": madaihan.ho_tro(), "kiem_md": madaihan.kiem_gan_nhat(tk, thumuc)} if goi == "claude" else {}
             ds.append({"taikhoan": tk, "ma": ma_nguon(goi, tk), "dang_dangnhap": (goi, tk) in _PHIEN,
                        "dangnhap_luc": lan.get(nhan_dangnhap(goi, tk)), **tt, **hs, **them})
         ra[goi] = ds

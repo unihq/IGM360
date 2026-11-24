@@ -80,6 +80,11 @@ class MaCu(BaseModel):
 
 class CheDoCapNhat(BaseModel):
     che_do: str = "cho"
+    van_capnhat: bool = False   # QĐ218 dòng 34: anh bấm "Vẫn cập nhật" khi Drive chưa kết nối
+
+
+class TiepTuc(BaseModel):
+    van: bool = False
 
 
 @router.post("/dangnhap")
@@ -204,19 +209,58 @@ def doi_may_xacnhan(body: Ma2Lop, p: dict = Depends(can_dang_nhap)):
     return kq
 
 
+def _them_antoan() -> dict:
+    """0.7.9: ổ trống (lớp 1), Drive đã nối (lớp 5), bước bản sao đang chạy, chế độ an toàn (lớp 2), quay về (lớp 3)."""
+    from maychu.hethong import antoan
+    from maychu.ketnoi import drive
+    o = antoan.o_trong()
+    try:
+        noi = drive.dang_noi()
+    except Exception:  # noqa: BLE001 - ở chế độ an toàn bảng kết nối có thể chưa đọc được
+        noi = False
+    return {"o_trong": {"du": o["du"], "chu": o["chu"], "lam": None if o["du"] else antoan.CHU["o_thieu_lam"]}, "drive_noi": noi, "chu_drive": None if noi else antoan.CHU["drive_chua_noi"], "chu_qua_gio": antoan.CHU["drive_qua_gio"],
+            **capnhat.trang_thai_sao(), "an_toan": antoan.chu_an_toan(), "quay_ve": antoan.thong_tin_quayve(),
+            "quayve_loi": antoan.quay_ve_loi_gan(), "kiem_hien": next((x.get("kiem") for x in capnhat.lich_su() if x["ban"] == capnhat.ban_dang_chay()), None)}
+
+
 @router.get("/capnhat")
 def xem_capnhat(p: dict = Depends(can_dang_nhap)):
-    return {**capnhat.kiem_tra(), "lichsu": capnhat.lich_su(), "so_viec_ai": capnhat.so_viec_ai_dangchay()}
+    return {**capnhat.kiem_tra(), "lichsu": capnhat.lich_su(), "so_viec_ai": capnhat.so_viec_ai_dangchay(), **_them_antoan()}
 
 
 @router.post("/capnhat/kiemtra")
 def kiem_lai(p: dict = Depends(can_dang_nhap)):
-    return {**capnhat.kiem_tra(bat_buoc=True), "lichsu": capnhat.lich_su(), "so_viec_ai": capnhat.so_viec_ai_dangchay()}
+    return {**capnhat.kiem_tra(bat_buoc=True), "lichsu": capnhat.lich_su(), "so_viec_ai": capnhat.so_viec_ai_dangchay(),
+            **_them_antoan()}
+
+
+class QuayVe(BaseModel):
+    dong_y_mat: bool = False
+
+
+@router.post("/capnhat/quayve")
+def quay_ve(body: QuayVe, p: dict = Depends(can_dang_nhap)):
+    """0.7.9 lớp 3 (QĐ215): quay về bản liền trước để sẵn trong ảnh."""
+    from maychu.hethong import antoan
+    kq = antoan.quay_ve(p["nguoidung_id"], body.dong_y_mat)
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return kq
 
 
 @router.post("/capnhat")
 def cap_nhat(body: CheDoCapNhat, p: dict = Depends(can_dang_nhap)):
-    kq = capnhat.yeu_cau(p["nguoidung_id"], body.che_do)
+    kq = capnhat.yeu_cau(p["nguoidung_id"], body.che_do, van_capnhat=body.van_capnhat)
+    if kq.get("can_chon"):
+        return kq   # giao diện mở hộp "Cập nhật khi chưa có bản sao Drive?"
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return kq
+
+
+@router.post("/capnhat/tieptuc")
+def tiep_tuc_capnhat(body: TiepTuc, p: dict = Depends(can_dang_nhap)):
+    kq = capnhat.tiep_tuc(p["nguoidung_id"], body.van)
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return kq
@@ -330,7 +374,7 @@ def bat_dau_drive(request: Request, p: dict = Depends(can_dang_nhap)):
 def ve_trang_drive(code: str = "", state: str = "", error: str = ""):
     """Google chuyển về đây (không mang cookie vì SameSite=Strict); kiểm bằng mã chống giả dùng 01 lần."""
     if error:
-        kq, ok = "Anh chưa cấp quyền cho IGM360 trên Google.", False
+        kq, ok = "Bạn chưa cấp quyền cho IGM360 trên Google.", False
     else:
         try:
             drive.ve_trang(code, state)
@@ -403,7 +447,9 @@ def _loi_dn(goi: str, taikhoan: int, kq: dict, p: dict) -> HTTPException:
     if kq.get("trung_voi"):
         ghi_f04("mohinh", "dangnhap_goi", dangnhap_goi.nhan_dangnhap(goi, taikhoan), ketqua="bichan",
                 lydo=f"trùng tài khoản {kq['trung_voi']:02d}", nguoi_id=p["nguoidung_id"])
-        return HTTPException(409, {"loi": kq["loi"], "trung_voi": kq["trung_voi"]})   # giao diện hiện dải báo trùng
+        return HTTPException(409, {"loi": kq["loi"], "trung_voi": kq["trung_voi"],
+                                   **({"chu_rieng": True} if kq.get("chu_rieng") else {}),
+                                   **({"lay_lai": True} if kq.get("lay_lai") else {})})   # dải báo trùng; Y38d N41 câu riêng; Y38f L3
     return HTTPException(400, kq["loi"])
 
 
@@ -461,6 +507,8 @@ def _md_xong(tk: int, ma: str, p: dict) -> dict:
         raise HTTPException(400, str(e))
     finally:
         madaihan.huy_lay(tk)   # Đ3: quên đầu ra của lệnh lấy mã
+    if "loi" in kq:   # QĐ216 N4: trùng tài khoản thì không lưu mã
+        raise HTTPException(400, kq["loi"])
     ghi_f04("mohinh", "luu_madaihan", _md_nhan(tk), nguoi_id=p["nguoidung_id"])
     thongbao.quet_madaihan()   # mã mới: đóng ngay tin "hết hạn", "sắp hết hạn" cũ
     if kq.get("goi_thu"):
@@ -500,8 +548,8 @@ def md_dan(body: MaGoi, p: dict = Depends(can_dang_nhap)):
     """Dán mã dài hạn làm ở nơi khác (`claude setup-token` trên máy anh)."""
     _goi("claude", body.taikhoan)
     if not madaihan.hop_le(body.ma):
-        raise HTTPException(400, "Mã không đúng dạng mã dài hạn của Claude (bắt đầu bằng sk-ant-oat01-)")
-    return _md_xong(body.taikhoan, body.ma.strip(), p)
+        raise HTTPException(400, madaihan.chu_loi_dan(body.ma))   # N28 (c)
+    return _md_xong(body.taikhoan, madaihan.lam_sach(body.ma), p)
 
 
 @router.post("/mohinh/goi/claude/madaihan/huy")

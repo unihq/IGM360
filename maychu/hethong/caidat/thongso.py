@@ -29,7 +29,7 @@ DANHMUC = [
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
     ("tyle_bao_hanmuc_tuan", 2, "Báo khi gói AI dùng quá hạn mức tuần", "so", "%", "80", None, ""),   # QĐ165, PTD-06 mục 10
     ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tự duyệt", "so", "đ", None, None,
-     "GĐ 1: AI chỉ đề xuất, mọi việc chờ anh bấm."),
+     "GĐ 1: AI chỉ đề xuất, mọi việc chờ bạn bấm."),
     ("tran_tien_thang_khoa_api", 2, "Hạn mức chi tháng", "so", "USD", None, None,
      "Không gọi AI bằng khoá API, chỉ dùng gói"),
     ("nhip_gui_baocao", 3, "Nhịp gửi báo cáo định kỳ", "chu", "", None, {"hangngay": "Mỗi ngày", "hangtuan": "Mỗi tuần"},

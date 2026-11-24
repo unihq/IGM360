@@ -96,18 +96,40 @@ def _don_ban_cu(goc: Path, thumuc: Path) -> None:
                 x.unlink(missing_ok=True)
 
 
-def chay(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict:
-    """Sao lưu lần lượt 07 file. Trả về {'ketqua': 'xong_tren_may' | 'loi', 'file': [...]}."""
+def ten_truoc_capnhat(luc: datetime, ban: str) -> str:
+    """Thư mục bản sao trước cập nhật (0.7.9 lớp 5): tên trên Drive thành `<ngày>_truoc_<bản>_<giờ>_<tệp>.mahoa`.
+    Y38c R2: thêm giờ phút giây để mỗi lần bấm cập nhật 01 thư mục riêng (không 02 dòng M01 chung 01 tệp)."""
+    return f"{luc.strftime('%Y-%m-%d')}_truoc_{ban}_{luc.strftime('%H%M%S')}"
+
+
+GIU_TRUOC_CAPNHAT = 2   # giữ bản sao trước cập nhật của 02 lần gần nhất trên máy (bản lâu dài ở Drive)
+
+
+def _don_truoc_capnhat(goc: Path, thumuc: Path) -> None:
+    cac = sorted((p for p in goc.iterdir() if p.is_dir() and "_truoc_" in p.name), key=lambda p: p.stat().st_mtime)
+    cho = _tep_dang_cho(thumuc)
+    for p in cac[:-GIU_TRUOC_CAPNHAT]:
+        if not any(str(x) in cho for x in p.iterdir()):
+            shutil.rmtree(p, ignore_errors=True)
+
+
+def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban: str | None = None) -> dict:
+    """Sao lưu lần lượt 07 file. Trả về {'ketqua': 'xong_tren_may' | 'loi', 'file': [...], 'noi': thư mục}.
+    `truoc_ban` (0.7.9 lớp 5, QĐ213): lượt chụp ngay trước khi gửi lệnh cập nhật lên bản đó, vào thư mục riêng
+    (không đè bản hằng ngày, không làm `da_co_hom_nay` đúng)."""
     thumuc = thumuc or ketnoi.thumuc_dulieu()
     luc = bay_gio or datetime.now(MUIGIO_VN)
     goc = thumuc_saoluu(thumuc)
-    noi = goc / luc.strftime("%Y-%m-%d")
+    noi = goc / (ten_truoc_capnhat(luc, truoc_ban) if truoc_ban else luc.strftime("%Y-%m-%d"))
     noi.mkdir(parents=True, exist_ok=True)
     os.chmod(goc, 0o700)
     os.chmod(noi, 0o700)
     dong_n01, ketqua_chung = [], "xong_tren_may"
     for ten in ketnoi.CAC_FILE:
-        buoc = {}
+        # CDA C1 (Y38): lượt trước cập nhật vẫn ghi N01 `loai` = 'hangngay' (CHECK N01 chỉ nhận 'hangngay',
+        # 'camay_hangtuan'; 0 đổi lược đồ), dịp ghi ở `ketqua_tungbuoc_json` khoá "dip" = "truoc_capnhat".
+        # Chỗ nào sau này đọc N01 theo nghĩa "hằng ngày" (đếm lượt, tính giờ sao lưu gần nhất) phải lọc bỏ `dip`.
+        buoc = {"dip": "truoc_capnhat", "ban": truoc_ban} if truoc_ban else {}
         tam = noi / f"{ten}.sqlite3.tam"
         chinh = noi / f"{ten}.sqlite3"
         kiemtra = None
@@ -154,7 +176,8 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict:
     _xep_cho_drive(thumuc, dong_n01, noi, luc)
     if ketqua_chung != "loi":
         _don_ban_cu(goc, thumuc)
-    return {"ketqua": ketqua_chung, "file": dong_n01}
+        _don_truoc_capnhat(goc, thumuc)
+    return {"ketqua": ketqua_chung, "file": dong_n01, "noi": noi}
 
 
 def _ghi_n01(thumuc: Path, dong: list) -> None:

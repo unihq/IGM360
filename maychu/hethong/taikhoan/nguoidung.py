@@ -127,7 +127,7 @@ def buoc_ma2lop(ma_tam: str, ma: str, thietbi: str, ip: str = "khong_ro", thumuc
         return _bao_khoa(k)
     t = _doc_ma_tam(ma_tam)
     if not t:
-        return {"loi": "Phiên đăng nhập đã hết hạn, anh đăng nhập lại"}
+        return {"loi": "Phiên đăng nhập đã hết hạn, bạn đăng nhập lại"}
     if t["khoa_moi"]:
         khoa = t["khoa_moi"]
     else:
@@ -172,7 +172,7 @@ def bat_doi_may(nguoidung_id: str, thumuc: Path | None = None) -> dict:
 def xac_nhan_doi_may(nguoidung_id: str, ma_tam: str, ma: str, thumuc: Path | None = None) -> dict:
     t = _doc_ma_tam(ma_tam)
     if not t or t["nguoidung_id"] != nguoidung_id or not t["khoa_moi"]:
-        return {"loi": "Đã quá thời gian, anh bấm Đổi máy nhận mã lại"}
+        return {"loi": "Đã quá thời gian, bạn bấm Đổi máy nhận mã lại"}
     if not _kiem_ma(nguoidung_id, t["khoa_moi"], ma):
         return {"loi": "Mã 02 lớp chưa đúng"}
     _cat_khoa_2lop(nguoidung_id, t["khoa_moi"], thumuc)

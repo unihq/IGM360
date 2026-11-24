@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from maychu.dulieu import khoitao
-from maychu.hethong import capnhat
+from maychu.hethong import antoan, capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.taikhoan import nguoidung
 from maychu.web import api
@@ -37,14 +37,25 @@ PHIENBAN = doc_phienban()
 
 @contextlib.asynccontextmanager
 async def vongdoi(_app: FastAPI):
-    khoitao.tao_het()
-    nguoidung.tao_quantri_tu_env()
-    thongso.khoi_tao()
-    capnhat.ghi_khoi_dong()
     viec = None
-    if os.environ.get("IGM360_LICH", "bat") != "tat":
-        from maychu.hethong.giamsat import lich
-        viec = asyncio.create_task(lich.chay_mai())
+    try:
+        khoitao.tao_het()
+    except Exception as e:  # noqa: BLE001 - 0.7.9 lớp 2: nâng dữ liệu không thành → chế độ an toàn, không khởi động lại mãi
+        antoan.vao_an_toan(e)
+    if not antoan.CHE_DO["an_toan"]:
+        nguoidung.tao_quantri_tu_env()
+        thongso.khoi_tao()
+        capnhat.ghi_khoi_dong()
+        if os.environ.get("IGM360_LICH", "bat") != "tat":
+            from maychu.hethong.giamsat import lich
+            viec = asyncio.create_task(lich.chay_mai())
+        antoan.bao_quay_ve_loi()   # Y38c R1, R3: lệnh chạy không trả được dữ liệu / bản trước hỏng → ghi F04
+        from maychu.hethong.giamsat import thongbao
+        thongbao.quet_quayve_loi()   # Y38d: tin chuông đỏ khi quay về hỏng
+        if viec is not None and antoan.can_kiem():   # 0.7.9 lớp 4: bản mới lần đầu chạy → kiểm 06 điểm (chạy nền, không chặn
+            # khởi động). Chỉ khi lịch chạy nền bật (máy chủ thật): bài kiểm tắt lịch nên không bao giờ chạm CLI của máy kiểm.
+            # Y38c R6: chờ 30 giây rồi chấm điểm lịch theo việc lịch còn chạy thật
+            asyncio.get_running_loop().run_in_executor(None, antoan.kiem_sau_khi_chay, viec)
     try:
         yield
     finally:
@@ -60,12 +71,21 @@ app = FastAPI(title="IGM360", version=PHIENBAN, docs_url=None, redoc_url=None, o
 @app.get("/suckhoe")
 def suckhoe() -> dict:
     """Máy chủ còn chạy. Không trả số đo máy ra ngoài mạng."""
-    return {"trangthai": "chay", "phienban": PHIENBAN}
+    return {"trangthai": "chay", "phienban": PHIENBAN, **({"an_toan": True} if antoan.CHE_DO["an_toan"] else {})}
 
 
 GIAODIEN = Path(__file__).resolve().parent / "web" / "giaodien"
 app.include_router(api.router)
 app.mount("/tainguyen", StaticFiles(directory=GIAODIEN), name="tainguyen")
+
+
+@app.middleware("http")
+async def che_do_an_toan(request, call_next):
+    """0.7.9 lớp 2: ở chế độ an toàn chỉ mở đăng nhập và Cài đặt › Cập nhật; đường khác trả câu báo."""
+    if antoan.CHE_DO["an_toan"] and not antoan.duoc_mo(request.url.path):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": antoan.CHU["an_toan_chan"], "an_toan": True}, status_code=503)
+    return await call_next(request)
 
 
 @app.middleware("http")
