@@ -173,8 +173,12 @@ def _ghi_f04(td: dict, thumuc: Path | None) -> None:
     tg = thoi_gian(td)
     if _da_co_f04(td["bat_dau"], thumuc):
         return
+    # QĐ258 (PTD-13 nghiệm thu): chay_moi = giây từ lúc bấm tới lúc bản mới chạy (hết bước 7; kiểm 06 điểm chạy nền sau đó)
+    moc = td.get("moc") or {}
+    chay = _giay(td.get("bat_dau"), moc.get("kiem") or td.get("xong"))
     chu = (f"{td.get('tu')} → {td.get('den')} · " + " ".join(f"{k}={v}" for k, v in tg.items())
-           + f" · tong={sum(tg.values())} giây · bat_dau={td['bat_dau']}")
+           + f" · tong={sum(tg.values())} giây" + (f" · chay_moi={round(chay)}" if chay is not None else "")
+           + f" · bat_dau={td['bat_dau']}")
     capnhat._ghi_f04("tiendo", chu[:300], "dat", None, thumuc=thumuc)
 
 

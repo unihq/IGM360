@@ -355,8 +355,9 @@ function veCapNhat(d) {
   $('.tab[data-tab="capnhat"] .cham-xanh').hidden = !d.co_ban_moi;
   ve();
   const t = d.tien_do;   // QĐ253: mở trang (hoặc vừa tải lại sang bản mới) giữa lúc đang cập nhật thì hiện tiếp tiến độ 08 bước
-  if (t && S.cn !== 'dangcn' && !t.loi && !t.treo && t.buoc !== 'xong' && t.tu && t.den)   // QĐ255 điểm 2: cờ treo do máy chủ tính
-    choCapNhat(t.tu, t.den, d);
+  const dangLuot = t && !t.loi && !t.treo && t.buoc !== 'xong' && t.tu && t.den;   // QĐ255 điểm 2: cờ treo do máy chủ tính
+  if (dangLuot && t.den !== d.ban_dang && S.cn !== 'dangcn') choCapNhat(t.tu, t.den, d);   // bản cũ còn chạy: hiện tiếp tiến độ
+  else if (dangLuot && t.den === d.ban_dang) theoKiem();   // QĐ258: đã lên bản mới, kiểm 06 điểm đang chạy nền
 }
 function moCapNhat() {
   const viec = D.capnhat.so_viec_ai, o = D.capnhat.o_trong || {du: true};
@@ -406,6 +407,7 @@ function tinhTienDo(td, bay) {   // bay: giờ máy chủ (ms). Cùng cách tín
   const so = (x, n) => hai(+x || 0) + '/' + hai(n);
   const thu = TD8.ma.map((m, i) => {   // từng bước: trạng thái và chữ cột phải
     if (xong || i < vi) { const sau = TD8.ma.slice(i + 1).map(x => moc[x]).find(Boolean) || td.xong, dr = td.drive || {};
+      if (m === 'drive' && dr.nen) return {tt: 'bo', cot: ''};   // QĐ258: Drive đẩy nền sau khi bản mới lên (chữ chờ CDO U19)
       if (m === 'drive' && !moc.drive) return {tt: 'bo', cot: TD8.chuaNoi};   // QĐ255 điểm 3: Drive chưa nối
       if (m === 'drive' && dr.tong && (+dr.da || 0) < dr.tong) return {tt: 'bo', cot: TD8.chuaLenHet};   // "Vẫn cập nhật" khi quá giờ
       return {tt: 'xong', cot: TD8.uoc.includes(m) ? TD8.xong : moc[m] && sau ? mmss((t(sau) - t(moc[m])) / 1000) : ''}; }
@@ -454,13 +456,24 @@ function veTienDo(td, o) {   // td = null: thẻ cũ (quay về bản trước, 
   e.innerHTML = htmlTienDo(td, o); e.dataset.td = '1'; e.classList.toggle('vien-do', !!td.loi);
 }
 // </TD8>
+function theoKiem() {   // QĐ258: trang đã chạy bản mới, kiểm 06 điểm chạy nền → hỏi lại máy chủ tới khi kiểm xong rồi vẽ lại lịch sử
+  if (D.theoKiem) return;
+  D.theoKiem = true;
+  const NHIP_GIAY = 10, PHUT_THEO = 15, het = Date.now() + PHUT_THEO * 60e3;
+  const hoi = async () => {
+    try { const s = await api('/capnhat'), t = s.tien_do;
+      if (!t || t.buoc === 'xong' || t.loi || t.treo) { D.theoKiem = false; veCapNhat(s); return; } }
+    catch (e) { /* mạng chập chờn: hỏi lại lượt sau */ }
+    if (Date.now() < het) setTimeout(hoi, NHIP_GIAY * 1000); else D.theoKiem = false;
+  };
+  setTimeout(hoi, NHIP_GIAY * 1000);
+}
 function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (mở trang giữa lúc đang cập nhật)
   S.cn = 'dangcn'; tieuDangCn(); ve(); veQuayVe(D.capnhat || {});   // N33: khoá quay về
   const PHUT_CHO = 35;   // QĐ255 điểm 1: watchtower chờ tối đa 30 phút (QĐ252) + dư. 0.8.1 GAP-080: `het` ở dòng riêng
   const DU_PHUT = PHUT_CHO - 30;   // phần dư 05 phút của QĐ255, dùng chung cho giới hạn riêng bước 3, 4
   const GIOI_HAN_PHUT = {day: 10, cho_viec: 30};   // giới hạn chờ của máy chủ: đẩy Drive (CHO_DRIVE_GIAY), chờ việc AI (CHO_TOIDA_GIAY)
   let het = Date.now() + PHUT_CHO * 60e3;   // cách cũ: tính từ lúc bấm, khi máy chủ chưa có tiến độ
-  let moiChay = false;   // QĐ253: bản mới đã chạy thì hiện tiếp bước 7–8, xong mới tải lại trang
   const datHet = (t, dang) => {   // Y41d (CDA N6): mốc hết giờ theo bước, không báo hỏng oan lúc chờ việc AI, chờ Drive
     const moc = t.moc || {}, may = x => Date.parse(x) - ((Date.parse(t.luc) - Date.now()) || 0);   // giờ máy chủ → giờ trang
     const h = moc.tai ? may(moc.tai) + PHUT_CHO * 60e3                                             // bước 5–8: 35 phút từ bước 5
@@ -475,12 +488,8 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
   if (s0) hien(s0, {});
   const cho = async () => {
     try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
-      if (k.phienban && k.phienban !== cu) {
-        const s = await api('/capnhat'), t = s.tien_do;
-        if (!t || t.loi || t.den !== k.phienban) { location.reload(); return; }   // không có tiến độ của lượt này: tải lại như cũ
-        moiChay = true; hien(s, {});
-        if (t.buoc === 'xong') { setTimeout(() => location.reload(), 3000); return; }
-      } else {
+      // QĐ258 (đổi QĐ253): bản mới chạy là tải lại ngay; kiểm 06 điểm chạy nền, kết quả hiện sau (theoKiem)
+      if (k.phienban && k.phienban !== cu) { location.reload(); return; } else {
         const s = await api('/capnhat');   // lớp 5: bước bản sao đang chạy; lỗi bản sao thì dừng, không gửi lệnh
         if (s.sao_loi && !s.dang_sao) { if (s.tien_do && s.tien_do.loi) { hien(s, {}); return; }   // QĐ253: lỗi bước 1–4 có nút Thử lại
           S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: ' + s.sao_loi + '.'; ve(); return; }
@@ -491,7 +500,6 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
       }
     } catch (e) { if (D.td) veTienDo(D.td.t, {...D.td.o, bay: Date.now() + D.td.lech}); }   // máy chủ đang thay bản: % đi theo giờ
     if (Date.now() < het) setTimeout(cho, 5000);
-    else if (moiChay) location.reload();
     else { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: sau ' + hai(PHUT_CHO) + ' phút máy chủ vẫn chạy bản ' + cu
       + '. Phần mềm vẫn chạy bình thường bằng bản này.'; ve(); }   // QĐ255 điểm 1
   };

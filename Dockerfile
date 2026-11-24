@@ -8,11 +8,15 @@
 ARG ANH_TRUOC=ghcr.io/unihq/igm360:latest
 FROM ${ANH_TRUOC} AS anh_truoc
 
+# 0.8.2 (QĐ258, PTD-13): ảnh nền ghim theo mã sha256, không theo nhãn. Nhãn trên Docker Hub được phát hành lại không báo
+# trước (0.8.1: nhãn python đổi giữa 02 lần đóng gói làm cả 17 lớp đổi, máy chủ tải lại 474,5 MB). Nâng nền có chủ đích:
+# Dependabot (.github/dependabot.yml, mục docker, thứ Hai hằng tuần) đề xuất đổi mã sha256, anh duyệt gộp.
+
 # Nguồn Node.js 22: lấy từ image chính thức, ghim bản vá bảo mật (22.23.4, phát hành 21/10/2026).
-FROM node:22.23.4-bookworm-slim AS nguon_node
+FROM node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d AS nguon_node
 
 # 0.8.0 (QĐ229): ghim nhãn Debian trixie để giữ SQLite ≥ 3.43 (cụm tìm chữ H08 dùng `contentless_delete`).
-FROM python:3.12-slim-trixie
+FROM python:3.12-slim-trixie@sha256:37fc60d303cb9294d3718b5b48998a0210bb1c73611c1399ef5eb7964c0536e5
 
 LABEL org.opencontainers.image.title="IGM360" \
       org.opencontainers.image.description="Phần mềm quản trị vận hành 360 thương mại điện tử" \
@@ -30,24 +34,27 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && node --version
 
-# Claude Code CLI: thư viện claude-agent-sdk cần nó để chạy bằng gói Claude.
-# Luồng đóng image truyền số phiên bản thật (lấy bản mới nhất lúc đóng).
-ARG CLAUDE_CLI_VERSION=latest
-RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}" \
-    && npm cache clean --force \
-    && claude --version
+WORKDIR /app
 
+# 0.8.2 (QĐ258): thứ tự lớp từ ít đổi đến hay đổi: thư viện Python → Codex CLI → Claude CLI → mã.
+# Thư viện Python để riêng 01 lớp: sửa mã không phải cài lại thư viện.
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+# 0.8.2 (QĐ258): 02 CLI ghim số bản, không lấy bản mới nhất mỗi lần đóng gói (trước đây gần như lần nào cũng gặp bản CLI
+# mới → tải lại ≈ 383 MB). Nâng = đổi 02 dòng ARG dưới đây (cách nâng tự động, nút nâng ngay: chờ anh chốt sau KT-QĐ260).
+# Codex ra bản ít hơn Claude (11 / 19 bản trong 30 ngày tới 24/11/2026) nên đặt trước.
 # Codex CLI: đăng nhập gói ChatGPT (nguồn thứ hai của Cổng AI).
-ARG CODEX_CLI_VERSION=latest
+ARG CODEX_CLI_VERSION=0.172.0
 RUN npm install -g "@openai/codex@${CODEX_CLI_VERSION}" \
     && npm cache clean --force \
     && codex --version
 
-WORKDIR /app
-
-# Thư viện Python để riêng 01 lớp: sửa mã không phải cài lại thư viện.
-COPY requirements.txt ./
-RUN pip install -r requirements.txt
+# Claude Code CLI: thư viện claude-agent-sdk cần nó để chạy bằng gói Claude.
+ARG CLAUDE_CLI_VERSION=2.1.331
+RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}" \
+    && npm cache clean --force \
+    && claude --version
 
 COPY VERSION LICENSE ./
 COPY maychu ./maychu

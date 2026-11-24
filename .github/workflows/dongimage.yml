@@ -34,7 +34,9 @@ jobs:
   dongimage:
     needs: kiemthu
     # Nhánh riêng chỉ chạy bài kiểm, không đóng image.
-    if: github.ref == 'refs/heads/main'
+    # Y43 (QĐ258, CPO đồng ý 24/11/2026): riêng nhánh capnhat-nhanh đóng ảnh nhãn `thu-<sha>` để đo lớp đổi trên GHCR;
+    # không đẩy `latest`, không đẩy nhãn số bản. BỎ dòng này sau khi gộp.
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/capnhat-nhanh'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -48,21 +50,19 @@ jobs:
       - name: Đọc số phiên bản
         run: echo "PHIENBAN=$(tr -d ' \n\r' < VERSION)" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      # Lấy số phiên bản thật để lớp cài CLI đổi khi có bản mới (chuỗi "latest" không làm đổi lớp).
-      - name: Lấy phiên bản Claude Code CLI, Codex CLI
+      # 0.8.2 (QĐ258): số bản 02 CLI ghim trong Dockerfile (không lấy bản mới nhất lúc đóng); main đẩy latest + số bản,
+      # nhánh capnhat-nhanh chỉ đẩy nhãn thu-<sha> (đo lớp, Y43).
+      - name: Chọn nhãn đẩy
         shell: bash
         run: |
-          for goi in "@anthropic-ai/claude-code:CLAUDE_CLI_VERSION" "@openai/codex:CODEX_CLI_VERSION"; do
-            ten="${goi%%:*}"; bien="${goi##*:}"
-            so="$(npm view "${ten}@latest" version)"
-            [[ "$so" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Số phiên bản lạ: $ten $so"; exit 1; }
-            echo "${bien}=${so}" >> "$GITHUB_ENV"
-            echo "${ten}: ${so}" >> "$GITHUB_STEP_SUMMARY"
-          done
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            { echo "NHAN<<HET"; echo "${IMAGE}:latest"; echo "${IMAGE}:${GITHUB_SHA}"; echo "${IMAGE}:${PHIENBAN}"; echo "HET"; } >> "$GITHUB_ENV"
+            echo "NHAN_KT=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          else
+            { echo "NHAN<<HET"; echo "${IMAGE}:thu-${GITHUB_SHA}"; echo "HET"; } >> "$GITHUB_ENV"
+            echo "NHAN_KT=thu-${GITHUB_SHA}" >> "$GITHUB_ENV"
+          fi
+          grep -o 'ARG [A-Z_]*_CLI_VERSION=.*' Dockerfile | tee -a "$GITHUB_STEP_SUMMARY"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -78,11 +78,12 @@ jobs:
         with:
           context: .
           load: true
-          build-args: |
-            CLAUDE_CLI_VERSION=${{ env.CLAUDE_CLI_VERSION }}
-            CODEX_CLI_VERSION=${{ env.CODEX_CLI_VERSION }}
           tags: igm360-thu:${{ github.sha }}
-          cache-from: type=gha
+          # 0.8.2 (QĐ258): ngoài bộ nhớ đệm gha (tự xoá sau 07 ngày không dùng), đọc thêm đệm gắn trong ảnh latest để lớp
+          # CLI, thư viện không bị dựng lại (dựng lại là đổi mã lớp, máy chủ tải lại hàng trăm MB).
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.IMAGE }}:latest
           cache-to: type=gha,mode=max
 
       # 0.8.0 (QĐ229): cụm tìm chữ H08 cần SQLite ≥ 3.43 (`contentless_delete`); thấp hơn thì không đẩy image.
@@ -123,18 +124,15 @@ jobs:
         with:
           context: .
           push: true
-          build-args: |
-            CLAUDE_CLI_VERSION=${{ env.CLAUDE_CLI_VERSION }}
-            CODEX_CLI_VERSION=${{ env.CODEX_CLI_VERSION }}
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
-            ${{ env.IMAGE }}:${{ env.PHIENBAN }}
-          cache-from: type=gha
+          tags: ${{ env.NHAN }}
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.IMAGE }}:latest
+          cache-to: type=inline
 
       - name: Ghi kích thước image
         shell: bash
         run: |
-          docker pull "${IMAGE}:${GITHUB_SHA}" >/dev/null
-          kt="$(docker image inspect "${IMAGE}:${GITHUB_SHA}" --format '{{.Size}}')"
+          docker pull "${IMAGE}:${NHAN_KT}" >/dev/null
+          kt="$(docker image inspect "${IMAGE}:${NHAN_KT}" --format '{{.Size}}')"
           echo "Kích thước image (giải nén): $((kt / 1024 / 1024)) MB" | tee -a "$GITHUB_STEP_SUMMARY"

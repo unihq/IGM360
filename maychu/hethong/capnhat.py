@@ -78,18 +78,33 @@ def _doc_thaydoi(tu_ban: str, het: list[dict] | None = None) -> list[dict]:
 
 def phan_tich_thaydoi(chu: str) -> list[dict]:
     """Mỗi bản 01 mục '## x.y.z'; dòng 'Tóm tắt: ...' là chữ ngắn cho lịch sử cập nhật (N07);
-    các dòng '- ...' là nội dung có gì mới."""
+    các dòng '- ...' là nội dung có gì mới. 0.8.2 (QĐ258): dòng 'Nâng dữ liệu: có/không' (không hiện ra trang) cho máy chủ
+    biết bản đó có nâng lược đồ không; thiếu dòng thì để None (coi là có)."""
     muc, ds = None, []
     for dong in chu.splitlines():
         m = re.match(r"^##\s+(\d+\.\d+\.\d+)", dong)
         if m:
-            muc = {"ban": m.group(1), "tomtat": None, "dong": []}
+            muc = {"ban": m.group(1), "tomtat": None, "dong": [], "nang_dulieu": None}
             ds.append(muc)
         elif muc and dong.strip().startswith("Tóm tắt:"):
             muc["tomtat"] = dong.strip()[len("Tóm tắt:"):].strip() or None
+        elif muc and dong.strip().startswith("Nâng dữ liệu:"):
+            gt = dong.strip()[len("Nâng dữ liệu:"):].strip().lower()
+            muc["nang_dulieu"] = {"có": True, "không": False}.get(gt)
         elif muc and dong.strip().startswith("- "):
             muc["dong"].append(dong.strip()[2:])
     return ds
+
+
+def co_nang_dulieu(tu_ban: str, den_ban: str | None, muc: list[dict]) -> bool:
+    """QĐ258 (PTD-13): lượt cập nhật tu_ban → den_ban có nâng dữ liệu không. Chỉ trả False khi MỌI bản trong khoảng đều ghi
+    rõ "Nâng dữ liệu: không"; thiếu mục, thiếu dòng hay ghi lạ đều coi là có (đẩy Drive trước như QĐ213 lớp 5)."""
+    if not den_ban:
+        return True
+    trong = [m for m in muc if _khoa_so(tu_ban) < _khoa_so(m["ban"]) <= _khoa_so(den_ban)]
+    if not any(m["ban"] == den_ban for m in trong):
+        return True
+    return any(m.get("nang_dulieu") is not False for m in trong)
 
 
 def kiem_tra(bat_buoc: bool = False) -> dict:
@@ -124,7 +139,8 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
     return {"ban_dang": dang, "ban_moi": moi, "co_ban_moi": bool(moi and _khoa_so(moi) > _khoa_so(dang)),
             "luc_kiem": datetime.fromtimestamp(_NHO["luc_dat"], MUIGIO_VN).isoformat(timespec="seconds") if _NHO["luc_dat"] else None,
             "nhip_phut": nhip_kiem_giay() // 60,
-            "thaydoi": _NHO["thaydoi"] if moi else [], "tomtat": _NHO["tomtat"], "loi": _NHO["loi"]}
+            "thaydoi": _NHO["thaydoi"] if moi else [], "tomtat": _NHO["tomtat"], "loi": _NHO["loi"],
+            "nang_dulieu": co_nang_dulieu(dang, moi, _NHO["thaydoi"])}   # QĐ258: trang biết trước khi bấm
 
 
 def _ghi_f04(lenhcon: str, tomtat: str, ketqua: str, lydo: str | None = None, nguoi_id=None, thumuc=None) -> None:
@@ -203,7 +219,7 @@ def yeu_cau(nguoi_id: str, che_do: str, thumuc=None, van_capnhat: bool = False) 
     # nên việc AI bắt đầu trong lúc chụp vẫn được chờ. Từ lúc bấm tới lúc gửi lệnh, dang_cho() = True để không nhận việc mới.
     if not dang_cho():
         tiendo.bat_dau(ban_dang_chay(), kq["ban_moi"], luc_o_trong, thumuc)   # bước 1 xong → bước 2 chụp 07 tệp
-    return bat_dau(nguoi_id, kq["ban_moi"], thumuc, cho_viec=che_do == "cho")
+    return bat_dau(nguoi_id, kq["ban_moi"], thumuc, cho_viec=che_do == "cho", day_truoc=kq.get("nang_dulieu", True))
 
 
 def dang_cho() -> bool:
@@ -216,7 +232,8 @@ def xu_ly_cho(thumuc=None) -> None:
     if _CHO["tu"] and (not so_viec_ai_dangchay(thumuc) or time.time() - _CHO["tu"] > CHO_TOIDA_GIAY):
         nguoi = _CHO["nguoi"]
         _CHO.update(tu=0.0, nguoi=None)
-        bat_dau(nguoi, kiem_tra()["ban_moi"], thumuc)
+        kq = kiem_tra()
+        bat_dau(nguoi, kq["ban_moi"], thumuc, day_truoc=kq.get("nang_dulieu", True))
 
 
 # ---------------- 0.7.9 lớp 5: bản sao Drive trước khi gửi lệnh ----------------
@@ -269,13 +286,15 @@ def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> No
         _SAO.update(buoc="tai" if not _SAO["loi"] else None)
 
 
-def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None, cho_viec: bool = False) -> dict:
+def bat_dau(nguoi_id: str, ban_moi: str | None, thumuc=None, cho_viec: bool = False, day_truoc: bool = True) -> dict:
     """Chụp bản sao 07 tệp vào thư mục riêng, chờ đẩy lên Drive (tối đa CHO_DRIVE_GIAY), rồi gửi lệnh. Chạy nền vì
-    đẩy Drive có thể vài phút; giao diện hỏi lại /api/capnhat để biết bước đang chạy."""
+    đẩy Drive có thể vài phút; giao diện hỏi lại /api/capnhat để biết bước đang chạy.
+    0.8.2 (QĐ258): `day_truoc` False (bản mới không nâng dữ liệu) thì không chờ Drive: bản chụp nằm sẵn trong hàng chờ
+    cho_day_drive, lịch chạy nền của bản mới đẩy tiếp (hàng chờ giữ cả khi quay về, QĐ237)."""
     with _KHOA_SAO:
         if _SAO["buoc"] in ("chup", "day", "qua_gio", "cho_viec", "gui"):
             return {"ok": True, "sao": True}
-        _SAO.update(buoc="chup", tu=time.time(), loi=None, den=ban_moi, cho_viec=cho_viec)
+        _SAO.update(buoc="chup", tu=time.time(), loi=None, den=ban_moi, cho_viec=cho_viec, day_truoc=day_truoc)
     _chay_nen(lambda: _sao_roi_gui(nguoi_id, ban_moi, thumuc))
     return {"ok": True, "sao": True}
 
@@ -305,7 +324,11 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
             tiendo.loi("chup", thumuc, "tệp " + loi["file_dulieu"] if loi.get("file_dulieu") else None)
             _ghi_f04("capnhat_ngay", dang, "bichan", "chưa chụp được bản sao: " + lydo, nguoi_id, thumuc)
             return
-        if drive.dang_noi(thumuc):
+        noi_drive = drive.dang_noi(thumuc)
+        if noi_drive and not _SAO.get("day_truoc", True):   # QĐ258: không nâng dữ liệu → Drive đẩy nền sau khi bản mới lên
+            tiendo.sang("drive", thumuc, nen=True, da=0, tong=_con_cho_drive(kq["noi"], thumuc))
+            noi_drive = False   # bản sao chưa lên Drive lúc gửi lệnh
+        elif noi_drive:
             _SAO["buoc"] = "day"
             tong = _con_cho_drive(kq["noi"], thumuc)
             tiendo.sang("drive", thumuc, da=0, tong=tong)   # bước 3: số tệp đã lên Drive / tổng
@@ -319,7 +342,7 @@ def _sao_roi_gui(nguoi_id: str, ban_moi: str | None, thumuc=None) -> None:
                 _SAO["buoc"] = "qua_gio"
                 return
         _SAO["buoc"] = "gui"
-        _gui(nguoi_id, ban_moi, drive.dang_noi(thumuc), thumuc)
+        _gui(nguoi_id, ban_moi, noi_drive, thumuc)
     except Exception as e:  # noqa: BLE001 - mọi lỗi đều báo lại, không gửi lệnh khi chưa có bản sao
         _SAO.update(loi=antoan.CHU["sao_loi"].format(lydo=type(e).__name__), buoc=None)
         tiendo.loi(type(e).__name__, thumuc)

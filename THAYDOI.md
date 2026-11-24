@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.2
+Tóm tắt: Cập nhật nhanh hơn
+Nâng dữ liệu: không
+- Từ bản sau, lần cập nhật chỉ đổi phần mềm tải khoảng 01–02 MB thay vì hàng trăm MB.
+- Bản không nâng dữ liệu: bản sao Drive được đẩy ngay sau khi lên bản mới; bản sao trên máy chủ vẫn chụp trước như cũ.
+- Lên bản mới là trang tải lại ngay; kiểm sau cập nhật chạy nền, kết quả hiện ở lịch sử cập nhật.
+
 ## 0.8.1
 Tóm tắt: Tiến độ cập nhật theo 08 bước
 - Thẻ Đang cập nhật hiện % và 08 bước, đã chạy bao lâu, còn khoảng bao lâu.
