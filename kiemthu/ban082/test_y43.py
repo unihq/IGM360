@@ -55,15 +55,35 @@ class KiemTepLuong(unittest.TestCase):
         self.assertNotIn("CODEX_CLI_VERSION=${{", wf)
         self.assertIn("cache-to: type=inline", wf)
 
-    def test_nhanh_do_lop_khong_day_latest(self):
+    def test_chi_main_dong_anh(self):
+        """CDA KT-Y43 N5: đường đo lớp của nhánh capnhat-nhanh đã bỏ; chỉ main đóng và đẩy ảnh."""
         wf = _doc(".github/workflows/dongimage.yml")
-        self.assertIn("if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/capnhat-nhanh'", wf)
+        self.assertIn("    if: github.ref == 'refs/heads/main'\n", wf)
+        self.assertNotIn("capnhat-nhanh'", wf)
+        self.assertNotIn(":thu-", wf)
         buoc = wf.split("- name: Chọn nhãn đẩy", 1)[1].split("- uses:", 1)[0]
-        nhanh = buoc.split("else", 1)[1].split("fi", 1)[0]
-        self.assertIn(":thu-${GITHUB_SHA}", nhanh)
-        self.assertNotIn(":latest", nhanh)
-        self.assertNotIn("${PHIENBAN}", nhanh)
+        for nhan in ("${IMAGE}:latest", "${IMAGE}:${GITHUB_SHA}", "${IMAGE}:${PHIENBAN}"):
+            self.assertIn(nhan, buoc)
         self.assertIn("tags: ${{ env.NHAN }}", wf)
+        self.assertIn("fetch-depth: 0", wf.split("dongimage:", 1)[0])      # kiemthu có origin/main (N1)
+
+    def test_luoc_do_doi_thi_phai_ghi_nang_du_lieu_co(self):
+        """CDA KT-Y43 N1: nhánh đổi PHIENBAN_LUOCDO so với main mà mục THAYDOI của bản ghi "Nâng dữ liệu: không" thì báo đỏ
+        (máy chủ sẽ không đẩy Drive trước khi nâng dữ liệu)."""
+        from maychu.dulieu import khoitao
+        from maychu.hethong import capnhat
+        r = subprocess.run(["git", "show", "origin/main:maychu/dulieu/khoitao.py"], cwd=GOC, capture_output=True,
+                           text=True, encoding="utf-8")
+        if r.returncode != 0:
+            self.skipTest("không có origin/main để so (CI lấy đủ lịch sử bằng fetch-depth: 0)")
+        m = re.search(r"^PHIENBAN_LUOCDO\s*=\s*(\d+)", r.stdout, re.M)
+        self.assertIsNotNone(m, "không đọc được PHIENBAN_LUOCDO của main")
+        ban = _doc("VERSION").strip()
+        muc = next((x for x in capnhat.phan_tich_thaydoi(_doc("THAYDOI.md")) if x["ban"] == ban), None)
+        self.assertIsNotNone(muc, f"THAYDOI thiếu mục {ban}")
+        if khoitao.PHIENBAN_LUOCDO != int(m.group(1)):
+            self.assertIs(muc["nang_dulieu"], True, f"PHIENBAN_LUOCDO {m.group(1)} → {khoitao.PHIENBAN_LUOCDO} mà mục {ban}"
+                                                    " không ghi \"Nâng dữ liệu: có\"")
 
 
 class KiemNangDuLieu(unittest.TestCase):
