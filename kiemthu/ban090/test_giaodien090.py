@@ -124,18 +124,22 @@ class KiemNode(unittest.TestCase):
 const ICON = {lock: '<svg stroke="#000" width="1" height="1">k</svg>', 'shield-alert': '<svg stroke="#000" width="1" height="1">sa</svg>',
   'shield-check': '<svg stroke="#000" width="1" height="1">sc</svg>'};
 const o = id => ({id, hidden: false, innerHTML: '', append(x) { this.con = x; }});
-const PHAN = {'#vong-2lop': o('vong'), '#ico-2lop-tat': o('ico'), '#f1-2lop': o('f1'), '#bao-2lop': o('bao'), '#the-2lop [data-mo="h-2lop"]': o('doi')};
-const $ = q => PHAN[q] || null, D = {};
+// #f1-2lop: gán innerHTML thì mất các phần tử con cũ (như trình duyệt) – nút đổi máy đã chuyển vào trong mất khỏi cây
+const f1 = {hidden: false, _h: '', con: null, append(x) { this.con = x; x.cha = this; },
+  get innerHTML() { return this._h; }, set innerHTML(v) { this._h = v; if (this.con) { this.con.cha = null; this.con = null; } }};
+const nutDoi = o('doi');
+const PHAN = {'#vong-2lop': o('vong'), '#ico-2lop-tat': o('ico'), '#f1-2lop': f1, '#bao-2lop': o('bao')};
+const $ = q => q === '#the-2lop [data-mo="h-2lop"]' ? (nutDoi.cha === undefined || nutDoi.cha === f1 ? nutDoi : null) : (PHAN[q] || null), D = {};
 """
 
     def test_ve_2lop_dang_bat_dang_tat_an_toan(self):
         ma = self.GIA + self.chu + self.ico + self.tat
-        bat = self.chay(ma + "ve2Lop({da_bat_2lop: true, co_khoa_2lop: true});", "[PHAN['#f1-2lop'].innerHTML, PHAN['#bao-2lop'].hidden, PHAN['#the-2lop [data-mo=\"h-2lop\"]'].hidden, PHAN['#vong-2lop'].hidden, D.tat2lop]")
+        bat = self.chay(ma + "ve2Lop({da_bat_2lop: true, co_khoa_2lop: true});", "[PHAN['#f1-2lop'].innerHTML, PHAN['#bao-2lop'].hidden, nutDoi.hidden, PHAN['#vong-2lop'].hidden, D.tat2lop]")
         self.assertIn('aria-checked="true" aria-label="Bật đăng nhập 02 lớp"', bat[0])
         self.assertIn('<div class="nhan n-dat"><i></i>Đang bật</div>', bat[0])
         self.assertIn("Đăng nhập trên máy mới cần thêm mã 06&nbsp;số trên điện thoại.", bat[0])
         self.assertEqual(bat[1:], [True, False, False, False])                                     # không cảnh báo, nút đổi máy hiện
-        tat = self.chay(ma + "ve2Lop({da_bat_2lop: false, co_khoa_2lop: true});", "[PHAN['#f1-2lop'].innerHTML, PHAN['#bao-2lop'].hidden, PHAN['#bao-2lop'].innerHTML, PHAN['#the-2lop [data-mo=\"h-2lop\"]'].hidden, PHAN['#vong-2lop'].hidden, PHAN['#ico-2lop-tat'].hidden, D.tat2lop]")
+        tat = self.chay(ma + "ve2Lop({da_bat_2lop: false, co_khoa_2lop: true});", "[PHAN['#f1-2lop'].innerHTML, PHAN['#bao-2lop'].hidden, PHAN['#bao-2lop'].innerHTML, nutDoi.hidden, PHAN['#vong-2lop'].hidden, PHAN['#ico-2lop-tat'].hidden, D.tat2lop]")
         self.assertIn('aria-checked="false"', tat[0])
         self.assertIn('<div class="nhan n-canh"><i></i>Đang tắt</div>', tat[0])
         self.assertEqual((tat[1], tat[3], tat[4], tat[5], tat[6]), (False, True, True, False, True))   # QĐ398: ẩn "Đổi máy nhận mã"
@@ -150,6 +154,13 @@ const $ = q => PHAN[q] || null, D = {};
     def test_app_js_dung_cu_phap(self):                                                        # cả tệp chạy được (node --check)
         r = subprocess.run(["node", "--check", str(GD / "app.js")], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_ve_2lop_ve_lai_nhieu_lan_khong_mat_nut_doi_may(self):                           # lỗi bắt được khi xem thử
+        ma = self.GIA + self.chu + self.ico + self.tat
+        kq = self.chay(ma + "ve2Lop({da_bat_2lop: true, co_khoa_2lop: true}); ve2Lop({da_bat_2lop: false, co_khoa_2lop: true});"
+                       " const a = [nutDoi.hidden, PHAN['#bao-2lop'].hidden]; ve2Lop({da_bat_2lop: true, co_khoa_2lop: true});",
+                       "[a, nutDoi.hidden, f1.con === nutDoi]")
+        self.assertEqual(kq, [[True, False], False, True])
 
     def test_doi_vi_tri_va_bang_tha(self):
         ma = r"""

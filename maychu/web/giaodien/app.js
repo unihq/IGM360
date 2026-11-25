@@ -411,8 +411,8 @@ function ve2Lop(d) {
     + '<div class="nhan ' + (tat ? 'n-canh' : 'n-dat') + '"><i></i>' + esc(tat ? C.dangTat : C.dangBat) + '</div>'
     + '<div class="phu t13" style="margin-top:2px">' + cum(tat ? C.giaiTat : C.giaiBat) + '</div>'
     + (khoa ? '<div class="dong t13 phu" style="gap:6px;margin-top:6px">' + icoMau(ICON.lock, '#646A73', 14) + '<span>' + cum(C.antoan) + '</span></div>' : '');
-  $('#f1-2lop').append($('#the-2lop [data-mo="h-2lop"]') || '');
-  $('#the-2lop [data-mo="h-2lop"]').hidden = tat;   // QĐ398: đang tắt thì ẩn "Đổi máy nhận mã"
+  D.nutDoiMay = D.nutDoiMay || $('#the-2lop [data-mo="h-2lop"]');   // giữ tham chiếu: vẽ lại innerHTML không làm mất nút
+  $('#f1-2lop').append(D.nutDoiMay); D.nutDoiMay.hidden = tat;   // QĐ398: đang tắt thì ẩn "Đổi máy nhận mã"
   const b = $('#bao-2lop'); b.hidden = !tat;   // dòng cảnh báo đầu ngăn khi tắt (BV03), nút "Bật lại" mở hộp bật lại
   if (tat) b.innerHTML = icoMau(ICON['shield-alert'], '#8F5F00', 18) + '<span class="f1 xem-chu t13">' + cum(C.baoTat) + '</span>'
     + '<button class="btn btn-chinh" data-bat2lopmo>' + icoMau(ICON['shield-check'], '#FFFFFF', 16) + esc(C.nutBatLai) + '</button>';
