@@ -19,8 +19,9 @@ from maychu.dulieu.saoluu import MUIGIO_VN
 
 GOC = Path(__file__).resolve().parents[2]
 CU = re.compile(r"(?<![qQ])[oO][àáảãạèéẻẽẹÀÁẢÃẠÈÉẺẼẸ](?!\w)|(?<![qQ])[uU][ỳýỷỹỵỲÝỶỸỴ](?!\w)")
-# Bản chép máy của mã cũ, đúng từng byte với commit gốc (00. Noidung.txt: "chép bằng máy, KHÔNG sửa tay"): chờ CPO, anh
-# chốt có đổi hay giữ (QĐ302 ghi "không ngoại lệ" nhưng chưa xét 02 thư mục này).
+# Ngoại lệ chính thức (QĐ333, anh: "bản cũ thì bỏ qua, áp dụng từ bản mới."): 02 thư mục là bản chép máy của mã 0.7.9
+# (d369e42), đúng từng byte, "KHÔNG sửa tay" (00. Noidung.txt); dùng cho bài Y40 (luocdo_ban3), Y41 (ma_079) và công cụ
+# nâng ngày 10. Giữ nguyên 11 chỗ dấu kiểu cũ trong 02 thư mục này; mọi tệp khác 0 chỗ (QĐ302).
 NGOAI_LE = ("kiemthu/ban080/luocdo_ban3/", "kiemthu/ban081/ma_079/")
 
 
