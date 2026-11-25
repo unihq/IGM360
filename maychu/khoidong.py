@@ -68,6 +68,12 @@ async def vongdoi(_app: FastAPI):
         except Exception:  # noqa: BLE001
             import logging
             logging.getLogger(__name__).exception("đổi chữ dấu kiểu mới lúc khởi động lỗi")
+        try:   # N0 (QĐ344): lượt trò chuyện bị cắt do khởi động lại → đối chiếu, 01 tin báo (QĐ352), đóng G02
+            from maychu.hethong.mohinh import luot
+            luot.don_khi_khoidong()
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).exception("đóng lượt trò chuyện dở lúc khởi động lỗi")
         if os.environ.get("IGM360_LICH", "bat") != "tat":
             from maychu.hethong.giamsat import lich
             viec = asyncio.create_task(lich.chay_mai())

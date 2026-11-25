@@ -3,10 +3,12 @@
 Bảo vệ: mã phiên ở cookie HttpOnly, SameSite=Strict, Secure; mọi lệnh ghi phải có header X-IGM360
 (trang web khác không gửi được header này). Chặn đoán mật khẩu theo địa chỉ IP thật, phiên 30 ngày (QĐ90).
 """
+import asyncio
+import json
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from maychu.dulieu import ketnoi
@@ -14,7 +16,7 @@ from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.giamsat import thongbao
-from maychu.hethong.mohinh import congai, dangnhap_goi, danhmuc_mohinh, madaihan, trochuyen
+from maychu.hethong.mohinh import congai, dangnhap_goi, danhmuc_mohinh, luot, madaihan, trochuyen
 from maychu.hethong.nhatky import ghi as ghi_f04
 from maychu.hethong.taikhoan import nguoidung, phien
 from maychu.ketnoi import drive
@@ -681,9 +683,43 @@ def xem_trochuyen(ma: str, p: dict = Depends(can_dang_nhap)):
 
 @router.post("/trochuyen")
 def gui_tin(body: TinMoi, p: dict = Depends(can_dang_nhap)):
+    """N0: mở 01 lượt chạy nền, trả ngay {hoithoai_id, hoi, luot_id}; trang theo dõi qua luồng sự kiện."""
     try:
-        return trochuyen.gui(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
+        return trochuyen.bat_luot(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
+    except trochuyen.ChoCapNhat as e:   # QĐ347 H1, QĐ352: giao diện hiện câu báo trong khung chat, giữ câu hỏi ở ô nhập
+        return JSONResponse({"detail": str(e), "ma": "cho_capnhat"}, status_code=409)
     except ValueError as e:
         raise HTTPException(400, str(e))
     except PermissionError as e:
         raise HTTPException(404, str(e))
+
+
+@router.get("/trochuyen/luot/{luot_id}/sukien")
+async def su_kien_luot(luot_id: str, request: Request, tu: int = 0, p: dict = Depends(can_dang_nhap)):
+    """Luồng sự kiện (SSE) của 01 lượt: bat_dau, cho, chu, buoc, lam_lai, xong, dung, loi. Có số thứ tự (`id:`), phát
+    lại từ `tu` hoặc `Last-Event-ID`; 15 giây không có gì thì gửi 01 dòng giữ kết nối. Lượt của người khác: 404."""
+    lt = luot.lay(luot_id, p["nguoidung_id"])
+    if lt is None:
+        raise HTTPException(404, "Không có lượt trả lời này")
+    try:
+        tu = max(tu, int(request.headers.get("last-event-id") or 0))
+    except ValueError:
+        pass
+
+    async def phat():
+        da = tu
+        while True:
+            ds = await asyncio.to_thread(lt.doi, da, 15)
+            if not ds:
+                if lt.ket_thuc:
+                    return
+                yield ": giu\n\n"
+                continue
+            for ev in ds:
+                da = ev["so"]
+                yield f"id: {ev['so']}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n"
+                if ev["loai"] in luot.KET_THUC:
+                    return
+
+    return StreamingResponse(phat(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

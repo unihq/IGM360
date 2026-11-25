@@ -17,7 +17,7 @@ from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
 from maychu.hethong.giamsat import domay, thongbao
 from maychu.hethong.mohinh import nangcli
-from maychu.hethong.mohinh import congai
+from maychu.hethong.mohinh import congai, luot
 from maychu.ketnoi import drive
 
 GIO_SAOLUU = 2
@@ -53,8 +53,16 @@ async def chay_mai() -> None:
             if moc != gio_do_cuoi:
                 await asyncio.to_thread(domay.ghi_n02)
                 await asyncio.to_thread(thongbao.quet_maychu)
+                try:   # QĐ348 (X1–X4): dòng G02 trò chuyện đã đóng quá 24 giờ; lỗi không làm bỏ các việc khác của vòng
+                    await asyncio.to_thread(luot.xoa_dong_cu)
+                except Exception:  # noqa: BLE001
+                    log.exception("xóa dòng lượt trò chuyện cũ lỗi")
                 gio_do_cuoi = moc
             capnhat.xu_ly_cho()
+            try:   # N0 H2 (SOAT-H2 S1–S4): lượt kẹt, hàm riêng, không chặn vòng lịch; lỗi không làm bỏ các việc khác
+                await asyncio.to_thread(luot.dong_luot_ket)
+            except Exception:  # noqa: BLE001
+                log.exception("đóng lượt trò chuyện kẹt lỗi")
             if bay_gio.hour >= GIO_SAOLUU and not saoluu.da_co_hom_nay(bay_gio=bay_gio):
                 kq = await asyncio.to_thread(saoluu.chay)
                 log.info("sao lưu: %s", kq["ketqua"])

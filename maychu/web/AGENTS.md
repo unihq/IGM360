@@ -14,6 +14,7 @@
 - Mọi đường gọi cần đăng nhập dùng `Depends(can_dang_nhap)`; chỉ vài đường công khai đã chốt (sức khỏe, trang về của đăng nhập Drive).
 - Mã phiên ở cookie HttpOnly, SameSite=Strict, Secure.
 - Đường ghi (POST) yêu cầu đầu báo của giao diện; không thêm đường ghi bằng GET.
+- Luồng sự kiện (N0): `GET /api/trochuyen/luot/{id}/sukien` chỉ đọc, `text/event-stream`, `Cache-Control: no-cache`; không thêm lớp nén cho đường này.
 - Thao tác thay đổi ghi F04 (ai, lúc, việc gì) qua `ghi_f04`.
 - Câu lỗi trả về là chữ người dùng thấy: tiếng Việt có dấu, xưng "bạn" không xưng "anh" (QĐ219, QĐ220), đúng từ điển thuật ngữ (tài liệu nội bộ, hỏi người giữ; QĐ135, QĐ136); không lộ khóa, đường dẫn, chi tiết kỹ thuật.
 - Số trong câu trả về theo cách hiện số của giao diện (chấm ngăn nghìn, phẩy thập phân, bỏ số 0 thừa, đơn vị sau số).
