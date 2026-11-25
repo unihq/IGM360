@@ -9,7 +9,8 @@ GOC = Path(__file__).resolve().parents[2]
 
 class KiemChu088BaoMat(unittest.TestCase):
     def test_version_va_muc_088_nguyen_van_qd376(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.8.8")
+        so = tuple(int(x) for x in (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))
+        self.assertGreaterEqual(so, (0, 8, 8))                                    # bản sau giữ mục 0.8.8 nguyên văn (0.8.9, QĐ380)
         dong = (GOC / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
         i = dong.index("## 0.8.8")
         self.assertEqual(dong[i:i + 7], [
@@ -22,7 +23,7 @@ class KiemChu088BaoMat(unittest.TestCase):
             "",
         ])                                                                        # QĐ376, đúng từng ký tự
         self.assertEqual(dong[i + 7], "## 0.8.7")
-        self.assertEqual([d for d in dong if d.startswith("## ")][0], "## 0.8.8")   # mục mới ở đầu
+        self.assertLess(dong.index("## 0.8.8"), dong.index("## 0.8.7"))            # mục mới hơn đứng trên (0.8.9 đặt trên 0.8.8)
         self.assertNotIn("và bot", " ".join(dong[i:i + 7]))                    # QĐ376: bỏ 02 chữ "và bot"
 
 

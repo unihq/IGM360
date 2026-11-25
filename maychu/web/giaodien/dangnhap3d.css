@@ -1,4 +1,4 @@
-/* IGM360 0.8.8 – đồ họa trang đăng nhập (QĐ368, QĐ369, QĐ371; bản chốt DM-04b). Chỉ trang trí: aria-hidden, không nhận bấm.
+/* IGM360 0.8.9 – đồ họa trang đăng nhập (QĐ368, QĐ369, QĐ371; bản chốt DM-04b). Chỉ trang trí: aria-hidden, không nhận bấm.
    Mọi quy tắc nằm trong #s01 (ngoại lệ màu 2.1 không lan). Chuyển động chỉ dùng transform, opacity (CDA SOAT-KH-088 2a).
    Tệp này không tải được thì ô đăng nhập vẫn dùng được (L3). */
 #s01 .nen,#s01 .kx-bay{display:block}

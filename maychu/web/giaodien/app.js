@@ -64,13 +64,13 @@ function ve() {
   $$('[data-trang]').forEach(e => e.classList.toggle('on', e.dataset.trang === S.trang));
   $$('.tab').forEach(e => e.classList.toggle('on', e.dataset.tab === S.tab));
   $('#tieude-tren').innerHTML = (ICO[S.trang] || '') + '<b class="t16 nw">' + (TEN[S.trang] || '') + '</b>';
-  const nutDn = $('[data-dangnhap]');   // 0.8.8 (CDA SOAT-KH-088 điểm 3): "Đang xử lý…" theo S.lv riêng; S.dn giữ 07 giá trị
+  const nutDn = $('[data-dangnhap]');   // 0.8.9 (CDA SOAT-KH-088 điểm 3): "Đang xử lý…" theo S.lv riêng; S.dn giữ 07 giá trị
   nutDn.disabled = S.dn === 'khoa' || S.dn === 'khoatk' || S.lv === 'dang';
   if ((S.lv === 'dang') !== nutDn.classList.contains('dang')) {
     if (S.lv === 'dang') { D.nutDn = nutDn.innerHTML; nutDn.innerHTML = icoMau(ICON.loader, '#FFFFFF', 18).replace('<svg', '<svg aria-hidden="true"') + CHU_DN.dang; }
     else nutDn.innerHTML = D.nutDn;
     nutDn.classList.toggle('dang', S.lv === 'dang'); }
-  if (S.g === '01') dongTacLv();   // 0.8.8: linh vật màn 01
+  if (S.g === '01') dongTacLv();   // 0.8.9: linh vật màn 01
   veNhom();   // Y52: thu gọn nhóm thanh trái
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
@@ -146,7 +146,7 @@ async function dangNhap() {
   const ten = $('#dn-ten').value.trim(), mk = $('#mk').value;
   if (!ten || !mk) { hienLoiDn('Bạn nhập tên đăng nhập và mật khẩu.', null); return; }
   if (S.lv === 'dang') return;
-  S.lv = 'dang'; ve();   // 0.8.8: nút "Đang xử lý…", linh vật đang làm; mọi nhánh (cả mất kết nối) trả lại ở finally
+  S.lv = 'dang'; ve();   // 0.8.9: nút "Đang xử lý…", linh vật đang làm; mọi nhánh (cả mất kết nối) trả lại ở finally
   try {
     const kq = await api('/dangnhap', {ten, matkhau: mk});
     D.maTam = kq.ma_tam; $('#mk').value = '';
@@ -160,7 +160,7 @@ async function xacNhanMa(nut) {
   if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
   try {
     await api('/dangnhap/ma2lop', {ma_tam: D.maTam, ma});
-    S.lv = 'xong'; ve();   // 0.8.8: linh vật xong việc, không thêm thời gian chờ
+    S.lv = 'xong'; ve();   // 0.8.9: linh vật xong việc, không thêm thời gian chờ
     if (nut.dataset.xacnhan === 'bat') bao('Đã bật đăng nhập 02 lớp.');
     xoa6(goc); $('#qr-2lop').innerHTML = ''; await vaoPhanMem();
   } catch (e) { xoa6(goc); if (e.status === 429) { hienKhoa(e.ct); return; }
@@ -168,7 +168,7 @@ async function xacNhanMa(nut) {
   finally { S.lv = null; ve(); }
 }
 
-// <LINHVAT> 0.8.8 (QĐ364, QĐ368, QĐ371): linh vật màn 01 đổi động tác theo S.lv || S.dn; chào mừng 01 lần khi màn 01 hiện.
+// <LINHVAT> 0.8.9 (QĐ364, QĐ368, QĐ371): linh vật màn 01 đổi động tác theo S.lv || S.dn; chào mừng 01 lần khi màn 01 hiện.
 // Giảm chuyển động hoặc máy yếu (CDA SOAT-KH-088 2a) → lớp .tinh trên #s01, bỏ chào mừng. Lỗi ở đây không chặn ve() (L3 d).
 const CHU_DN = {hien: 'Hiện mật khẩu', an: 'Ẩn mật khẩu', dang: 'Đang xử lý…'};   // bảng chữ QĐ369 (6); quy chuẩn 5.1
 const LV = {matkhau: 'cho', dang: 'danglam', sai: 'loi', khoa: 'loi', khoatk: 'loi', hethan: 'loi', ma2lop: 'chay', batdau2lop: 'chay', xong: 'xong'};

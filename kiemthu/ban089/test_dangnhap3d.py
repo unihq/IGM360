@@ -1,4 +1,4 @@
-"""Bài kiểm bản 0.8.8 – logo C3 và trang đăng nhập 3D (QĐ345, QĐ369, QĐ371; kế hoạch KH-088, CDA SOAT-KH-088).
+"""Bài kiểm bản 0.8.9 (trước đánh số 0.8.8; dời số theo QĐ374, QĐ380) – logo C3 và trang đăng nhập 3D (QĐ345, QĐ369, QĐ371; kế hoạch KH-088, CDA SOAT-KH-088).
 
 L1 thư viện · L2 nguồn tệp · L3 đăng nhập được khi đồ họa lỗi · L4 cỡ tải · L5 chuyển động, máy yếu ·
 trạng thái linh vật qua biến riêng S.lv (S.dn giữ 07 giá trị) · chữ đúng bảng chữ đã duyệt.
@@ -96,7 +96,7 @@ class KiemTep088(unittest.TestCase):
         self.assertEqual(phai.count('<svg aria-hidden="true"\n  style="flex:none;vertical-align:middle"'), 9)
 
     def test_l3_css_o_dang_nhap_nam_trong_index(self):
-        st = self.ix[self.ix.index("<style>/* 0.8.8"):self.ix.index("</head>")]
+        st = self.ix[self.ix.index("<style>/* 0.8.9"):self.ix.index("</head>")]
         for chon in ("#s01 .o-nhap{", "#s01 .btn{", "#s01 .nhan-o{", "#s01 .o6{", "#s01 .the-doi{", "#s01 .dn-phai{"):
             self.assertIn(chon, st)
             self.assertNotIn(chon, self.css)
@@ -129,7 +129,7 @@ class KiemTep088(unittest.TestCase):
             self.assertTrue(k.startswith("dn3-"), k)
             self.assertNotIn(k, kf_chinh)
 
-    # ---- L4: cỡ tải (số đo mã dựng 0.8.8, có biên)
+    # ---- L4: cỡ tải (số đo mã dựng 0.8.9, có biên)
     def test_l4_tran_co(self):
         c = (GD / "dangnhap3d.css").read_bytes().replace(b"\r\n", b"\n")
         self.assertLess(len(c), 18000)                                            # đo 15.639 B
@@ -223,6 +223,13 @@ class KiemTep088(unittest.TestCase):
         self.assertIn("<div class=\"t12 phu nw\">Quản trị vận hành 360</div>", self.ix)
         self.assertIn("nav.menu .logo{gap:14px;padding-left:20px}", self.ix)        # SC-3, SC-4
 
+    def test_logo_thu_gon_giua_thanh(self):
+        # P3 CDO BT-088: thu gọn menu (68 px) bỏ lề trái 20 px của SC-4 để biểu tượng 36 px nằm giữa
+        i = self.ix.index("nav.menu .logo{gap:14px;padding-left:20px}")
+        j = self.ix.index(".thu nav.menu .logo{padding-left:0}")
+        self.assertGreater(j, i)                                                  # cùng độ mạnh bộ chọn, đặt sau nên thắng
+        self.assertIn(".thu nav.menu{width:68px}", self.ix)
+
     def test_logo_hang_dung_net_tep_goc(self):
         for t, mau in (("tiktok.svg", "#000000"), ("shopee.svg", "#EE4D2D")):    # QĐ92
             d = re.search(r' d="([^"]+)"', doc(GD / "logo" / t)).group(1)
@@ -293,7 +300,7 @@ class KiemLinhVat088(unittest.TestCase):
     def setUpClass(cls):
         a = doc(GD / "app.js")
         cls.man01 = a[a.index("// ---- Màn 01"):a.index("// ---- Màn 02")]
-        cls.nut = a[a.index("  const nutDn = $('[data-dangnhap]');"):a.index("  if (S.g === '01') dongTacLv();   // 0.8.8")]
+        cls.nut = a[a.index("  const nutDn = $('[data-dangnhap]');"):a.index("  if (S.g === '01') dongTacLv();   // 0.8.9")]
         cls.dau = GIA_DOM.replace("NUT", cls.nut)
 
     def chay(self, truoc, ma, cau):
