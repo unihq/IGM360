@@ -478,7 +478,7 @@ function veCapNhat(d) {
   ve();
   const t = d.tien_do;   // QĐ253: mở trang (hoặc vừa tải lại sang bản mới) giữa lúc đang cập nhật thì hiện tiếp tiến độ 08 bước
   const dangLuot = t && !t.loi && !t.treo && t.buoc !== 'xong' && t.tu && t.den;   // QĐ255 điểm 2: cờ treo do máy chủ tính
-  if (dangLuot && t.den !== d.ban_dang && S.cn !== 'dangcn') choCapNhat(t.tu, t.den, d);   // bản cũ còn chạy: hiện tiếp tiến độ
+  if (dangLuot && !daLen(d.ban_dang, t.den) && S.cn !== 'dangcn') choCapNhat(t.tu, t.den, d);   // bản cũ còn chạy: hiện tiếp tiến độ
   else if ((dangLuot && t.den === d.ban_dang) || sl.keoDrive) theoKiem();   // QĐ258, QĐ261: kiểm 06 điểm, Drive đang chạy nền
 }
 // QĐ261 (bản vẽ Z19, chữ U19 anh duyệt dòng 1–9): chữ thẻ Có bản mới và thẻ bản đang dùng sau khi tải lại, viết ở 01 chỗ này.
@@ -594,6 +594,9 @@ ICON['circle-arrow-up'] = ICON['circle-arrow-up'] || svgLucide('circle-arrow-up'
 const caVn = t => new Date((typeof t === 'number' ? t : Date.parse(t)) + 7 * 3600e3).toISOString();   // giờ Việt Nam
 const caSo = b => String(b || '0.0.0').split('.').map(x => parseInt(x, 10) || 0);
 const caCao = (a, b) => { const x = caSo(a), y = caSo(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
+// QĐ386 (LOI-CN-089): bản đang chạy ≥ bản yêu cầu là đã lên (watchtower kéo bản mới nhất, có thể mới hơn bản ghi lúc bấm).
+// Chỉ dùng để quyết định "bản cũ còn chạy" (gọi choCapNhat); khi nhận lượt, máy chủ ghi den = bản thật (tiendo.vao_ban_moi).
+const daLen = (dang, den) => !!den && !caCao(den, dang);
 const caBan = (so, goi) => goi ? (so ? so + ' trong gói' : 'trong gói') : so;   // QĐ307 dòng 10, 11, 15b: bản trong gói
 function caLuc(t, bay) {   // "10:00 hôm nay" · "10:00 ngày mai" · ngày khác: "10:00 ngày 23/11/2026"
   const v = caVn(t), n = v.slice(0, 10);

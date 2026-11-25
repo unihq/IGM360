@@ -248,7 +248,10 @@ def chan_vi(thumuc: Path | None = None) -> str | None:
     if capnhat.dang_cho():
         return "dang_cap_nhat"
     td = tiendo.doc(thumuc)
-    if td and not td.get("xong") and not td.get("loi") and td.get("den") and td.get("den") != capnhat.ban_dang_chay():
+    # QĐ386 (LOI-CN-089): chỉ chặn khi lượt cập nhật còn hiệu lực (chưa quá 02 giờ) VÀ bản chạy còn thấp hơn bản yêu cầu
+    if td and not td.get("xong") and not td.get("loi") and td.get("den") \
+            and not tiendo.da_len(capnhat.ban_dang_chay(), td.get("den")) \
+            and (tiendo._giay(td.get("bat_dau"), tiendo._bay()) or 0) <= tiendo.TOI_DA_LUOT_GIAY:
         return "dang_cap_nhat"
     if doc_trangthai(thumuc).get("tam_dung"):
         return "tam_dung"

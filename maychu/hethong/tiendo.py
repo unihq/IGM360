@@ -73,6 +73,18 @@ def doc(thumuc: Path | None = None) -> dict | None:
     return td if isinstance(td, dict) else None
 
 
+def da_len(ban: str | None, den: str | None) -> bool:
+    """QĐ386 (LOI-CN-089): bản đang chạy ≥ bản yêu cầu là đã lên – watchtower kéo `latest`, có thể mới hơn `den` ghi lúc
+    bấm (kết quả kiểm nhớ 05 phút). Bản chạy < `den` (quay về, chưa lên) là chưa lên. Số bản lạ thì so bằng như cũ."""
+    if not den:
+        return True
+    from maychu.hethong import capnhat
+    try:
+        return capnhat._khoa_so(str(ban)) >= capnhat._khoa_so(str(den))
+    except ValueError:
+        return ban == den
+
+
 # ---------------- Ghi các mốc ----------------
 def bat_dau(tu: str, den: str | None, luc_o_trong: str, thumuc: Path | None = None) -> None:
     """Bước 1 xong (ổ trống đủ), bắt đầu bước 2. `luc_o_trong`: lúc bắt đầu kiểm ổ trống."""
@@ -151,11 +163,13 @@ def vao_ban_moi(ban: str, thumuc: Path | None = None) -> bool:
     Mốc bước 6 do lệnh chạy `chay.py` ghi lúc vùng chứa bắt đầu; thiếu thì lấy lúc này."""
     try:
         td = doc(thumuc)
-        if not td or td.get("xong") or td.get("loi") or td.get("den") != ban:
+        if not td or td.get("xong") or td.get("loi") or not td.get("den") or not da_len(ban, td.get("den")):   # QĐ386
             return False
         if (_giay(td.get("bat_dau"), _bay()) or 0) > TOI_DA_LUOT_GIAY:   # N1: lượt treo cũ, không nối lại, không ghi F04
             huy(thumuc)
             return False
+        if ban != td.get("den"):   # QĐ386, CDA 16b: watchtower lên bản mới hơn bản ghi lúc bấm → ghi bản thật, giữ bản yêu cầu
+            td = {**td, "den": ban, "den_yc": td.get("den")}
         _NHO["td"] = td
         if "khoidong" not in (td.get("moc") or {}):
             sang("khoidong", thumuc)
@@ -169,9 +183,11 @@ def xong(ban: str | None = None, thumuc: Path | None = None) -> None:
     """Bước 8 xong: ghi mốc kết thúc và 01 dòng F04 tóm tắt thời gian từng bước (01 lần cho mỗi lượt).
     `ban`: chỉ kết thúc lượt cập nhật lên đúng bản này (lần kiểm không do cập nhật thì không đụng)."""
     td = _hien_tai(thumuc)
-    if not td or td.get("xong") or td.get("loi") or (ban and td.get("den") not in (None, ban)):
+    if not td or td.get("xong") or td.get("loi") or (ban and td.get("den") and not da_len(ban, td["den"])):   # QĐ386
         return
     td = {**td, "xong": _bay(), "buoc": "xong"}
+    if ban and ban != td.get("den"):   # QĐ386, CDA 16b: ghi bản thật đã lên, giữ bản yêu cầu
+        td.update(den=ban, den_yc=td.get("den"))
     _ghi(thumuc, td, True)
     try:
         _ghi_f04(td, thumuc)
@@ -203,7 +219,8 @@ def _ghi_f04(td: dict, thumuc: Path | None) -> None:
     # QĐ258 (PTD-13 nghiệm thu): chay_moi = giây từ lúc bấm tới lúc bản mới chạy (hết bước 7; kiểm 06 điểm chạy nền sau đó)
     moc = td.get("moc") or {}
     chay = _giay(td.get("bat_dau"), moc.get("kiem") or td.get("xong"))
-    chu = (f"{td.get('tu')} → {td.get('den')} · " + " ".join(f"{k}={v}" for k, v in tg.items())
+    den = f"{td.get('den')} (yêu cầu {td['den_yc']})" if td.get("den_yc") else td.get("den")   # QĐ386: bản thật đã lên
+    chu = (f"{td.get('tu')} → {den} · " + " ".join(f"{k}={v}" for k, v in tg.items())
            + f" · tong={sum(tg.values())} giây" + (f" · chay_moi={round(chay)}" if chay is not None else "")
            + f" · bat_dau={td['bat_dau']}")
     capnhat._ghi_f04("tiendo", chu[:300], "dat", None, thumuc=thumuc)

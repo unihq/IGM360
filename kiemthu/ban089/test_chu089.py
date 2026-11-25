@@ -9,7 +9,8 @@ GOC = Path(__file__).resolve().parents[2]
 
 class KiemChu089(unittest.TestCase):
     def test_version_va_muc_089_nguyen_van_qd371(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.8.9")
+        so = tuple(int(x) for x in (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))
+        self.assertGreaterEqual(so, (0, 8, 9))                                    # bản sau giữ mục 0.8.9 nguyên văn (0.8.10, QĐ386)
         dong = (GOC / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
         i = dong.index("## 0.8.9")
         self.assertEqual(dong[i:i + 8], [
@@ -25,7 +26,7 @@ class KiemChu089(unittest.TestCase):
             "",
         ])                                                                        # QĐ371 (CGM-088 bản A), đúng từng ký tự
         self.assertEqual(dong[i + 8], "## 0.8.8")                              # mục bảo mật 0.8.8 (QĐ376) ngay sau
-        self.assertEqual([d for d in dong if d.startswith("## ")][0], "## 0.8.9")   # mục mới ở đầu
+        self.assertLess(dong.index("## 0.8.9"), dong.index("## 0.8.8"))            # mục mới hơn đứng trên (0.8.10 đặt trên 0.8.9)
 
 
 if __name__ == "__main__":

@@ -219,7 +219,8 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
     ban = capnhat.ban_dang_chay()
     tt = doc(thumuc)
     yc = tt.get("yeu_cau") or {}
-    diem = {"ban": (yc.get("den") == ban) if yc.get("den") else True}
+    from maychu.hethong import tiendo
+    diem = {"ban": tiendo.da_len(ban, yc.get("den"))}   # QĐ386: bản chạy ≥ bản yêu cầu là đạt; quay về (< yêu cầu) vẫn chưa đạt
     tot, luocdo = True, True
     for ten in ketnoi.CAC_FILE:
         try:

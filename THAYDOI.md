@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.10
+Tóm tắt: Sửa màn Cập nhật
+Nâng dữ liệu: không
+- Máy lên bản mới hơn bản bạn bấm thì "Kiểm sau cập nhật" không còn báo nhầm "chưa lên đúng bản", phần tiến độ không còn đứng yên.
+- Màn Cập nhật không còn tự tải lại liên tục.
+- Sau lần cập nhật như vậy, tự nâng công cụ AI chạy lại bình thường.
+
 ## 0.8.9
 Tóm tắt: Đăng nhập mới
 Nâng dữ liệu: không
