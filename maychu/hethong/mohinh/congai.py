@@ -445,6 +445,188 @@ def _chay(lenh: list, env: dict, vao: str | None = None, giay: int = GIAY_TOIDA)
                               timeout=giay, env=env, cwd=cho_lam)
 
 
+# ---------------- N0: đọc dần đầu ra CLI cho lượt trò chuyện có người nghe (QĐ344, QĐ349, QĐ351) ----------------
+# Chỉ lượt trò chuyện có người nghe (sổ lượt `luot.py` đặt `_NGHE`) đi đường này; việc nền, bot, Gọi thử, kiểm bản CLI mới
+# (Y46) không có người nghe nên vẫn đi `_chay` như cũ (CDA K1). Phần đọc kết quả, hết hạn mức, tự chuyển tài khoản, ghim,
+# dòng vàng giữ nguyên dòng mã: `_chay_dan` trả đúng kiểu `CompletedProcess` như `_chay`.
+_NGHE: contextvars.ContextVar = contextvars.ContextVar("igm360_nghe", default=None)
+GIAY_CHO_DUNG = 2   # TERM cả nhóm tiến trình, chờ 02 giây rồi KILL (CDA K2)
+
+
+class DaDung(Exception):
+    """Lượt trò chuyện bị dừng (nền cho TC46): không thử nguồn sau, không tính là lỗi nguồn."""
+
+
+class Nghe:
+    """Người nghe 01 lượt: nhận mẩu chữ, bước đang chạy; giữ cờ dừng. `phat(loai, **du)` do sổ lượt cung cấp."""
+
+    def __init__(self, phat=None):
+        self.phat = phat or (lambda loai, **du: None)
+        self.dung = threading.Event()
+        self.chu: list[str] = []   # chữ đã phát của nguồn đang trả lời (bỏ khi sang nguồn kế; phần đã có khi Dừng)
+
+    def them_chu(self, them: str) -> None:
+        if them:
+            self.chu.append(them)
+            self.phat("chu", them=them)
+
+    def buoc(self, ten: str) -> None:
+        self.phat("buoc", ten=ten)
+
+    def lam_lai(self) -> None:
+        """CDA (5): nguồn trước đã đẩy chữ rồi không trả lời xong → trang bỏ phần đã hiện."""
+        if self.chu:
+            self.chu.clear()
+            self.phat("lam_lai")
+
+    def chu_da_co(self) -> str:
+        return "".join(self.chu)
+
+
+def dung_nhom(pr) -> None:
+    """Dừng cả nhóm tiến trình: TERM, chờ GIAY_CHO_DUNG, còn sống thì KILL (kế hoạch N0 mục 2.2)."""
+    if pr.poll() is not None:
+        return
+    if os.name == "nt":   # máy kiểm Windows: không có nhóm tiến trình kiểu POSIX
+        pr.terminate()
+        try:
+            pr.wait(GIAY_CHO_DUNG)
+        except subprocess.TimeoutExpired:
+            pr.kill()
+            pr.wait()
+        return
+    import signal
+    try:
+        os.killpg(pr.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        return
+    try:
+        pr.wait(GIAY_CHO_DUNG)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(pr.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+        pr.wait()
+
+
+def _chay_dan(lenh: list, env: dict, vao: str | None, giay: int, nghe: "Nghe", moi_dong) -> subprocess.CompletedProcess:
+    """Như `_chay` nhưng đọc stdout từng dòng (gọi `moi_dong`), có cờ dừng và giờ tối đa; trả `CompletedProcess`.
+    Tiến trình chạy trong nhóm riêng (`start_new_session`); Dừng → `DaDung`, quá giờ → `subprocess.TimeoutExpired`."""
+    with tempfile.TemporaryDirectory() as cho_lam:   # như `_chay`: không cho đụng tệp
+        pr = subprocess.Popen(lenh, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                              encoding="utf-8", errors="replace", env=env, cwd=cho_lam, start_new_session=os.name != "nt")
+        loi_ra: list[str] = []
+        ly_do = {"v": None}
+        xong = threading.Event()
+        het = time.monotonic() + giay
+
+        def ghi_vao():
+            try:
+                if vao is not None:
+                    pr.stdin.write(vao)
+                pr.stdin.close()
+            except (BrokenPipeError, OSError, ValueError):
+                pass
+
+        def doc_loi():
+            try:
+                loi_ra.append(pr.stderr.read())
+            except (OSError, ValueError):
+                pass
+
+        def canh():
+            while not xong.wait(0.2):
+                if nghe.dung.is_set():
+                    ly_do["v"] = "dung"
+                elif time.monotonic() >= het:
+                    ly_do["v"] = "quagio"
+                else:
+                    continue
+                dung_nhom(pr)
+                return
+
+        luong = [threading.Thread(target=f, daemon=True) for f in (ghi_vao, doc_loi, canh)]
+        for t in luong:
+            t.start()
+        ra: list[str] = []
+        try:
+            for dong in pr.stdout:
+                ra.append(dong)
+                if ly_do["v"] is None:
+                    try:
+                        moi_dong(dong)
+                    except Exception:  # noqa: BLE001 - 01 dòng đọc lỗi không được làm hỏng lượt
+                        pass
+            pr.wait()
+        finally:
+            xong.set()
+            if pr.poll() is None:
+                dung_nhom(pr)
+        luong[1].join(GIAY_CHO_DUNG)
+    if ly_do["v"] == "dung":
+        raise DaDung()
+    if ly_do["v"] == "quagio":
+        raise subprocess.TimeoutExpired(lenh, giay)
+    return subprocess.CompletedProcess(lenh, pr.returncode, "".join(ra), "".join(loi_ra))
+
+
+def _doc_dan_claude(nghe: "Nghe"):
+    """Dòng `stream_event` (cờ `--include-partial-messages`): mẩu `text_delta` của câu chính → `chu`; công cụ → `buoc`.
+    Mẩu của tác tử con (`parent_tool_use_id`) bỏ qua. Chữ lưu cuối lượt vẫn lấy từ dòng `result` như cũ."""
+    def doc(dong: str) -> None:
+        o = json.loads(dong)
+        if o.get("type") != "stream_event" or o.get("parent_tool_use_id"):
+            return
+        ev = o.get("event") or {}
+        if ev.get("type") == "content_block_start":
+            khoi = ev.get("content_block") or {}
+            if khoi.get("type") in ("tool_use", "server_tool_use"):
+                nghe.buoc(str(khoi.get("name") or ""))
+            elif khoi.get("type") == "text" and nghe.chu:
+                nghe.them_chu("\n\n")   # khối chữ mới sau khi dùng công cụ: sang đoạn mới
+        elif ev.get("type") == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
+            nghe.them_chu(str(ev["delta"].get("text") or ""))
+    return doc
+
+
+def _doc_dan_codex(nghe: "Nghe"):
+    """`codex exec --json`: mỗi `agent_message` xong → `chu` (cả đoạn, bản 0.172.0 không có mẩu nhỏ hơn); bước → `buoc`."""
+    def doc(dong: str) -> None:
+        o = json.loads(dong)
+        t, it = o.get("type"), (o.get("item") or {})
+        if t == "item.completed" and it.get("type") == "agent_message":
+            if nghe.chu:
+                nghe.them_chu("\n\n")
+            nghe.them_chu(str(it.get("text") or ""))
+        elif t == "item.started" and it.get("type") in ("command_execution", "web_search", "mcp_tool_call"):
+            nghe.buoc(str(it.get("type")))
+    return doc
+
+
+class _ChoCho:
+    """Giữ chỗ chạy (`so_viec_ai_songsong`). Có người nghe: chờ chỗ thì phát `cho`, bấm Dừng lúc chờ → `DaDung`."""
+
+    def __init__(self, sem):
+        self.sem = sem
+
+    def __enter__(self):
+        n = _NGHE.get()
+        if n is None:
+            self.sem.acquire()
+            return self
+        if not self.sem.acquire(blocking=False):
+            n.phat("cho")
+            while not self.sem.acquire(timeout=0.5):
+                if n.dung.is_set():
+                    raise DaDung()
+        return self
+
+    def __exit__(self, *_):
+        self.sem.release()
+        return False
+
+
 # QĐ195 (Y36e, lỗi H17): trò chuyện của anh không đặt trần lượt, được tra web; vẫn cấm lệnh máy, cấm ghi/sửa tệp
 # (giống Codex `--sandbox read-only`). Phanh kẹt vòng: 600 giây/câu (GIAY_TOIDA). Việc khác (Gọi thử, việc nền) giữ 01 lượt.
 _TRA_WEB: contextvars.ContextVar = contextvars.ContextVar("igm360_tra_web", default=False)
@@ -483,7 +665,12 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = N
         lenh += ["--max-turns", "1"]
     if mohinh:
         lenh += ["--model", mohinh]
-    r = _chay(lenh, dangnhap_goi._env("claude", taikhoan), vao=cau)
+    n = _NGHE.get() if cli is None else None   # N0: chỉ lượt trò chuyện có người nghe đọc dần
+    if n is not None:
+        lenh.append("--include-partial-messages")
+        r = _chay_dan(lenh, dangnhap_goi._env("claude", taikhoan), cau, GIAY_TOIDA, n, _doc_dan_claude(n))
+    else:
+        r = _chay(lenh, dangnhap_goi._env("claude", taikhoan), vao=cau)
     kq, hm, bao = None, {}, None
     for dong in r.stdout.splitlines():
         try:
@@ -517,7 +704,8 @@ def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = 
         lenh += ["-m", mohinh]
     lenh.append("-")   # đọc câu hỏi từ đầu vào chuẩn
     env = dangnhap_goi._env("chatgpt", taikhoan)
-    r = _chay(lenh, env, vao=cau)
+    n = _NGHE.get() if cli is None else None   # N0: chỉ lượt trò chuyện có người nghe đọc dần
+    r = _chay_dan(lenh, env, cau, GIAY_TOIDA, n, _doc_dan_codex(n)) if n is not None else _chay(lenh, env, vao=cau)
     chu, vao, ra, loi = [], 0, 0, ""
     for dong in r.stdout.splitlines():
         try:
@@ -602,6 +790,9 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
         bo_qua.append({"nguon": ten, "lydo": lydo})
         return lydo
     m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", d["ma"] or "")
+    n = _NGHE.get()
+    if n is not None:
+        n.lam_lai()   # CDA (5): mỗi lần thử 01 nguồn bắt đầu từ chữ trống
     t0 = time.monotonic()
     try:
         if m and m.group(1) == "claude":
@@ -610,6 +801,9 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
             kq = _goi_chatgpt(int(m.group(2)), cau, (d["mohinh"] or {}).get("ma"))
         else:
             kq = _goi_khoa(d, cau, thumuc, client)
+    except DaDung:   # N0: bấm Dừng – không thử nguồn sau; G04 ghi `huy`
+        _ghi_g04(d, None, "huy", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
+        raise
     except HetHanMuc as e:
         _ghi_g04(d, None, "het_hanmuc", int((time.monotonic() - t0) * 1000), viecnen_id, thumuc)
         hm = dict(e.hanmuc or {})
@@ -706,7 +900,7 @@ def goi(cau: str, *, viecnen_id=None, chi_nguon_id=None, loai_viec=None, mohinh_
 
 def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id, thumuc, client) -> dict:
     ghim_hong, nghi, nghi_mh, het_dau, loi_dau, da_ghim = None, {}, {}, None, None, {}
-    with sem:
+    with _ChoCho(sem):
         ds = _nguon(thumuc, loai_viec)
         if danhmuc_mohinh.la_viec_nen(loai_viec) or viecnen_id is not None:
             mohinh_id = None   # K-VN Đ2: lượt gọi từ việc nền hoặc bot không đọc ghim, chặn ở cổng (không trông vào nơi gọi)

@@ -24,6 +24,7 @@ Cổng AI 03 nguồn (`congai.py`: gói Claude, gói ChatGPT, khóa API), đăng
 - Tệp trạng thái công cụ AI: đọc – sửa – ghi dưới `_KHOA_TT` (`_sua_goi`); ghi nguyên tử.
 - Bài kiểm không gọi npm thật: truyền `chay`, `client` giả (móc `kiemthu/__init__.py` báo hỏng nếu có lần chạy npm).
 - Hết hạn mức lúc kiểm thử bản mới thì hoãn, không ghi bản hỏng (QĐ306).
+- N0 (QĐ344, QĐ349, QĐ351): chỉ lượt trò chuyện có người nghe (`congai._NGHE`) đọc dần đầu ra CLI qua `_chay_dan` (nhóm tiến trình riêng; Dừng, quá giờ: TERM cả nhóm, chờ 02 giây, KILL). Việc nền, bot, Gọi thử, kiểm bản CLI mới (truyền `cli`) giữ `_chay`. Không đổi phần đọc kết quả, hết hạn mức, tự chuyển tài khoản, ghim, dòng vàng.
 - Gói Claude: danh sách mô hình = 04 bí danh + tệp danh mục Claude Code tự tải theo tài khoản (`cache/model-catalog`); mô hình cần bản công cụ cao hơn hiện xám (QĐ265).
 
 ## 4. Được chứa / không được chứa
