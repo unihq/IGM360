@@ -3,6 +3,12 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.6
+Tóm tắt: Thu gọn nhóm menu
+Nâng dữ liệu: không
+- Menu bên trái thu gọn theo nhóm: mỗi lúc mở 01 nhóm, bấm tên nhóm để mở hoặc gập; mở trang nào thì nhóm của trang đó tự mở. "Trò chuyện AI" đứng riêng, luôn hiện.
+- Nhóm đang gập vẫn hiện số Chờ duyệt và số Giám sát AI ngay ở tên nhóm, giữ màu như cũ. Nút "Thu gọn menu" và màn hình điện thoại giữ như cũ.
+
 ## 0.8.5
 Tóm tắt: Đặt dấu kiểu mới: xóa, khóa
 Nâng dữ liệu: không

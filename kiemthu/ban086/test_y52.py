@@ -9,7 +9,8 @@ import subprocess
 import unittest
 from pathlib import Path
 
-GD = Path(__file__).resolve().parents[2] / "maychu" / "web" / "giaodien"
+GOC_KHO = Path(__file__).resolve().parents[2]
+GD = GOC_KHO / "maychu" / "web" / "giaodien"
 
 
 @unittest.skipUnless(shutil.which("node"), "máy không có node")
@@ -76,6 +77,21 @@ class KiemThuGonNhom(unittest.TestCase):
                   "#app:not(.mb) .nhom-ds.rieng{margin-top:8px}"):
             self.assertIn(x, self.html)                                           # QĐ328 L4 A, QĐ329 điện thoại không áp dụng
         self.assertNotIn("menu-cuon", self.html + self.app)                       # QĐ326 L6 không làm ở bản này
+
+
+class KiemThaydoi086(unittest.TestCase):
+    def test_version_va_muc_086_nguyen_van_qd337(self):
+        self.assertEqual((GOC_KHO / "VERSION").read_text(encoding="utf-8").strip(), "0.8.6")
+        dong = (GOC_KHO / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
+        i = dong.index("## 0.8.6")
+        self.assertEqual(dong[i:i + 6], [
+            '## 0.8.6',
+            'Tóm tắt: Thu gọn nhóm menu',
+            'Nâng dữ liệu: không',
+            '- Menu bên trái thu gọn theo nhóm: mỗi lúc mở 01 nhóm, bấm tên nhóm để mở hoặc gập; mở trang nào thì nhóm của trang đó tự mở. "Trò chuyện AI" đứng riêng, luôn hiện.',
+            '- Nhóm đang gập vẫn hiện số Chờ duyệt và số Giám sát AI ngay ở tên nhóm, giữ màu như cũ. Nút "Thu gọn menu" và màn hình điện thoại giữ như cũ.',
+            ''])                                                                        # QĐ337 (A), đúng từng ký tự
+        self.assertEqual(dong[i + 6], "## 0.8.5")
 
 
 if __name__ == "__main__":
