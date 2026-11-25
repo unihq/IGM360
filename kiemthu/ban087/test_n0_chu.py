@@ -60,6 +60,14 @@ class KiemChu087(unittest.TestCase):
         self.assertIn("moHt(D.htId).catch(async () => {", js)                     # chỉ hiện khi tải lại hội thoại cũng lỗi
         self.assertIn("await api('/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); } catch (e) { bao(e.message + '.'); }", js)
 
+    def test_qd361_cau_bao_mat_ket_noi(self):
+        js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
+        cau = "Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối lại"
+        self.assertIn("} catch (e) { S.k = 'matketnoi'; ve();", js)                # dải đỏ giữ như cũ
+        self.assertIn("const m = new Error('" + cau + "'); m.matKetNoi = true; throw m; }", js)   # QĐ361 (A), đúng từng ký tự
+        self.assertFalse(cau.endswith("."))                                         # báo nổi tự thêm dấu chấm
+        self.assertEqual(js.count("bao(e.message + '.')"), 18)                      # 18 chỗ cùng hiện câu này, không sửa từng chỗ
+
     def test_khong_con_chu_cu(self):
         for tep in ("maychu/hethong/mohinh/trochuyen.py", "maychu/web/api.py"):
             ma = (GOC / tep).read_text(encoding="utf-8")

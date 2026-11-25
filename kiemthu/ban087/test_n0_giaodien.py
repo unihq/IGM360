@@ -99,6 +99,23 @@ class KiemGiaoDienLuot(unittest.TestCase):
             self.assertEqual(len(kq["bao"]), 1, ten)
             self.assertTrue(kq["bao"][0].endswith("."), ten)                       # chữ báo giữ nguyên, báo nổi thêm dấu chấm
 
+    def test_qd361_mat_mang_bao_cau_tieng_viet(self):
+        """QĐ361: fetch không tới máy chủ → api() ném lỗi mang câu đã duyệt, dải đỏ bật; guiTin báo nổi đúng câu, câu hỏi về ô nhập."""
+        a = self.app
+        ham_api = a[a.index("async function api(duong, than) {"):a.index("// ---- Vẽ theo trạng thái")]
+        gui = a[a.index("async function guiTin(chu) {"):a.index("\n}\n", a.index("async function guiTin(chu) {")) + 3]
+        ma = ("const o = {value: 'Câu mới'}, ds = {innerHTML: ''}; PHAN['#tc-o'] = o; PHAN['#ds-tin'] = ds;"
+              " const tinHtml = x => '<tin>'; const ghimKhoa = () => 'k1', luuGhim = () => {}; let bao_ra = []; const bao = t => bao_ra.push(t);"
+              " const fetch = async () => { throw new TypeError('Failed to fetch'); }; S.k = 'binhthuong'; S.g = '08'; D.tin = []; S.tc = 'rong';"
+              + ham_api + gui +
+              " (async () => { await guiTin(); console.log(JSON.stringify({bao: bao_ra, k: S.k, o: o.value, ds: ds.innerHTML})); })();")
+        r = subprocess.run(["node", "-e", GIA_DOM.replace("api = async () => ({hoithoai: []});", "_bo = 0;") + self.chu + self.luot + ma],
+                           capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        kq = json.loads(r.stdout)
+        self.assertEqual(kq["bao"], ["Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối lại."])
+        self.assertEqual((kq["k"], kq["o"], kq["ds"]), ("matketnoi", "Câu mới", ""))
+
     def test_sua_p3_xong_luot_bam_day_hoac_giu(self):
         """CDO BT-N0b P3: xong lượt vẽ lại dài thêm (dòng nhãn, nút Chép) – đang bám đáy thì đưa xuống đáy, đã cuộn lên thì giữ."""
         a = self.app
