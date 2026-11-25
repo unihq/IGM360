@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 06: Cổng AI 03 nguồn, chọn theo ưu tiên, chuyển nguồn khi hết hạn mức, trần tiền khoá API,
+"""Bài kiểm ngày 06: Cổng AI 03 nguồn, chọn theo ưu tiên, chuyển nguồn khi hết hạn mức, trần tiền khóa API,
 ghi G04 và % hạn mức gói, trò chuyện F35. CLI giả lập in đúng dạng dòng JSON của CLI thật; Google, OpenAI,
 Anthropic giả lập bằng httpx.MockTransport."""
 import json
@@ -100,7 +100,7 @@ class NenCongAI(unittest.TestCase):
             nid = maso.tao()
             hang = "anthropic" if "anthropic" in ma else "openai"   # Y22a: G06 bắt buộc hang, cach_goi (QĐ161)
             cn.execute("INSERT INTO nguon_ai (id, ma, ten, loai, uutien, tran_tien_thang, hang, cach_goi)"
-                       " VALUES (?, ?, ?, 'khoa_api', ?, ?, ?, ?)", (nid, ma, "Khoá API AI", uu, tran, hang, hang))
+                       " VALUES (?, ?, ?, 'khoa_api', ?, ?, ?, ?)", (nid, ma, "Khóa API AI", uu, tran, hang, hang))
             cn.execute("INSERT INTO mohinh_ai (id, nguon_ai_id, ma_mohinh, gia_vao, gia_ra, tien_ma, trangthai)"
                        " VALUES (?, ?, 'mo-hinh-x', ?, ?, 'USD', 'dung')", (maso.tao(), nid, *gia))
         finally:
@@ -153,10 +153,10 @@ class KiemCongAI(NenCongAI):
         def gia(req):
             goi_den.append(req)
             assert req.headers["x-api-key"] == "sk-gia-bimat-1234"
-            return httpx.Response(200, json={"content": [{"type": "text", "text": "Khoá API đây."}],
+            return httpx.Response(200, json={"content": [{"type": "text", "text": "Khóa API đây."}],
                                              "usage": {"input_tokens": 1000, "output_tokens": 200}})
         kq = congai.goi("x", client=httpx.Client(transport=httpx.MockTransport(gia)))
-        self.assertEqual(kq["chu"], "Khoá API đây.")
+        self.assertEqual(kq["chu"], "Khóa API đây.")
         self.assertEqual(self.g04()[0][3], 6000)                          # 1000×3 + 200×15 phần triệu USD = 0,006 USD
         self.assertEqual(congai.tom_tat_tuan()["tien_that_usd"], 0.006)
         cn = ketnoi.mo("Nhatky")

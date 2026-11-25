@@ -4,9 +4,9 @@ Bước: 1 kiểm ổ trống · 2 chụp 07 tệp · 3 bản sao Drive · 4 g�
 8 kiểm sau cập nhật. Bước 1–4 do bản đang chạy làm, 6–8 do bản mới làm. Bước 5 (watchtower kéo gói, thay vùng chứa) không
 tiến trình IGM360 nào đo được (app không có quyền Docker): % bước 5–7 là ƯỚC TÍNH theo thời gian các lần trước.
 
-- Tiến độ đang chạy: khoá phụ `tien_do` trong tệp trạng thái `capnhat_trangthai.json`, ghi qua `antoan.ghi` (khoá, ghi
+- Tiến độ đang chạy: khóa phụ `tien_do` trong tệp trạng thái `capnhat_trangthai.json`, ghi qua `antoan.ghi` (khóa, ghi
   nguyên tử), nhịp ≤ 01 lần/giây; ghi lỗi thì bỏ qua, không chặn cập nhật. Bản cũ (0.7.9) đọc bằng `doc` + gộp nên giữ
-  khoá lạ này.
+  khóa lạ này.
 - Lịch sử thời gian: hết mỗi lần cập nhật ghi 01 dòng F04 `capnhat` / `tiendo` (chỉ ghi thêm, có sao lưu, qua quay về nhờ
   QĐ237); trọng số các bước = trung bình 05 lần gần nhất; chưa có thì dùng số mặc định (ước lượng, chưa đo).
 """
@@ -51,7 +51,7 @@ def _giay(a: str | None, b: str | None) -> float | None:
 
 
 def _ghi(thumuc: Path | None, td: dict | None, bat_buoc: bool) -> None:
-    """Ghi khoá `tien_do` (None = xoá). Không bắt buộc mà chưa đủ 01 giây từ lần ghi trước thì để lần sau."""
+    """Ghi khóa `tien_do` (None = xóa). Không bắt buộc mà chưa đủ 01 giây từ lần ghi trước thì để lần sau."""
     from maychu.hethong import antoan
     with _KHOA:
         _NHO["td"] = td
@@ -121,7 +121,7 @@ def huy(thumuc: Path | None = None) -> None:
 
 
 def dat(thumuc: Path | None = None, **muc) -> None:
-    """Gộp thêm khoá vào tiến độ đang chạy (ví dụ `drive_noi`: thư mục bản chụp chờ đẩy Drive nền, QĐ258). Không hiện ra trang."""
+    """Gộp thêm khóa vào tiến độ đang chạy (ví dụ `drive_noi`: thư mục bản chụp chờ đẩy Drive nền, QĐ258). Không hiện ra trang."""
     td = _hien_tai(thumuc)
     if td and not td.get("xong") and not td.get("loi"):
         _ghi(thumuc, {**td, **muc}, True)

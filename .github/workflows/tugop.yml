@@ -8,7 +8,7 @@ name: Tự gộp bản sửa lỗi (QĐ259)
 # cửa chặn. Bước kiểm ở đây chỉ đọc phần đổi (git diff), không chạy mã của nhánh.
 #
 # Gộp bằng GITHUB_TOKEN không tự gọi tệp luồng khác (tài liệu GitHub), nên gộp xong gọi chạy tay đóng ảnh cho main
-# (workflow_dispatch là ngoại lệ, vẫn chạy). Không cần khoá bí mật mới.
+# (workflow_dispatch là ngoại lệ, vẫn chạy). Không cần khóa bí mật mới.
 on:
   workflow_run:
     workflows: ["Kiểm và đóng image (GHCR)"]

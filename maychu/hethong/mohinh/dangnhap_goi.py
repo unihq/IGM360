@@ -15,7 +15,7 @@ mã viết mới).
       Claude: `email`, `orgId` của `claude auth status --json` (đã thấy trên CLI 2.1.330). ChatGPT: `email` trong
       `tokens.id_token` của `$CODEX_HOME/auth.json`, mã tổ chức `tokens.account_id` (theo mã nguồn công khai của Codex,
       codex-rs/login/src/auth/storage.rs, token_data.rs; chưa thấy trên máy thật). Không đọc được định danh thì không chặn.
-  (2) gỡ tài khoản: đăng xuất CLI ở thư mục đó, G06 `trangthai` = `ngung` (không xoá dòng).
+  (2) gỡ tài khoản: đăng xuất CLI ở thư mục đó, G06 `trangthai` = `ngung` (không xóa dòng).
   (3) ô tài khoản N > 1 chỉ hiện sau khi đăng nhập xong (có dòng G06 đang dùng; bản vẽ Z6-TK); ô đã gỡ ẩn, kể cả
       đăng nhập (chưa từng có dòng G06).
 - Bản 0.7.3 (QĐ169 đợt 1, Y26, bản vẽ Z8): ô tài khoản hiện "Tên · gói" đọc sống mỗi lần hỏi, **không lưu** vào bảng
@@ -81,7 +81,7 @@ def thu_muc(goi: str, taikhoan: int) -> Path | None:
 
 
 def _env(goi: str, taikhoan: int, tao: bool = True, ma_daihan: bool = True) -> dict:
-    """Môi trường 01 lần chạy CLI của 01 tài khoản. Gói Claude (0.7.8, PTD-09 Đ2): luôn bỏ khoá API
+    """Môi trường 01 lần chạy CLI của 01 tài khoản. Gói Claude (0.7.8, PTD-09 Đ2): luôn bỏ khóa API
     (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` đứng trước mã dài hạn trong thứ tự của CLI) và mã của tài khoản khác;
     `ma_daihan` thì đặt mã dài hạn còn hạn của đúng tài khoản này. Đăng nhập, đăng xuất kiểu cũ, lấy mã: `ma_daihan=False`."""
     tm = thu_muc(goi, taikhoan)
@@ -243,7 +243,7 @@ def _g06(thumuc: Path | None = None) -> dict:
 
 
 def _don(goi: str, taikhoan: int, thumuc: Path | None = None) -> bool:
-    """QĐ164 ý 3: xoá thư mục tài khoản N > 1 chưa đăng nhập, chưa từng có dòng G06, không đang đăng nhập."""
+    """QĐ164 ý 3: xóa thư mục tài khoản N > 1 chưa đăng nhập, chưa từng có dòng G06, không đang đăng nhập."""
     tm = thu_muc(goi, taikhoan)
     if tm is None or not tm.is_dir() or (goi, taikhoan) in _PHIEN or ma_nguon(goi, taikhoan) in _g06(thumuc):
         return False
@@ -297,7 +297,7 @@ GO_MA_KHI_TRUNG = False
 
 
 def _khoa_bam() -> bytes:
-    """Khoá băm suy ra từ khoá chủ (HMAC-SHA256, thư viện có sẵn): dấu băm không dò ngược ra email."""
+    """Khóa băm suy ra từ khóa chủ (HMAC-SHA256, thư viện có sẵn): dấu băm không dò ngược ra email."""
     from maychu.hethong.kekhoa import khoachu
     return hmac.new(khoachu.lay(), b"igm360-dinhdanh-v1", hashlib.sha256).digest()
 
@@ -340,7 +340,7 @@ def ghi_chup(taikhoan: int, c: dict) -> None:
 
 
 def xoa_chup(taikhoan: int) -> None:
-    tep_chup(taikhoan).unlink(missing_ok=True)   # N5: tài khoản 01 dùng thư mục gốc nên xoá đích danh tệp
+    tep_chup(taikhoan).unlink(missing_ok=True)   # N5: tài khoản 01 dùng thư mục gốc nên xóa đích danh tệp
 
 
 def _co_ma(taikhoan: int) -> bool:
@@ -425,7 +425,7 @@ def go(goi: str, taikhoan: int, thumuc: Path | None = None) -> dict:
     p = _PHIEN.pop((goi, taikhoan), None)
     if p:
         _dung(p)
-    if goi == "claude":   # 0.7.8 Đ5: gỡ là xoá mã dài hạn ở Két khoá, dừng lượt lấy mã dở
+    if goi == "claude":   # 0.7.8 Đ5: gỡ là xóa mã dài hạn ở Két khóa, dừng lượt lấy mã dở
         from maychu.hethong.mohinh import madaihan
         madaihan.huy_lay(taikhoan)
         madaihan.xoa(taikhoan, thumuc)
@@ -572,12 +572,12 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
 
 
 # QĐ160 (N10 b): thứ tự dùng nguồn theo cách tính phí trước, `uutien` sau: gói (phí cố định tháng) luôn đứng trước
-# mô hình chạy trên máy, rồi tới Khoá API (phí theo lượt); thêm gói thì tự đứng trước Khoá API (PTD-05 mục 3).
+# mô hình chạy trên máy, rồi tới Khóa API (phí theo lượt); thêm gói thì tự đứng trước Khóa API (PTD-05 mục 3).
 NHOM_PHI = {"goi": 0, "tuchay": 1, "khoa_api": 2}
 
 
 def loai_nguon(d: dict) -> str:
-    """Mã loại nguồn (QĐ187, PTD-08 Đ5, CDA K-MH5): 01 hàm duy nhất ở máy chủ. Mọi tài khoản cùng gói, mọi khoá cùng hãng
+    """Mã loại nguồn (QĐ187, PTD-08 Đ5, CDA K-MH5): 01 hàm duy nhất ở máy chủ. Mọi tài khoản cùng gói, mọi khóa cùng hãng
     chung 01 mã ("goi_claude_02" → "goi_claude", "khoa_anthropic_01" → "khoa_anthropic"); trùng 1–1 với nhóm
     "Hãng · Công cụ" ở giao diện. Nguồn khác giữ nguyên mã."""
     ma = d.get("ma") or ""
@@ -586,7 +586,7 @@ def loai_nguon(d: dict) -> str:
 
 
 def thu_tu(ds: list[dict]) -> list[dict]:
-    """Thứ tự dùng nguồn 03 tầng (PTD-08 Đ5): (1) cách tính phí (QĐ160: gói → chạy trên máy → khoá API); (2) loại
+    """Thứ tự dùng nguồn 03 tầng (PTD-08 Đ5): (1) cách tính phí (QĐ160: gói → chạy trên máy → khóa API); (2) loại
     nguồn, xếp theo `uutien` nhỏ nhất trong loại; (3) `uutien` từng tài khoản. Tài khoản cùng loại đứng liền nhau:
     Claude 1 (1), ChatGPT 1 (2), Claude 2 (3) → Claude 1 → Claude 2 → ChatGPT 1."""
     nho: dict[str, int] = {}
@@ -647,7 +647,7 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
 
 def tinh_hinh_goi(thumuc: Path | None = None) -> dict:
     """Thẻ gói ở màn 13 (QĐ164 ý 3, bản vẽ Z6-TK): tài khoản 01 có sẵn trừ khi đã gỡ; tài khoản N > 1 chỉ hiện sau khi
-    đăng nhập xong, tức có dòng G06 đang dùng (đang đăng nhập dở, đã huỷ, còn sót thư mục thì không hiện; khung đăng
+    đăng nhập xong, tức có dòng G06 đang dùng (đang đăng nhập dở, đã hủy, còn sót thư mục thì không hiện; khung đăng
     nhập ở giao diện tự hiện riêng). Tài khoản 01 đã đăng nhập mà chưa có dòng G06
     (ví dụ phiên Claude đăng nhập lúc cài máy, bước 2.04) thì tự ghi nguồn để Cổng AI dùng được; dòng đã gỡ (`ngung`)
     không tự bật lại, chỉ bật lại khi anh đăng nhập lại trên giao diện."""

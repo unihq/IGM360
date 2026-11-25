@@ -89,7 +89,7 @@ jobs:
           context: .
           load: true
           tags: igm360-thu:${{ github.sha }}
-          # 0.8.2 (QĐ258): ngoài bộ nhớ đệm gha (tự xoá sau 07 ngày không dùng), đọc thêm đệm gắn trong ảnh latest để lớp
+          # 0.8.2 (QĐ258): ngoài bộ nhớ đệm gha (tự xóa sau 07 ngày không dùng), đọc thêm đệm gắn trong ảnh latest để lớp
           # CLI, thư viện không bị dựng lại (dựng lại là đổi mã lớp, máy chủ tải lại hàng trăm MB).
           cache-from: |
             type=gha

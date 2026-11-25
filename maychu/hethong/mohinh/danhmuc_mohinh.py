@@ -1,18 +1,18 @@
 """Danh sách mô hình theo nguồn AI cho ô chọn mô hình (QĐ178, QĐ184, Y31; bản vẽ Z10, Z10b).
 
-Ghi vào G08 `mohinh_ai` (bảng có sẵn, 0 đổi cấu trúc): mỗi mô hình 01 dòng theo nguồn, chỉ thêm, không xoá.
+Ghi vào G08 `mohinh_ai` (bảng có sẵn, 0 đổi cấu trúc): mỗi mô hình 01 dòng theo nguồn, chỉ thêm, không xóa.
 - Gói Claude: bí danh của Claude Code CLI (haiku, sonnet, opus, fable; thấy trong CLI 2.1.330). CLI tự hiểu bí danh
   là bản mới nhất của họ đó, nên không phải hỏi mạng.
 - Gói ChatGPT: đọc tệp `models_cache.json` Codex tự lưu trong thư mục đăng nhập (danh sách mô hình tài khoản dùng
   được, mục `visibility` = "list"). Chưa có tệp thì nhóm chỉ còn "mặc định của Codex" (không tự đặt bảng cố định).
-- Khoá API: hỏi danh sách mô hình của hãng (Anthropic, OpenAI) bằng khoá trong Két khoá; nhớ 24 giờ; hỏi ở luồng
+- Khóa API: hỏi danh sách mô hình của hãng (Anthropic, OpenAI) bằng khóa trong Két khóa; nhớ 24 giờ; hỏi ở luồng
   phụ, trong lúc hỏi giao diện ghi "Đang tải danh sách mô hình…".
 Mô hình mặc định theo loại việc (màn 13, nút "Đổi") ghi ở G08 `macdinh_cho_json` (danh sách mã loại việc).
 "Mặc định của nguồn" (Z10c, S6): 01 dòng G08 của nguồn có `ma_mohinh` trống, chỉ để giữ nguồn mặc định của loại việc;
 không hiện trong danh sách mô hình; cổng AI gặp dòng này thì dùng mô hình mặc định của nguồn đó.
 Bản 0.7.6 (QĐ187, PTD-08 Đ5, Đ6, CDA K-MH5): chọn theo mô hình, không chia tài khoản. Danh sách gộp theo loại nguồn
-(`dangnhap_goi.loai_nguon`); mỗi mô hình có khoá "mã loại nguồn|mã mô hình" (`khoa_mh`, 01 hàm duy nhất; "loại|" =
-mặc định của loại nguồn). Ghim, mặc định dùng khoá này; dòng G08 mang dấu mặc định chỉ là đại diện của loại + mã.
+(`dangnhap_goi.loai_nguon`); mỗi mô hình có khóa "mã loại nguồn|mã mô hình" (`khoa_mh`, 01 hàm duy nhất; "loại|" =
+mặc định của loại nguồn). Ghim, mặc định dùng khóa này; dòng G08 mang dấu mặc định chỉ là đại diện của loại + mã.
 """
 import json
 import os
@@ -101,7 +101,7 @@ def _thumuc_claude(taikhoan: int) -> Path:
 
 def _danhmuc_claude(taikhoan: int) -> dict[str, str | None]:
     """Y46 phần D (QĐ265): {mã mô hình: bản Claude Code tối thiểu hoặc None} đọc từ tệp danh mục Claude Code tự tải theo
-    tài khoản (`<thư mục đăng nhập>/cache/model-catalog/*.json`, chỉ có tên mô hình, không có khoá). Ưu tiên
+    tài khoản (`<thư mục đăng nhập>/cache/model-catalog/*.json`, chỉ có tên mô hình, không có khóa). Ưu tiên
     tệp của Claude Code dòng lệnh (`surface` = "cc"); không có thì dùng tệp khác. Chưa có tệp: {} (chỉ còn 04 bí danh)."""
     cc: dict[str, str | None] = {}
     khac: dict[str, str | None] = {}
@@ -212,7 +212,7 @@ def _da_ket_noi(d: dict, thumuc=None) -> bool:
 
 
 def khoa_mh(loai: str, ma: str | None) -> str:
-    """Khoá "mã loại nguồn|mã mô hình" (PTD-08 mục 0.1): giao diện chỉ dùng lại, không tự ghép; bản 4 chép nguyên văn."""
+    """Khóa "mã loại nguồn|mã mô hình" (PTD-08 mục 0.1): giao diện chỉ dùng lại, không tự ghép; bản 4 chép nguyên văn."""
     return f"{loai}|{ma or ''}"
 
 
@@ -239,7 +239,7 @@ def dong_cua(nguon_id: str, ma: str, thumuc=None) -> dict | None:
 
 
 def chuan_khoa(gia_tri: str | None, thumuc=None) -> str | None:
-    """Ghim gửi lên: khoá "loại|mã" giữ nguyên; dạng cũ (id G08 của 0.7.5) đổi sang khoá; dòng trống mã hoặc không có thì None."""
+    """Ghim gửi lên: khóa "loại|mã" giữ nguyên; dạng cũ (id G08 của 0.7.5) đổi sang khóa; dòng trống mã hoặc không có thì None."""
     if not gia_tri:
         return None
     if "|" in gia_tri:
@@ -322,7 +322,7 @@ def macdinh(thumuc=None) -> dict:
 
 
 def danh_sach(thumuc=None, nap_nen: bool = True) -> dict:
-    """Nhóm theo nguồn đã kết nối (thứ tự ưu tiên), mỗi nhóm các mô hình G08 đang dùng. Nhóm khoá API chưa có
+    """Nhóm theo nguồn đã kết nối (thứ tự ưu tiên), mỗi nhóm các mô hình G08 đang dùng. Nhóm khóa API chưa có
     danh sách hoặc đã cũ hơn 24 giờ thì hỏi hãng ở luồng phụ và ghi `dang_tai`."""
     nguon = [d for d in dangnhap_goi.danh_sach(thumuc) if _da_ket_noi(d, thumuc)]
     for d in nguon:

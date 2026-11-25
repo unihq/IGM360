@@ -2,7 +2,7 @@
 
 Cụm tìm chữ H08 ở tệp Bot (lược đồ bản 4): bảng ảo FTS5 `tinnhan_tim` không giữ chữ (`content=''`,
 `contentless_delete=1`) + bảng nối `tinnhan_tim_noi` (`so` ↔ `tin_id`). Nối bằng `id` tin, không dựa `rowid` H08 (V5).
-Ghi, xoá chỉ mục cùng giao dịch với dòng gốc, trong hàm ghi duy nhất (Q5); không trigger.
+Ghi, xóa chỉ mục cùng giao dịch với dòng gốc, trong hàm ghi duy nhất (Q5); không trigger.
 Chỉ dùng thư viện chuẩn.
 """
 import sqlite3
@@ -27,7 +27,7 @@ def ghi_tin(cn: sqlite3.Connection, tin_id: str, noidung) -> None:
 
 
 def xoa_tin(cn: sqlite3.Connection, tin_id: str) -> None:
-    """Xoá chỉ mục 01 tin qua bảng nối (tra theo chỉ mục không trùng)."""
+    """Xóa chỉ mục 01 tin qua bảng nối (tra theo chỉ mục không trùng)."""
     d = cn.execute("SELECT so FROM tinnhan_tim_noi WHERE tin_id = ?", (tin_id,)).fetchone()
     if d:
         cn.execute("DELETE FROM tinnhan_tim WHERE rowid = ?", (d[0],))

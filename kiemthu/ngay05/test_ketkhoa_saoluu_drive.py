@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 05: két khoá (danh sách, hạn, đổi, xoá), mã hoá sao lưu, hàng chờ đẩy Drive, kết nối Google Drive
+"""Bài kiểm ngày 05: két khóa (danh sách, hạn, đổi, xóa), mã hóa sao lưu, hàng chờ đẩy Drive, kết nối Google Drive
 (giả lập Google bằng httpx.MockTransport, không gọi mạng), đường gọi màn 09, màn 11, logo hãng."""
 import json
 import os
@@ -72,7 +72,7 @@ class KiemNgay05(unittest.TestCase):
             os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
         self.tam.cleanup()
 
-    # ---- Két khoá ----
+    # ---- Két khóa ----
     def test_ket_khoa_danh_sach_han_doi_xoa(self):
         hom = date(2026, 11, 22)
         a = kho.cat("pancake", "pk-bimat-aaaa1111", self.thumuc, han="2026-11-30")
@@ -81,7 +81,7 @@ class KiemNgay05(unittest.TestCase):
         kho.cat("khongthoihan", "kh-bimat-dddd4444", self.thumuc)
         kho.cat("totp_2lop", "noibo-khong-hien", self.thumuc)
         ds = {x["id"]: x for x in kho.danh_sach(self.thumuc, 5, hom)}
-        self.assertEqual(len(ds), 4)                                  # khoá nội bộ 02 lớp không hiện
+        self.assertEqual(len(ds), 4)                                  # khóa nội bộ 02 lớp không hiện
         self.assertEqual((ds[a]["tinhtrang"], ds[a]["con_ngay"]), ("dung", 8))
         self.assertEqual((ds[b]["tinhtrang"], ds[b]["con_ngay"]), ("saphet", 3))
         self.assertEqual(ds[c]["tinhtrang"], "hethan")
@@ -101,7 +101,7 @@ class KiemNgay05(unittest.TestCase):
         kho.xoa(a, self.thumuc)
         self.assertNotIn(a, {x["id"] for x in kho.danh_sach(self.thumuc)})
 
-    # ---- Sao lưu mã hoá ----
+    # ---- Sao lưu mã hóa ----
     def test_sao_luu_ma_hoa_giai_bang_tep_khoa_chu(self):
         luc = datetime(2026, 11, 22, 2, 5, tzinfo=saoluu.MUIGIO_VN)
         kq = saoluu.chay(self.thumuc, luc)
@@ -112,7 +112,7 @@ class KiemNgay05(unittest.TestCase):
         for t in tep:
             self.assertEqual(stat.S_IMODE(t.stat().st_mode), 0o600)
             self.assertFalse(t.read_bytes().startswith(b"SQLite format 3"))
-        # Khôi phục ở "máy khác": chỉ có tệp .mahoa và 01 bản khoá chủ anh đã chép về
+        # Khôi phục ở "máy khác": chỉ có tệp .mahoa và 01 bản khóa chủ anh đã chép về
         khac = Path(tempfile.mkdtemp())
         try:
             shutil.copy(khoachu.duong(self.thumuc), khac / "IGM360_Khoachu.key")
@@ -143,7 +143,7 @@ class KiemNgay05(unittest.TestCase):
         con = sorted(p.name for p in goc.iterdir() if p.is_dir() and len(p.name) == 10)
         self.assertEqual(con, ["2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22"])
         self.assertEqual(sorted(x.name for x in (goc / "2026-11-18").iterdir())[0], "Baomat.sqlite3.mahoa")
-        self.assertFalse(list((goc / "2026-11-18").glob("*.sqlite3")))   # bản chưa mã hoá ngày cũ đã xoá
+        self.assertFalse(list((goc / "2026-11-18").glob("*.sqlite3")))   # bản chưa mã hóa ngày cũ đã xóa
 
     # ---- Google Drive ----
     def noi_drive(self, gia):
@@ -193,7 +193,7 @@ class KiemNgay05(unittest.TestCase):
         self.assertEqual(len(gia.tep), 7)
         self.assertIn("2026-11-22_Dulieu_Chinh.sqlite3.mahoa", gia.tep)
         noi = saoluu.thumuc_saoluu(self.thumuc) / "2026-11-22"
-        self.assertFalse(list(noi.glob("*.mahoa")))                     # đẩy xong mới xoá tệp tạm
+        self.assertFalse(list(noi.glob("*.mahoa")))                     # đẩy xong mới xóa tệp tạm
         self.assertEqual(len(list(noi.glob("*.sqlite3"))), 7)           # bản trên máy 03 ngày vẫn còn
         self.assertEqual(drive.tinh_hinh(self.thumuc)["hang_cho"], {"cho": 0, "loi": 0, "xong": 7})
 
@@ -243,7 +243,7 @@ class KiemDuongGoi(unittest.TestCase):
         self.tam.cleanup()
 
     def test_ket_khoa_qua_duong_goi(self):
-        self.assertEqual(self.c.get("/api/kekhoa").json()["tong"], 0)                 # khoá 02 lớp không hiện
+        self.assertEqual(self.c.get("/api/kekhoa").json()["tong"], 0)                 # khóa 02 lớp không hiện
         self.assertEqual(self.c.post("/api/kekhoa", json={"dichvu": "groq", "giatri": "x"}).status_code, 403)   # thiếu dấu trang
         r = self.c.post("/api/kekhoa", json={"dichvu": "groq", "giatri": "gsk-bimat-12345678", "han": "2099-01-01"}, headers=self.h)
         ma = r.json()["id"]

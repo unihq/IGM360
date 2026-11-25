@@ -23,7 +23,7 @@ CAM = {
     "tên tài khoản": re.compile("Mr" + "-Jin|Mr" + r"\. ?Đạt|@" + "[A-Za-z]"),
     "chữ cấm": re.compile("|".join(["ja" + "vis", "uni" + "mate", "uni" + r"[ _\-]" + "mate"]), re.I),
     # QĐ304: chữ mới viết dấu kiểu mới (vần mở oa, oe, uy không phụ âm cuối, không sau "q")
-    # CDA KT-Y47 N3: bắt cả chữ IN HOA ("KHOÁ") – không phân biệt hoa thường
+    # CDA KT-Y47 N3: bắt cả chữ IN HOA ("KHO\u00c1") – không phân biệt hoa thường; Y50: mẫu kiểu cũ viết bằng mã ký tự để tệp không còn chữ kiểu cũ (QĐ302)
     "dấu kiểu cũ": re.compile(r"(?<!q)o[àáảãạèéẻẽẹ](?!\w)|(?<!q)u[ỳýỷỹỵ](?!\w)", re.I),
 }
 
@@ -62,7 +62,7 @@ class KiemTepHuongDanAI(unittest.TestCase):
 
     def test_mau_dau_kieu_cu_bat_ca_chu_in_hoa(self):
         mau = CAM["dấu kiểu cũ"]
-        for tu in ("khoá", "KHOÁ", "Khoá", "xoá", "XOÁ", "huỷ", "HUỶ", "khoẻ", "hoạ"):
+        for tu in ("kho\u00e1", "KHO\u00c1", "Kho\u00e1", "xo\u00e1", "XO\u00c1", "hu\u1ef7", "HU\u1ef6", "kho\u1ebb", "ho\u1ea1"):
             self.assertTrue(mau.search(tu), tu)
         for tu in ("khóa", "KHÓA", "hoán", "thoát", "toàn", "loại", "quý", "QUÝ", "hoạt"):
             self.assertFalse(mau.search(tu), tu)                                  # kiểu mới, có phụ âm cuối, sau "q"

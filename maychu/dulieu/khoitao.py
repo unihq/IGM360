@@ -5,7 +5,7 @@ Chạy lại nhiều lần không sao. Số phiên bản lược đồ ghi ở P
 - File mới (user_version 0): chạy nguyên lược đồ bản hiện hành.
 - File bản cũ: trước khi nâng, chụp bản sao CẢ 07 file vào `saoluu/truoc_nangcap_vNN/`. Mỗi file nâng thẳng
   lên bản hiện hành trong 01 giao dịch: tạo bảng mới, đổi tên bảng, dựng lại mỗi bảng đổi đúng 01 lần
-  (tạo bảng theo lược đồ hiện hành, chép dữ liệu cột trùng tên, xoá bảng cũ, đổi tên), chạy bước điền dữ liệu.
+  (tạo bảng theo lược đồ hiện hành, chép dữ liệu cột trùng tên, xóa bảng cũ, đổi tên), chạy bước điền dữ liệu.
   Cột bị bỏ mà còn dữ liệu thì dừng, không bỏ im lặng. Lỗi ở bất kỳ file nào: trả CẢ 07 file về bản sao
   (điều kiện CDA, QĐ108) rồi báo lỗi.
 - Bản 4 (0.8.0; QĐ204 PTD-10, QĐ227, QĐ229; thiết kế mục 1.3): thêm cột thuần bằng `ALTER TABLE ADD COLUMN` (THEM_COT,
@@ -65,7 +65,7 @@ NANGCAP = {
 # Bảng mới của từng bản (tạo theo lược đồ hiện hành trước khi dựng lại bảng khác).
 BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi'],
                 'Baomat': ['vaitro', 'quyen_vaitro', 'gan_vaitro']},   # Y20c (QĐ144, QĐ155): F07-F09 rỗng
-            # Bản 4: D05, H14, H13, H15–H21 rỗng; bảng nối cụm tìm chữ H08 (QĐ229). H15 trước H07, H16, H17 (khoá ngoại).
+            # Bản 4: D05, H14, H13, H15–H21 rỗng; bảng nối cụm tìm chữ H08 (QĐ229). H15 trước H07, H16, H17 (khóa ngoại).
             4: {'Dulieu_Chinh': ['canhbao_doc'],
                 'Viecnen': ['phien_cli'],
                 'Bot': ['nhom_trochuyen', 'tinnhan_dau', 'tailieu_gan', 'nhom_dahoc', 'chiase_lienket', 'muctieu',
@@ -154,7 +154,7 @@ def _dung_lai(cn: sqlite3.Connection, ten: str, bang: str, dien: dict[str, str] 
     dien = dien or {}
     moi = f"{bang}__moi"
     cn.execute(_lay_ddl(ten, bang).replace(f"CREATE TABLE IF NOT EXISTS {bang} (", f"CREATE TABLE {moi} (", 1))
-    cot_moi = cn.execute(f"PRAGMA table_info({moi})").fetchall()  # (stt, tên, kiểu, bắt buộc, mặc định, khoá chính)
+    cot_moi = cn.execute(f"PRAGMA table_info({moi})").fetchall()  # (stt, tên, kiểu, bắt buộc, mặc định, khóa chính)
     cot_cu = {r[1] for r in cn.execute(f"PRAGMA table_info({bang})")}
     bo = cot_cu - {r[1] for r in cot_moi}
     for c in sorted(bo - set(duoc_bo)):
@@ -346,7 +346,7 @@ def _phienban(ten: str, thumuc: Path) -> int:
 LICH_KHOITAO = [
     ("lay_tygia_vcb", "Lấy tỷ giá Vietcombank", "09:00", "hangngay", None, 0),
     ("bao_chua_lay_tygia", "Báo chưa lấy được tỷ giá", "09:30", "hangngay", None, 1),
-    ("nhac_khoa_tygia_thang", "Nhắc khoá tỷ giá tháng", "09:00", "hangthang", 1, 1),
+    ("nhac_khoa_tygia_thang", "Nhắc khóa tỷ giá tháng", "09:00", "hangthang", 1, 1),
 ]
 
 

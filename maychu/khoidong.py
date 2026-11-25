@@ -62,6 +62,12 @@ async def vongdoi(_app: FastAPI):
         except Exception:  # noqa: BLE001 - dọn lỗi không chặn khởi động
             import logging
             logging.getLogger(__name__).exception("dọn tệp sao lưu lúc khởi động lỗi")
+        try:   # Y50 (QĐ301): đổi 02 chữ dấu kiểu cũ đã lưu (05 điều kiện CDA); lỗi không chặn khởi động
+            from maychu.dulieu import doidau
+            doidau.doi_khi_khoidong()
+        except Exception:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).exception("đổi chữ dấu kiểu mới lúc khởi động lỗi")
         if os.environ.get("IGM360_LICH", "bat") != "tat":
             from maychu.hethong.giamsat import lich
             viec = asyncio.create_task(lich.chay_mai())

@@ -113,7 +113,7 @@ class KiemChuong(unittest.TestCase):
         hom = datetime.now(MUIGIO_VN).date()
         a = self._khoa("composio", (hom + timedelta(days=3)).isoformat())
         b = self._khoa("tiktok_quangcao", (hom + timedelta(days=30)).isoformat())
-        self._khoa("totp_2lop", (hom - timedelta(days=1)).isoformat())   # khoá nội bộ: không báo
+        self._khoa("totp_2lop", (hom - timedelta(days=1)).isoformat())   # khóa nội bộ: không báo
         tb.quet_khoa(self.t)
         self.assertEqual(self._mo(), [f"khoa_saphethan:{a}"])
         self.assertEqual(self._d03()[f"khoa_saphethan:{a}"][1:], (3, 5))
@@ -206,13 +206,13 @@ class KiemChuong(unittest.TestCase):
         kq = tb.danh_sach(thumuc=self.t)
         chu = [x["chu"].replace(NB, " ") for x in kq["ds"]]
         self.assertEqual(chu[:2], ["Ổ cứng máy chủ dùng 86%, quá ngưỡng 70%", "Gói Claude · Tài khoản 1 hết phiên đăng nhập"])
-        self.assertEqual(set(chu[2:4]), {"Khoá composio còn 05 ngày hết hạn", "Gói Claude · Tài khoản 1 đã dùng 82% hạn mức tuần"})
+        self.assertEqual(set(chu[2:4]), {"Khóa composio còn 05 ngày hết hạn", "Gói Claude · Tài khoản 1 đã dùng 82% hạn mức tuần"})
         self.assertEqual(chu[4], "Có bản mới 0.7.3")
         self.assertEqual([x["muc"] for x in kq["ds"]], ["do", "do", "xem", "xem", "tin"])
         self.assertEqual(kq["so_moi"], 5)
         x = {i["loai"]: i for i in kq["ds"]}
         self.assertEqual((x["goi_hetphien"]["di"], x["goi_hetphien"]["noi"], x["goi_hetphien"]["icon"]), ("13", "Mô hình AI", "brain-circuit"))
-        self.assertEqual((x["khoa_saphethan"]["di"], x["khoa_saphethan"]["noi"]), ("ketkhoa", "Cài đặt › Két khoá"))
+        self.assertEqual((x["khoa_saphethan"]["di"], x["khoa_saphethan"]["noi"]), ("ketkhoa", "Cài đặt › Két khóa"))
         self.assertEqual((x["ocung_vuot"]["di"], x["ocung_vuot"]["cuon"], x["ocung_vuot"]["noi"]), ("03", "o-maychu", "Bảng điều hành › Máy chủ"))
         self.assertEqual((x["banmoi"]["di"], x["banmoi"]["noi"], x["banmoi"]["icon"]), ("capnhat", "Cài đặt › Cập nhật", "cloud-download"))
         self.assertIn("Tài" + NB + "khoản" + NB + "1", x["goi_hetphien"]["chu"])   # nối không ngắt (Z7b)
@@ -221,7 +221,7 @@ class KiemChuong(unittest.TestCase):
         self.assertEqual(tb._chu("swap_vuot_nguong", "swap_vuot_nguong", {"giatri": 240, "nguong": 100}, {}, {}).replace(NB, " "),
                          "Máy chủ dùng tệp hoán đổi 240 MB, quá 100 MB")
         self.assertEqual(tb._chu("khoa_hethan", "khoa_hethan:k1", {"giatri": None, "nguong": None}, {"k1": "TikTok quảng cáo"}, {}).replace(NB, " "),
-                         "Khoá TikTok quảng cáo đã hết hạn")
+                         "Khóa TikTok quảng cáo đã hết hạn")
 
     def test_doc_het_ghi_moc_khong_doi_d03(self):
         self._du_lieu_mau()

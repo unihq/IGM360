@@ -2,10 +2,10 @@
 xin đúng 01 quyền `drive.file` (chỉ thấy, sửa file do IGM360 tạo ra), máy đẩy thẳng; không dùng service account.
 
 Gọi API bằng httpx (thư viện đã duyệt, QĐ80); không thêm thư viện của Google.
-- Mã ứng dụng (client id, client secret) anh dán ở màn 11, cất ở két khoá: dịch vụ `google_oauth_ungdung`.
-- Quyền đẩy file (refresh token) cất ở két khoá: dịch vụ `google_drive_lammoi`. Mã truy cập ngắn hạn chỉ giữ trong bộ nhớ.
+- Mã ứng dụng (client id, client secret) anh dán ở màn 11, cất ở két khóa: dịch vụ `google_oauth_ungdung`.
+- Quyền đẩy file (refresh token) cất ở két khóa: dịch vụ `google_drive_lammoi`. Mã truy cập ngắn hạn chỉ giữ trong bộ nhớ.
 - Tệp đẩy lên thư mục `IGM360_Saoluu` do IGM360 tạo trên Drive của anh.
-- Đẩy theo hàng chờ M01; lỗi thì thử lại sau 05, 10, 20... phút, tối đa 06 giờ; đẩy xong mới xoá tệp tạm trên VPS.
+- Đẩy theo hàng chờ M01; lỗi thì thử lại sau 05, 10, 20... phút, tối đa 06 giờ; đẩy xong mới xóa tệp tạm trên VPS.
 """
 import json
 import secrets
@@ -78,7 +78,7 @@ def bat_dau(duong_ve: str, nguoi_id: str, thumuc: Path | None = None) -> str:
 
 
 def ve_trang(code: str, state: str, thumuc: Path | None = None, client=None) -> dict:
-    """Google trả về sau khi anh đồng ý: đổi mã lấy quyền đẩy file, cất két khoá, ghi K01."""
+    """Google trả về sau khi anh đồng ý: đổi mã lấy quyền đẩy file, cất két khóa, ghi K01."""
     v = _TRANGTHAI.pop(state or "", None)
     if not v or v["het"] < time.time():
         raise PermissionError("Phiên kết nối đã hết hạn hoặc không phải do IGM360 tạo; bấm Kết nối lại")
@@ -242,7 +242,7 @@ def _dat(thumuc, ma: str, **cot) -> None:
 
 
 def ngung(thumuc: Path | None = None) -> None:
-    """Ngừng: lịch đẩy dừng, khoá giữ ở két, tệp chờ giữ trên máy; bật lại bằng Kết nối lại."""
+    """Ngừng: lịch đẩy dừng, khóa giữ ở két, tệp chờ giữ trên máy; bật lại bằng Kết nối lại."""
     cn = ketnoi.mo("Ketnoi", thumuc)
     try:
         cn.execute("UPDATE ketnoi SET trangthai = 'ngung', trangthai_phien = 'ngung' WHERE ma = ?", (MA_KETNOI,))

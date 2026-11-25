@@ -6,7 +6,7 @@
   * R1: mục có `tra_du_lieu` thì trả 07 tệp từ bản chụp TRƯỚC khi chạy (chưa tiến trình nào mở tệp): chép từng tệp ra
     tệp tạm, kiểm `quick_check`, đủ cả mới thay; lỗi 01 tệp thì không thay tệp nào, bỏ cờ, chạy bản mới.
   * R3: bản trước chạy dưới sự canh của lệnh này: chưa lên được `/suckhoe` mà đã dừng thì đếm 01 lần hỏng; hỏng tới
-    SO_LAN_HONG lần thì bỏ cờ, chạy lại bản mới (anh vẫn vào được giao diện). Lên được thì xoá số đếm.
+    SO_LAN_HONG lần thì bỏ cờ, chạy lại bản mới (anh vẫn vào được giao diện). Lên được thì xóa số đếm.
 - Ảnh mới hơn về (bấm Cập nhật ngay lên bản sửa): mục đó ghi bản ảnh cũ → bỏ mục, chạy bản mới.
 Chỉ dùng thư viện chuẩn: bản trước chạy trên đúng thư viện của ảnh này. Lỗi ghi vào `quayve_loi` để bản mới ghi F04.
 """
@@ -101,7 +101,7 @@ def _tep_tra(tra: dict) -> list:
 def tra_du_lieu(dl: Path, tra: dict, ghi_buoc=lambda b: None) -> str | None:
     """R1, V2: trả các tệp ghi trong `tra` từ thư mục chụp. Bước 1: chép ra tệp tạm, `quick_check`, đủ cả mới sang bước 2.
     Bước 2 (ghi `buoc` = "thay" trước): tệp đang có (kèm -wal, -shm) đổi tên sang `.cu`, tệp tạm vào chỗ; lỗi ở tệp nào
-    thì đổi các `.cu` về hết (07 tệp như trước lúc trả). Xong đủ thì ghi `buoc` = "xong_thay" rồi mới xoá `.cu`.
+    thì đổi các `.cu` về hết (07 tệp như trước lúc trả). Xong đủ thì ghi `buoc` = "xong_thay" rồi mới xóa `.cu`.
     Trả None khi xong; chuỗi lỗi khi không trả (dữ liệu giữ nguyên)."""
     noi = dl / "saoluu" / str(tra.get("thumuc", ""))
     tep = _tep_tra(tra)

@@ -4,14 +4,14 @@ Không bao giờ chép thẳng file đang chạy. Mỗi file 05 bước:
   (1) chụp bằng lệnh sao lưu trực tuyến của SQLite ra file tạm;
   (2) PRAGMA integrity_check trên bản chụp, khác "ok" thì dừng cả lượt;
   (3) đổi tên file tạm thành tên chính thức trong 01 lần;
-  (4) mã hoá bản chụp ra tệp `.mahoa` (Fernet), khoá sao lưu suy ra từ khoá chủ (HKDF-SHA256), nên chỉ cần
-      01 bản khoá chủ anh đã chép về máy là giải mã được bản trên Drive, kể cả khi mất cả VPS;
+  (4) mã hóa bản chụp ra tệp `.mahoa` (Fernet), khóa sao lưu suy ra từ khóa chủ (HKDF-SHA256), nên chỉ cần
+      01 bản khóa chủ anh đã chép về máy là giải mã được bản trên Drive, kể cả khi mất cả VPS;
   (5) xếp tệp `.mahoa` vào hàng chờ đẩy Drive (M01); việc đẩy chạy theo lịch khi đã kết nối Drive
-      (maychu/ketnoi/drive.py), đẩy xong mới xoá tệp `.mahoa` trên máy.
+      (maychu/ketnoi/drive.py), đẩy xong mới xóa tệp `.mahoa` trên máy.
       0.8.3 (QĐ277): công tắc "Sao lưu Google Drive" tắt thì bỏ qua bước (5). QĐ279 (luật C): dòng M01 loại `saoluu` đang
       chờ chỉ tồn tại khi tệp còn trên máy; QĐ283: tắt hoặc bật mà chưa nối Drive thì dọn tệp theo luật 03 ngày / 02 lượt,
       không giữ tệp đang chờ.
-Bản chụp chưa mã hoá giữ trên máy 03 ngày để khôi phục nhanh (thư mục quyền 700, tệp quyền 600).
+Bản chụp chưa mã hóa giữ trên máy 03 ngày để khôi phục nhanh (thư mục quyền 700, tệp quyền 600).
 """
 import hashlib
 import json
@@ -48,7 +48,7 @@ def da_co_hom_nay(thumuc: Path | None = None, bay_gio: datetime | None = None) -
 
 
 def _khoa_saoluu(thumuc: Path | None = None):
-    """Khoá sao lưu = HKDF-SHA256 của khoá chủ (không cất riêng, không nằm trong bản sao lưu)."""
+    """Khóa sao lưu = HKDF-SHA256 của khóa chủ (không cất riêng, không nằm trong bản sao lưu)."""
     import base64
     from cryptography.fernet import Fernet
     from cryptography.hazmat.primitives import hashes
@@ -69,7 +69,7 @@ def ma_hoa_tep(nguon: Path, thumuc: Path | None = None) -> Path:
 
 
 def giai_ma_tep(tep_mahoa: Path, tep_khoachu: Path, dich: Path) -> Path:
-    """Khôi phục bản tải từ Drive bằng tệp khoá chủ anh giữ (chạy được ở máy bất kỳ có thư viện cryptography)."""
+    """Khôi phục bản tải từ Drive bằng tệp khóa chủ anh giữ (chạy được ở máy bất kỳ có thư viện cryptography)."""
     import tempfile
     with tempfile.TemporaryDirectory() as d:
         Path(d, ".khoa_chu").write_bytes(Path(tep_khoachu).read_bytes())
@@ -88,7 +88,7 @@ def _tep_dang_cho(thumuc: Path) -> set[str]:
 
 def _giu_tep_cho(thumuc: Path) -> bool:
     """QĐ279, QĐ283: chỉ giữ tệp đang chờ đẩy Drive khi công tắc BẬT và Drive ĐÃ NỐI. Không đọc được thì giữ (an toàn:
-    không xoá tệp chưa lên Drive)."""
+    không xóa tệp chưa lên Drive)."""
     from maychu.hethong.caidat import thongso
     from maychu.ketnoi import drive
     try:
@@ -101,8 +101,8 @@ CHO_DANG = ("cho", "dangday", "loi")   # PTD-15 6.2 điểm 1: chỉ dòng đang
 
 
 def _don_dong_mat_tep(thumuc: Path) -> int:
-    """QĐ279 (luật C): xoá dòng M01 loại `saoluu` đang chờ mà tệp không còn trên máy. Không đụng loại `filegoc`,
-    `goi_banghigoc` (QĐ54), không đụng dòng `xong`. Trả số dòng đã xoá."""
+    """QĐ279 (luật C): xóa dòng M01 loại `saoluu` đang chờ mà tệp không còn trên máy. Không đụng loại `filegoc`,
+    `goi_banghigoc` (QĐ54), không đụng dòng `xong`. Trả số dòng đã xóa."""
     cn = ketnoi.mo("Hotho", thumuc)
     try:
         cn.execute("BEGIN IMMEDIATE")
@@ -127,7 +127,7 @@ def _don_ban_cu(goc: Path, thumuc: Path, giu: bool = True) -> None:
         if not con:
             shutil.rmtree(p, ignore_errors=True)
             continue
-        for x in p.iterdir():  # còn tệp chưa đẩy Drive: giữ tệp đó, xoá phần còn lại
+        for x in p.iterdir():  # còn tệp chưa đẩy Drive: giữ tệp đó, xóa phần còn lại
             if x not in con:
                 x.unlink(missing_ok=True)
 
@@ -165,7 +165,7 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
     from maychu.hethong.caidat import thongso
     drive_bat = thongso.drive_bat(thumuc)
     for ten in ketnoi.CAC_FILE:
-        # Dịp ghi ở `ketqua_tungbuoc_json` khoá "dip" = "truoc_capnhat" (CDA C1, Y38). Từ lược đồ bản 4 (QĐ227) cột `loai`
+        # Dịp ghi ở `ketqua_tungbuoc_json` khóa "dip" = "truoc_capnhat" (CDA C1, Y38). Từ lược đồ bản 4 (QĐ227) cột `loai`
         # = 'truoc_capnhat'; Nhatky còn lược đồ 3 (chế độ an toàn sau lần nâng hỏng) thì vẫn 'hangngay' + `dip` (V1b).
         buoc = {"dip": "truoc_capnhat", "ban": truoc_ban} if truoc_ban else {}
         tam = noi / f"{ten}.sqlite3.tam"
@@ -222,7 +222,7 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
         giu = _giu_tep_cho(thumuc)
         _don_ban_cu(goc, thumuc, giu)
         _don_truoc_capnhat(goc, thumuc, giu)
-        _don_dong_mat_tep(thumuc)   # QĐ279: xoá tệp nào thì xoá dòng chờ trỏ tệp đó trong cùng lượt
+        _don_dong_mat_tep(thumuc)   # QĐ279: xóa tệp nào thì xóa dòng chờ trỏ tệp đó trong cùng lượt
     return {"ketqua": ketqua_chung, "file": dong_n01, "noi": noi}
 
 
@@ -255,7 +255,7 @@ def _ghi_n01(thumuc: Path, dong: list) -> None:
 
 
 def _xep_cho_drive(thumuc: Path, dong_n01: list, noi: Path, luc: datetime) -> None:
-    """Bước 5: mỗi tệp đã mã hoá 01 dòng M01 trạng thái 'cho'."""
+    """Bước 5: mỗi tệp đã mã hóa 01 dòng M01 trạng thái 'cho'."""
     cn = ketnoi.mo("Hotho", thumuc)
     try:
         cn.execute("BEGIN IMMEDIATE")
@@ -299,7 +299,7 @@ def don_khi_khoidong(thumuc: Path | None = None) -> dict:
     kq = {"dong": dong, "tep": truoc[0] - sau[0], "byte": truoc[1] - sau[1]}
     if dong or kq["tep"]:
         from maychu.hethong import nhatky
-        nhatky.ghi("saoluu", "don_tep_don", f"xoá {kq['dong']:02d} dòng chờ mất tệp · {kq['tep']:02d} tệp"
+        nhatky.ghi("saoluu", "don_tep_don", f"xóa {kq['dong']:02d} dòng chờ mất tệp · {kq['tep']:02d} tệp"
                    f" · giải phóng {kq['byte']} byte", thumuc=thumuc)
     return kq
 
@@ -307,7 +307,7 @@ def don_khi_khoidong(thumuc: Path | None = None) -> dict:
 # ---------------- 0.8.3 D1 (QĐ281, QĐ284; PTD-15 mục 6.3): bản sao trước khi nâng `truoc_nangcap_vNN` ----------------
 GIU_TRUOC_NANG_NGAY = 30   # QĐ281: giữ bản của lần nâng gần nhất 30 ngày
 DAU_TRUOC_NANG = "truoc_nangcap_v"
-DUOI_DANG_XOA = ".dang_xoa"   # CDA Y49b N2: đổi tên trước rồi mới xoá; còn sót thì lượt sau xoá tiếp
+DUOI_DANG_XOA = ".dang_xoa"   # CDA Y49b N2: đổi tên trước rồi mới xóa; còn sót thì lượt sau xóa tiếp
 
 
 def _thumuc_truoc_nang(goc: Path) -> list[tuple[int, Path]]:
@@ -334,8 +334,8 @@ def _kiem_dat(ban: str | None, thumuc: Path) -> bool:
 
 def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = None) -> list[dict]:
     """D1 (QĐ281): giữ bản sao trước khi nâng của lần nâng gần nhất 30 ngày, tính từ `nang_luocdo.luc` (D1-1); bản cũ hơn
-    chỉ xoá khi lần nâng gần nhất đã "Kiểm sau cập nhật" đạt (D1-2); không chạy ở chế độ an toàn, không chạy khi còn cờ
-    quay về hay đang nâng (D1-4); mỗi thư mục xoá ghi 01 dòng F04 (D1-5). Không đọc được giờ nâng thì không xoá bản mới
+    chỉ xóa khi lần nâng gần nhất đã "Kiểm sau cập nhật" đạt (D1-2); không chạy ở chế độ an toàn, không chạy khi còn cờ
+    quay về hay đang nâng (D1-4); mỗi thư mục xóa ghi 01 dòng F04 (D1-5). Không đọc được giờ nâng thì không xóa bản mới
     nhất."""
     from maychu.hethong import antoan, nhatky
     thumuc = thumuc or ketnoi.thumuc_dulieu()
@@ -343,7 +343,7 @@ def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = Non
     if antoan.CHE_DO["an_toan"] or tt.get("chay_ban_truoc") or tt.get("dang_nang"):
         return []
     goc = thumuc_saoluu(thumuc)
-    for p in (goc.glob(DAU_TRUOC_NANG + "*" + DUOI_DANG_XOA) if goc.is_dir() else []):   # lượt trước xoá dở
+    for p in (goc.glob(DAU_TRUOC_NANG + "*" + DUOI_DANG_XOA) if goc.is_dir() else []):   # lượt trước xóa dở
         shutil.rmtree(p, ignore_errors=True)
     cac = _thumuc_truoc_nang(goc)
     if not cac:
@@ -366,18 +366,18 @@ def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = Non
     for p, lydo in xoa:
         so, byte = _dem_tep(p)
         bo = p.with_name(p.name + DUOI_DANG_XOA)
-        try:   # CDA Y49b N2: đổi tên 01 lần (nguyên tử) → tên cũ mất hẳn thì Quay về khoá, không bao giờ trả 01 phần tệp
+        try:   # CDA Y49b N2: đổi tên 01 lần (nguyên tử) → tên cũ mất hẳn thì Quay về khóa, không bao giờ trả 01 phần tệp
             os.replace(p, bo)
         except OSError:
             continue   # đổi tên không được: thư mục còn nguyên, không ghi F04, lượt sau thử lại
         nhatky.ghi("saoluu", "xoa_truoc_nangcap", f"{p.name} · {lydo} · {so:02d} tệp · {byte} byte", thumuc=thumuc)
         ra.append({"thumuc": p.name, "lydo": lydo, "byte": byte})
-        shutil.rmtree(bo, ignore_errors=True)   # xoá dở thì lượt sau xoá tiếp (đầu hàm)
+        shutil.rmtree(bo, ignore_errors=True)   # xóa dở thì lượt sau xóa tiếp (đầu hàm)
     return ra
 
 
 def ngay_xoa_truoc_nangcap(ten: str, thumuc: Path | None = None) -> str | None:
-    """QĐ287: giờ thật lúc xoá thư mục `ten` (dòng F04 do `don_truoc_nangcap` ghi), cho dòng báo `qv_het_han`."""
+    """QĐ287: giờ thật lúc xóa thư mục `ten` (dòng F04 do `don_truoc_nangcap` ghi), cho dòng báo `qv_het_han`."""
     cn = ketnoi.mo("Nhatky", thumuc)
     try:
         d = cn.execute("SELECT luc FROM nhatky_thaotac WHERE congcu = 'saoluu' AND lenhcon = 'xoa_truoc_nangcap'"

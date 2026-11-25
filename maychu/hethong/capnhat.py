@@ -43,7 +43,7 @@ _KIEU_GOI = ", ".join(("application/vnd.oci.image.index.v1+json", "application/v
 
 
 def _hoi_ghcr(dang: str | None = None) -> tuple[str | None, str | None]:
-    """(bản mới nhất DÙNG ĐƯỢC, nhãn số lớn nhất trên kho). 02 lượt hỏi: khoá đọc ẩn danh + danh sách nhãn. Nhãn lớn
+    """(bản mới nhất DÙNG ĐƯỢC, nhãn số lớn nhất trên kho). 02 lượt hỏi: khóa đọc ẩn danh + danh sách nhãn. Nhãn lớn
     hơn bản đang chạy thì hỏi thêm đúng nhãn đó (QĐ174 điểm 04): gói đóng xong (trả 200) mới tính là bản mới; đang đóng
     thì lùi về nhãn trước, lần sau hỏi lại."""
     with httpx.Client(timeout=10, follow_redirects=True) as c:
@@ -252,14 +252,14 @@ def trang_thai_sao() -> dict:
 
 
 def tiep_tuc(nguoi_id: str, van: bool, thumuc=None) -> dict:
-    """QĐ218 dòng 28, 32, 34: bản sao quá 10 phút chưa lên Drive thì chờ anh chọn Huỷ hay Vẫn cập nhật."""
+    """QĐ218 dòng 28, 32, 34: bản sao quá 10 phút chưa lên Drive thì chờ anh chọn Hủy hay Vẫn cập nhật."""
     if _SAO["buoc"] != "qua_gio":
         return {"loi": "Không có lượt cập nhật nào đang chờ chọn"}
     if not van:
         _SAO.update(buoc=None, loi=None)
         from maychu.hethong import tiendo
         tiendo.huy(thumuc)
-        _ghi_f04("capnhat_ngay", ban_dang_chay(), "bichan", "bạn huỷ: bản sao Drive quá 10 phút", nguoi_id, thumuc)
+        _ghi_f04("capnhat_ngay", ban_dang_chay(), "bichan", "bạn hủy: bản sao Drive quá 10 phút", nguoi_id, thumuc)
         return {"ok": True, "huy": True}
     _SAO["buoc"] = "gui"
     _chay_nen(lambda: _gui(nguoi_id, _SAO["den"], False, thumuc))

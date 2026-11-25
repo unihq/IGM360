@@ -1,4 +1,4 @@
-"""Bài kiểm ngày 04: tài khoản, 02 lớp, phiên, thông số, cập nhật, khoá chủ, lệnh đặt lại mật khẩu, trang."""
+"""Bài kiểm ngày 04: tài khoản, 02 lớp, phiên, thông số, cập nhật, khóa chủ, lệnh đặt lại mật khẩu, trang."""
 import os
 import stat
 import tempfile
@@ -135,7 +135,7 @@ class KiemMayChu(unittest.TestCase):
         r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": MK}, headers=self.h)   # đúng mật khẩu vẫn bị chặn
         self.assertEqual(r.status_code, 429)
         dap = iter(["mat-khau-moi", "mat-khau-moi"])
-        datlai.chay([], hoi=lambda _: next(dap), thumuc=self.thumuc)       # lệnh VPS mở khoá ngay
+        datlai.chay([], hoi=lambda _: next(dap), thumuc=self.thumuc)       # lệnh VPS mở khóa ngay
         r = self.c.post("/api/dangnhap", json={"ten": "chu", "matkhau": "mat-khau-moi"}, headers=self.h)
         self.assertEqual(r.status_code, 200)
 

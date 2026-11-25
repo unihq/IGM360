@@ -1,4 +1,4 @@
-"""Bài kiểm bản 0.7.7 (QĐ192, Y36; CDA K-VN Đ1–Đ3): đo hạn mức bị động (0 lượt gọi thêm, không đọc khoá đăng nhập) và
+"""Bài kiểm bản 0.7.7 (QĐ192, Y36; CDA K-VN Đ1–Đ3): đo hạn mức bị động (0 lượt gọi thêm, không đọc khóa đăng nhập) và
 dòng "Việc nền chung" (QĐ194). Dữ liệu giả, không gọi CLI thật."""
 import json
 import os
@@ -167,11 +167,11 @@ class KiemGiaoDien077(unittest.TestCase):
                     "$$('.lop').some(e => !e.hidden)", "a.closest('#p13')"):
             self.assertIn(chu, js)
         self.assertIn(".mb .thongbao{position:fixed;left:16px;right:16px;bottom:76px;transform:none;max-width:none}", html)   # M2
-        self.assertIn('<div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khoá</div>', js)   # M1: tự xuống dòng được
+        self.assertIn('<div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khóa</div>', js)   # M1: tự xuống dòng được
         lich = (GOC / "maychu/hethong/giamsat/lich.py").read_text(encoding="utf-8")
         self.assertIn("await asyncio.to_thread(congai.quet_codex)", lich)
         cg = (GOC / "maychu/hethong/mohinh/congai.py").read_text(encoding="utf-8")
-        self.assertNotIn("credentials", cg)                             # không đọc khoá đăng nhập
+        self.assertNotIn("credentials", cg)                             # không đọc khóa đăng nhập
         self.assertNotIn("oauth/usage", cg)
 
 
@@ -230,7 +230,7 @@ class KiemP1(Nen):
             kq = congai.goi("hỏi", loai_viec="trochuyen")
             self.assertFalse(kq.get("chu"))   # 01 tài khoản, mô hình mặc định đang hết: không có câu trả lời
         self.assertFalse(self.het_tk())
-        self.assertGreater(congai.het_mo_hinh(self.c1, None), time.time())   # "mặc định của nguồn" ghi khoá rỗng
+        self.assertGreater(congai.het_mo_hinh(self.c1, None), time.time())   # "mặc định của nguồn" ghi khóa rỗng
         self.assertEqual(congai.ds_het_mo_hinh(self.c1)[0]["ma"], None)
 
     def test_ca_tai_khoan_het_van_danh_dau(self):

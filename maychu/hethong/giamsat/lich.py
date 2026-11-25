@@ -2,7 +2,7 @@
 - đo máy mỗi giờ, ghi N02;
 - sao lưu hằng ngày từ 02:00 giờ Việt Nam, ghi N01;
 - cập nhật đang chờ việc AI chạy xong (tối đa 30 phút);
-- đẩy bản sao lưu đã mã hoá lên Google Drive theo hàng chờ M01 (ngày 05), mỗi 05 phút;
+- đẩy bản sao lưu đã mã hóa lên Google Drive theo hàng chờ M01 (ngày 05), mỗi 05 phút;
 - quét nguồn thông báo ở chuông mỗi 10 phút (QĐ165); đo máy, sao lưu xong thì quét ngay phần của mình;
 - tin "có bản mới" quét riêng theo nhịp dò bản mới (QĐ174: 05 phút, `capnhat.nhip_kiem_giay`);
 - đọc tệp phiên Codex mới nhất mỗi 10 phút để cập nhật % hạn mức gói ChatGPT, không gọi AI (QĐ192, bản 0.7.7).

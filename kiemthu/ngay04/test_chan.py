@@ -1,4 +1,4 @@
-"""Bài kiểm chặn đoán mật khẩu và thời hạn phiên theo QĐ90 (từng số khoá)."""
+"""Bài kiểm chặn đoán mật khẩu và thời hạn phiên theo QĐ90 (từng số khóa)."""
 import stat
 import tempfile
 import unittest
@@ -34,7 +34,7 @@ class KiemChan(unittest.TestCase):
         self.assertEqual((kq["loai"], kq["phut"]), ("ip", 15))
         self.assertIsNotNone(chan.dang_khoa("1.1.1.1", self.t, T0 + 10 + 15 * PHUT - 1))
         self.assertIsNone(chan.dang_khoa("1.1.1.1", self.t, T0 + 10 + 15 * PHUT + 1))
-        self.assertIsNone(chan.dang_khoa("2.2.2.2", self.t, T0 + 20))   # địa chỉ khác không bị khoá
+        self.assertIsNone(chan.dang_khoa("2.2.2.2", self.t, T0 + 20))   # địa chỉ khác không bị khóa
 
     def test_sai_cach_nhau_qua_15_phut_khong_cong_don(self):
         self.sai("1.1.1.1", 4, T0)
@@ -50,7 +50,7 @@ class KiemChan(unittest.TestCase):
         luc, ds = T0, []
         for _ in range(9):
             self.sai("1.1.1.1", 5, luc)
-            r = json.loads((self.t / chan.TEN_TEP).read_text())["ip"]["1.1.1.1"]   # khoá theo địa chỉ (khoá tài khoản tính riêng)
+            r = json.loads((self.t / chan.TEN_TEP).read_text())["ip"]["1.1.1.1"]   # khóa theo địa chỉ (khóa tài khoản tính riêng)
             ds.append(r["phut"])
             luc = r["khoa_den"] + 1
         self.assertEqual(ds, [15, 30, 60, 120, 240, 480, 960, 1440, 1440])
@@ -61,7 +61,7 @@ class KiemChan(unittest.TestCase):
         self.assertEqual(kq["phut"], 30)
         kq = self.sai("1.1.1.1", 5, kq["den"] + 24 * GIO + 1)
         self.assertEqual(kq["phut"], 15)
-        kq2 = self.sai("1.1.1.1", 5, kq["den"] + 23 * GIO)   # lại trong 24 giờ sau lần khoá trước: gấp đôi
+        kq2 = self.sai("1.1.1.1", 5, kq["den"] + 23 * GIO)   # lại trong 24 giờ sau lần khóa trước: gấp đôi
         self.assertEqual(kq2["phut"], 30)
 
     def test_20_lan_moi_dia_chi_khoa_tai_khoan_01_gio(self):

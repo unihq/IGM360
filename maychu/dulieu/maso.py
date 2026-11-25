@@ -1,6 +1,6 @@
 """Mã dòng ULID: 26 ký tự, không trùng giữa các file, sắp được theo thời gian tạo.
 
-Viết bằng thư viện chuẩn: 48 bit thời gian (mili giây) + 80 bit ngẫu nhiên, mã hoá Crockford base32.
+Viết bằng thư viện chuẩn: 48 bit thời gian (mili giây) + 80 bit ngẫu nhiên, mã hóa Crockford base32.
 """
 import os
 import time

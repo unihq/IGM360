@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS quyen (
   hieuluc_den TEXT
 );
 
--- F03 Két khoá: 01 dòng = 01 khoá
+-- F03 Két khóa: 01 dòng = 01 khóa
 CREATE TABLE IF NOT EXISTS kekhoa (
   id TEXT PRIMARY KEY NOT NULL,
   dichvu TEXT,

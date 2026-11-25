@@ -1,6 +1,6 @@
 """Bài kiểm ngày 11 (lược đồ bản 3 phần 5/5; QĐ108 điều kiện CDA): dữ liệu dựng như bản 0.5.0 đang chạy (tài khoản
 chủ có mật khẩu, đã bật 02 lớp, két F03 ghi "ai bấm" là 'anh', F01 do lệnh đặt lại ghi 'lenh_vps', đang có 01 phiên),
-nâng lên bản 3 rồi đăng nhập lại đủ 02 lớp; mã người cấp tiếp không trùng; khoá ngoại về A18 đúng.
+nâng lên bản 3 rồi đăng nhập lại đủ 02 lớp; mã người cấp tiếp không trùng; khóa ngoại về A18 đúng.
 Dữ liệu thử chỉ dùng tên giả (QĐ126)."""
 from kiemthu.ngay07.test_luocdo_ban3 import CoThuMuc, dung_ban2
 from maychu.dulieu import aibam, ketnoi, khoitao, maso, songuoi
@@ -35,7 +35,7 @@ class KiemDangNhapSauNang(CoThuMuc):
         self.assertEqual(set(self.lay(t, "PRAGMA user_version")[0][0] for t in ketnoi.CAC_FILE), {2})
         khoitao.tao_het(self.thumuc)
         self.assertEqual(set(self.lay(t, "PRAGMA user_version")[0][0] for t in ketnoi.CAC_FILE), {khoitao.PHIENBAN_LUOCDO})   # 0.8.0: nâng thẳng 2 → 4
-        # "ai bấm" đã đổi; két 02 lớp vẫn giải được bằng khoá chủ cũ
+        # "ai bấm" đã đổi; két 02 lớp vẫn giải được bằng khóa chủ cũ
         self.assertEqual(self.lay("Baomat", "SELECT nguoi_nhap FROM kekhoa"), [(self.chu,)])
         self.assertEqual(self.lay("Baomat", "SELECT nguoi_khai FROM nguoidung"), [("hethong",)])
         khoa_id = self.lay("Baomat", "SELECT totp_khoa_id FROM nguoidung")[0][0]
@@ -49,7 +49,7 @@ class KiemDangNhapSauNang(CoThuMuc):
         self.assertIn("loi", sai)
         r = nguoidung.buoc_ma2lop(kq["ma_tam"], totp.ma_cua_buoc(self.khoa, totp.buoc() + 1), "Máy thử 2", thumuc=self.thumuc)
         self.assertIn("ma_phien", r)
-        # F01 nối A18 của anh; mã người cấp tiếp không trùng; khoá ngoại về A18 đúng ở cả 07 file
+        # F01 nối A18 của anh; mã người cấp tiếp không trùng; khóa ngoại về A18 đúng ở cả 07 file
         a18 = self.lay("Dulieu_Chinh", "SELECT id, ma FROM nguoi WHERE loai = 'anh'")
         self.assertEqual(self.lay("Baomat", "SELECT nguoi_id FROM nguoidung"), [(a18[0][0],)])
         self.assertEqual(a18[0][1], "0000001")

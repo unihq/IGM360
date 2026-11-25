@@ -1,5 +1,5 @@
 """Bài kiểm giao diện dựng lại từ bản vẽ đã duyệt (QĐ91, QĐ94): đủ chỗ cho dữ liệu màn 13, 08; không còn viền hồng,
-số minh hoạ; tên thiết bị phiên theo bản vẽ màn 09."""
+số minh họa; tên thiết bị phiên theo bản vẽ màn 09."""
 import re
 import unittest
 from pathlib import Path

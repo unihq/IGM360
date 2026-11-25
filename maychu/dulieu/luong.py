@@ -1,7 +1,7 @@
 """Lớp ghi C16 Lương, nhân sự (QĐ143; thiết kế mục 0.7 Q6, PTD-03).
 
-- Không trùng theo (người A18 qua A15, tháng): A15 tách phiên bản (01 người nhiều dòng `nhanvien`), nên khoá là
-  `nguoi_id` của dòng A15 mà `nhanvien_id` trỏ tới, không phải `nhanvien_id`. Lược đồ không chặn được (khoá đi qua
+- Không trùng theo (người A18 qua A15, tháng): A15 tách phiên bản (01 người nhiều dòng `nhanvien`), nên khóa là
+  `nguoi_id` của dòng A15 mà `nhanvien_id` trỏ tới, không phải `nhanvien_id`. Lược đồ không chặn được (khóa đi qua
   bảng khác), nên chặn ở lớp ghi, đọc kiểm và ghi trong cùng 01 giao dịch BEGIN IMMEDIATE.
 - Nạp lại đúng cùng số của người, tháng đã có: trả dòng cũ, không báo lỗi (thiết kế mục 0.7 L02). Khác số: từ chối,
   sửa qua Sổ điều chỉnh C20.

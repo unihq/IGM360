@@ -146,7 +146,7 @@ class KiemBan2(unittest.TestCase):
             self.assertEqual(cn.execute("SELECT ten, vai FROM kenh_nhan WHERE id = ?", (ma_kenh,)).fetchone(),
                              ("Kênh báo anh", "anh_nhan_baocao"))
             self.assertEqual(cn.execute("PRAGMA foreign_key_check").fetchall(), [])
-            with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại tới bảng dựng lại vẫn chạy
+            with self.assertRaises(sqlite3.IntegrityError):  # khóa ngoại tới bảng dựng lại vẫn chạy
                 cn.execute("INSERT INTO lich_baocao (id, ma, kenhnhan_id) VALUES (?, 'LICH02', 'khongco')", (maso.tao(),))
         finally:
             cn.close()

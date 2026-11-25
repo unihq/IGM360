@@ -2,7 +2,7 @@
 
     docker compose exec igm360 python -m maychu.hethong.taikhoan.datlai [--tat-2lop]
 
-Hỏi mật khẩu mới 02 lần (không hiện chữ), thu hồi mọi phiên cũ, xoá bộ đếm chặn đoán mật khẩu (mở khoá ngay). --tat-2lop: tắt 02 lớp, lần đăng nhập
+Hỏi mật khẩu mới 02 lần (không hiện chữ), thu hồi mọi phiên cũ, xóa bộ đếm chặn đoán mật khẩu (mở khóa ngay). --tat-2lop: tắt 02 lớp, lần đăng nhập
 sau phần mềm bắt bật lại. Chưa có tài khoản nào thì hỏi thêm tên đăng nhập và tạo tài khoản chủ.
 """
 import getpass
@@ -43,7 +43,7 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
         if not u:
             if not nguoi_id:
                 cn.execute("ROLLBACK")
-                print("CHƯA ĐẶT LẠI: tài khoản chủ vừa bị xoá trong lúc chạy lệnh, chạy lại lệnh")
+                print("CHƯA ĐẶT LẠI: tài khoản chủ vừa bị xóa trong lúc chạy lệnh, chạy lại lệnh")
                 return 1
             bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
             ma = maso.tao()
@@ -64,7 +64,7 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
     so = phien.thu_hoi(u[0], thumuc=thumuc)
     chan.xoa_het(thumuc)
     nguoidung.ghi_doi_matkhau(u[0], "lenh_vps", thumuc)
-    print(f"ĐÃ ĐẶT LẠI MẬT KHẨU. Đã thu hồi {so:02d} phiên đăng nhập cũ. Đã mở khoá đăng nhập."
+    print(f"ĐÃ ĐẶT LẠI MẬT KHẨU. Đã thu hồi {so:02d} phiên đăng nhập cũ. Đã mở khóa đăng nhập."
           + (" Đã tắt 02 lớp, lần đăng nhập sau sẽ bật lại." if "--tat-2lop" in thamso else ""))
     return 0
 

@@ -7,7 +7,7 @@ Chạy được bằng Python có sẵn trong container bản cũ (chỉ dùng t
 
 Cách kiểm: mở 07 file ở chế độ chỉ đọc, chép sang bộ nhớ, chạy thử đúng các bước nâng bản 3 trên bản trong bộ nhớ
 (đổi tên bảng, tạo bảng mới, đếm mã trống ở bảng có phiên bản, dựng lại bảng theo lược đồ bản 3, đổi giá trị
-"ai bấm" cũ, kiểm khoá ngoại).
+"ai bấm" cũ, kiểm khóa ngoại).
 Không ghi gì vào file thật. Chỉ in số đếm, tên bảng, tên cột; không in dữ liệu.
 Thoát 0 = ĐẠT (nâng được), 1 = DỪNG (lần nâng sẽ dừng và trả nguyên trạng), 2 = lỗi chạy.
 """

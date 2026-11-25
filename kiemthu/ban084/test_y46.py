@@ -650,7 +650,7 @@ class KiemGiaoDienKhoi(unittest.TestCase):
                   "<span>Nâng gần nhất</span>", "bản trước 2.1.329", ">Đã mới nhất<", "23/11/2026 06:00", "Về bản trước",
                   "Đang dùng bản mới nhất. Lần kiểm tới: 03:00 ngày mai.", 'title="Đang dùng bản mới nhất"', 'aria-checked="true"'):
             self.assertIn(x, h)
-        self.assertNotIn("data-canang", h)                                        # mới nhất: nút khoá
+        self.assertNotIn("data-canang", h)                                        # mới nhất: nút khóa
 
     def test_dong_6_7_hang_co_ban_moi(self):
         moi = self.goi(hang={"ban": "2.1.332", "ra_luc": "2026-11-24T03:00:00Z", "uoc_chu": "185 MB"})
@@ -714,7 +714,7 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         self.assertIn("Bật lại: gạt công tắc Tự nâng mỗi ngày, hoặc cập nhật lên bản mới.", tam)
         self.assertIn("2.1.300 · trong gói", tam)
         self.assertIn('aria-checked="false"', tam)
-        self.assertNotIn("data-canang", tam)                                      # nút nâng khoá
+        self.assertNotIn("data-canang", tam)                                      # nút nâng khóa
         self.assertIn("Hoãn nâng Claude · Code 2.1.332: gói Claude đang hết hạn mức nên chưa kiểm thử được. Vẫn dùng bản 2.1.331;"
                       " lượt kiểm 03:00 ngày mai thử lại.", hoan)
         self.assertIn("<i clock m=#646A73>", hoan)                                # dòng xám, icon clock
@@ -770,7 +770,7 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         for h in (at, cn):
             self.assertNotIn("data-canang", h)
             self.assertNotIn("data-cave", h)                                        # CDA A2: không bấm được Về bản trước lúc bị chặn
-        self.assertIn('<button class="btn-chu nho qv-khoa" disabled title="Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.">', at)   # QĐ308: khoá, không ẩn
+        self.assertIn('<button class="btn-chu nho qv-khoa" disabled title="Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.">', at)   # QĐ308: khóa, không ẩn
         self.assertIn('<button class="btn-chu nho qv-khoa" disabled title="Đang cập nhật lên 0.8.4">', cn)
         self.assertEqual(at.count("qv-khoa"), 1)                                   # 01 dòng công cụ (khối thử chỉ có Claude)
         self.assertIn("D.ca.chan_chu = D.ca.chan === 'che_do_an_toan' ? CHU_CN.chan", self.app)
@@ -963,7 +963,7 @@ class KiemK4VungChua(Nen):
 
     def test_version_va_thaydoi_084_nguyen_van_qd309(self):
         goc = Path(__file__).resolve().parents[2]
-        self.assertEqual((goc / "VERSION").read_text(encoding="utf-8").strip(), "0.8.4")
+        self.assertGreaterEqual(tuple(map(int, (goc / "VERSION").read_text(encoding="utf-8").strip().split("."))), (0, 8, 4))   # Y50: lên 0.8.5
         td = (goc / "THAYDOI.md").read_text(encoding="utf-8").replace("\r\n", "\n")
         muc = td[td.index("## 0.8.4\n"):td.index("## 0.8.3\n")]
         self.assertTrue(muc.startswith("## 0.8.4\nTóm tắt: Công cụ AI tự nâng mỗi ngày\nNâng dữ liệu: không\n"))

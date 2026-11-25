@@ -21,7 +21,7 @@ Thư mục không có tệp riêng thì đọc tệp của thư mục cha gần 
 - Kho công khai: không địa chỉ IP, tên máy chủ, đường dẫn ổ đĩa máy cá nhân, email, khóa bí mật; không tài liệu thiết kế nghiệp vụ; không dữ liệu khách hàng.
 - Quét thông tin nhạy cảm là 01 bước riêng trước khi đẩy kho, đọc kết quả rồi mới đẩy.
 - Thư viện, phần mềm cài thêm (requirements.txt, Dockerfile) phải được duyệt trước.
-- Chữ người dùng thấy: tiếng Việt có dấu; số 1–9 trước danh từ đếm ghi 02 chữ số; chữ mới viết dấu kiểu mới (xóa, khóa, hóa – QĐ304).
+- Chữ người dùng thấy: tiếng Việt có dấu; số 1–9 trước danh từ đếm ghi 02 chữ số; mọi chữ viết dấu kiểu mới (xóa, khóa, hóa, hủy – QĐ304; Y50 đổi toàn kho theo QĐ298, QĐ302).
 - Không viết chữ cấm (tên mã gốc) trong maychu, kiemthu, mauketnoi (bài kiểm `kiemthu/test_chucam.py`).
 - Đổi số bản: sửa `VERSION` và thêm mục mới đầu `THAYDOI.md`; mục cũ không đổi dòng "Nâng dữ liệu".
 - Tên tệp, thư mục, hàm, biến: tiếng Việt không dấu.

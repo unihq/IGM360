@@ -135,7 +135,7 @@ class KiemLop5(NenAT):
             capnhat._SAO.update(buoc="qua_gio")
             self.assertEqual(capnhat.tiep_tuc("nguoi", False), {"ok": True, "huy": True})
             self.assertIsNone(capnhat.trang_thai_sao()["dang_sao"])
-            self.assertIn("bạn huỷ", self.f04("capnhat_ngay")[-1][2])
+            self.assertIn("bạn hủy", self.f04("capnhat_ngay")[-1][2])
             self.assertIn("loi", capnhat.tiep_tuc("nguoi", True))
 
     def test_chup_loi_thi_khong_gui(self):
@@ -479,7 +479,7 @@ class KiemY38c(NenAT):
     def test_r1_nhat_ky_loi_thi_khong_ghi_co_khong_dung(self):
         g = self.goc()
         with mock.patch.object(antoan, "GOC_MA", g), mock.patch.object(capnhat, "ban_dang_chay", return_value="0.7.9"), \
-                mock.patch.object(capnhat, "_ghi_f04", side_effect=sqlite3.OperationalError("khoá")), \
+                mock.patch.object(capnhat, "_ghi_f04", side_effect=sqlite3.OperationalError("khóa")), \
                 mock.patch.object(antoan, "_thoat") as th:
             kq = antoan.quay_ve("nguoi", tre_giay=0.01)
             time.sleep(0.2)
@@ -502,7 +502,7 @@ class KiemY38c(NenAT):
         self.assertIn("khởi động hỏng 03 lần", antoan.doc(self.dl)["quayve_loi"]["chu"])
         antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.7.9", "ban_truoc": "0.7.8", "so_lan_hong": 2})
         with mock.patch.object(chay, "LENH", ["-c", "import time; time.sleep(0.5)"]):
-            chay.canh_ban_truoc(g / "ban_truoc", tep, cho_len=5, hoi=lambda: True)   # lên được → xoá số đếm
+            chay.canh_ban_truoc(g / "ban_truoc", tep, cho_len=5, hoi=lambda: True)   # lên được → xóa số đếm
         self.assertEqual(antoan.doc(self.dl)["chay_ban_truoc"]["so_lan_hong"], 0)
 
     def test_g5_co_la_thi_vao_che_do_an_toan(self):
@@ -575,7 +575,7 @@ class KiemY38c(NenAT):
         self.assertFalse(dg.GO_MA_KHI_TRUNG)
         self.assertEqual(kq["loi"], "Bạn vừa đăng nhập tài khoản đã kết nối ở Tài khoản 1. Bấm Lấy tên, gói, đăng nhập đúng"
                                     " tài khoản của mã này.")                                                    # A8
-        self.assertEqual(madaihan.lay(2), MA_GIA)                                   # mã dài hạn còn trong Két khoá
+        self.assertEqual(madaihan.lay(2), MA_GIA)                                   # mã dài hạn còn trong Két khóa
         self.assertEqual(dg.doc_chup(2)["ten_hien"], "Nguoi Dung")                  # không ghi tên, gói sai
         dx.assert_called_once()                                                     # đăng xuất kiểu cũ của tài khoản nhầm
 
@@ -670,7 +670,7 @@ class KiemY38d(NenAT):
             p.write_text(ma, encoding="utf-8")
             r = sp.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout), ["antoan", True, True, True])        # N31: an toàn ẩn thẻ mới nhất; N33 khoá
+        self.assertEqual(json.loads(r.stdout), ["antoan", True, True, True])        # N31: an toàn ẩn thẻ mới nhất; N33 khóa
         self.assertNotIn('id="cn-quayve"', (GD / "index.html").read_text(encoding="utf-8"))   # N36 (a): không còn thẻ riêng
 
     def chuan_bi_tra(self):
@@ -792,7 +792,7 @@ class KiemY38dBoSung(NenAT):
 
 # ---------------- Y38e: 15 câu QĐ219, giữ mã khi đăng nhập nhầm, xưng "bạn" QĐ220 ----------------
 class KiemY38e(NenAT):
-    A = {1: "Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API.",
+    A = {1: "Đây là khóa API, không phải mã dài hạn. Khóa API thêm ở thẻ Khóa API.",
          2: "Đây không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-).",
          3: "Đang quay về bản 0.7.8",
          4: "Quay về bản 0.7.8 chưa được: chưa trả được dữ liệu",
@@ -898,9 +898,9 @@ class KiemY38f(NenAT):
         a7 = A[7] + " Dữ liệu đã trả về lúc 10:05."
         ra = self.chay_js("console.log(JSON.stringify([" + ", ".join(json.dumps(s) for s in (A[1], A[6], a7)) + "].map(cum)));")
         for s in ra:
-            for c in ("Khoá API", "khởi động", "chưa được", "dữ liệu", "Dữ liệu", "bản 0.7.8", "bản 0.7.9"):
+            for c in ("Khóa API", "khởi động", "chưa được", "dữ liệu", "Dữ liệu", "bản 0.7.8", "bản 0.7.9"):
                 self.assertNotIn(c, s)                                              # cụm nào có trong câu đều đã nối &nbsp;
-        self.assertEqual(ra[0].count("Khoá&nbsp;API"), 2)                            # L1: cả 02 chỗ
+        self.assertEqual(ra[0].count("Khóa&nbsp;API"), 2)                            # L1: cả 02 chỗ
         for c in ("khởi&nbsp;động", "chưa&nbsp;được", "bản&nbsp;0.7.8", "bản&nbsp;0.7.9", "Dữ&nbsp;liệu"):
             self.assertIn(c, ra[2])
         self.assertIn("dữ&nbsp;liệu", ra[1])
@@ -1271,7 +1271,7 @@ class KiemChu(unittest.TestCase):
                   'Mã dài hạn chỉ dán vào ô "Dán mã". Không chụp ảnh, không gửi qua tin nhắn.', "'Đã hiểu'",
                   "Tạo mã ở máy có Claude Code, chạy lệnh:", "'claude setup-token'", "'Đã chép.'", "'Thu hồi mã cũ ở trang '",
                   "claude.ai/settings/claude-code", "Trang hiện 01 mã xác nhận. Chép mã đó, dán vào ô dưới.",
-                  "Máy chủ tự đổi thành mã dài hạn, cất ở Két khoá; bạn không cần chép mã dài hạn.", "'Mã xác nhận'",
+                  "Máy chủ tự đổi thành mã dài hạn, cất ở Két khóa; bạn không cần chép mã dài hạn.", "'Mã xác nhận'",
                   "'Kiểm mã · đạt '", "'Kiểm mã · chưa được '", "Claude chưa nhận mã này. Bấm Lấy mã mới hoặc Dán mã lại.",
                   "'Chưa kiểm được trùng tài khoản'",
                   "Phần mềm chưa có tên, gói của tài khoản này nên chưa so được với tài khoản khác. Mã vẫn dùng bình thường.",
@@ -1288,7 +1288,7 @@ class KiemChu(unittest.TestCase):
         js = (GD / "app.js").read_text(encoding="utf-8")
         for c in ("Bước 1/2 · Đang tạo bản sao Drive (tối đa 10 phút)", "Bước 1/2 · Bản sao Drive quá 10 phút, chờ bạn chọn",
                   "'Bước 2/2 · Đang tải bản '", "'Chưa đủ ổ trống'", "Cập nhật khi chưa có bản sao Drive?",
-                  "Máy chủ hỏng thì không lấy lại được bản sao này.", "'Kết nối Drive'", "'Huỷ'", "'Vẫn cập nhật'",
+                  "Máy chủ hỏng thì không lấy lại được bản sao này.", "'Kết nối Drive'", "'Hủy'", "'Vẫn cập nhật'",
                   "'Chế độ an toàn'", "'Việc nền, AI tạm dừng.'", "Chỉ mở Cập nhật và nhật ký; việc ghi khác bị chặn.",
                   "Chế độ an toàn: chỉ mở được Cập nhật. Việc ghi khác bị chặn.", "'Quay về bản trước'",
                   "'Chạy lại bản ' + b + ' đi kèm gói cài, không cần mạng'", "'Quay về bản ' + b + '?'",

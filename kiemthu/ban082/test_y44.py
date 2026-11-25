@@ -125,7 +125,7 @@ class KiemCuaChan(NenKho):
 
     def test_luat_18_bai_kiem_cu(self):
         cu = MA_GOC["kiemthu/test_cu.py"]
-        for moi, mau in ((cu.replace("assertEqual(1, 1)", "assertTrue(True)"), "Luật 18: kiemthu/test_cu.py xoá hoặc sửa 01 dòng"),
+        for moi, mau in ((cu.replace("assertEqual(1, 1)", "assertTrue(True)"), "Luật 18: kiemthu/test_cu.py xóa hoặc sửa 01 dòng"),
                          (cu + "\n    @unittest.skip('tạm')\n    def test_c(self):\n        pass\n", "thêm lệnh bỏ qua bài kiểm"),
                          (cu + "\n    def test_a(self):\n        pass\n", "trùng tên hàm K.test_a")):
             with self.subTest(mau=mau):
@@ -181,7 +181,7 @@ class KiemQuetChung(NenKho):
         self.ghi("maychu/hethong/mohinh/lo.py", f'K = "{khoa}"\nT = "{ma_gh}"\nI = "{ip}"\nE = "{thu}"\n')
         ma, ra = self.chay("quet_chung.py")
         self.assertEqual(ma, 1)
-        for x in ("khoá riêng: maychu/hethong/mohinh/lo.py:1", "mã GitHub: maychu/hethong/mohinh/lo.py:2",
+        for x in ("khóa riêng: maychu/hethong/mohinh/lo.py:1", "mã GitHub: maychu/hethong/mohinh/lo.py:2",
                   "địa chỉ IP công cộng: maychu/hethong/mohinh/lo.py:3", "email: maychu/hethong/mohinh/lo.py:4"):
             self.assertIn(x, ra)
         for x in (ma_gh, ip, thu):
@@ -269,7 +269,7 @@ class KiemSuaY44e(unittest.TestCase):
         self.assertIn("> /tmp/in_ra_kiem.txt 2> /tmp/ketqua_kiem.txt", buoc)   # print() bài kiểm không vào tệp tổng kết
         vi = {k: buoc.index(k) for k in ("unittest discover", "::notice title=Ket qua bai kiem::", 'echo "::stop-commands::',
                                           "cat /tmp/in_ra_kiem.txt /tmp/ketqua_kiem.txt", 'echo "::${khoa}::"', 'exit "$ma"')}
-        self.assertEqual(sorted(vi, key=vi.get), list(vi))                        # đúng thứ tự: chạy → chú thích → khoá → in → mở
+        self.assertEqual(sorted(vi, key=vi.get), list(vi))                        # đúng thứ tự: chạy → chú thích → khóa → in → mở
         self.assertIn("secrets.token_hex", buoc)                                  # mã ngẫu nhiên mỗi lượt
         self.assertIn("tail -n 2", buoc)                                          # chỉ 02 dòng tổng kết cuối
 

@@ -1,6 +1,6 @@
 """Bài kiểm bản 0.7.6 (QĐ187, PTD-08 Đ1, Đ5, Đ6; CDA K-MH5; bản vẽ Z11): chọn theo mô hình, không chia tài khoản.
 Mã loại nguồn 01 hàm, thứ tự 03 tầng, danh sách gộp theo loại, mặc định đọc theo loại + mã, ghim thử lần lượt tài khoản
-cùng loại, ghim dạng cũ đổi sang khoá; N1–N3. Dữ liệu giả, không gọi CLI thật."""
+cùng loại, ghim dạng cũ đổi sang khóa; N1–N3. Dữ liệu giả, không gọi CLI thật."""
 import json
 import shutil
 import subprocess
@@ -129,7 +129,7 @@ class KiemTheoMoHinh(Nen):
         dm.danh_sach()
         cu = dm.dong_cua(self.c1, "haiku")["id"]                             # id G08 của 0.7.5
         self.assertEqual(dm.chuan_khoa(cu), "goi_claude|haiku")
-        self.assertIsNone(dm.chuan_khoa("goi_claude|"))                     # khoá mặc định không phải ghim
+        self.assertIsNone(dm.chuan_khoa("goi_claude|"))                     # khóa mặc định không phải ghim
         kq = trochuyen.gui(None, "nguoi_gia", "Chào", mohinh_id=cu)
         self.assertEqual((kq["tra_loi"]["mohinh"], kq["tra_loi"]["ghim_khoa"]), ("haiku", "goi_claude|haiku"))
 
@@ -148,7 +148,7 @@ class KiemGiaoDien076(unittest.TestCase):
                     "' title=\"' + esc(tieuTraLoi(x)) + '\"'",
                     "const tenLoai = n => n && n.goi ? TEN_NGUON_GOI[n.goi] : tenNguon(n);",      # QĐ189: không ghi tài khoản
                     "'chạy bằng tài khoản ' + x.chay_tk", "' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)", "'tài khoản ' + dp.tk + ' đang tạm nghỉ'",
-                    "trên cùng phần mềm, hãng có thể khoá tài&nbsp;khoản.",                         # Z11b
+                    "trên cùng phần mềm, hãng có thể khóa tài&nbsp;khoản.",                         # Z11b
                     "khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.' + canhTk(ten)",
                     "(dn.tk >= 2 ? canhTk(ten) : '')"):
             self.assertIn(chu, self.js, chu)
@@ -182,7 +182,7 @@ class KiemY34(unittest.TestCase):
         self.js = (GD / "app.js").read_text(encoding="utf-8")
 
     def test_u10_g1_g3(self):
-        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khóa</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # "·" không đứng đầu dòng
         html = (GD / "index.html").read_text(encoding="utf-8")
         self.assertIn(".hm{display:grid;grid-template-columns:92px 1fr minmax(40px,max-content);", html)   # "chưa đo" không tràn
 

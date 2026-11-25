@@ -1,7 +1,7 @@
-"""Cất, đọc, đổi, xoá khoá ở F03 `kekhoa`. Chỉ lưu bản mã và 04 ký tự cuối; không ghi khoá ra nhật ký.
+"""Cất, đọc, đổi, xóa khóa ở F03 `kekhoa`. Chỉ lưu bản mã và 04 ký tự cuối; không ghi khóa ra nhật ký.
 
-Màn 09 ngăn Két khoá (ngày 05) chỉ đọc danh sách không có bản mã. Khoá không có hạn: `han` để trống, màn hiện
-"Không có hạn". Khoá sắp hết hạn: còn ít ngày hơn hoặc bằng thông số `songay_baotruoc_khoa_hethan` (mặc định 05).
+Màn 09 ngăn Két khóa (ngày 05) chỉ đọc danh sách không có bản mã. Khóa không có hạn: `han` để trống, màn hiện
+"Không có hạn". Khóa sắp hết hạn: còn ít ngày hơn hoặc bằng thông số `songay_baotruoc_khoa_hethan` (mặc định 05).
 """
 from datetime import date, datetime
 from pathlib import Path
@@ -13,7 +13,7 @@ from maychu.hethong.kekhoa import khoachu
 
 def cat(dichvu: str, giatri: str, thumuc: Path | None = None, *, ketnoi_id=None, han=None,
         nguoi_nhap: str = "hethong", cn=None) -> str:
-    """Cất 01 khoá; trả về id dòng F03. Truyền `cn` để ghi trong giao dịch của người gọi.
+    """Cất 01 khóa; trả về id dòng F03. Truyền `cn` để ghi trong giao dịch của người gọi.
     `nguoi_nhap`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
     aibam.kiem(nguoi_nhap)
     ma = maso.tao()
@@ -32,7 +32,7 @@ def cat(dichvu: str, giatri: str, thumuc: Path | None = None, *, ketnoi_id=None,
 
 
 def doc(ma: str, thumuc: Path | None = None) -> str:
-    """Giải mã 01 khoá (chỉ lớp kết nối, tài khoản gọi; không đưa ra giao diện, nhật ký)."""
+    """Giải mã 01 khóa (chỉ lớp kết nối, tài khoản gọi; không đưa ra giao diện, nhật ký)."""
     c = ketnoi.mo("Baomat", thumuc)
     try:
         dong = c.execute("SELECT banma FROM kekhoa WHERE id = ?", (ma,)).fetchone()
@@ -57,7 +57,7 @@ def xoa(ma: str, thumuc: Path | None = None, cn=None) -> None:
         c.close()
 
 
-# Khoá do phần mềm tự sinh, dùng nội bộ: không hiện ở ngăn Két khoá, không sửa trên web.
+# Khóa do phần mềm tự sinh, dùng nội bộ: không hiện ở ngăn Két khóa, không sửa trên web.
 NOIBO = {"totp_2lop"}
 TEN_DICHVU = {"google_oauth_ungdung": "Google Drive · mã ứng dụng", "google_drive_lammoi": "Google Drive · quyền đẩy file"}
 
@@ -99,7 +99,7 @@ def danh_sach(thumuc: Path | None = None, songay_baotruoc: int = 5, hom_nay: dat
 
 
 def doi(ma: str, giatri: str, thumuc: Path | None = None, *, han=None, cn=None) -> None:
-    """Thay giá trị 01 khoá (giữ id để nguồn đang dùng khoá không phải nối lại)."""
+    """Thay giá trị 01 khóa (giữ id để nguồn đang dùng khóa không phải nối lại)."""
     sql = "UPDATE kekhoa SET banma = ?, kytu_cuoi = ?, han = ? WHERE id = ? AND trangthai = 'dung'"
     gt = (khoachu.ma_hoa(giatri.encode(), thumuc), giatri[-4:], han, ma)
     c = cn or ketnoi.mo("Baomat", thumuc)

@@ -1,6 +1,6 @@
 """Quét chung thông tin nhạy cảm trên các dòng thêm giữa `--goc` và `--dau` (QĐ259, Y44).
 
-Chỉ chứa mẫu chung (địa chỉ IP công cộng, khoá riêng, mã truy cập, email), KHÔNG chứa giá trị bí mật nào: kho công khai.
+Chỉ chứa mẫu chung (địa chỉ IP công cộng, khóa riêng, mã truy cập, email), KHÔNG chứa giá trị bí mật nào: kho công khai.
 Máy quét đầy đủ (mẫu riêng) vẫn chạy trên máy CTO, là 01 bước riêng trước khi đẩy nhánh. Chỉ dùng thư viện chuẩn Python.
 """
 import argparse
@@ -10,9 +10,9 @@ import subprocess
 import sys
 
 MAU = (
-    ("khoá riêng", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("khóa riêng", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("mã GitHub", re.compile(r"\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}\b|\bgithub_pat_[A-Za-z0-9_]{40,}\b")),
-    ("khoá API", re.compile(r"\bsk-(ant-|proj-)?[A-Za-z0-9_-]{20,}\b|\bAKIA[0-9A-Z]{16}\b|\bAIza[0-9A-Za-z_-]{30,}\b")),
+    ("khóa API", re.compile(r"\bsk-(ant-|proj-)?[A-Za-z0-9_-]{20,}\b|\bAKIA[0-9A-Z]{16}\b|\bAIza[0-9A-Za-z_-]{30,}\b")),
     ("mã Slack", re.compile(r"\bxox[abpr]-[A-Za-z0-9-]{10,}\b")),
     ("JWT", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b")),
 )

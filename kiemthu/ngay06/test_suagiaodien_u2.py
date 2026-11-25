@@ -1,4 +1,4 @@
-"""Bài kiểm lượt sửa giao diện U2 (QĐ121, QĐ122, QĐ125): tiền khoá API theo tháng kèm chỗ đồng Việt, lúc đăng nhập
+"""Bài kiểm lượt sửa giao diện U2 (QĐ121, QĐ122, QĐ125): tiền khóa API theo tháng kèm chỗ đồng Việt, lúc đăng nhập
 gói, dòng tóm tắt mỗi bản trong THAYDOI.md, icon ô dán mã, giữ cụm chữ khi xuống dòng (chạy bằng node nếu máy có)."""
 import json
 import os

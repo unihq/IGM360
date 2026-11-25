@@ -1,4 +1,4 @@
-"""Đường gọi cho màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (ngày 04), két khoá và màn 11 Nguồn dữ liệu (ngày 05).
+"""Đường gọi cho màn 01 Đăng nhập, 02 Khung và menu, 09 Cài đặt (ngày 04), két khóa và màn 11 Nguồn dữ liệu (ngày 05).
 
 Bảo vệ: mã phiên ở cookie HttpOnly, SameSite=Strict, Secure; mọi lệnh ghi phải có header X-IGM360
 (trang web khác không gửi được header này). Chặn đoán mật khẩu theo địa chỉ IP thật, phiên 30 ngày (QĐ90).
@@ -217,7 +217,7 @@ def doi_mat_khau(body: DoiMatKhau, p: dict = Depends(can_dang_nhap)):
 
 @router.post("/2lop/doimay/batdau")
 def doi_may_batdau(body: MaCu, p: dict = Depends(can_dang_nhap)):
-    """Bước 1: nhập mã trên máy cũ; đúng thì trả QR của khoá mới."""
+    """Bước 1: nhập mã trên máy cũ; đúng thì trả QR của khóa mới."""
     kq = nguoidung.kiem_ma_hien_tai(p["nguoidung_id"], body.ma)
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
@@ -334,7 +334,7 @@ def tiep_tuc_capnhat(body: TiepTuc, p: dict = Depends(can_dang_nhap)):
     return kq
 
 
-# ---- Két khoá (màn 09, ngày 05) ----
+# ---- Két khóa (màn 09, ngày 05) ----
 class KhoaMoi(BaseModel):
     dichvu: str
     giatri: str
@@ -360,7 +360,7 @@ def _kiem_han(han: str | None) -> str | None:
     try:
         return date.fromisoformat(han[:10]).isoformat()
     except ValueError:
-        raise HTTPException(400, "Hạn khoá phải là ngày (năm-tháng-ngày)")
+        raise HTTPException(400, "Hạn khóa phải là ngày (năm-tháng-ngày)")
 
 
 @router.get("/kekhoa")
@@ -374,7 +374,7 @@ def xem_kekhoa(p: dict = Depends(can_dang_nhap)):
 @router.post("/kekhoa")
 def them_khoa(body: KhoaMoi, p: dict = Depends(can_dang_nhap)):
     if not body.giatri.strip() or not body.dichvu.strip() or body.dichvu in kho.NOIBO:
-        raise HTTPException(400, "Thiếu tên dịch vụ hoặc giá trị khoá")
+        raise HTTPException(400, "Thiếu tên dịch vụ hoặc giá trị khóa")
     ma = kho.cat(body.dichvu.strip(), body.giatri.strip(), han=_kiem_han(body.han), nguoi_nhap=p["nguoidung_id"])
     ghi_f04("kekhoa", "them", f"dịch vụ {body.dichvu.strip()}", nguoi_id=p["nguoidung_id"])
     return {"id": ma}
@@ -383,25 +383,25 @@ def them_khoa(body: KhoaMoi, p: dict = Depends(can_dang_nhap)):
 @router.post("/kekhoa/{ma}/doi")
 def doi_khoa(ma: str, body: DoiKhoa, p: dict = Depends(can_dang_nhap)):
     if not body.giatri.strip() or ma not in {x["id"] for x in kho.danh_sach()}:
-        raise HTTPException(400, "Không đổi được khoá này")
+        raise HTTPException(400, "Không đổi được khóa này")
     kho.doi(ma, body.giatri.strip(), han=_kiem_han(body.han))
-    ghi_f04("kekhoa", "doi", f"khoá {ma}", nguoi_id=p["nguoidung_id"])
+    ghi_f04("kekhoa", "doi", f"khóa {ma}", nguoi_id=p["nguoidung_id"])
     return {"id": ma}
 
 
 @router.post("/kekhoa/{ma}/xoa")
 def xoa_khoa(ma: str, p: dict = Depends(can_dang_nhap)):
-    """Xoá hẳn (không lấy lại được); nguồn dùng khoá này ngừng lấy số."""
+    """Xóa hẳn (không lấy lại được); nguồn dùng khóa này ngừng lấy số."""
     if ma not in {x["id"] for x in kho.danh_sach()}:
-        raise HTTPException(400, "Không xoá được khoá này")
+        raise HTTPException(400, "Không xóa được khóa này")
     kho.xoa(ma)
     cn = ketnoi.mo("Ketnoi")
     try:
-        so = cn.execute("UPDATE ketnoi SET trangthai_phien = 'mat_khoa', loi_cuoi = 'Khoá đã bị xoá ở Két khoá'"
+        so = cn.execute("UPDATE ketnoi SET trangthai_phien = 'mat_khoa', loi_cuoi = 'Khóa đã bị xóa ở Két khóa'"
                         " WHERE khoa_id = ?", (ma,)).rowcount
     finally:
         cn.close()
-    ghi_f04("kekhoa", "xoa", f"khoá {ma}; {so:02d} nguồn ngừng lấy số", nguoi_id=p["nguoidung_id"])
+    ghi_f04("kekhoa", "xoa", f"khóa {ma}; {so:02d} nguồn ngừng lấy số", nguoi_id=p["nguoidung_id"])
     return {"id": ma, "so_nguon_ngung": so}
 
 
@@ -555,7 +555,7 @@ def goi_go(goi: str, body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
     _goi(goi, body.taikhoan)
     kq = dangnhap_goi.go(goi, body.taikhoan)
     if goi == "claude" and "loi" not in kq:
-        thongbao.quet_madaihan()   # N24: mã đã xoá thì đóng ngay tin "hết hạn", không chờ lần quét kế tiếp
+        thongbao.quet_madaihan()   # N24: mã đã xóa thì đóng ngay tin "hết hạn", không chờ lần quét kế tiếp
     ghi_f04("mohinh", "go_goi", dangnhap_goi.nhan_dangnhap(goi, body.taikhoan), ketqua="loi" if "loi" in kq else "dat",
             nguoi_id=p["nguoidung_id"])
     if "loi" in kq:
@@ -603,7 +603,7 @@ def md_bat_dau(body: TaiKhoanGoi, p: dict = Depends(can_dang_nhap)):
 
 @router.post("/mohinh/goi/claude/madaihan/ma")
 def md_gui_ma(body: MaGoi, p: dict = Depends(can_dang_nhap)):
-    """Mã trang đăng nhập hiện → lệnh in mã dài hạn → lưu Két khoá, gọi thử."""
+    """Mã trang đăng nhập hiện → lệnh in mã dài hạn → lưu Két khóa, gọi thử."""
     _goi("claude", body.taikhoan)
     r = madaihan.gui_ma(body.taikhoan, body.ma)
     if "loi" in r:

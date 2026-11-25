@@ -1,1 +1,1 @@
-"""Két khoá (F03): khoá chủ và cất khoá đã mã hoá."""
+"""Két khóa (F03): khóa chủ và cất khóa đã mã hóa."""

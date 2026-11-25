@@ -121,7 +121,7 @@ class KiemDoBanMoi(CoSo):
             self.gio[0] += 301
             n = self.kho.dem()
             capnhat.kiem_tra()
-            self.assertEqual(self.kho.dem() - n, 2)                        # bình thường: 02 lượt (khoá + danh sách nhãn)
+            self.assertEqual(self.kho.dem() - n, 2)                        # bình thường: 02 lượt (khóa + danh sách nhãn)
         self.assertEqual(self.kho.dem("raw.githubusercontent.com"), 1)
         self.kho.nhan.append("0.7.5")
         self.kho.da_dong.add("0.7.5")

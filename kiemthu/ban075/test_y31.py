@@ -170,7 +170,7 @@ class KiemMacDinhNguon(Nen):
         self.assertNotIn(None, [m["ma"] for g in ds["nhom"] for m in g["mohinh"]])   # dòng mặc định không hiện là mô hình
         self.assertEqual(ds["macdinh_ct"]["dexuat"]["nguon_id"], khoa)
         ng = congai._nguon(None, "dexuat")
-        self.assertEqual((ng[0]["id"], ng[0]["mohinh"]["id"]), (khoa, co_gia))   # khoá: mô hình đầu tiên đã có giá
+        self.assertEqual((ng[0]["id"], ng[0]["mohinh"]["id"]), (khoa, co_gia))   # khóa: mô hình đầu tiên đã có giá
         dm.dat_macdinh("dexuat", None, nguon_id=claude)
         ng = congai._nguon(None, "dexuat")
         self.assertEqual((ng[0]["id"], ng[0]["mohinh"]), (claude, None))         # gói: mặc định CLI
@@ -207,7 +207,7 @@ class KiemCongAI(Nen):
                     "mohinh_bao": "claude-" + (mohinh or "macdinh") + "-gia"}
         self.vas2 = [mock.patch.object(congai, "_goi_claude", side_effect=claude),
                      mock.patch.object(congai, "_goi_khoa", side_effect=lambda *a, **k: self.goi.append(("khoa", None)) or {
-                         "chu": "khoá", "vao": 1, "ra": 1, "sotien": 1, "sotien_thamkhao": None, "tien_ma": "USD", "hanmuc": {}}),
+                         "chu": "khóa", "vao": 1, "ra": 1, "sotien": 1, "sotien_thamkhao": None, "tien_ma": "USD", "hanmuc": {}}),
                      mock.patch.object(congai.kho, "tim", return_value="k1")]
         for v in self.vas2:
             v.start()
@@ -238,9 +238,9 @@ class KiemCongAI(Nen):
         dm.dat_macdinh("trochuyen", self.ids["sonnet"])
         self.het_opus = True
         kq = congai.goi("hỏi", loai_viec="trochuyen", mohinh_id=self.ids["opus"])
-        self.assertEqual(self.goi, [("claude", "opus"), ("claude", "sonnet")])   # không chuyển sang khoá API
+        self.assertEqual(self.goi, [("claude", "opus"), ("claude", "sonnet")])   # không chuyển sang khóa API
         self.assertEqual((kq["mohinh"], kq["nguon_id"]), ("sonnet", self.claude))
-        self.assertEqual(kq["ghim_hong"], {"khoa": "goi_claude|opus", "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})   # 0.7.6: khoá loại|mã
+        self.assertEqual(kq["ghim_hong"], {"khoa": "goi_claude|opus", "ma": "opus", "het_hanmuc": True, "lydo": "hết hạn mức"})   # 0.7.6: khóa loại|mã
         self.assertEqual([r[2] for r in self.g04()], ["het_hanmuc", "xong"])
 
     def test_ghim_khoa_chua_co_gia_khong_goi(self):
@@ -261,7 +261,7 @@ class KiemCongAI(Nen):
             cn.execute("UPDATE nguon_ai SET trangthai = 'ngung' WHERE id = ?", (self.claude,))   # nguồn đã gỡ
         finally:
             cn.close()
-        kq = congai.goi("hỏi", mohinh_id=self.ids["opus"])   # còn khoá API chưa có giá: không nguồn nào gọi được
+        kq = congai.goi("hỏi", mohinh_id=self.ids["opus"])   # còn khóa API chưa có giá: không nguồn nào gọi được
         self.assertEqual((kq["ghim_hong"]["lydo"], "loi" in kq), ("không còn dùng được", True))
         self.assertIn({"nguon": "Mô hình đã chọn", "lydo": "không còn dùng được"}, kq["bo_qua"])
 
@@ -274,7 +274,7 @@ class KiemCongAI(Nen):
 
 
 class KiemMoHinhBaoVe(unittest.TestCase):
-    """Y31c S4: đọc mô hình công cụ báo về (Claude dòng khởi đầu, Codex tệp phiên, khoá API phản hồi)."""
+    """Y31c S4: đọc mô hình công cụ báo về (Claude dòng khởi đầu, Codex tệp phiên, khóa API phản hồi)."""
 
     def test_claude_dong_khoi_dau(self):
         ra = "\n".join(json.dumps(o) for o in (
@@ -356,7 +356,7 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("try { const g = docGhim();", self.js)               # trình duyệt chặn lưu: không lỗi
 
     def test_g2_g3_g5(self):
-        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khóa</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)
         self.assertIn("'&nbsp;·&nbsp;<span class=\"nw\">' + esc(x.goi_ten)", self.js)
         self.assertIn("'Đăng nhập lúc&nbsp;' + esc(luc(x.dangnhap_luc))", self.js)
 

@@ -147,7 +147,7 @@ class KiemLopGhi(NenMoi):
     def test_giao_dich_loi_thi_khong_ghi_do(self):
         self.cn.execute("BEGIN IMMEDIATE")
         phienban.them(self.cn, "shop", {"ma": "SHOP01", "hieuluc_tu": "2026-03-01"})
-        self.cn.execute("ROLLBACK")      # chạy trong giao dịch người gọi: người gọi huỷ thì không còn dòng
+        self.cn.execute("ROLLBACK")      # chạy trong giao dịch người gọi: người gọi hủy thì không còn dòng
         self.assertEqual(self.cn.execute("SELECT count(*) FROM shop").fetchone()[0], 0)
 
 
@@ -170,7 +170,7 @@ class KiemA15C16(NenMoi):
             phienban.them(self.cn, "nhanvien", {"ma": "NV02", "hieuluc_tu": "2026-03-01"})   # thiếu người
         phienban.them(self.cn, "nhanvien", {"ma": "NV02", "nguoi_id": self.n2, "hieuluc_tu": "2026-03-01"})
         with self.assertRaises(phienban.LoiPhienBan):
-            phienban.tim_id(self.cn, "shop", "x", cot="nguoi_id")   # nguoi_id chỉ là khoá bền của A15
+            phienban.tim_id(self.cn, "shop", "x", cot="nguoi_id")   # nguoi_id chỉ là khóa bền của A15
 
     def test_a15_khong_doi_nguoi_cua_01_ma(self):
         """Y18b (CDA, PTD-03 mục 10.9): 01 mã nhân viên chỉ gắn 01 người, chặn ở cả 03 lối ghi."""
@@ -212,7 +212,7 @@ class KiemDoiPhienBanGiuaKy(NenMoi):
     def test_phan_bo_theo_ma_du_100_phan_tram(self):
         s1 = phienban.them(self.cn, "shop", {"ma": "SHOP01", "hieuluc_tu": "2026-03-01", "ky_tcong": 7})
         phienban.them(self.cn, "shop", {"ma": "SHOP02", "hieuluc_tu": "2026-03-01"})
-        phanbo = json.loads('{"SHOP01": 6000, "SHOP02": 4000}')   # tỷ lệ × 100, khoá bằng mã (Q1)
+        phanbo = json.loads('{"SHOP01": 6000, "SHOP02": 4000}')   # tỷ lệ × 100, khóa bằng mã (Q1)
         theo_id_thang3 = {phienban.tim_id(self.cn, "shop", m, "2026-03-31"): t for m, t in phanbo.items()}
         phienban.phienban_moi(self.cn, "shop", "SHOP01", "2026-04-15", {"ky_tcong": 14}, "hethong")
         for ngay in ("2026-04-01", "2026-04-30"):

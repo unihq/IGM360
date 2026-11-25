@@ -3,7 +3,7 @@
 - Chế độ ghi WAL cho mọi file.
 - Độ bền FULL cho Dulieu_Chinh, Ketnoi, Baomat; NORMAL cho 04 file còn lại.
 - Chờ file bận 5.000 ms; riêng Viecnen 30.000 ms.
-- Bật khoá ngoại trong từng file.
+- Bật khóa ngoại trong từng file.
 """
 import os
 import sqlite3

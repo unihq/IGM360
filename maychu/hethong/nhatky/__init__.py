@@ -1,4 +1,4 @@
-"""Nhật ký thao tác F04 (file Nhatky, chỉ ghi thêm). Không ghi khoá, mật khẩu vào cột nào."""
+"""Nhật ký thao tác F04 (file Nhatky, chỉ ghi thêm). Không ghi khóa, mật khẩu vào cột nào."""
 from datetime import datetime
 from pathlib import Path
 

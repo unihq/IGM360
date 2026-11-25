@@ -348,7 +348,7 @@ const veCapNhat = s => { ve.push(s.lan); theoKiem(); };
 
 
     def test_sau_cap_nhat_tai_lai_ve_cai_dat_cap_nhat(self):
-        """CDO U21 G1: tải lại sau cập nhật mở đúng Cài đặt › Cập nhật (dấu #sau-capnhat), rồi xoá dấu khỏi địa chỉ."""
+        """CDO U21 G1: tải lại sau cập nhật mở đúng Cài đặt › Cập nhật (dấu #sau-capnhat), rồi xóa dấu khỏi địa chỉ."""
         js = GD.joinpath("app.js").read_text(encoding="utf-8").replace("\r\n", "\n").split("\n")
         dau = next(x for x in js if x.startswith("const DAU_SAU_CN = "))
         a = next(i for i, x in enumerate(js) if x.startswith("async function vaoPhanMem("))

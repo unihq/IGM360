@@ -37,7 +37,7 @@ Giao diện 01 trang: `index.html` (khung, CSS), `app.js` (vẽ màn, gọi `/ap
 - QĐ88, QĐ89: bản vẽ đợt 1, tên màn, icon.
 - QĐ92: logo gốc của hãng ngoài.
 - QĐ135, QĐ136: thuật ngữ thông dụng, nhãn 02–04 tiếng.
-- QĐ288, QĐ304: không dùng chữ "chụp"; chữ mới viết dấu kiểu mới.
+- QĐ288, QĐ304, QĐ298: không dùng chữ "chụp"; mọi chữ viết dấu kiểu mới (Y50 đã đổi cả chữ dùng chung, nút "Hủy").
 
 ## 6. Kiểm trước bàn giao
 

@@ -21,12 +21,12 @@ log = logging.getLogger("igm360.thongbao")
 NB = " "   # dấu cách không ngắt (bản vẽ Z7b: "Tài khoản 1", "hết hạn", "05 ngày"… không tách khi xuống dòng)
 CON_MO = ("moi", "dabao", "dagiao_task")
 MAYCHU = ("03", "o-maychu", "Bảng điều hành › Máy chủ")
-# tiền tố khoá: (mức, icon, màn đích, chỗ cuộn tới, nơi mở). Mức: do = Cần xử lý ngay, xem = Sắp tới hạn, tin = Tin mới
+# tiền tố khóa: (mức, icon, màn đích, chỗ cuộn tới, nơi mở). Mức: do = Cần xử lý ngay, xem = Sắp tới hạn, tin = Tin mới
 LOAI = {
     "goi_hetphien": ("do", "brain-circuit", "13", None, "Mô hình AI"),
     "hanmuc_tuan": ("xem", "hourglass", "13", None, "Mô hình AI"),
-    "khoa_hethan": ("do", "key-round", "ketkhoa", None, "Cài đặt › Két khoá"),
-    "khoa_saphethan": ("xem", "key-round", "ketkhoa", None, "Cài đặt › Két khoá"),
+    "khoa_hethan": ("do", "key-round", "ketkhoa", None, "Cài đặt › Két khóa"),
+    "khoa_saphethan": ("xem", "key-round", "ketkhoa", None, "Cài đặt › Két khóa"),
     "madaihan_hethan": ("do", "key-round", "13", None, "Mô hình AI"),
     "madaihan_saphethan": ("xem", "key-round", "13", None, "Mô hình AI"),
     "saoluu_loi": ("do", "database-backup", *MAYCHU),
@@ -57,7 +57,7 @@ def _so(v) -> int:
 
 # ---------------- Ghi D03 ----------------
 def _mo(cn, khoa: str, bang: str | None, dong_id: str | None = None, nguong=None, giatri=None) -> str:
-    """Mở 01 dòng còn mở theo khoá; đã có thì chỉ cập nhật số (giữ giờ tạo, giữ dòng nguồn đầu tiên)."""
+    """Mở 01 dòng còn mở theo khóa; đã có thì chỉ cập nhật số (giữ giờ tạo, giữ dòng nguồn đầu tiên)."""
     d = cn.execute(f"SELECT id FROM canhbao WHERE khoa_chongtrung = ? AND trangthai IN {CON_MO} LIMIT 1", (khoa,)).fetchone()
     if d:
         if nguong is not None or giatri is not None:
@@ -137,7 +137,7 @@ def quet_goi(thumuc: Path | None = None) -> None:
 
 
 def quet_khoa(thumuc: Path | None = None) -> None:
-    """Khoá kết nối đã hết hạn (đỏ); còn ≤ `songay_baotruoc_khoa_hethan` ngày (vàng)."""
+    """Khóa kết nối đã hết hạn (đỏ); còn ≤ `songay_baotruoc_khoa_hethan` ngày (vàng)."""
     from maychu.hethong.kekhoa import kho
     n = _so(thongso.doc_mot("songay_baotruoc_khoa_hethan", "5", thumuc))
     ds = [k for k in kho.danh_sach(thumuc, n) if not (k["dichvu"] or "").startswith("goi_claude_")]   # mã dài hạn: quet_madaihan
@@ -148,21 +148,21 @@ def quet_khoa(thumuc: Path | None = None) -> None:
             het, sap = f"khoa_hethan:{k['id']}", f"khoa_saphethan:{k['id']}"
             if k["tinhtrang"] == "hethan":
                 _mo(w, het, "kekhoa", k["id"])
-                _dong(w, sap, "Khoá đã hết hạn")
+                _dong(w, sap, "Khóa đã hết hạn")
             elif k["tinhtrang"] == "saphet":
                 _mo(w, sap, "kekhoa", k["id"], nguong=n, giatri=k["con_ngay"])
-                _dong(w, het, "Đã gia hạn khoá")
+                _dong(w, het, "Đã gia hạn khóa")
             else:
-                _dong(w, het, "Đã gia hạn khoá")
-                _dong(w, sap, "Đã gia hạn khoá")
+                _dong(w, het, "Đã gia hạn khóa")
+                _dong(w, sap, "Đã gia hạn khóa")
         for khoa in _khoa_mo(w, "khoa_hethan:") + _khoa_mo(w, "khoa_saphethan:"):
             if khoa.split(":", 1)[1] not in con:
-                _dong(w, khoa, "Khoá đã xoá")
+                _dong(w, khoa, "Khóa đã xóa")
 
 
 def quet_madaihan(thumuc: Path | None = None) -> None:
     """0.7.8 (QĐ198, QĐ200, PTD-09 mục 3): mã dài hạn gói Claude hết hạn (đỏ, 01 dòng mở tới khi lấy mã mới hoặc gỡ);
-    còn ≤ `madaihan.SO_NGAY_NHAC` ngày (vàng) thì MỖI NGÀY 01 dòng: khoá chống trùng gắn ngày, dòng ngày cũ đóng."""
+    còn ≤ `madaihan.SO_NGAY_NHAC` ngày (vàng) thì MỖI NGÀY 01 dòng: khóa chống trùng gắn ngày, dòng ngày cũ đóng."""
     from maychu.hethong.mohinh import madaihan
     bay = datetime.now(MUIGIO_VN)
     hom_nay = bay.date().isoformat()
@@ -395,7 +395,7 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
     if loai == "hanmuc_tuan":
         return f"{_ten_goi(sau)} đã dùng {gt}% {_nb('hạn mức tuần')}"
     if loai in ("khoa_hethan", "khoa_saphethan"):
-        ten = f"Khoá {ten_khoa.get(sau, 'kết nối')}"
+        ten = f"Khóa {ten_khoa.get(sau, 'kết nối')}"
         if loai == "khoa_hethan":
             return f"{ten} đã {_nb('hết hạn')}"
         return f"{ten} {_nb('hết hạn')} hôm nay" if not gt else f"{ten} còn {_nb(f'{gt:02d} ngày')} {_nb('hết hạn')}"

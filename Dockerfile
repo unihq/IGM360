@@ -3,7 +3,7 @@
 # Mã để chỉ đọc; mọi dữ liệu nằm ở ổ gắn ngoài /dulieu và 02 ổ giữ đăng nhập gói AI.
 # Không cài thêm gói hệ điều hành nào ngoài image nền.
 
-# 0.7.9 lớp 3 (QĐ213, QĐ215): ảnh liền trước trên kho ảnh (công khai, không cần khoá). Mã của nó được để sẵn ở
+# 0.7.9 lớp 3 (QĐ213, QĐ215): ảnh liền trước trên kho ảnh (công khai, không cần khóa). Mã của nó được để sẵn ở
 # /app/ban_truoc để nút "Quay về bản trước" chạy lại bản đó mà không cần mạng, không cần quyền Docker.
 ARG ANH_TRUOC=ghcr.io/unihq/igm360:latest
 FROM ${ANH_TRUOC} AS anh_truoc

@@ -95,7 +95,7 @@ class KiemBaoLoiKiemTra(unittest.TestCase):
 
 
 class KiemThuTuNguon(unittest.TestCase):
-    """N10 b, QĐ160: gói (phí cố định tháng) luôn trước Khoá API (phí theo lượt), kể cả khi `uutien` của gói lớn hơn."""
+    """N10 b, QĐ160: gói (phí cố định tháng) luôn trước Khóa API (phí theo lượt), kể cả khi `uutien` của gói lớn hơn."""
 
     def setUp(self):
         self.tam = tempfile.TemporaryDirectory()
@@ -167,12 +167,12 @@ class KiemChuGiaoDien(unittest.TestCase):
 
     def test_chu_moi_theo_tu_dien(self):
         for moi in ("Chờ duyệt", "Mô hình AI", "Phí theo lượt", "Phí cố định tháng", "Chi phí AI tháng", "Chưa đặt hạn mức",
-                    "mục Chờ duyệt", "mục&nbsp;Két&nbsp;khoá", "Mở Mô hình AI", "Tài chính", "Báo cáo, dữ liệu"):
+                    "mục Chờ duyệt", "mục&nbsp;Két&nbsp;khóa", "Mở Mô hình AI", "Tài chính", "Báo cáo, dữ liệu"):
             with self.subTest(moi=moi):
                 self.assertTrue(moi in self.html or moi in self.js or moi in self.ico, moi)
         self.assertIn("Ngoại lệ cần duyệt: đề xuất AI hoặc 01&nbsp;trong 03&nbsp;cách xử lý", self.html)
         self.assertIn("(đổi ở Cài&nbsp;đặt&nbsp;›&nbsp;Thông&nbsp;số)", self.html)   # đường dẫn có "›": không thêm "mục"
-        self.assertIn("Két khoá có ở bản sau (cùng màn 11&nbsp;Nguồn dữ liệu)", self.html)   # CPO xác nhận giữ
+        self.assertIn("Két khóa có ở bản sau (cùng màn 11&nbsp;Nguồn dữ liệu)", self.html)   # CPO xác nhận giữ
         self.assertEqual(thongso.NHOM, ("Tài chính", "Máy chủ và bảo mật", "AI", "Báo cáo, dữ liệu"))
         self.assertEqual(congai.dung_duoc({"ma": "khoa_thu_01", "loai": "khoa_api", "tran_tien_thang": None, "id": "x"})[1], "chưa đặt hạn mức")
 
@@ -182,11 +182,11 @@ class KiemChuGiaoDien(unittest.TestCase):
         for c in ("'Mở trang'", "'TikTok Shop'", "'mã sàn'"):                                 # N12, T1
             self.assertIn(c, self.js)
         self.assertIn("ChatGPT&nbsp;·&nbsp;Codex", self.html)                                 # T2 → QĐ172 (Z9)
-        # U4 (CDO, S1–S3): không tách cụm "mục Két khoá ·", "tài khoản Claude", "mục Bộ mã chung"
-        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khoá</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # Y31 G2: tối đa 02 dòng
+        # U4 (CDO, S1–S3): không tách cụm "mục Két khóa ·", "tài khoản Claude", "mục Bộ mã chung"
+        self.assertIn("Cất ở mục&nbsp;Két&nbsp;khóa</div><div class=\"t12 phu\">Ưu&nbsp;tiên&nbsp;", self.js)   # Y31 G2: tối đa 02 dòng
         self.assertIn("tài&nbsp;khoản&nbsp;Claude của bạn.", self.js)   # QĐ220
         self.assertIn("mục&nbsp;Bộ&nbsp;mã&nbsp;chung", self.html)
-        self.assertIn("'mục Chờ duyệt', 'mục Két khoá', 'mục Bộ mã chung'", self.js)
+        self.assertIn("'mục Chờ duyệt', 'mục Két khóa', 'mục Bộ mã chung'", self.js)
         self.assertIn("chatgpt: 'ChatGPT' + NB + '·' + NB + 'Codex'", self.js)               # QĐ172 (Z9)
         nguon = (GOC / "maychu" / "hethong" / "mohinh" / "dangnhap_goi.py").read_text(encoding="utf-8")
         self.assertIn('Bấm \\"Mở trang\\" lấy mã mới rồi dán lại."', nguon)                # N12: dấu chấm cuối

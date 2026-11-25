@@ -1,5 +1,5 @@
 """Bài kiểm Y49 (bản 0.8.3): công tắc "Sao lưu Google Drive" (QĐ277, QĐ278, QĐ280, QĐ282), luật C dòng chờ đi theo tệp
-(QĐ279), bật mà chưa nối dọn như khi tắt (QĐ283), D1 bản sao trước khi nâng giữ 30 ngày + khoá Quay về (QĐ281, QĐ284,
+(QĐ279), bật mà chưa nối dọn như khi tắt (QĐ283), D1 bản sao trước khi nâng giữ 30 ngày + khóa Quay về (QĐ281, QĐ284,
 QĐ287), bỏ chữ "chụp" trên giao diện (QĐ288, QĐ290). PTD-15 mục 6.2 (04 điểm) và 6.3 (D1-1 đến D1-6).
 Không gọi mạng, không gọi CLI thật.
 """
@@ -85,7 +85,7 @@ class KiemCongTac(Nen):
             self.assertEqual(thongso.drive_bat(self.thumuc), bat)
         self.assertEqual(thongso.gat("saoluu_drive", True, "hethong", self.thumuc), {"ok": True, "doi": False})
         ls = thongso.lich_su("saoluu_drive", self.thumuc)
-        self.assertEqual([x["giatri"] for x in ls], ["1", "0", "1", "0"])         # không xoá dòng cũ (luật P01)
+        self.assertEqual([x["giatri"] for x in ls], ["1", "0", "1", "0"])         # không xóa dòng cũ (luật P01)
         self.assertEqual(sum(1 for x in ls if x["hieuluc_den"] is None), 1)
         self.assertIn("loi", thongso.gat("nguong_ocung", True, "hethong", self.thumuc))   # không phải công tắc
 
@@ -292,21 +292,21 @@ class KiemD1(Nen):
         noi = self.mo_nang_ban_dang_chay()
         that = shutil.rmtree
 
-        def xoa_do(p, *a, **k):   # xoá được 01 tệp rồi hỏng giữa chừng
+        def xoa_do(p, *a, **k):   # xóa được 01 tệp rồi hỏng giữa chừng
             next(Path(p).iterdir()).unlink()
             raise OSError("ổ lỗi giữa chừng")
         with mock.patch.object(antoan, "ban_truoc", return_value="0.8.1"):
             with mock.patch.object(saoluu.shutil, "rmtree", side_effect=xoa_do):
                 with self.assertRaises(OSError):
                     saoluu.don_truoc_nangcap(self.thumuc, datetime(2026, 11, 2, tzinfo=saoluu.MUIGIO_VN))
-            self.assertFalse(noi.exists())                                        # tên cũ đã mất trước khi xoá
+            self.assertFalse(noi.exists())                                        # tên cũ đã mất trước khi xóa
             self.assertTrue(noi.with_name(noi.name + saoluu.DUOI_DANG_XOA).exists())
             self.assertEqual(len(self.f04("saoluu", "xoa_truoc_nangcap")), 1)
             q = antoan.thong_tin_quayve(self.thumuc)
-            self.assertEqual((q["co"], q["khoa"]), (True, True))                  # khoá, không trả 01 phần tệp
+            self.assertEqual((q["co"], q["khoa"]), (True, True))                  # khóa, không trả 01 phần tệp
             self.assertEqual(antoan.quay_ve("hethong", True, self.thumuc), {"loi": q["chu"]})
         self.assertIs(saoluu.shutil.rmtree, that)
-        saoluu.don_truoc_nangcap(self.thumuc, datetime(2026, 11, 3, tzinfo=saoluu.MUIGIO_VN))   # lượt sau xoá tiếp phần sót
+        saoluu.don_truoc_nangcap(self.thumuc, datetime(2026, 11, 3, tzinfo=saoluu.MUIGIO_VN))   # lượt sau xóa tiếp phần sót
         self.assertEqual([p.name for p in self.goc.iterdir() if p.name.startswith("truoc_nangcap_v")], [])
         self.assertEqual(len(self.f04("saoluu", "xoa_truoc_nangcap")), 1)        # không ghi F04 lần 02
 

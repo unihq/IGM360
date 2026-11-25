@@ -2,16 +2,16 @@
 
 `claude setup-token` cấp 01 mã dùng 365 ngày cho đúng gói đã đăng nhập, dành cho việc chạy không người ngồi. CLI nhận
 mã qua biến `CLAUDE_CODE_OAUTH_TOKEN`. Theo mã CLI 2.1.330 (đọc chữ trong tệp chạy, chưa chạy thật), CLI chọn nguồn đăng
-nhập theo thứ tự: `ANTHROPIC_API_KEY` → apiKeyHelper → khoá /login → `ANTHROPIC_AUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN` →
-tệp mã → đăng nhập claude.ai đã lưu. Vì vậy lượt gọi gói luôn bỏ 02 biến khoá API ra khỏi môi trường, rồi mới đặt mã.
+nhập theo thứ tự: `ANTHROPIC_API_KEY` → apiKeyHelper → khóa /login → `ANTHROPIC_AUTH_TOKEN` → `CLAUDE_CODE_OAUTH_TOKEN` →
+tệp mã → đăng nhập claude.ai đã lưu. Vì vậy lượt gọi gói luôn bỏ 02 biến khóa API ra khỏi môi trường, rồi mới đặt mã.
 
 Bảo mật (PTD-09 Đ1–Đ8):
-- Đ1: mã chỉ nằm ở Két khoá F03 (mã hoá bằng khoá chủ), mỗi tài khoản 01 dòng `dichvu` = `goi_claude_NN`,
+- Đ1: mã chỉ nằm ở Két khóa F03 (mã hóa bằng khóa chủ), mỗi tài khoản 01 dòng `dichvu` = `goi_claude_NN`,
   `han` = lúc lưu + 365 ngày (không đọc được ngày hết hạn từ mã nên tính từ lúc lưu). Không ghi ra tệp nào khác.
 - Đ2: mã chỉ đi qua biến môi trường của từng lần chạy CLI, đúng tài khoản; tài khoản khác bỏ biến này.
 - Đ3: không ra F04, G04, N01, D03, câu lỗi, câu trả lời API (`kekhoa.che`). Đầu ra của `setup-token` chỉ giữ trong
-  bộ nhớ phiên lấy mã tới lúc lưu xong rồi xoá.
-- Đ5: gỡ tài khoản thì xoá dòng F03 (`dangnhap_goi.go`). Đ6: mã hết hạn thì không gọi tài khoản đó.
+  bộ nhớ phiên lấy mã tới lúc lưu xong rồi xóa.
+- Đ5: gỡ tài khoản thì xóa dòng F03 (`dangnhap_goi.go`). Đ6: mã hết hạn thì không gọi tài khoản đó.
 - Đ7: lấy mã mới thì thay dòng cũ (`kho.doi`). Đ8: chỉ nhận chuỗi bắt đầu `sk-ant-oat01-`; lưu xong, gọi thử đạt rồi
   mới đăng xuất kiểu đăng nhập cũ của thư mục đó.
 
@@ -36,9 +36,9 @@ from maychu.hethong.kekhoa.che import che  # noqa: F401 - nơi khác gọi `mada
 TIEN_TO = "sk-ant-oat01-"
 MA_RE = re.compile(r"sk-ant-oat01-[A-Za-z0-9_\-]{20,}")
 BIEN = "CLAUDE_CODE_OAUTH_TOKEN"
-BIEN_BO = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", BIEN)   # lượt gọi gói không bao giờ mang khoá API
+BIEN_BO = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", BIEN)   # lượt gọi gói không bao giờ mang khóa API
 SO_NGAY = 365                # mã `setup-token` sống 01 năm
-SO_NGAY_NHAC = 7             # QĐ200: chuông nhắc mỗi ngày 01 lần từ 07 ngày trước (khoá Drive giữ 05 ngày, QĐ165)
+SO_NGAY_NHAC = 7             # QĐ200: chuông nhắc mỗi ngày 01 lần từ 07 ngày trước (khóa Drive giữ 05 ngày, QĐ165)
 SO_NGAY_VANG = 14            # QĐ198: thẻ màn 13 đổi màu Cảnh báo trong 14 ngày cuối (tính lúc hiện, không lưu)
 COT, DONG = 500, 60          # khung giả lập rộng: mã dài không bị ngắt dòng
 CHO_LINK_GIAY, CHO_MA_GIAY, HAN_PHIEN_GIAY = 20, 45, 900
@@ -56,8 +56,8 @@ CHU_DAN = {
     "trong": "Bạn dán mã dài hạn vào ô",
     "chua_tron": "Mã vừa dán có {n} ký tự, chưa trọn. Chép lại cả mã rồi dán lại",   # Z15b dòng 23 (CPO trình anh)
     "trung": "Tài khoản Claude này đã kết nối ở Tài khoản {tk}. Phần mềm không lưu mã. Thu hồi mã vừa tạo ở claude.ai/settings/claude-code",   # Z15b dòng 22
-    # Y38d N30: CHỮ MỚI do CDO đề xuất, CHỜ ANH DUYỆT (CPO trình): khoá API, và chuỗi không có tiền tố
-    "khoa_api": "Đây là khoá API, không phải mã dài hạn. Khoá API thêm ở thẻ Khoá API.",            # QĐ219 A1
+    # Y38d N30: CHỮ MỚI do CDO đề xuất, CHỜ ANH DUYỆT (CPO trình): khóa API, và chuỗi không có tiền tố
+    "khoa_api": "Đây là khóa API, không phải mã dài hạn. Khóa API thêm ở thẻ Khóa API.",            # QĐ219 A1
     "sai_tien_to": "Đây không phải mã dài hạn (mã bắt đầu bằng sk-ant-oat01-).",                     # QĐ219 A2
     # QĐ219 A8 (N40: không gỡ mã): "Lấy tên, gói" đăng nhập nhầm tài khoản đã có ở ô khác
     "trung_dang_nhap_lai": "Bạn vừa đăng nhập tài khoản đã kết nối ở Tài khoản {tk}. Bấm Lấy tên, gói, đăng nhập đúng tài khoản của mã này.",
@@ -83,14 +83,14 @@ def chu_loi_dan(ma) -> str:
     s = lam_sach(ma)
     if not s:
         return CHU_DAN["trong"]
-    if s.startswith("sk-ant-api"):   # Y38d N30: khoá API dán nhầm hộp
+    if s.startswith("sk-ant-api"):   # Y38d N30: khóa API dán nhầm hộp
         return CHU_DAN["khoa_api"]
     if not s.startswith(TIEN_TO):
         return CHU_DAN["sai_tien_to"]
     return CHU_DAN["chua_tron"].format(n=len(s))
 
 
-# ---------------- Két khoá ----------------
+# ---------------- Két khóa ----------------
 def _dong(tk: int, thumuc=None):
     try:
         c = ketnoi.mo("Baomat", thumuc)
@@ -150,7 +150,7 @@ def luu(tk: int, ma: str, thumuc=None, nguoi: str = "hethong") -> dict:
 
 
 def xoa(tk: int, thumuc=None) -> bool:
-    """Đ5: xoá hẳn dòng F03 (mã vẫn sống ở hãng tới khi thu hồi trên trang của hãng)."""
+    """Đ5: xóa hẳn dòng F03 (mã vẫn sống ở hãng tới khi thu hồi trên trang của hãng)."""
     c = ketnoi.mo("Baomat", thumuc)
     try:
         return c.execute("DELETE FROM kekhoa WHERE dichvu = ?", (dichvu(tk),)).rowcount > 0
@@ -159,7 +159,7 @@ def xoa(tk: int, thumuc=None) -> bool:
 
 
 def moi_truong(env: dict, tk: int, dung_ma: bool = True, thumuc=None) -> dict:
-    """Đ2: bỏ khoá API và mã của tài khoản khác; `dung_ma` thì đặt mã còn hạn của đúng tài khoản này."""
+    """Đ2: bỏ khóa API và mã của tài khoản khác; `dung_ma` thì đặt mã còn hạn của đúng tài khoản này."""
     for k in BIEN_BO:
         env.pop(k, None)
     if dung_ma:
@@ -288,7 +288,7 @@ def _doc(tk: int, p: dict) -> None:
 
 def bat_dau_lay(tk: int, env: dict) -> dict:
     """Chạy `claude setup-token`, chờ đường link đăng nhập. {url} hoặc {loi, khong_ho_tro?}. `env`: môi trường của đúng
-    tài khoản (thư mục cấu hình), đã bỏ khoá API và mã cũ: lệnh cấp mã cho gói nó đăng nhập, không dùng mã sẵn có."""
+    tài khoản (thư mục cấu hình), đã bỏ khóa API và mã cũ: lệnh cấp mã cho gói nó đăng nhập, không dùng mã sẵn có."""
     if not ho_tro():
         return {"loi": "Máy chủ này không chạy được bước lấy mã tự động", "khong_ho_tro": True}   # N18b: câu hiện trong hộp Dán mã
     huy_lay(tk)
@@ -336,7 +336,7 @@ def bat_dau_lay(tk: int, env: dict) -> dict:
 def gui_ma(tk: int, ma_web: str) -> dict:
     """Gõ mã trang đăng nhập hiện, chờ mã dài hạn. {ma} (chỉ cho lớp lưu, không trả ra API) hoặc {loi}."""
     ma_web = "".join(str(ma_web or "").split())
-    if lam_sach(ma_web).startswith(TIEN_TO):   # N28 (b): mã dài hạn dán nhầm ô bước 2 → huỷ lượt, lưu như Dán mã
+    if lam_sach(ma_web).startswith(TIEN_TO):   # N28 (b): mã dài hạn dán nhầm ô bước 2 → hủy lượt, lưu như Dán mã
         huy_lay(tk)
         return {"ma": lam_sach(ma_web), "dan_nham": True} if hop_le(ma_web) else {"loi": chu_loi_dan(ma_web)}
     with _KHOA:

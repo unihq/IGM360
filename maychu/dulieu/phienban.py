@@ -1,11 +1,11 @@
 """Lớp ghi danh mục có phiên bản (QĐ142, QĐ143; thiết kế mục 0.4, 0.7 quy tắc Q1-Q3).
 
 - 29 bảng có `ma`, `hieuluc_tu`, `phienban` (01 dòng = 01 phiên bản; G15 `quytrinh_lanchay` là bảng sự kiện, không thuộc).
-- Khoá bền là `ma`: bắt buộc, không sửa được. Gõ sai thì đóng mã cũ, mở mã mới qua mục Chờ duyệt.
+- Khóa bền là `ma`: bắt buộc, không sửa được. Gõ sai thì đóng mã cũ, mở mã mới qua mục Chờ duyệt.
 - Cùng 01 mã không chồng lấn khoảng hiệu lực [hieuluc_tu, hieuluc_den) (trống `hieuluc_den` = đang hiệu lực).
-  A15 `nhanvien` thêm khoá bền của người là `nguoi_id` (A18): cùng 01 người không chồng lấn.
+  A15 `nhanvien` thêm khóa bền của người là `nguoi_id` (A18): cùng 01 người không chồng lấn.
 - Chặn 02 lớp: lớp ghi trong mã (hàm dưới); lưới an toàn trong lược đồ (`ma` NOT NULL, trigger chặn mã trống và
-  chặn sửa `ma`; trigger chặn sửa khoá bền thêm, ví dụ A15 `nguoi_id` (Y20a, QĐ155); tạo ở `tao_trigger`).
+  chặn sửa `ma`; trigger chặn sửa khóa bền thêm, ví dụ A15 `nguoi_id` (Y20a, QĐ155); tạo ở `tao_trigger`).
   Không chồng lấn không làm được bằng ràng buộc nên chỉ ở lớp ghi.
 - Mọi lần thêm dòng vào 29 bảng đi qua `them` hoặc `phienban_moi` (bài kiểm quét mã chặn câu ghi thẳng).
 """
@@ -16,7 +16,7 @@ from datetime import date, datetime
 from maychu.dulieu import maso
 from maychu.dulieu.saoluu import MUIGIO_VN
 
-# Khoá bền thêm ngoài `ma` (không chồng lấn hiệu lực theo cột này). QĐ143: A15 tách phiên bản theo người.
+# Khóa bền thêm ngoài `ma` (không chồng lấn hiệu lực theo cột này). QĐ143: A15 tách phiên bản theo người.
 KHOA_THEM = {"nhanvien": ("nguoi_id",)}
 # Cột không cho đổi khi sửa tại chỗ hoặc khi mở phiên bản mới (cộng thêm cột ở KHOA_THEM của bảng đó, Y18b).
 KHONG_DOI = ("id", "ma")
@@ -107,7 +107,7 @@ def them(cn: sqlite3.Connection, bang: str, dong: dict) -> str:
                 raise LoiPhienBan(f"{bang}: thiếu {k}")
             if _chong_lan(cn, bang, k, dong[k], tu, den):
                 raise LoiPhienBan(f"{bang}: cùng {k} đã có phiên bản hiệu lực chồng lấn")
-            # Khoá bền gắn cố định với mã (Y18b, QĐ143): 01 mã nhân viên chỉ thuộc 01 người, kể cả ở khoảng không chồng lấn.
+            # Khóa bền gắn cố định với mã (Y18b, QĐ143): 01 mã nhân viên chỉ thuộc 01 người, kể cả ở khoảng không chồng lấn.
             if cn.execute(f"SELECT 1 FROM {bang} WHERE ma = ? AND {k} IS NOT ? LIMIT 1", (dong["ma"], dong[k])).fetchone():
                 raise LoiPhienBan(f"{bang} mã {dong['ma']}: đã gắn với {k} khác; không đổi {k} của 01 mã")
         if dong.get("phienban") is None:
@@ -128,7 +128,7 @@ def phienban_moi(cn: sqlite3.Connection, bang: str, ma: str, tu_ngay, thaydoi: d
     doi = sorted(set(thaydoi) & set(KHONG_DOI + KHOA_THEM.get(bang, ()) + ("hieuluc_tu", "hieuluc_den", "phienban",
                                                                           "tao_luc", "nguoi_khai")))
     if doi:
-        raise LoiPhienBan(f"{bang}: không đổi {', '.join(doi)} khi mở phiên bản mới (QĐ142, QĐ143: khoá bền không sửa được)")
+        raise LoiPhienBan(f"{bang}: không đổi {', '.join(doi)} khi mở phiên bản mới (QĐ142, QĐ143: khóa bền không sửa được)")
     tu = _ngay(tu_ngay, "ngày áp dụng")
     with giao_dich(cn):
         dang = cn.execute(f"SELECT * FROM {bang} WHERE ma = ? AND COALESCE(hieuluc_tu, '') <= ?"
@@ -152,7 +152,7 @@ def sua(cn: sqlite3.Connection, bang: str, ma_dong: str, thaydoi: dict) -> None:
     cot = _kiem_bang(cn, bang)
     cam = sorted(set(thaydoi) & set(KHONG_DOI + KHOA_THEM.get(bang, ()) + ("hieuluc_tu", "hieuluc_den", "phienban")))
     if cam:
-        raise LoiPhienBan(f"{bang}: không sửa {', '.join(cam)} tại chỗ (QĐ142, QĐ143: khoá bền không sửa được)")
+        raise LoiPhienBan(f"{bang}: không sửa {', '.join(cam)} tại chỗ (QĐ142, QĐ143: khóa bền không sửa được)")
     la = sorted(set(thaydoi) - set(cot))
     if la:
         raise LoiPhienBan(f"{bang}: không có cột {', '.join(la)}")
@@ -166,12 +166,12 @@ def sua(cn: sqlite3.Connection, bang: str, ma_dong: str, thaydoi: dict) -> None:
 
 
 def tim_id(cn: sqlite3.Connection, bang: str, giatri: str, ngay=None, cot: str = "ma") -> str | None:
-    """Q3: đổi (khoá bền, ngày) ra `id` phiên bản có hiệu lực ngày đó (mặc định hôm nay, giờ Việt Nam).
+    """Q3: đổi (khóa bền, ngày) ra `id` phiên bản có hiệu lực ngày đó (mặc định hôm nay, giờ Việt Nam).
     `cot` = `ma`, hoặc `nguoi_id` với A15. Không có phiên bản nào thì None: người gọi báo "Tạm tính · thiếu …",
     không bỏ qua im lặng."""
     _kiem_bang(cn, bang)
     if cot != "ma" and cot not in KHOA_THEM.get(bang, ()):
-        raise LoiPhienBan(f"{bang}: {cot} không phải khoá bền")
+        raise LoiPhienBan(f"{bang}: {cot} không phải khóa bền")
     n = _ngay(ngay, "ngày") if ngay else datetime.now(MUIGIO_VN).date().isoformat()
     d = cn.execute(f"SELECT id FROM {bang} WHERE {cot} = ? AND COALESCE(hieuluc_tu, '') <= ?"
                    " AND (hieuluc_den IS NULL OR hieuluc_den > ?) ORDER BY phienban DESC LIMIT 1", (giatri, n, n)).fetchone()
@@ -180,7 +180,7 @@ def tim_id(cn: sqlite3.Connection, bang: str, giatri: str, ngay=None, cot: str =
 
 def tao_trigger(cn: sqlite3.Connection) -> int:
     """Lưới an toàn trong lược đồ cho mọi bảng có phiên bản của file (chạy lại không sao): chặn thêm dòng mã trống
-    (NOT NULL không chặn chuỗi rỗng), chặn sửa `ma`, chặn sửa khoá bền thêm ở KHOA_THEM (trigger `kb__`).
+    (NOT NULL không chặn chuỗi rỗng), chặn sửa `ma`, chặn sửa khóa bền thêm ở KHOA_THEM (trigger `kb__`).
     Trả số trigger mã (`ma__`) đang có."""
     for bang in cac_bang(cn):
         cn.execute(f"CREATE TRIGGER IF NOT EXISTS ma__{bang}__trong BEFORE INSERT ON {bang} WHEN trim(NEW.ma) = ''"

@@ -39,7 +39,7 @@ class KiemKenhNhan(CoThuMuc):
             sql = self.lay("Bot", "SELECT sql FROM sqlite_master WHERE name = ?", (bang,))[0][0]
             with self.subTest(bang=bang):
                 self.assertIn("kenh_nhan", sql)
-        with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại tới bảng đổi tên vẫn chạy
+        with self.assertRaises(sqlite3.IntegrityError):  # khóa ngoại tới bảng đổi tên vẫn chạy
             self.ghi("Bot", "INSERT INTO chude_nhom (id, ma, kenhnhan_id) VALUES (?, 'CD02', 'khongco')", (maso.tao(),))
 
 

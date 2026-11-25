@@ -23,7 +23,7 @@ MK_THU = secrets.token_urlsafe(18)   # mật khẩu giả sinh mỗi lần chạ
 GOC = Path(__file__).resolve().parents[2]
 # 07 tin mẫu (tên giả) và 09 câu tìm PTD-02 Q10: chữ gõ → các tin phải ra
 TIN = {"t1": "Đơn hàng mới của khách", "t2": "Khách xin đổi địa chỉ giao", "t3": "Giảm giá 10% cho người mua",
-       "t4": "Sương ơi kiểm lại đơn", "t5": "Đặt hàng thêm 05 thùng", "t6": "Lương thưởng tháng 11", "t7": "Gửi hoá đơn hàng tuần"}
+       "t4": "Sương ơi kiểm lại đơn", "t5": "Đặt hàng thêm 05 thùng", "t6": "Lương thưởng tháng 11", "t7": "Gửi hóa đơn hàng tuần"}
 CAU = {"don hang": {"t1", "t7"}, "doi dia chi": {"t2"}, "giam gia": {"t3"}, "nguoi mua": {"t3"}, "suong oi": {"t4"},
        "dat hang": {"t5"}, "luong thuong": {"t6"}, "đơn hàng": {"t1", "t7"}, "Don": {"t1", "t4", "t7"}}
 
@@ -207,7 +207,7 @@ class KiemNangBan4(Nen):
             self.assertIn(t["id"], timchu.tim(cn, "doi don hang"))
             self.assertEqual(cn.execute("SELECT count(*) FROM tinnhan").fetchone()[0],
                              cn.execute("SELECT count(*) FROM tinnhan_tim_noi").fetchone()[0])
-            timchu.xoa_tin(cn, t["id"])                                               # X3 (lúc bật): xoá cụm tìm chữ của tin
+            timchu.xoa_tin(cn, t["id"])                                               # X3 (lúc bật): xóa cụm tìm chữ của tin
             self.assertNotIn(t["id"], timchu.tim(cn, "doi don hang"))
         finally:
             cn.close()
@@ -428,7 +428,7 @@ class KiemY40c(Nen):
 
     def test_ghi_noi_loi_khong_chan_lan_sau_ghi_lai(self):
         chay, g = self.dung()
-        with mock.patch.object(chay, "_noi_bang", side_effect=sqlite3.OperationalError("khoá giả")):
+        with mock.patch.object(chay, "_noi_bang", side_effect=sqlite3.OperationalError("khóa giả")):
             self.assertEqual(chay.chon(self.dl, g), g / "ban_truoc")                      # vẫn quay về
         self.assertTrue((self.dl / chay.TEP_GIU).exists())
         self.assertEqual(antoan.doc(self.dl)["giu_nhatky"]["loi"], "OperationalError")

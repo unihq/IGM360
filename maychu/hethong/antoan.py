@@ -5,7 +5,7 @@ Lớp 2  chế độ an toàn khi nâng dữ liệu không thành hoặc lần n
 Lớp 4  kiểm sau cập nhật: `kiem_sau_capnhat()`, 06 điểm, ghi F04 `capnhat` / `kiem_saunang`.
 Lớp 5  bản sao Drive trước khi cập nhật: `capnhat.yeu_cau` gọi `saoluu.chay` vào thư mục riêng (xem capnhat.py).
 Lớp 3  quay về bản trước (QĐ215, cách 2): mã bản liền trước để sẵn trong ảnh ở `/app/ban_truoc`; `quay_ve()` ghi cờ
-       rồi tự dừng, Docker bật lại, `maychu.chay` chạy bản trước. Không khoá mới, không cần mạng, lùi đúng 01 bản.
+       rồi tự dừng, Docker bật lại, `maychu.chay` chạy bản trước. Không khóa mới, không cần mạng, lùi đúng 01 bản.
 
 0 bảng, 0 cột: trạng thái cập nhật nằm ở 01 tệp `capnhat_trangthai.json` trên ổ dữ liệu (không có dữ liệu cá nhân,
 không có mã). Ngưỡng và chữ hiện viết ở 01 chỗ này (như nhịp 05 phút QĐ174), không phải thông số.
@@ -23,7 +23,7 @@ from maychu.dulieu import ketnoi
 from maychu.dulieu.saoluu import MUIGIO_VN
 
 # ---- Ngưỡng (01 chỗ) ----
-HE_SO_DULIEU = 3                  # bản chụp trước khi nâng + bản sao + bản mã hoá (học kiemtruoc_ban3: ≥ 03 lần)
+HE_SO_DULIEU = 3                  # bản chụp trước khi nâng + bản sao + bản mã hóa (học kiemtruoc_ban3: ≥ 03 lần)
 DU_PHONG_BYTE = 2 * 1024 ** 3     # chỗ cho 01 ảnh mới giải nén (ảnh 0.7.7 nén 461,8 MB; cỡ giải nén chưa đo)
 CHO_DRIVE_GIAY = 10 * 60          # chờ bản sao đẩy lên Drive tối đa 10 phút rồi mới gửi lệnh cập nhật
 GIU_BAN_TRUOC = 2                 # giữ bản sao trước cập nhật của 02 lần gần nhất trên máy
@@ -38,9 +38,9 @@ CHU = {
     "sao_loi": "Chưa tạo được bản sao trước khi cập nhật: {lydo}",          # QĐ290 (Z25 dòng 8), ngoài bảng QĐ218
     "drive_chua_noi": "Drive chưa kết nối. Bản sao chỉ nằm trên máy chủ.",                                        # 31
     "drive_qua_gio": "Đẩy bản sao lên Drive đã quá 10 phút. Bản sao chỉ nằm trên máy chủ.",                        # 32
-    # QĐ287, QĐ296 (Z24 dòng 1, anh sửa chữ 24/11/2026 19:21): bản sao trước khi nâng đã xoá (QĐ281) → nút Quay về khoá
+    # QĐ287, QĐ296 (Z24 dòng 1, anh sửa chữ 24/11/2026 19:21): bản sao trước khi nâng đã xóa (QĐ281) → nút Quay về khóa
     "qv_het_han": "Không còn dữ liệu bản sao trước đó (đã xóa ngày {ngay}).",
-    # CDA Y49b N1, QĐ296 (Z24 dòng 1b): không có dòng F04 ghi ngày xoá
+    # CDA Y49b N1, QĐ296 (Z24 dòng 1b): không có dòng F04 ghi ngày xóa
     "qv_het_han_khong_ngay": "Không tìm thấy ngày xóa dữ liệu bản sao.",
     "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
     "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
@@ -101,7 +101,7 @@ def ghi_nguyen_tu(p: Path, d: dict) -> None:
 
 
 def ghi(thumuc: Path | None = None, **muc) -> dict:
-    """Gộp các mục vào tệp trạng thái (giá trị None = bỏ mục); đọc – gộp – ghi trong 01 khoá (Y38c R7)."""
+    """Gộp các mục vào tệp trạng thái (giá trị None = bỏ mục); đọc – gộp – ghi trong 01 khóa (Y38c R7)."""
     with _KHOA_GHI:
         d = doc(thumuc)
         for k, v in muc.items():
@@ -164,7 +164,7 @@ def chu_an_toan() -> str | None:
     return CHU["an_toan"].format(den=CHE_DO["den"], luc=_gio(CHE_DO["luc"] or ""))
 
 
-# Đường còn mở ở chế độ an toàn: trang, tài nguyên giao diện, sức khoẻ, đăng nhập – phiên, màn 09 Cập nhật.
+# Đường còn mở ở chế độ an toàn: trang, tài nguyên giao diện, sức khỏe, đăng nhập – phiên, màn 09 Cập nhật.
 DUONG_MO = ("/", "/suckhoe", "/api/dangnhap", "/api/dangxuat", "/api/toi", "/api/2lop", "/api/capnhat")
 
 
@@ -241,7 +241,7 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
     loi = [TEN_DIEM[k] for k, v in diem.items() if not v]
     tom = f"{ban} · {dat:02d}/{len(diem):02d} đạt" if not loi else f"{ban} · {dat:02d}/{len(diem):02d} · " + ", ".join(loi)   # 45, 46
     capnhat._ghi_f04("kiem_saunang", tom, "dat" if not loi else "loi", thumuc=thumuc)
-    if not loi:   # D1-2 (QĐ281): kiểm đạt thì dọn bản sao trước khi nâng cũ hơn ngay (lên 0.8.3: v03 xoá)
+    if not loi:   # D1-2 (QĐ281): kiểm đạt thì dọn bản sao trước khi nâng cũ hơn ngay (lên 0.8.3: v03 xóa)
         try:
             from maychu.dulieu import saoluu
             saoluu.don_truoc_nangcap(thumuc)
@@ -340,7 +340,7 @@ def thong_tin_quayve(thumuc: Path | None = None) -> dict:
         return {"co": False, "ban": None, "mat_tu": None, "chu": CHU["qv_khong_co"]}
     n = doc(thumuc).get("nang_luocdo") or {}
     mat = n.get("luc") if n.get("ban") == capnhat.ban_dang_chay() and not CHE_DO["an_toan"] else None
-    if mat:   # QĐ284, QĐ287 (D1-3): bản có nâng lược đồ mà bản sao trước khi nâng đã xoá → nút hiện, khoá, kèm dòng báo
+    if mat:   # QĐ284, QĐ287 (D1-3): bản có nâng lược đồ mà bản sao trước khi nâng đã xóa → nút hiện, khóa, kèm dòng báo
         from maychu.dulieu import khoitao, saoluu
         noi = khoitao._thumuc_chup(thumuc or ketnoi.thumuc_dulieu())
         if not noi.is_dir():
@@ -363,7 +363,7 @@ def quay_ve(nguoi_id: str, dong_y_mat: bool = False, thumuc: Path | None = None,
     from maychu.hethong import capnhat
     thumuc = thumuc or ketnoi.thumuc_dulieu()
     q = thong_tin_quayve(thumuc)
-    if not q["co"] or q.get("khoa"):   # QĐ287: nút khoá thì máy chủ cũng từ chối
+    if not q["co"] or q.get("khoa"):   # QĐ287: nút khóa thì máy chủ cũng từ chối
         return {"loi": q["chu"]}
     if q["mat_tu"] and not dong_y_mat:
         return {"loi": CHU["qv_can_dong_y"], "mat_tu": q["mat_tu"]}

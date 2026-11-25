@@ -7,9 +7,9 @@ không bị chặn nhầm); số bản, mục THAYDOI vẫn so với main mới 
 
 Luật (số theo Phần 11):
 - 01–14 chặn theo đường dẫn.
-- 15 lệnh tạo, sửa, xoá cấu trúc dữ liệu; 16 thư viện ngoài mới, nạp module động; 17 dòng "Nâng dữ liệu"; 18 bài kiểm cũ
-  (không xoá, không sửa dòng, không thêm lệnh bỏ qua, không trùng tên hàm trong 01 lớp, số bài chạy không ít hơn, số bài bỏ
-  qua không nhiều hơn main); 20 thêm, xoá, đổi tên tệp ngoài kiemthu/; 21 chuỗi tiếng Việt có dấu (chữ người dùng thấy)
+- 15 lệnh tạo, sửa, xóa cấu trúc dữ liệu; 16 thư viện ngoài mới, nạp module động; 17 dòng "Nâng dữ liệu"; 18 bài kiểm cũ
+  (không xóa, không sửa dòng, không thêm lệnh bỏ qua, không trùng tên hàm trong 01 lớp, số bài chạy không ít hơn, số bài bỏ
+  qua không nhiều hơn main); 20 thêm, xóa, đổi tên tệp ngoài kiemthu/; 21 chuỗi tiếng Việt có dấu (chữ người dùng thấy)
   trong mã Python (bỏ chuỗi mô tả hàm, chú thích).
 - Kèm: nhánh tên sualoi/*, số bản tăng đúng 01 ở số cuối, mục THAYDOI của bản mới có Tóm tắt và ít nhất 01 dòng "- ",
   mỗi dòng "- " theo khuôn "Sửa lỗi <mô tả ngắn>" (QĐ270).
@@ -134,7 +134,7 @@ def kiem(goc: str, dau: str, nhanh: str, so_bai: dict | None = None) -> list[str
             if so:
                 loi.append(f"Luật {so}: chạm {x}")
         if trang[0] in "ADRC" and not all(x.startswith("kiemthu/") for x in duong):
-            loi.append(f"Luật 20: {'thêm' if trang[0] == 'A' else 'xoá' if trang[0] == 'D' else 'đổi tên'} tệp ngoài kiemthu/: {' → '.join(duong)}")
+            loi.append(f"Luật 20: {'thêm' if trang[0] == 'A' else 'xóa' if trang[0] == 'D' else 'đổi tên'} tệp ngoài kiemthu/: {' → '.join(duong)}")
     cho_phep = None
     for trang, duong in tep_doi:
         if trang == "D":
@@ -156,7 +156,7 @@ def kiem(goc: str, dau: str, nhanh: str, so_bai: dict | None = None) -> list[str
                             loi.append(f"Luật 16: {duong}:{so} thư viện ngoài mới {x.split('.')[0]}")
         if duong.startswith("kiemthu/"):
             if trang == "M" and bot:
-                loi.append(f"Luật 18: {duong} xoá hoặc sửa {len(bot):02d} dòng của bài kiểm cũ")
+                loi.append(f"Luật 18: {duong} xóa hoặc sửa {len(bot):02d} dòng của bài kiểm cũ")
             for so, chu in them:
                 if MAU_BO_QUA.search(chu):
                     loi.append(f"Luật 18: {duong}:{so} thêm lệnh bỏ qua bài kiểm")

@@ -82,7 +82,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
             tl["mohinh_id"], tl["mohinh"], tl["ghim_hong"] = kq.get("mohinh_id"), kq.get("mohinh"), kq.get("ghim_hong")
             tl["md_hong"] = kq.get("md_hong")   # Y36c: lượt thường đã sang hãng khác vì mô hình mặc định hết hạn mức
             tl["mohinh_bao"] = kq.get("mohinh_bao")   # Y31c S4: mô hình công cụ báo về
-            tl["ghim_khoa"] = kq.get("ghim_khoa")     # 0.7.6: khoá ghim chuẩn, giao diện lưu lại thay dạng cũ
+            tl["ghim_khoa"] = kq.get("ghim_khoa")     # 0.7.6: khóa ghim chuẩn, giao diện lưu lại thay dạng cũ
             tl["chay_tk"], tl["du_phong"] = kq.get("chay_tk"), kq.get("du_phong")   # QĐ189: chỉ hiện khi rê chuột
     finally:
         cn.close()

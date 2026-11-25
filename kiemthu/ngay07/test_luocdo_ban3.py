@@ -21,7 +21,7 @@ def dung_ban2(thumuc: Path) -> None:
         try:
             cn.execute("PRAGMA foreign_keys=OFF")
             for (t, bang) in V2:
-                if t == ten:  # bảng đổi tên ở bản 3: xoá theo tên mới, tạo lại tên cũ
+                if t == ten:  # bảng đổi tên ở bản 3: xóa theo tên mới, tạo lại tên cũ
                     cn.execute(f"DROP TABLE {ten_moi.get((t, bang), bang)}")
             for (t, bang), ddl in V2.items():
                 if t == ten:
@@ -105,7 +105,7 @@ class KiemFileMoiBan3(CoThuMuc):
         DC = "Dulieu_Chinh"
         with self.assertRaises(sqlite3.IntegrityError):  # A15 bắt buộc có người
             self.ghi(DC, "INSERT INTO nhanvien (id, ma) VALUES (?, 'NV01')", (maso.tao(),))
-        with self.assertRaises(sqlite3.IntegrityError):  # khoá ngoại về A18
+        with self.assertRaises(sqlite3.IntegrityError):  # khóa ngoại về A18
             self.ghi(DC, "INSERT INTO nhanvien (id, ma, nguoi_id) VALUES (?, 'NV01', 'khongco')", (maso.tao(),))
         self.ghi(DC, "INSERT INTO nhanvien (id, ma, nguoi_id) VALUES (?, 'NV01', ?)", (maso.tao(), n))
         # QĐ143: A15 tách phiên bản, lược đồ cho 02 dòng cùng người; chồng lấn hiệu lực chặn ở lớp ghi (bài kiểm Y18)

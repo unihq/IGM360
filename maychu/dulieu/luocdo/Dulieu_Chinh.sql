@@ -672,7 +672,7 @@ CREATE TABLE IF NOT EXISTS quangcao_tieu (
   ketqua_json TEXT
 );
 
--- C13 Quảng cáo, nạp và hoá đơn: 01 dòng = 01 hoá đơn nạp
+-- C13 Quảng cáo, nạp và hóa đơn: 01 dòng = 01 hóa đơn nạp
 CREATE TABLE IF NOT EXISTS quangcao_nap (
   id TEXT PRIMARY KEY NOT NULL,
   congty_id TEXT REFERENCES congty(id),

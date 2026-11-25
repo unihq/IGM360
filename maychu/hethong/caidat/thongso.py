@@ -1,6 +1,6 @@
 """Thông số P01 (thiết kế Phần 2; nhãn theo bản vẽ đợt 1, QĐ88).
 
-Sửa = thêm 01 dòng mới có ngày áp dụng, đóng `hieuluc_den` của dòng đang dùng; không xoá dòng cũ.
+Sửa = thêm 01 dòng mới có ngày áp dụng, đóng `hieuluc_den` của dòng đang dùng; không xóa dòng cũ.
 Thông số trống: không chặn lưu, phần mềm làm cách an toàn nhất (nhật ký mục 5.57 D câu 05).
 """
 from datetime import date, datetime
@@ -24,8 +24,8 @@ DANHMUC = [
     ("saoluu_drive", 1, "Sao lưu Google Drive", "codong", "", "0", {"0": "Tắt", "1": "Bật"}, ""),   # QĐ277, QĐ278 (Z21)
     ("nguong_cho_day_drive", 1, "Dữ liệu chờ đẩy lên Drive tối đa", "so", "GB", "5", None, ""),
     ("songay_giu_banghigoc_vps", 1, "Số ngày giữ bản ghi gốc trên máy chủ", "so", "ngày", None, None,
-     "Đang giữ mãi, không tự xoá"),
-    ("songay_baotruoc_khoa_hethan", 1, "Báo trước khi khoá kết nối hết hạn", "so", "ngày", "5", None, ""),
+     "Đang giữ mãi, không tự xóa"),
+    ("songay_baotruoc_khoa_hethan", 1, "Báo trước khi khóa kết nối hết hạn", "so", "ngày", "5", None, ""),
     # QĐ263, QĐ271 (Z20 dòng 1): công tắc "Tự nâng mỗi ngày" của khối Công cụ AI, mặc định bật; hiện ở màn Cập nhật,
     # không hiện ở ngăn Thông số (AN_O_THONGSO)
     ("tunang_congcu_ai", 2, "Tự nâng mỗi ngày", "codong", "", "1", {"0": "Tắt", "1": "Bật"}, ""),
@@ -35,7 +35,7 @@ DANHMUC = [
     ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tự duyệt", "so", "đ", None, None,
      "GĐ 1: AI chỉ đề xuất, mọi việc chờ bạn bấm."),
     ("tran_tien_thang_khoa_api", 2, "Hạn mức chi tháng", "so", "USD", None, None,
-     "Không gọi AI bằng khoá API, chỉ dùng gói"),
+     "Không gọi AI bằng khóa API, chỉ dùng gói"),
     ("nhip_gui_baocao", 3, "Nhịp gửi báo cáo định kỳ", "chu", "", None, {"hangngay": "Mỗi ngày", "hangtuan": "Mỗi tuần"},
      "Không gửi báo cáo định kỳ, tin báo sự kiện vẫn gửi"),
     ("nhip_lay_dulieu", 3, "Nhịp lấy dữ liệu", "danhsach", "", None, None,
@@ -193,7 +193,7 @@ def drive_bat(thumuc: Path | None = None) -> bool:
 
 
 def gat(ten: str, bat: bool, nguoi: str = "hethong", thumuc: Path | None = None) -> dict:
-    """QĐ278: gạt công tắc, có hiệu lực ngay hôm nay. Giữ đúng luật bảng P01 (không xoá dòng cũ): đóng dòng đang dùng
+    """QĐ278: gạt công tắc, có hiệu lực ngay hôm nay. Giữ đúng luật bảng P01 (không xóa dòng cũ): đóng dòng đang dùng
     (`hieuluc_den` = hôm nay) rồi thêm 01 dòng từ hôm nay; gạt nhiều lần trong 01 ngày thì các dòng cũ cùng ngày có
     hieuluc_tu = hieuluc_den (không còn hiệu lực), lịch sử vẫn đủ."""
     aibam.kiem(nguoi)

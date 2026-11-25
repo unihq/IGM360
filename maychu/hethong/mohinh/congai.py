@@ -1,7 +1,7 @@
-"""Cổng AI 03 nguồn (F34, ngày 06): gói Claude, gói ChatGPT, khoá API. Mỗi lần gọi ghi 01 dòng G04.
+"""Cổng AI 03 nguồn (F34, ngày 06): gói Claude, gói ChatGPT, khóa API. Mỗi lần gọi ghi 01 dòng G04.
 
 Chọn nguồn theo ưu tiên ở G06 (màn 13): bỏ nguồn ngừng, gói đang báo hết hạn mức (chưa tới giờ đặt lại),
-tài khoản gói chưa đăng nhập, khoá API chưa đặt trần tiền hoặc tháng này đã chạm trần. Nguồn đầu báo hết hạn
+tài khoản gói chưa đăng nhập, khóa API chưa đặt trần tiền hoặc tháng này đã chạm trần. Nguồn đầu báo hết hạn
 mức thì chuyển sang nguồn kế tiếp. Giờ nghỉ do 01 chỗ quyết (Y36d): lượt bị từ chối → mốc nghỉ riêng `_HET_TK`
 (`ghi_het_tai_khoan`); số đo → cửa sổ đã đầy (`_het_luc_dat_lai`). Cột `da_het_luc` chỉ còn ghi lại, không dùng để chặn.
 
@@ -10,12 +10,12 @@ mức thì chuyển sang nguồn kế tiếp. Giờ nghỉ do 01 chỗ quyết (
   thêm) và dòng `rate_limit_event` (% cửa sổ 05 giờ, tuần, giờ đặt lại).
 - Gói ChatGPT: Codex CLI `codex exec --json --skip-git-repo-check`; đọc `item.completed` loại `agent_message`,
   `turn.completed` (lượng chữ); % hạn mức đọc từ dòng `rate_limits` cuối cùng trong tệp phiên của Codex.
-- Khoá API: Anthropic hoặc OpenAI qua httpx (thư viện đã duyệt); tiền thật = lượng chữ × giá G08.
+- Khóa API: Anthropic hoặc OpenAI qua httpx (thư viện đã duyệt); tiền thật = lượng chữ × giá G08.
 Số việc AI chạy cùng lúc ≤ thông số `so_viec_ai_songsong` (QĐ71).
 Bản 0.7.5 (QĐ178–QĐ183, PTD-08, Y31): `goi()` nhận `loai_viec` (mô hình mặc định theo loại việc, màn 13) và
 `mohinh_id` (mô hình anh ghim cho cuộc trò chuyện; chỉ trò chuyện gửi, việc tự chạy và bot không đọc ghim). Mô hình
 ghim vẫn qua đủ kiểm (đã kết nối, hạn mức, trần tiền, có giá); không dùng được thì tự dùng mặc định, trả `ghim_hong`
-để ghi 01 dòng dưới câu trả lời; không tự chọn khoá API thay cho mô hình ghim (QĐ183).
+để ghi 01 dòng dưới câu trả lời; không tự chọn khóa API thay cho mô hình ghim (QĐ183).
 Tiền ghi số nguyên theo phần triệu đơn vị tiền ở `tien_ma` (1 USD = 1.000.000); giá G08 là phần triệu USD
 cho 1.000.000 chữ (token).
 """
@@ -182,7 +182,7 @@ def _mohinh_codex(thu_muc: Path | None) -> str | None:
 
 
 # ---------------- Đo hạn mức bị động (QĐ192, bản 0.7.7) ----------------
-# Không gọi thêm lượt AI nào, không đọc khoá đăng nhập. Số đo đến từ (1) mỗi lượt gọi thật (rate_limit_event của Claude,
+# Không gọi thêm lượt AI nào, không đọc khóa đăng nhập. Số đo đến từ (1) mỗi lượt gọi thật (rate_limit_event của Claude,
 # tệp phiên Codex) và (2) lịch nền 10 phút đọc tệp phiên Codex mới nhất (`quet_codex`; tệp không đổi thì không đọc lại).
 _DA_QUET: dict[str, float] = {}   # đường dẫn tệp phiên → mtime đã đọc
 _HET_MH: dict[tuple, float] = {}  # (nguồn, mã mô hình; "" = mặc định của nguồn) → giờ dùng lại được (epoch); mất khi khởi động lại
@@ -353,14 +353,14 @@ def _nguon(thumuc=None, loai_viec=None) -> list[dict]:
     """Nguồn đang dùng theo ưu tiên, mỗi nguồn kèm mô hình sẽ gọi:
     - loại việc có mô hình mặc định (màn 13) → nguồn của mô hình đó đứng đầu, gọi đúng mô hình đó;
     - gói khác: mô hình mặc định của CLI (không truyền --model);
-    - khoá API khác: dòng G08 đầu tiên đã có giá (cũ: dòng đầu tiên)."""
+    - khóa API khác: dòng G08 đầu tiên đã có giá (cũ: dòng đầu tiên)."""
     md = danhmuc_mohinh.macdinh_khoa(loai_viec, thumuc) if loai_viec else None   # Đ6: (loại nguồn, mã) hoặc None
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cot = ["id", "ma", "ten", "loai", "uutien", "tran_tien_thang", "tyle_5gio", "tyle_tuan", "datlai_5gio_luc",
                "datlai_tuan_luc", "do_luc", "da_het_luc"]
         ds = dangnhap_goi.thu_tu([dict(zip(cot, r)) for r in cn.execute(
-            f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'")])   # QĐ160: gói trước Khoá API
+            f"SELECT {', '.join(cot)} FROM nguon_ai WHERE trangthai = 'dung'")])   # QĐ160: gói trước Khóa API
         for d in ds:
             d["macdinh_loai"] = bool(md and dangnhap_goi.loai_nguon(d) == md[0])   # mọi tài khoản cùng loại (Đ6)
             dong = danhmuc_mohinh.dong_cua(d["id"], md[1], thumuc) if d["macdinh_loai"] and md[1] else None
@@ -430,7 +430,7 @@ def dung_duoc(d: dict, thumuc=None) -> tuple[bool, str]:
     if not d["tran_tien_thang"]:
         return False, "chưa đặt hạn mức"
     if not kho.tim(d["ma"], thumuc):
-        return False, "chưa có khoá"
+        return False, "chưa có khóa"
     if not d["mohinh"] or d["mohinh"]["gia_vao"] is None or d["mohinh"]["gia_ra"] is None:
         return False, "chưa có giá mô hình"
     if tien_thang(d["id"], thumuc) >= d["tran_tien_thang"] * TRIEU:
@@ -567,7 +567,7 @@ def _goi_khoa(d: dict, cau: str, thumuc=None, client=None) -> dict:
         chu = o["choices"][0]["message"]["content"] or ""
         vao, ra = int(o["usage"]["prompt_tokens"]), int(o["usage"]["completion_tokens"])
     else:
-        raise RuntimeError("Khoá API chưa rõ của hãng nào (mã nguồn phải bắt đầu bằng khoa_anthropic hoặc khoa_openai)")
+        raise RuntimeError("Khóa API chưa rõ của hãng nào (mã nguồn phải bắt đầu bằng khoa_anthropic hoặc khoa_openai)")
     tien = round((vao * m["gia_vao"] + ra * m["gia_ra"]) / TRIEU)
     bao = o.get("model") if isinstance(o.get("model"), str) else None   # Y31c S4: hãng trả mô hình thực dùng
     return {"chu": chu, "vao": vao, "ra": ra, "sotien": tien, "sotien_thamkhao": None, "tien_ma": m["tien_ma"] or "USD",
@@ -626,7 +626,7 @@ def _thu(d: dict, cau: str, bo_qua: list, viecnen_id=None, thumuc=None, client=N
         elif bao:
             with _KHOA_HET:
                 _TEN_HET[(d["id"], "")] = bao
-        if tk_het and d["loai"] == "goi":   # khoá API báo 429 thường là giới hạn theo phút: không nghỉ 01 giờ
+        if tk_het and d["loai"] == "goi":   # khóa API báo 429 thường là giới hạn theo phút: không nghỉ 01 giờ
             ghi_het_tai_khoan(d["id"], dl_tk, hm)
         hm["het"] = tk_het
         ghi_han_muc(d["id"], hm, thumuc)
@@ -774,7 +774,7 @@ def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id,
 
 
 def tom_tat_thang(thumuc=None) -> dict:
-    """Thẻ Khoá API màn 13 (QĐ122, bản vẽ "Tiền thật tháng 11"): tiền thật từ ngày 01 tháng này, giờ Việt Nam."""
+    """Thẻ Khóa API màn 13 (QĐ122, bản vẽ "Tiền thật tháng 11"): tiền thật từ ngày 01 tháng này, giờ Việt Nam."""
     bay = datetime.now(MUIGIO_VN)
     tu = bay.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
     cn = ketnoi.mo("Nhatky", thumuc)
@@ -786,7 +786,7 @@ def tom_tat_thang(thumuc=None) -> dict:
 
 
 def tom_tat_tuan(thumuc=None) -> dict:
-    """Số cho màn 13, 10: tiền thật (khoá API) và quy đổi tham khảo (gói) 07 ngày, tách riêng, không cộng lẫn."""
+    """Số cho màn 13, 10: tiền thật (khóa API) và quy đổi tham khảo (gói) 07 ngày, tách riêng, không cộng lẫn."""
     tu = datetime.fromtimestamp(time.time() - 7 * 86400, MUIGIO_VN).isoformat(timespec="seconds")
     cn = ketnoi.mo("Nhatky", thumuc)
     try:

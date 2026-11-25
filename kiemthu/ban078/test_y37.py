@@ -82,7 +82,7 @@ class KiemLuuVaMoiTruong(NenMa):
         self.assertTrue(madaihan.xoa(1))
         self.assertIsNone(madaihan.thong_tin(1))
         with self.assertRaises(ValueError):
-            madaihan.luu(1, "sk-ant-api03-" + "Q" * 30)         # Đ8: khoá API không nhận nhầm
+            madaihan.luu(1, "sk-ant-api03-" + "Q" * 30)         # Đ8: khóa API không nhận nhầm
         self.assertEqual(kho.ten_dichvu("goi_claude_02"), "Claude · Code · Tài khoản 2 · mã dài hạn")
 
     def test_moi_truong_dung_tai_khoan(self):
@@ -148,7 +148,7 @@ class KiemChuong(NenMa):
         thongbao.quet_madaihan()
         thongbao.quet_khoa()
         hom_nay = datetime.now(MUIGIO_VN).date().isoformat()
-        self.assertEqual(self.mo(), [f"madaihan_saphethan:goi_claude_01:{hom_nay}"])   # 01 dòng mỗi ngày; không có dòng khoá Drive
+        self.assertEqual(self.mo(), [f"madaihan_saphethan:goi_claude_01:{hom_nay}"])   # 01 dòng mỗi ngày; không có dòng khóa Drive
         ds = thongbao.danh_sach()["ds"]
         self.assertEqual((ds[0]["chu"], ds[0]["di"], ds[0]["muc"]),
                          ("Mã dài hạn Gói Claude · Tài khoản 1 còn 07 ngày hết hạn", "13", "xem"))
@@ -158,7 +158,7 @@ class KiemChuong(NenMa):
         madaihan.xoa(1)
         thongbao.quet_madaihan()
         self.assertEqual(self.mo(), [])
-        self.assertEqual(madaihan.SO_NGAY_NHAC, 7)            # QĐ200; khoá Drive vẫn 05 (thông số chung)
+        self.assertEqual(madaihan.SO_NGAY_NHAC, 7)            # QĐ200; khóa Drive vẫn 05 (thông số chung)
 
 
 class KiemKetNoi(NenMa):
@@ -397,7 +397,7 @@ class KiemGiaoDien(unittest.TestCase):
                     "if (kq.khong_ho_tro) { D.mdh[tk] = null; veMoHinh(); moMdDan(tk, kq.loi); return; }",
                     "(k.ct ? ' title=\"' + esc(k.ct) + '\"' : '')",                                                          # N17
                     'type="password"', "if (o) o.value = '';", "tenMh(hong.dung, hong.nguon_id, null, true)",
-                    " bị xoá khỏi Két&nbsp;khoá; mã vẫn còn hiệu lực ở Claude",
+                    " bị xóa khỏi Két&nbsp;khóa; mã vẫn còn hiệu lực ở Claude",
                     "(cl ? '<div class=\"md-khoi\">' + theMd(x, nutGo) + '</div>' : '')",                                    # N11b
                     "nbsp('Dán ' + CHU_MDH.toLowerCase()) + ' · ' + nbsp('Claude tài khoản ' + k.tk)",                         # N25
                     "'Đang tải nguồn AI…</div>'",                                                                              # N26

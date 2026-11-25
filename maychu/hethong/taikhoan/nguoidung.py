@@ -1,6 +1,6 @@
 """Người dùng (F01): tài khoản quản trị tạo sẵn, đăng nhập 02 bước, bật và đổi máy nhận mã 02 lớp.
 
-Chặn đoán mật khẩu theo QĐ90 (chan.py): đang khoá thì không kiểm mật khẩu; sai mật khẩu hay mã 02 lớp đều đếm.
+Chặn đoán mật khẩu theo QĐ90 (chan.py): đang khóa thì không kiểm mật khẩu; sai mật khẩu hay mã 02 lớp đều đếm.
 Mã 02 lớp bắt buộc, không có cách tắt trên web (chỉ lệnh đặt lại trên VPS).
 """
 import os
@@ -76,7 +76,7 @@ def _sai(ip: str, chu: str, thumuc) -> dict:
 
 
 def buoc_matkhau(ten: str, mk: str, ip: str = "khong_ro", thumuc: Path | None = None) -> dict:
-    """Bước 1. Đang khoá: {'loi': 'khoa', 'khoa': {...}}; sai: {'loi': ..., 'con_lai': n};
+    """Bước 1. Đang khóa: {'loi': 'khoa', 'khoa': {...}}; sai: {'loi': ..., 'con_lai': n};
     đúng: {'buoc': 'ma2lop' | 'bat2lop', 'ma_tam': ..., (qr, khoa khi bật)}."""
     k = chan.dang_khoa(ip, thumuc)
     if k:
@@ -159,7 +159,7 @@ def kiem_ma_hien_tai(nguoidung_id: str, ma: str, thumuc: Path | None = None) -> 
 
 
 def bat_doi_may(nguoidung_id: str, thumuc: Path | None = None) -> dict:
-    """Đổi máy nhận mã: sinh khoá mới, trả về QR; khoá cũ chỉ thay khi anh nhập đúng mã của khoá mới."""
+    """Đổi máy nhận mã: sinh khóa mới, trả về QR; khóa cũ chỉ thay khi anh nhập đúng mã của khóa mới."""
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         u = _lay(cn, ma_id=nguoidung_id)

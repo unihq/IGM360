@@ -126,9 +126,9 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
     def test_ten_nguon_z9b_z9c(self):
         """QĐ176, QĐ177: đổi chữ trên giao diện, 0 đổi dữ liệu; câu văn về gói giữ "Gói Claude"."""
         js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
-        # Z9b: thẻ "Khoá API", dòng khoá "Hãng · API"
-        self.assertIn('<div class="t16 b7">Khoá API</div>', js)
-        self.assertNotIn("Khoá API AI</div>", js)
+        # Z9b: thẻ "Khóa API", dòng khóa "Hãng · API"
+        self.assertIn('<div class="t16 b7">Khóa API</div>', js)
+        self.assertNotIn("Khóa API AI</div>", js)
         for hang, chu in (("anthropic", "Claude · API"), ("openai", "OpenAI · API"), ("google", "Gemini · API"),
                           ("openrouter", "OpenRouter · API"), ("groq", "Groq · API"), ("deepseek", "DeepSeek · API"),
                           ("ollama", "Ollama · Cloud")):

@@ -33,6 +33,7 @@ Lớp dữ liệu: mở 07 tệp SQLite, tạo và nâng lược đồ, mã dòn
 - QĐ142, QĐ143: danh mục có phiên bản, chặn sửa mã.
 - QĐ227: sổ sao lưu ghi loại hằng ngày / trước cập nhật.
 - QĐ277, QĐ279, QĐ281, QĐ283: công tắc Drive, luật dọn 03 ngày / 02 lượt, giữ bản sao trước khi nâng 30 ngày.
+- QĐ301: `doidau.doi_khi_khoidong` đổi 02 chữ kiểu cũ đã lưu (tên lịch qua `phienban_moi`, `ketnoi.loi_cuoi` theo đúng chữ cũ), 05 điều kiện CDA.
 
 ## 6. Kiểm trước bàn giao
 

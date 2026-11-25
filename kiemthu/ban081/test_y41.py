@@ -2,7 +2,7 @@
 
 Phần 1 (GAP-080): `choCapNhat` hỏi /suckhoe nhiều lần; bản đổi thì tải lại trang; quá giờ thì báo hỏng.
 (0.7.9–0.8.0: câu `const het` bị nối vào chú thích nên vòng hỏi dừng sau 01 lần, thẻ quay mãi.)
-Phần 2 (QĐ251, CDA phương án B): tiến độ 08 bước ở khoá phụ `tien_do` của tệp trạng thái; 01 dòng F04 tóm tắt mỗi lượt;
+Phần 2 (QĐ251, CDA phương án B): tiến độ 08 bước ở khóa phụ `tien_do` của tệp trạng thái; 01 dòng F04 tóm tắt mỗi lượt;
 đủ 05 điều kiện CDA (qua antoan.ghi, ≤ 01 lần/giây, ghi lỗi không chặn, bản 0.7.9 đọc được, không ghi đôi dòng tóm tắt).
 """
 import importlib.util
@@ -129,7 +129,7 @@ class KiemTheTienDo(unittest.TestCase):
                 f"const o = {{...{json.dumps(o, ensure_ascii=False)}, bay: Date.parse('{T0}') + {giay} * 1000}};\n"
                 "console.log(JSON.stringify({html: htmlTienDo(td, o), r: tinhTienDo(td, o.bay)}));\n")
         kq = self.node(_ma_the() + nen + chay)
-        self.assertNotIn("undefined", kq["html"])                       # Y41c: chữ thiếu (khoá TD8 bị nuốt vào chú thích)
+        self.assertNotIn("undefined", kq["html"])                       # Y41c: chữ thiếu (khóa TD8 bị nuốt vào chú thích)
         return kq
 
     def test_dang_chay_buoc_2_so_do_that(self):
@@ -600,7 +600,7 @@ class KiemWatchtower30Phut(unittest.TestCase):
 
 
 class KiemBan079DocDuoc(NenTD):
-    """Điều kiện CDA: bản quay về 0.7.9 gặp tệp trạng thái có khoá phụ `tien_do` vẫn chạy và không làm mất khoá."""
+    """Điều kiện CDA: bản quay về 0.7.9 gặp tệp trạng thái có khóa phụ `tien_do` vẫn chạy và không làm mất khóa."""
 
     def nap(self, ten: str):
         spec = importlib.util.spec_from_file_location(f"ma079_{ten}", MA_079 / f"{ten}_079.py")

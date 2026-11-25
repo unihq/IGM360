@@ -19,6 +19,7 @@ Bài kiểm unittest của toàn phần mềm. Mỗi bản có 01 thư mục `ba
 - Không gọi mạng thật: Google, GHCR, GitHub giả lập (`httpx.MockTransport`, `mock`).
 - Lịch chạy nền tắt trong bài kiểm (`IGM360_LICH=tat`).
 - Không gọi npm thật (Y46): truyền hàm chạy, máy npm giả.
+- 0 chỗ dấu kiểu cũ trong mọi tệp (QĐ302, bài `ban085/test_y50.py`); mẫu dò, chữ cũ cần so viết bằng mã ký tự (`\u00e1`).
 - Móc `kiemthu/__init__.py` ghi lại mọi lần ghi vào thư mục dữ liệu mặc định `/dulieu` và mọi lần chạy npm thật; bài cuối `kiemthu/test_zz_khong_ghi_dulieu.py` hỏng nếu có (CDA KT-Y46-4a).
 - Bài kiểm cũ: không xóa, không sửa câu kiểm; chỉ thêm dòng ở phần chuẩn bị khi hành vi mặc định đổi theo QĐ (luật 18 cửa chặn). Câu kiểm ghi nguyên văn chữ đã được QĐ đổi thì đổi theo QĐ và ghi rõ trong báo cáo.
 - Giá trị giống khóa, IP, email trong bài kiểm: ghép từ nhiều mảnh lúc chạy để kho không chứa chuỗi đó.

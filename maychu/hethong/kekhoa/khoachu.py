@@ -1,7 +1,7 @@
-"""Khoá chủ của két khoá: 01 tệp quyền 600 trong ổ dữ liệu (QĐ89 điểm B4, làm ở ngày 04).
+"""Khóa chủ của két khóa: 01 tệp quyền 600 trong ổ dữ liệu (QĐ89 điểm B4, làm ở ngày 04).
 
 Tệp không nằm trong bản sao lưu 07 file; anh giữ thêm 01 bản riêng (lệnh chép ở kế hoạch GĐ 1 Phần 4).
-Mất tệp này thì không giải mã được khoá đã cất: phải nhập lại khoá và bật lại 02 lớp.
+Mất tệp này thì không giải mã được khóa đã cất: phải nhập lại khóa và bật lại 02 lớp.
 """
 import os
 from pathlib import Path
@@ -18,7 +18,7 @@ def duong(thumuc: Path | None = None) -> Path:
 
 
 def lay(thumuc: Path | None = None) -> bytes:
-    """Đọc khoá chủ; chưa có thì tạo mới (chỉ 01 lần, quyền 600, không bao giờ ghi đè)."""
+    """Đọc khóa chủ; chưa có thì tạo mới (chỉ 01 lần, quyền 600, không bao giờ ghi đè)."""
     p = duong(thumuc)
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -39,4 +39,4 @@ def giai_ma(ban_ma: bytes, thumuc: Path | None = None) -> bytes:
     try:
         return Fernet(lay(thumuc)).decrypt(ban_ma)
     except InvalidToken as loi:
-        raise RuntimeError("khoá chủ không khớp: không giải mã được khoá đã cất") from loi
+        raise RuntimeError("khóa chủ không khớp: không giải mã được khóa đã cất") from loi
