@@ -17,7 +17,8 @@ C2 = "Câu trả lời này đã xong hoặc không còn chạy. Bạn mở lạ
 
 class KiemChu087(unittest.TestCase):
     def test_version_va_muc_087_nguyen_van_qd358(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.8.7")
+        so = tuple(int(x) for x in (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))
+        self.assertGreaterEqual(so, (0, 8, 7))                                    # bản sau giữ mục 0.8.7 nguyên văn (QĐ376)
         dong = (GOC / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
         i = dong.index("## 0.8.7")
         self.assertEqual(dong[i:i + 8], [

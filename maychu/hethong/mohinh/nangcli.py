@@ -331,7 +331,9 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         lenh = ["npm", "install", "--prefix", str(dich), "--registry", REGISTRY, "--cache", str(dem),
                 "--no-audit", "--no-fund", "--omit=dev"] + (["--ignore-scripts"] if GOI_CLI[goi]["bo_cai_kem"] else []) \
             + [f"{GOI_CLI[goi]['npm']}@{ban}"]
-        moi_truong = {**os.environ, "npm_config_userconfig": os.devnull, "npm_config_globalconfig": os.devnull}   # K5
+        from maychu.hethong.mohinh import dangnhap_goi as dg
+        moi_truong = {**dg.moi_truong_sach(), **{k: v for k, v in os.environ.items() if k.lower().startswith("npm_config_")},
+                      "npm_config_userconfig": os.devnull, "npm_config_globalconfig": os.devnull}   # K5; QĐ374 (b) danh sách trắng
         try:
             r = chay(lenh, capture_output=True, text=True, timeout=900, env=moi_truong)
             cai_dat = r.returncode == 0

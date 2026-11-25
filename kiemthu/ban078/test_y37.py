@@ -30,6 +30,9 @@ CUOI = MA_GIA[-4:]
 class NenMa(Nen):
     def setUp(self):
         super().setUp()
+        # QĐ374 (b): CLI chỉ nhận biến trong danh sách trắng; khai tên biến mà CLI giả của bài này đọc
+        self.addCleanup(setattr, dg, "BIEN_GIU_THU", dg.BIEN_GIU_THU)
+        dg.BIEN_GIU_THU = frozenset({"MA_GIA_IN"})
         # 0.7.9: không bao giờ gọi CLI thật của máy chạy bài kiểm (CLI trỏ tới đường không có; bài cần CLI thì tự đặt CLI giả);
         # tài khoản 01 dùng thư mục tạm, không đụng thư mục nhà
         bien = mock.patch.dict(os.environ, {"IGM360_THUMUC_CLAUDE": str(self.g / "claude"), "CLAUDE_CONFIG_DIR": str(self.g / "claude01"),
@@ -97,7 +100,7 @@ class KiemLuuVaMoiTruong(NenMa):
             self.assertNotIn(madaihan.BIEN, e2)                # tài khoản 02 không dùng nhầm mã tài khoản 01
             self.assertNotIn("ANTHROPIC_API_KEY", e2)
             self.assertNotIn(madaihan.BIEN, dg._env("claude", 1, ma_daihan=False))   # đăng nhập, lấy mã: không mang mã
-            self.assertEqual(dg._env("chatgpt", 1)["ANTHROPIC_API_KEY"], "khoa-gia")   # Codex không đụng
+            self.assertNotIn("ANTHROPIC_API_KEY", dg._env("chatgpt", 1))   # QĐ374 (b): Codex không nhận khóa API (trước QĐ374: giữ nguyên)
 
     def test_het_han_khong_goi(self):
         madaihan.luu(1, MA_GIA)

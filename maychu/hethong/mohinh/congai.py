@@ -836,10 +836,12 @@ _TRA_WEB: contextvars.ContextVar = contextvars.ContextVar("igm360_tra_web", defa
 CONGCU_TRA_WEB = "WebSearch,WebFetch"                      # công cụ duy nhất có mặt và được phép
 CONGCU_CAM = "Bash,PowerShell,Write,Edit,MultiEdit,NotebookEdit"   # chặn thêm 01 lớp, phòng cài đặt máy bật lại
 # QĐ374 (KIEM-BM-16d): mô hình không có công cụ chạy lệnh máy.
-# (a) Codex: tắt tính năng shell_tool (Codex 0.172.0 spec_plan.rs 1289–1296: không đăng ký công cụ chạy lệnh);
-#     cờ `--disable` khai báo global, đặt sau lệnh con exec / app-server vẫn nhận (cli/src/main.rs 966–975, 1090–1092).
+# (a) Codex: tắt shell_tool (Codex 0.172.0 spec_plan.rs 1289–1296: không đăng ký công cụ chạy lệnh) và view_image
+#     (spec_plan.rs 1497–1499: không có công cụ đọc tệp ảnh) – CDA KT-QĐ374. Cờ `--disable` khai báo global, đặt sau
+#     lệnh con exec / app-server vẫn nhận (cli/src/main.rs 966–975, 1090–1092). Tác tử con dùng bản sao cấu hình
+#     của lượt cha (core/src/agent/child_config.rs 144–146) nên cũng tắt.
 # (c) Claude, lượt không phải trò chuyện: không công cụ nào (`--tools ""`), không MCP (`--strict-mcp-config`).
-CODEX_TAT_LENH = ["--disable", "shell_tool"]
+CODEX_TAT_LENH = ["--disable", "shell_tool", "--disable", "view_image"]
 CLAUDE_KHONG_CONGCU = ["--tools", "", "--strict-mcp-config"]
 LOI_CLAUDE = {"error_max_turns": "chạm trần số lượt", "error_during_execution": "lỗi khi chạy",
               "error_max_budget_usd": "chạm trần chi phí", "error_max_structured_output_retries": "lỗi định dạng trả lời"}

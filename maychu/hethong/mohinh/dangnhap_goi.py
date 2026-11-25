@@ -80,15 +80,23 @@ def thu_muc(goi: str, taikhoan: int) -> Path | None:
     return goc / f"taikhoan_{taikhoan:02d}"
 
 
-# QĐ374 (b) (KIEM-BM-16d): CLI AI không nhận biến môi trường bí mật của vùng chứa. Codex mặc định đưa MỌI biến nó nhận
-# vào lệnh mô hình chạy (Codex 0.172.0 shell_environment_policy.rs 135–136). Bỏ đích danh mật khẩu quản trị, mã cập
-# nhật, và mọi biến có tên dạng mật khẩu, bí mật, mã, khóa. Mã dài hạn Claude đặt lại SAU bước lọc (madaihan).
-BIEN_CAM = frozenset({"IGM360_ADMIN_USER", "IGM360_ADMIN_PASSWORD", "WATCHTOWER_TOKEN"})
-_MAU_BIEN_CAM = re.compile(r"PASSWORD|PASSWD|SECRET|TOKEN|PRIVATE|CREDENTIAL|(^|_)KEY$|_KEY_", re.IGNORECASE)
+# QĐ374 (b) (KIEM-BM-16d; CDA KT-QĐ374): CLI AI chỉ nhận DANH SÁCH TRẮNG biến môi trường. Codex mặc định đưa MỌI biến
+# nó nhận vào lệnh mô hình chạy (Codex 0.172.0 shell_environment_policy.rs 135–136); vùng chứa có mật khẩu quản trị,
+# mã cập nhật. Thư mục tài khoản (CLAUDE_CONFIG_DIR, CODEX_HOME) và mã dài hạn Claude đặt lại SAU bước lọc.
+BIEN_GIU = frozenset({"PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR", "TERM",
+                      "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "no_proxy",
+                      "all_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS"})
+BIEN_GIU_GOI = {"claude": frozenset({"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"}), "chatgpt": frozenset({"CODEX_HOME"})}
+# Chỉ máy làm mã Windows (Python, Node trên Windows cần các biến này); máy chủ Linux không dùng.
+BIEN_GIU_WINDOWS = frozenset({"SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "APPDATA", "LOCALAPPDATA",
+                              "TEMP", "TMP"})
+BIEN_GIU_THU: frozenset = frozenset()   # bài kiểm thêm tên biến của CLI giả; chạy thật luôn rỗng
 
 
-def bien_cam(ten: str) -> bool:
-    return ten in BIEN_CAM or bool(_MAU_BIEN_CAM.search(ten))
+def moi_truong_sach(goi: str | None = None) -> dict:
+    """Biến môi trường được đưa cho tiến trình ngoài (CLI AI, npm): chỉ tên trong danh sách trắng."""
+    giu = BIEN_GIU | BIEN_GIU_GOI.get(goi, frozenset()) | BIEN_GIU_THU | (BIEN_GIU_WINDOWS if os.name == "nt" else frozenset())
+    return {k: v for k, v in os.environ.items() if k in giu}
 
 
 def _env(goi: str, taikhoan: int, tao: bool = True, ma_daihan: bool = True) -> dict:
@@ -96,7 +104,7 @@ def _env(goi: str, taikhoan: int, tao: bool = True, ma_daihan: bool = True) -> d
     (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` đứng trước mã dài hạn trong thứ tự của CLI) và mã của tài khoản khác;
     `ma_daihan` thì đặt mã dài hạn còn hạn của đúng tài khoản này. Đăng nhập, đăng xuất kiểu cũ, lấy mã: `ma_daihan=False`."""
     tm = thu_muc(goi, taikhoan)
-    env = {k: v for k, v in os.environ.items() if not bien_cam(k)}   # QĐ374 (b)
+    env = moi_truong_sach(goi)   # QĐ374 (b): danh sách trắng
     if tm is not None:
         if tao:
             tm.mkdir(parents=True, exist_ok=True)

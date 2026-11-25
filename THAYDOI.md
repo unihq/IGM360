@@ -3,6 +3,13 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.8
+Tóm tắt: Tăng bảo mật AI
+Nâng dữ liệu: không
+- Tăng bảo mật cho công cụ AI: mỗi nơi dùng AI chỉ được dùng đúng công cụ cần cho việc đó.
+- AI không nhận mật khẩu và mã quản trị.
+- Trò chuyện AI, Gọi thử, việc chạy nền dùng bộ công cụ đã giới hạn.
+
 ## 0.8.7
 Tóm tắt: Trả lời chạy nền
 Nâng dữ liệu: không

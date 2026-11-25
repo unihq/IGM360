@@ -80,6 +80,9 @@ def _tao_cli(thumuc: Path, ten: str, ma: str) -> str:
 
 class KiemY24(unittest.TestCase):
     def setUp(self):
+        # QĐ374 (b): CLI chỉ nhận biến trong danh sách trắng; khai tên biến mà CLI giả của bài này đọc
+        self.addCleanup(setattr, dg, "BIEN_GIU_THU", dg.BIEN_GIU_THU)
+        dg.BIEN_GIU_THU = frozenset({"GIA_MACDINH_CLAUDE", "GIA_MACDINH_CODEX", "GIA_DANGXUAT_HONG", "GIA_TOCHUC", "GIA_EMAIL"})
         self.tam = tempfile.TemporaryDirectory()
         g = self.g = Path(self.tam.name)
         bien = ("IGM360_THUMUC_DULIEU", "IGM360_CLAUDE_CLI", "IGM360_CODEX_CLI", "IGM360_THUMUC_CLAUDE",
