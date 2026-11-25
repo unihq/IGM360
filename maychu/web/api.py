@@ -666,6 +666,7 @@ class TinMoi(BaseModel):
     hoithoai_id: str | None = None
     noidung: str
     mohinh_id: str | None = None   # QĐ180: mô hình ghim cho cuộc này (trình duyệt nhớ)
+    nen: bool = False   # N0: giao diện gửi true → lượt chạy nền, trả ngay luot_id; không gửi → trả lời đồng bộ như trước
 
 
 @router.get("/trochuyen")
@@ -683,9 +684,12 @@ def xem_trochuyen(ma: str, p: dict = Depends(can_dang_nhap)):
 
 @router.post("/trochuyen")
 def gui_tin(body: TinMoi, p: dict = Depends(can_dang_nhap)):
-    """N0: mở 01 lượt chạy nền, trả ngay {hoithoai_id, hoi, luot_id}; trang theo dõi qua luồng sự kiện."""
+    """N0: `nen` = true → mở 01 lượt chạy nền, trả ngay {hoithoai_id, hoi, luot_id}, trang theo dõi qua luồng sự kiện.
+    Không có `nen` → đường đồng bộ cũ, trả {hoithoai_id, hoi, tra_loi} như trước N0 (giữ người gọi cũ)."""
     try:
-        return trochuyen.bat_luot(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
+        if body.nen:
+            return trochuyen.bat_luot(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
+        return trochuyen.gui(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
     except trochuyen.ChoCapNhat as e:   # QĐ347 H1, QĐ352: giao diện hiện câu báo trong khung chat, giữ câu hỏi ở ô nhập
         return JSONResponse({"detail": str(e), "ma": "cho_capnhat"}, status_code=409)
     except ValueError as e:

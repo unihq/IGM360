@@ -272,7 +272,7 @@ class KiemDuongGoi(Nen):
 
     def test_gui_tra_ngay_roi_theo_luong(self):
         with mock.patch.object(congai, "goi", side_effect=lambda c, **k: time.sleep(0.3) or dict(TL)):
-            r = self.c.post("/api/trochuyen", json={"noidung": "Câu 01"}, headers={"X-IGM360": "1"})
+            r = self.c.post("/api/trochuyen", json={"noidung": "Câu 01", "nen": True}, headers={"X-IGM360": "1"})
             self.assertEqual(r.status_code, 200, r.text)
             kq = r.json()
             ev = self.doc(f"/api/trochuyen/luot/{kq['luot_id']}/sukien")
@@ -282,16 +282,22 @@ class KiemDuongGoi(Nen):
         self.nguoi = {"nguoidung_id": "nguoi-khac"}
         self.assertEqual(self.c.get(f"/api/trochuyen/luot/{kq['luot_id']}/sukien").status_code, 404)
 
+    def test_khong_gui_nen_thi_tra_loi_dong_bo_nhu_cu(self):
+        with mock.patch.object(congai, "goi", return_value=dict(TL)):
+            r = self.c.post("/api/trochuyen", json={"noidung": "Câu"}, headers={"X-IGM360": "1"}).json()
+        self.assertEqual((r["tra_loi"]["noidung"], "luot_id" in r), ("Trả lời đủ", False))
+
     def test_h1_tra_409_kem_ma(self):
         with mock.patch.object(capnhat, "dang_cho", return_value=True):
-            r = self.c.post("/api/trochuyen", json={"noidung": "Câu"}, headers={"X-IGM360": "1"})
-        self.assertEqual((r.status_code, r.json()["ma"]), (409, "cho_capnhat"))
+            r = self.c.post("/api/trochuyen", json={"noidung": "Câu", "nen": True}, headers={"X-IGM360": "1"})
+            r2 = self.c.post("/api/trochuyen", json={"noidung": "Câu"}, headers={"X-IGM360": "1"})   # đường đồng bộ cũ cũng chặn
+        self.assertEqual((r.status_code, r.json()["ma"], r2.status_code), (409, "cho_capnhat", 409))
         self.assertEqual(r.json()["detail"], luot.CHU_CHO_CAPNHAT)
 
     def test_xem_tra_luot_dang_va_phu(self):
         cho = threading.Event()
         with mock.patch.object(congai, "goi", side_effect=lambda c, **k: cho.wait(5) and dict(TL)):
-            kq = self.c.post("/api/trochuyen", json={"noidung": "Câu"}, headers={"X-IGM360": "1"}).json()
+            kq = self.c.post("/api/trochuyen", json={"noidung": "Câu", "nen": True}, headers={"X-IGM360": "1"}).json()
             x = self.c.get("/api/trochuyen/" + kq["hoithoai_id"]).json()
             self.assertEqual(x["luot_dang"], kq["luot_id"])
             cho.set()
