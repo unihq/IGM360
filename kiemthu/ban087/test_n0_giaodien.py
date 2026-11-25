@@ -77,6 +77,28 @@ class KiemGiaoDienLuot(unittest.TestCase):
         self.assertEqual(kq, [[2000, 0], 600])                                    # ở đáy: bám đáy trang; đã cuộn lên: giữ
         self.assertIn("const c = vungCuon(); if (c) c.scrollTop = c.scrollHeight;   // vừa gửi: đưa tới đáy", self.app)
 
+    def test_sua_bt7_loi_gui_ve_lai_va_tra_cau_hoi(self):
+        """CDO BT25: lỗi 409, mất kết nối, 500 → vẽ lại như trước khi gửi (không treo câu hỏi, bong bóng), câu hỏi về ô nhập."""
+        a = self.app
+        gui = a[a.index("async function guiTin(chu) {"):a.index("\n}\n", a.index("async function guiTin(chu) {")) + 3]
+        loi = {"409": "Object.assign(new Error('AI đang trả lời câu hỏi trước'), {status: 409})",
+               "mang": "new TypeError('Failed to fetch')",
+               "500": "Object.assign(new Error('Internal Server Error'), {status: 500})"}
+        for ten, e in loi.items():
+            ma = ("const o = {value: 'Câu mới'}, ds = {innerHTML: ''}; PHAN['#tc-o'] = o; PHAN['#ds-tin'] = ds;"
+                  " const tinHtml = x => '<tin:' + x.noidung + '>'; const ghimKhoa = () => 'k1', luuGhim = () => {}; let bao_ra = [];"
+                  " const bao = t => bao_ra.push(t); api = async () => { throw " + e + "; }; D.htId = 'h1';"
+                  " D.tin = [{vai: 'nguoi', noidung: 'Cũ'}]; S.tc = 'co';" + gui +
+                  " (async () => { await guiTin(); console.log(JSON.stringify({ds: ds.innerHTML, o: o.value, tc: S.tc, bao: bao_ra, es: es_cuoi === null})); })();")
+            r = subprocess.run(["node", "-e", GIA_DOM.replace("api = async () => ({hoithoai: []});", "_api_bo = 0; let api = async () => ({hoithoai: []});")
+                                + self.chu + self.luot + ma], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            kq = json.loads(r.stdout)
+            self.assertEqual(kq["ds"], "<tin:Cũ>", ten)                           # không còn câu hỏi mới, không còn #tn-chay
+            self.assertEqual((kq["o"], kq["tc"], kq["es"]), ("Câu mới", "co", True), ten)
+            self.assertEqual(len(kq["bao"]), 1, ten)
+            self.assertTrue(kq["bao"][0].endswith("."), ten)                       # chữ báo giữ nguyên, báo nổi thêm dấu chấm
+
     def test_sua_p3_xong_luot_bam_day_hoac_giu(self):
         """CDO BT-N0b P3: xong lượt vẽ lại dài thêm (dòng nhãn, nút Chép) – đang bám đáy thì đưa xuống đáy, đã cuộn lên thì giữ."""
         a = self.app

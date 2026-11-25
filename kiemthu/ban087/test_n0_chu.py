@@ -41,7 +41,7 @@ class KiemChu087(unittest.TestCase):
         self.assertIn('raise DangTraLoi("' + C1 + '")', ma)
         self.assertFalse(C1.endswith("."))                                        # báo nổi tự thêm dấu chấm
         js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
-        self.assertIn("if (e.status === 409) o.value = nd;", js)                  # câu hỏi trở lại ô nhập
+        self.assertIn("$('#ds-tin').innerHTML = cu.map(tinHtml).join(''); o.value = nd;", js)   # câu hỏi trở lại ô nhập (SUA-BT7: mọi lỗi)
 
     def test_n2_cau_2_luong_su_kien_khong_con(self):
         from fastapi.testclient import TestClient

@@ -1363,7 +1363,9 @@ async function guiTin(chu) {
   catch (e) {
     if (e.ma === 'cho_capnhat') { $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + toi + htmlChoCn(e.message);
       o.value = nd; S.tc = 'co'; ve(); return; }
-    if (e.status === 409) o.value = nd;   // QĐ358 N2 câu 1: câu hỏi trở lại ô nhập như H1
+    // SUA-BT7 (CDO BT25): mọi lỗi gửi (409, mất kết nối, 500…) – vẽ lại như trước khi gửi (bỏ câu hỏi, bong bóng đang chạy),
+    // câu hỏi trở lại ô nhập như H1, N5, QĐ358 N2 câu 1; chữ báo giữ nguyên
+    $('#ds-tin').innerHTML = cu.map(tinHtml).join(''); o.value = nd;
     S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.'); }
 }
 
