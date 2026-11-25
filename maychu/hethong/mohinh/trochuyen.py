@@ -185,7 +185,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
     kq = bat_luot(hoithoai_id, nguoidung_id, noidung, thumuc, mohinh_id, nghe=False)
     lt = luot.lay(kq["luot_id"], nguoidung_id)
     if lt is None or kq.get("trung"):
-        raise DangTraLoi("Cuộc trò chuyện đang có câu trả lời chưa xong")   # chữ giữ nguyên tới khi anh duyệt chữ mới (N2)
+        raise DangTraLoi("AI đang trả lời câu hỏi trước. Bạn gửi câu mới khi câu trả lời xong")   # QĐ358 (N2 câu 1), không dấu chấm cuối
     lt.luong.join()
     if lt.loi_ngoai is not None:
         raise lt.loi_ngoai

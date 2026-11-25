@@ -42,7 +42,7 @@ class KiemGiaoDienLuot(unittest.TestCase):
         a = cls.app
         cls.chu = a[a.index("const esc = "):a.index("const cau = ")]
         cls.luot = a[a.index("// <LUOT>"):a.index("// </LUOT>")]
-        cls.tin = a[a.index("function tinHtml(x) {"):a.index("function veTin(ds)")]
+        cls.tin = a[a.index("function tinHtml(x) {"):a.index("function veTin(ds, giu)")]
 
     def chay(self, ma, cau):
         r = subprocess.run(["node", "-e", GIA_DOM + self.chu + self.luot + ma + "\nconsole.log(JSON.stringify(" + cau + "));"],
@@ -76,6 +76,21 @@ class KiemGiaoDienLuot(unittest.TestCase):
                        " trang.scrollTop = 600; veChay(); const da_cuon = trang.scrollTop;", "[o_day, da_cuon]")
         self.assertEqual(kq, [[2000, 0], 600])                                    # ở đáy: bám đáy trang; đã cuộn lên: giữ
         self.assertIn("const c = vungCuon(); if (c) c.scrollTop = c.scrollHeight;   // vừa gửi: đưa tới đáy", self.app)
+
+    def test_sua_p3_xong_luot_bam_day_hoac_giu(self):
+        """CDO BT-N0b P3: xong lượt vẽ lại dài thêm (dòng nhãn, nút Chép) – đang bám đáy thì đưa xuống đáy, đã cuộn lên thì giữ."""
+        a = self.app
+        ve_tin = a[a.index("function veTin(ds, giu) {"):a.index("// <LUOT>")]
+        xong = a[a.index("async function xongLuot("):a.index("function theoLuot(")]
+        ma = ("const tinHtml = x => '<tin>'; PHAN['#ds-tin'] = {innerHTML: ''}; khung.scrollHeight = 500; khung.clientHeight = 500;"
+              + ve_tin + xong.replace("async function xongLuot(", "async function xongLuot2(") +
+              " const ket = [];"
+              " (async () => { trang.scrollHeight = 2000; trang.scrollTop = 1100; await xongLuot2([], {}, null); ket.push(trang.scrollTop);"
+              " trang.scrollTop = 300; await xongLuot2([], {}, null); ket.push(trang.scrollTop);"
+              " console.log(JSON.stringify(ket)); })();")
+        r = subprocess.run(["node", "-e", GIA_DOM + self.chu + self.luot + ma], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), [2000, 300])                       # ở đáy → đáy; đã cuộn lên → giữ
 
     def test_t2_t3_m2_n3_su_kien_luot(self):
         ma = ("async function xongLuot(ds, tl, gh) { goi_xong.push([ds.length, tl.noidung, gh]); }"

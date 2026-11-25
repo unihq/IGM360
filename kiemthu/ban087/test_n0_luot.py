@@ -290,7 +290,7 @@ class KiemDuongGoi(Nen):
                             headers={"X-IGM360": "1"})
             cho.set()
             self.cho_xong(kq["luot_id"])
-        self.assertEqual((r.status_code, r.json()["detail"]), (409, "Cuộc trò chuyện đang có câu trả lời chưa xong"))
+        self.assertEqual((r.status_code, r.json()["detail"]), (409, "AI đang trả lời câu hỏi trước. Bạn gửi câu mới khi câu trả lời xong"))   # QĐ358
 
     def test_khong_gui_nen_thi_tra_loi_dong_bo_nhu_cu(self):
         with mock.patch.object(congai, "goi", return_value=dict(TL)):

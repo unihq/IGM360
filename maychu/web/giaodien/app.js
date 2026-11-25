@@ -1300,8 +1300,8 @@ function tinHtml(x) {
     + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || x.md_hong || {}).loi_ct ? ' title="' + esc((x.ghim_hong || x.md_hong).loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
-function veTin(ds) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
-  const c = $('.tc-than'); if (c) c.scrollTop = c.scrollHeight; }
+function veTin(ds, giu) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
+  const c = vungCuon(); if (c && !giu) c.scrollTop = c.scrollHeight; }   // SUA-P3: vùng cuộn thật; `giu` = người đọc đã cuộn lên
 async function napTroChuyen() {
   try { D.ht = (await api('/trochuyen')).hoithoai; veDsHt();
     const md = D.md || await api('/mohinh').catch(() => null); if (md) D.md = md;
@@ -1328,7 +1328,8 @@ function veChay() { LUOT.hen = 0; const b = $('#tn-chay'), c = vungCuon(); if (!
   if (c && day) c.scrollTop = c.scrollHeight; }
 const henVe = () => { if (!LUOT.hen) LUOT.hen = requestAnimationFrame(veChay); };   // H4: gộp mẩu, vẽ 01 lần mỗi khung hình
 async function xongLuot(ds, tl, gh) {   // T1, T2: thay toàn bộ phần đang chạy bằng câu đã lưu (giữ dòng vàng, nhãn như nay)
-  ghiHong(tl, gh); veTin([...ds, tl]); veNutMh();
+  const v = vungCuon(), day = !v || v.scrollHeight - v.scrollTop - v.clientHeight <= 40;   // SUA-P3: đo trước khi vẽ lại
+  ghiHong(tl, gh); veTin([...ds, tl], !day); veNutMh();
   try { D.ht = (await api('/trochuyen')).hoithoai; veDsHt(); } catch (e) { /* danh sách cuộc cập nhật ở lần sau */ } }
 function theoLuot(id, ds, gh) { boLuot(); LUOT.id = id;
   const es = new EventSource('/api/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); LUOT.es = es;
@@ -1337,7 +1338,9 @@ function theoLuot(id, ds, gh) { boLuot(); LUOT.id = id;
     else if (e.loai === 'lam_lai') { LUOT.chu = ''; henVe(); }                          // T3, H8: xóa sạch chữ dở
     else if (e.loai === 'xong' || e.loai === 'dung') { boLuot(); xongLuot(ds, e.tra_loi, gh); }
     else if (e.loai === 'loi') { boLuot(); if (D.htId) moHt(D.htId); } };              // N3, M2: tải lại cuộc, không để chữ dở
-  es.onerror = () => { if (es.readyState === 2 && LUOT.id === id) { boLuot(); if (D.htId) moHt(D.htId); } }; }
+  // QĐ358 N2 câu 2: luồng đóng → tự tải lại hội thoại; chỉ khi tải lại cũng lỗi mới hỏi lại luồng để lấy câu báo của máy chủ
+  es.onerror = () => { if (es.readyState === 2 && LUOT.id === id) { boLuot(); if (D.htId) moHt(D.htId).catch(async () => {
+    try { await api('/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); } catch (e) { bao(e.message + '.'); } }); } }; }
 // QĐ347 H1, QĐ352: đang chờ cập nhật – câu báo ngay dưới câu hỏi vừa gửi (khung "Cần xem", không ghi vào hội thoại,
 // vẽ lại khung chat thì mất), câu hỏi trở lại ô nhập. Chữ đúng chữ máy chủ trả (đã duyệt), không thêm dấu.
 const htmlChoCn = t => '<div class="tn-bao">' + icoMau(ICON['cloud-download'], '#8F5F00', 16) + '<span class="f1">' + cum(t) + '</span></div>';
@@ -1360,6 +1363,7 @@ async function guiTin(chu) {
   catch (e) {
     if (e.ma === 'cho_capnhat') { $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + toi + htmlChoCn(e.message);
       o.value = nd; S.tc = 'co'; ve(); return; }
+    if (e.status === 409) o.value = nd;   // QĐ358 N2 câu 1: câu hỏi trở lại ô nhập như H1
     S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.'); }
 }
 

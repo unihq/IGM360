@@ -706,7 +706,7 @@ async def su_kien_luot(luot_id: str, request: Request, tu: int = 0, p: dict = De
     lại từ `tu` hoặc `Last-Event-ID`; 15 giây không có gì thì gửi 01 dòng giữ kết nối. Lượt của người khác: 404."""
     lt = luot.lay(luot_id, p["nguoidung_id"])
     if lt is None:
-        raise HTTPException(404, "Không có lượt trả lời này")
+        raise HTTPException(404, "Câu trả lời này đã xong hoặc không còn chạy. Bạn mở lại hội thoại để xem")   # QĐ358 (N2 câu 2), không dấu chấm cuối
     try:
         tu = max(tu, int(request.headers.get("last-event-id") or 0))
     except ValueError:

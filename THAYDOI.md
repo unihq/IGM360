@@ -3,6 +3,14 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.7
+Tóm tắt: Trả lời chạy nền
+Nâng dữ liệu: không
+- Claude và ChatGPT hiện chữ chạy dần trong lúc trả lời.
+- Câu trả lời của AI chạy trên máy chủ: bạn tải lại hoặc đóng trang giữa chừng, câu trả lời vẫn chạy tiếp và tự lưu; mở lại hội thoại, câu trả lời hiện khi xong.
+- Khi phần mềm đang chờ cập nhật, câu hỏi mới chưa được nhận: khung chat báo ngay dưới câu hỏi, câu hỏi vẫn ở ô nhập để bạn gửi lại sau khi cập nhật xong.
+- Phần mềm khởi động lại giữa lúc AI đang trả lời thì hội thoại có tin báo câu trả lời bị ngắt để bạn gửi lại câu hỏi; tin này không có nút "Mở Mô hình AI".
+
 ## 0.8.6
 Tóm tắt: Thu gọn nhóm menu
 Nâng dữ liệu: không

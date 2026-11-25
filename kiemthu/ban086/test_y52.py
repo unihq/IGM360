@@ -93,7 +93,8 @@ class KiemThuGonNhom(unittest.TestCase):
 
 class KiemThaydoi086(unittest.TestCase):
     def test_version_va_muc_086_nguyen_van_qd337(self):
-        self.assertEqual((GOC_KHO / "VERSION").read_text(encoding="utf-8").strip(), "0.8.6")
+        so = tuple(int(x) for x in (GOC_KHO / "VERSION").read_text(encoding="utf-8").strip().split("."))
+        self.assertGreaterEqual(so, (0, 8, 6))                                    # bản sau giữ mục 0.8.6 nguyên văn (QĐ358)
         dong = (GOC_KHO / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
         i = dong.index("## 0.8.6")
         self.assertEqual(dong[i:i + 6], [
