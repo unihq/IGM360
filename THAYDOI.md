@@ -3,6 +3,14 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.8.8
+Tóm tắt: Đăng nhập mới
+Nâng dữ liệu: không
+- Logo IGM360 mới ở menu bên trái và trang đăng nhập; thẻ trình duyệt và màn hình chính iPhone có biểu tượng IGM360.
+- Trang đăng nhập làm mới: nền nhiều lớp có chiều sâu, linh vật chào mừng khi mở trang và đổi động tác khi đang đăng nhập, khi báo lỗi, khi nhập mã 02 lớp.
+- Nút Đăng nhập hiện "Đang xử lý…" trong lúc chờ, không bấm lại được; nút xem mật khẩu đổi hình theo lúc hiện hoặc ẩn mật khẩu.
+- Máy đặt giảm chuyển động thì linh vật và nền đứng yên.
+
 ## 0.8.7
 Tóm tắt: Trả lời chạy nền
 Nâng dữ liệu: không
