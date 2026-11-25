@@ -36,6 +36,7 @@ const cau = s => /[.!?…]$/.test(String(s).trim()) ? s : s + '.';   // câu bá
 // ---- Gọi máy chủ
 async function api(duong, than) {
   let r;
+  if (duong === '/trochuyen' && than) than = {...than, nen: true};   // N0 (QĐ344, QĐ355): gửi tin trò chuyện luôn mở lượt chạy nền
   try {
     r = await fetch('/api' + duong, {method: than === undefined ? 'GET' : 'POST', credentials: 'same-origin',
       headers: {'Content-Type': 'application/json', 'X-IGM360': '1'}, body: than === undefined ? undefined : JSON.stringify(than)});
@@ -44,7 +45,7 @@ async function api(duong, than) {
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && S.g !== '01') { S.g = '01'; S.dn = 'hethan'; ve(); }
   if (!r.ok) { const ct = d.detail; const e = new Error(typeof ct === 'string' ? ct : (ct && ct.loi) || 'Có lỗi');
-    e.o = ct && ct.o; e.status = r.status; e.ct = ct; throw e; }
+    e.o = ct && ct.o; e.status = r.status; e.ct = ct; e.ma = d.ma; throw e; }   // N0: mã lỗi riêng (cho_capnhat)
   return d;
 }
 
@@ -1293,7 +1294,8 @@ function veDsHt() {
 }
 function tinHtml(x) {
   if (x.vai === 'nguoi') return '<div class="tn toi"><div class="tn-noi">' + esc(x.noidung).replace(/\n/g, '<br>') + '</div></div>';
-  if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span><button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button></div>';
+  if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span>'
+    + (x.phu && x.phu.loai === 'luot_cat' ? '' : '<button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button>') + '</div>';   // QĐ350
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
     + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || x.md_hong || {}).loi_ct ? ' title="' + esc((x.ghim_hong || x.md_hong).loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
@@ -1306,17 +1308,56 @@ async function napTroChuyen() {
     await napDsMh(); veNutMh();   // QĐ178 (Z10): bỏ ô chọn nguồn đầu cuộc, nút chọn mô hình dưới khung nhập
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
 }
-async function moHt(id) { const d = await api('/trochuyen/' + encodeURIComponent(id)); D.htId = id; $('#tc-tieude').textContent = d.tieude; veTin(d.tinnhan); veDsHt(); dongMh(); }
+// <LUOT> N0 (QĐ344, QĐ352, QĐ355; CDO HINH-TC45 H1–H9; CDA T1–T4, M2, N3): lượt trả lời chạy nền + chữ chạy dần.
+// Gửi `nen: true` → máy chủ trả ngay mã lượt; trang nghe luồng sự kiện (EventSource, tự nối lại kèm Last-Event-ID).
+// Đóng, tải lại trang không dừng lượt; mở lại cuộc còn lượt chạy thì nối lại (`luot_dang`). Không lưu gì ở trình duyệt.
+const LUOT = {es: null, id: null, chu: '', hen: 0};
+function boLuot() { if (LUOT.es) LUOT.es.close(); if (LUOT.hen) cancelAnimationFrame(LUOT.hen);
+  LUOT.es = null; LUOT.id = null; LUOT.chu = ''; LUOT.hen = 0; }
+// H1: bong bóng trả lời có sẵn, mở ngay khi gửi; trước chữ đầu tiên chỉ có con trỏ. H7: aria-busy. H9: chưa có dòng dưới.
+const htmlChay = () => '<div class="tn ai" id="tn-chay" aria-busy="true"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles)
+  + '</div><div class="tn-noi"><p><span class="dang-viet"></span></p></div></div>';
+// H2–H4, T4: chữ qua cum() (thoát chữ), tách đoạn như tin đã xong; con trỏ .dang-viet::after ở cuối (H3: span rỗng, chữ giữ
+// màu chính). H5: chỉ bám đáy khi đang ở đáy (≤ 40 px).
+function veChay() { LUOT.hen = 0; const b = $('#tn-chay'), c = $('.tc-than'); if (!b) return;
+  const day = !c || c.scrollHeight - c.scrollTop - c.clientHeight <= 40, doan = cum(LUOT.chu).split(/\n{2,}/);
+  b.querySelector('.tn-noi').innerHTML = doan.map((o, i) => '<p>' + o.replace(/\n/g, '<br>')
+    + (i === doan.length - 1 ? '<span class="dang-viet"></span>' : '') + '</p>').join('');
+  if (c && day) c.scrollTop = c.scrollHeight; }
+const henVe = () => { if (!LUOT.hen) LUOT.hen = requestAnimationFrame(veChay); };   // H4: gộp mẩu, vẽ 01 lần mỗi khung hình
+async function xongLuot(ds, tl, gh) {   // T1, T2: thay toàn bộ phần đang chạy bằng câu đã lưu (giữ dòng vàng, nhãn như nay)
+  ghiHong(tl, gh); veTin([...ds, tl]); veNutMh();
+  try { D.ht = (await api('/trochuyen')).hoithoai; veDsHt(); } catch (e) { /* danh sách cuộc cập nhật ở lần sau */ } }
+function theoLuot(id, ds, gh) { boLuot(); LUOT.id = id;
+  const es = new EventSource('/api/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); LUOT.es = es;
+  es.onmessage = m => { if (LUOT.id !== id) return; let e; try { e = JSON.parse(m.data); } catch (_) { return; }
+    if (e.loai === 'chu') { LUOT.chu += e.them || ''; henVe(); }
+    else if (e.loai === 'lam_lai') { LUOT.chu = ''; henVe(); }                          // T3, H8: xóa sạch chữ dở
+    else if (e.loai === 'xong' || e.loai === 'dung') { boLuot(); xongLuot(ds, e.tra_loi, gh); }
+    else if (e.loai === 'loi') { boLuot(); if (D.htId) moHt(D.htId); } };              // N3, M2: tải lại cuộc, không để chữ dở
+  es.onerror = () => { if (es.readyState === 2 && LUOT.id === id) { boLuot(); if (D.htId) moHt(D.htId); } }; }
+// QĐ347 H1, QĐ352: đang chờ cập nhật – câu báo ngay dưới câu hỏi vừa gửi (khung "Cần xem", không ghi vào hội thoại,
+// vẽ lại khung chat thì mất), câu hỏi trở lại ô nhập. Chữ đúng chữ máy chủ trả (đã duyệt), không thêm dấu.
+const htmlChoCn = t => '<div class="tn-bao">' + icoMau(ICON['cloud-download'], '#8F5F00', 16) + '<span class="f1">' + cum(t) + '</span></div>';
+// </LUOT>
+async function moHt(id) { boLuot(); const d = await api('/trochuyen/' + encodeURIComponent(id)); D.htId = id;
+  $('#tc-tieude').textContent = d.tieude; veTin(d.tinnhan); veDsHt(); dongMh();
+  if (d.luot_dang) { $('#ds-tin').insertAdjacentHTML('beforeend', htmlChay()); S.tc = 'dang'; ve();   // nối lại lượt đang chạy
+    theoLuot(d.luot_dang, d.tinnhan, ghimKhoa()); } }
 async function guiTin(chu) {
   const o = $('#tc-o'), nd = (chu ?? o.value).trim(); if (!nd || S.tc === 'dang') return;
-  o.value = ''; const cu = D.tin && D.htId ? D.tin : [];
-  $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + tinHtml({vai: 'nguoi', noidung: nd}); S.tc = 'dang'; ve();
+  o.value = ''; const cu = D.tin && D.htId ? D.tin : [], toi = tinHtml({vai: 'nguoi', noidung: nd});
+  $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + toi + htmlChay(); S.tc = 'dang'; ve();
+  const c = $('.tc-than'); if (c) c.scrollTop = c.scrollHeight;
   try { const ht0 = D.htId, gh = ghimKhoa();   // QĐ180: mỗi tin gửi kèm khóa mô hình ghim (trình duyệt nhớ)
-    const kq = await api('/trochuyen', {hoithoai_id: D.htId, noidung: nd, mohinh_id: gh});
+    const kq = await api('/trochuyen', {hoithoai_id: D.htId, noidung: nd, mohinh_id: gh});   // api() thêm nen: true
     if (!D.htId) $('#tc-tieude').textContent = nd.slice(0, 80);
     D.htId = kq.hoithoai_id; if (!ht0 && D.ghimMoi) { luuGhim(D.htId, D.ghimMoi); D.ghimMoi = null; }
-    ghiHong(kq.tra_loi, gh); veTin([...cu, kq.hoi, kq.tra_loi]); veNutMh(); D.ht = (await api('/trochuyen')).hoithoai; veDsHt(); }
-  catch (e) { S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.'); }
+    theoLuot(kq.luot_id, [...cu, kq.hoi || {vai: 'nguoi', noidung: nd}], gh); }
+  catch (e) {
+    if (e.ma === 'cho_capnhat') { $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + toi + htmlChoCn(e.message);
+      o.value = nd; S.tc = 'co'; ve(); return; }
+    S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.'); }
 }
 
 async function napTab() {
@@ -1415,7 +1456,7 @@ document.addEventListener('click', async ev => {
     catch (e) { bao('Gọi thử chưa đạt: ' + e.message + '.'); } t.disabled = false; await napMoHinh(); return; }
   else if (d.chep) { try { await navigator.clipboard.writeText(d.chep); bao('Đã chép mã thiết bị.'); } catch (e) { bao('Bạn chép tay mã ' + d.chep + '.'); } }
   else if (d.chepTin) { const x = (D.tin || []).find(y => y.id === d.chepTin); if (x) { try { await navigator.clipboard.writeText(x.noidung); bao('Đã chép câu trả lời.'); } catch (e) { /* */ } } }
-  else if ('tcMoi' in d) { D.htId = null; D.ghimMoi = null; dongMh(); D.tin = []; $('#ds-tin').innerHTML = ''; $('#tc-tieude').textContent = 'Trò chuyện mới'; S.tc = 'rong'; veDsHt(); $('#tc-o').focus(); }
+  else if ('tcMoi' in d) { boLuot(); D.htId = null; D.ghimMoi = null; dongMh(); D.tin = []; $('#ds-tin').innerHTML = ''; $('#tc-tieude').textContent = 'Trò chuyện mới'; S.tc = 'rong'; veDsHt(); $('#tc-o').focus(); }
   else if (d.ht) { await moHt(d.ht); return; }
   else if ('tcMau' in d) { await guiTin(t.textContent); return; }
   else if ('tcGui' in d) { await guiTin(); return; }

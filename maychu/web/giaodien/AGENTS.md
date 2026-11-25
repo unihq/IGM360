@@ -26,6 +26,7 @@ Giao diện 01 trang: `index.html` (khung, CSS), `app.js` (vẽ màn, gọi `/ap
 - Dùng đúng từ điển thuật ngữ (tài liệu nội bộ, hỏi người giữ); nhãn, tên chỉ số 02–04 tiếng (QĐ135, QĐ136).
 - Số: dấu chấm ngăn nghìn, dấu phẩy thập phân, bỏ số 0 thừa, đơn vị đặt sau số (ví dụ 1.250 MB, 0,5%).
 - Chữ màu Đạt #258832 và Cảnh báo #E22E28 chỉ đặt trên nền trắng, luôn có icon hoặc chấm đi kèm.
+- N0 (QĐ344, QĐ350, QĐ352, QĐ355): khối `// <LUOT>` của `app.js`: gửi tin trò chuyện thì `api()` thêm `nen: true`, nghe `EventSource` của lượt; chữ chạy dần qua `cum()`, con trỏ `.dang-viet` là span rỗng ở cuối (không tô cả đoạn), chỉ bám đáy khi đang ở đáy (≤ 40 px), `aria-busy` khi đang chạy, xong thì vẽ lại bằng tin đã lưu; tin `hethong` có `phu.loai = 'luot_cat'` không có nút "Mở Mô hình AI"; không lưu gì ở trình duyệt.
 
 ## 4. Được chứa / không được chứa
 

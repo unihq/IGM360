@@ -698,8 +698,11 @@ def _chay_as(lenh: list, env: dict, cau: str, mohinh: str | None, nghe: "Nghe", 
             return so["id"]
 
         def tu_choi(m):   # K3: mọi yêu cầu app-server gửi lên (duyệt lệnh, duyệt tệp…) trả từ chối ngay
-            pr.stdin.write(json.dumps({"id": m["id"], "error": {"code": -32601, "message": "IGM360 không cấp quyền"}}) + "\n")
-            pr.stdin.flush()
+            try:   # N4 (CDA SOAT-N0-3): tiến trình vừa bị dừng (Dừng, quá giờ) thì bỏ qua, để ra DaDung / quá giờ
+                pr.stdin.write(json.dumps({"id": m["id"], "error": {"code": -32601, "message": "IGM360 không cấp quyền"}}) + "\n")
+                pr.stdin.flush()
+            except (OSError, ValueError):
+                pass
 
         cho_lai: list[str] = []
 

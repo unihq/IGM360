@@ -96,6 +96,19 @@ class KiemAppServer(Nen):
         self.assertLess(time.monotonic() - bd, 10)
         self.assertEqual(n.chu_da_co(), "Xin chào bạn")
 
+    def test_n4_tra_tu_choi_loi_ong_van_ra_dung(self):
+        """CDA SOAT-N0-3 N4: ghi trả từ chối lỗi ống (tiến trình đang bị dừng) không làm hỏng lượt; Dừng vẫn ra DaDung."""
+        that = congai.json.dumps
+
+        def dumps(o, *a, **k):
+            if isinstance(o, dict) and o.get("error"):
+                raise BrokenPipeError("ống đã đóng")
+            return that(o, *a, **k)
+        n = NgheGhi()
+        threading.Timer(1.5, n.dung.set).start()
+        with mock.patch.object(congai.json, "dumps", side_effect=dumps), self.assertRaises(congai.DaDung):
+            self.goi("thuong", n)
+
     def test_dung_luc_khoi_dau_khong_chay_exec(self):
         n = NgheGhi()
         threading.Timer(0.5, n.dung.set).start()

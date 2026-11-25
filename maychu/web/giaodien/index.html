@@ -348,6 +348,7 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .dang-viet{color:var(--phu)}
 .dang-viet::after{content:'';display:inline-block;width:8px;height:14px;background:var(--xanh);margin-left:4px;vertical-align:middle;animation:nhay 1s infinite}
 @keyframes nhay{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.dang-viet::after{animation:none}}   /* H6 (QĐ355): con trỏ đứng yên */
 .tn-bao{display:flex;align-items:center;gap:10px;border:1px solid #E3C48A;border-radius:10px;padding:10px 14px;font-size:13px;flex-wrap:wrap}
 .tn-bao.do{border-color:var(--canh)}
 .tc-rong{align-items:center;text-align:center;padding:40px 0}
@@ -1298,23 +1299,6 @@ body.dien-thoai #khoi-cl .btn-chu,body.dien-thoai #khoi-cl .nut-gat,body.dien-th
       <div class="phu t13">AI đọc được số đã nạp, mục&nbsp;Chờ&nbsp;duyệt, mục&nbsp;Bộ&nbsp;mã&nbsp;chung, tỷ&nbsp;giá. Câu hỏi mẫu:</div>
       <div class="mau"><button class="chip" data-tc-mau>Hôm qua nạp bao nhiêu lô, lỗi gì?</button><button class="chip" data-tc-mau>Mục Chờ duyệt còn việc nào trên 01&nbsp;triệu?</button><button class="chip" data-tc-mau>Tỷ giá MYR tuần này</button><button class="chip" data-tc-mau>Mã sàn nào chưa ghép SKU?</button></div></div></div>
           <div data-s="tc:co dang" id="ds-tin"></div>
-          <div data-s="tc:dang"><div class="tn ai"><div class="tn-ico"><svg
-  style="flex:none;vertical-align:middle" class="lucide lucide-sparkles"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="#7A4BD6"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
-  <path d="M20 2v4" />
-  <path d="M22 4h-4" />
-  <circle cx="4" cy="20" r="2" />
-</svg></div><div class="tn-noi"><p class="dang-viet">Đang trả lời…</p></div></div></div>
         </div>
         <div class="tc-nhap"><input id="tc-o" placeholder="Hỏi về số liệu, mục Chờ duyệt, mục Bộ mã chung…">
           <button class="nut-tron" data-s="tc:co rong" data-tc-gui><svg
