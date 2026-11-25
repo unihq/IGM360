@@ -72,11 +72,23 @@ class KiemThuGonNhom(unittest.TestCase):
         self.assertNotIn("Thu gọn nhóm", self.app + self.html)
 
     def test_css_chi_may_tinh_thu_ca_thanh_giu_nhu_nay(self):
-        for x in ("#app:not(.mb) .nhom-ds.gap>.muc{display:none}", "#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh)}",
+        for x in ("#app:not(.mb) .nhom-ds.gap>.muc{display:none}", "#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh);border-left-color:var(--xanh)}",
                   ".thu .nhom-nut{display:none!important}", ".thu .nhom-ds.gap>.muc{display:flex!important}",
                   "#app:not(.mb) .nhom-ds.rieng{margin-top:8px}"):
             self.assertIn(x, self.html)                                           # QĐ328 L4 A, QĐ329 điện thoại không áp dụng
         self.assertNotIn("menu-cuon", self.html + self.app)                       # QĐ326 L6 không làm ở bản này
+
+    def test_y52b_qd340_co_so_12px_va_vach_trai_3px(self):
+        """QĐ340 (anh "Chọn A cả 02"): L-Y52-1 số ở tiêu đề nhóm 12 px như số ở mục; L-Y52-2 nhóm gập chứa trang đang
+        xem có vạch trái 3 px xanh như mục đang chọn (cùng biến màu, cùng độ rộng), chữ vẫn thẳng cột cũ (17 + 3 = 20 px)."""
+        h = self.html
+        self.assertIn(".bao{margin-left:auto;background:#fff;border:1px solid var(--xanh);color:var(--xanh);font-size:12px;", h)
+        self.assertIn("#app:not(.mb) .nhom-nut .bao{margin-left:0;font-size:12px;", h)                    # L-Y52-1
+        self.assertNotIn(".nhom-nut .bao{margin-left:0;font-size:11px", h)
+        self.assertIn("border-left:3px solid transparent;font-size:14px", h)                               # mục: vạch 3 px
+        self.assertIn(".muc.on{border-left-color:var(--xanh);", h)
+        self.assertIn("padding:14px 14px 4px 17px;border-left:3px solid transparent;", h)                 # L-Y52-2
+        self.assertIn("#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh);border-left-color:var(--xanh)}", h)
 
 
 class KiemThaydoi086(unittest.TestCase):
