@@ -583,7 +583,7 @@ body.dien-thoai #khoi-cl .btn-chu,body.dien-thoai #khoi-cl .nut-gat,body.dien-th
 #s01 .b6{font-weight:600}
 #s01 .b7{font-weight:700}
 #s01 .phu{color:var(--phu)}
-#s01{display:flex;min-height:max(640px,calc(100vh - 42px))}
+#s01{display:flex;min-height:max(640px,100vh)}
 #s01 .dn-phai{flex:1;display:flex;align-items:center;justify-content:center;padding:48px}
 #s01 .dn-the{width:360px;max-width:100%}
 #s01 .cot-doc{display:flex;flex-direction:column;gap:20px}
@@ -707,6 +707,10 @@ body.dien-thoai [data-s="tab:taikhoan"] .btn,body.dien-thoai .lop .btn,body.dien
 body:not(.dien-thoai) .luoi-tk{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .lop .o-nhap:focus-within{border-color:#1456F0;box-shadow:0 0 0 3px rgba(20,86,240,.2)}
 .o-tk .nut-gat:focus-visible,.bao-vang .btn:focus-visible,.lop .btn:focus-visible,.lop .nut-ico:focus-visible{outline:2px solid #1456F0;outline-offset:2px}
+/* SUA-090-L (CDO BT-090): L1 trang đăng nhập tràn sát mép đúng ảnh chốt QĐ369, cửa sổ thấp hơn 640 px thì cuộn được (vùng .cuon khổ máy tính ẩn phần tràn);
+   L2 nút "Đang xử lý…" của hộp 02 lớp không mờ – cùng cách #s01 .btn.dang (quy chuẩn: đang xử lý khác khóa) */
+#app:not(.mb) .cuon:has(#s01:not([hidden])){overflow-y:auto}
+.lop .btn.dang{opacity:1;cursor:progress}
 </style><link rel="icon" href="/tainguyen/logo/favicon.ico"><link rel="apple-touch-icon" href="/tainguyen/logo/igm360_180.png"><link rel="stylesheet" href="/tainguyen/dangnhap3d.css"></head><body>
 <!-- 0.9.0 (QĐ375): lớp phông nền Mẫu 1, chép nguyên của DM; aria-hidden, không nhận bấm, không chữ -->
 <div class="pn pn1" aria-hidden="true"><i class="pn-dom a"></i><i class="pn-dom b"></i><i class="pn-dom c"></i>

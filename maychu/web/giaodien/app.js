@@ -436,21 +436,24 @@ function hop2Lop(id) {   // hộp tắt, hộp bật lại (bản vẽ BV02, BV0
 }
 function loi2Lop(l, e) {   // bản vẽ BV07: câu báo sai + câu có sẵn số lần thử (đếm chung chặn đăng nhập)
   const con = e.status === 429 ? 0 : e.ct && e.ct.con_lai, b = $('[data-loi2lop]', l);
-  $('span', b).innerHTML = cum(l.id === 'h-tat2lop' ? CHU_2LOP.saiTat : cau(e.message))
-    + (con != null ? ' Còn <b>' + hai(con) + '</b> lần thử: sai <b>05</b> lần trong 15&nbsp;phút sẽ tạm khóa <b>15</b> phút.' : '');
+  const chu = cum(l.id === 'h-tat2lop' ? CHU_2LOP.saiTat : e.status === 429 ? 'Mã 02 lớp chưa đúng.' : cau(e.message))   // 429: chi tiết máy chủ là mã "khoa"
+    + (con != null ? ' Còn <b>' + hai(con) + '</b>&nbsp;lần thử: sai <b>05</b>&nbsp;lần trong 15&nbsp;phút sẽ tạm khóa <b>15</b>&nbsp;phút.' : '');   // L4: số đi liền chữ sau
+  if (!b) { bao(chu.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, NB)); return; }   // SUA-090-L6: hộp Đổi máy nhận mã không có dòng báo → báo nhanh
+  $('span', b).innerHTML = chu;
   b.hidden = false; $$('.o-nhap', l).forEach(x => x.classList.add('loi')); $$('.o6', l).forEach(x => x.style.borderColor = '#E22E28');
 }
 async function gui2Lop(tat) {   // bản vẽ BV08: đang xử lý – nút giữ màu, không mờ (quy chuẩn 5.1)
   const l = $(tat ? '#h-tat2lop' : '#h-bat2lop'), ma = ma6(l), nut = $('.hop-chan .btn-chinh', l), goc = nut.innerHTML;
   if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
   const mk = tat ? $('input[type="password"]', l).value : '';
-  nut.disabled = true; nut.style.cursor = 'progress'; nut.innerHTML = icoMau(ICON.loader, '#FFFFFF', 16) + CHU_DN.dang;
+  $('[data-loi2lop]', l).hidden = true; $$('.o-nhap', l).forEach(x => x.classList.remove('loi')); $$('.o6', l).forEach(x => x.style.borderColor = '');   // L3: bỏ báo sai lần trước
+  nut.disabled = true; nut.classList.add('dang'); nut.innerHTML = icoMau(ICON.loader, '#FFFFFF', 16) + CHU_DN.dang;   // L2: .lop .btn.dang không mờ
   $$('input, .btn-phu', l).forEach(e => e.disabled = true);
   try {
     const kq = await api(tat ? '/2lop/tat' : '/2lop/bat', tat ? {matkhau: mk, ma} : {ma});
     dongHop(); bao((tat ? CHU_2LOP.daTat : CHU_2LOP.daBat).replace(/(\d) /g, '$1' + NB)); if (kq.doi !== false) demSo(); napTaiKhoan();
   } catch (e) { if (e.matKetNoi) { bao(cau(e.message)); } else if (e.status === 403) { dongHop(); bao(cau(e.message)); } else { xoa6(l); loi2Lop(l, e); } }
-  finally { nut.disabled = false; nut.style.cursor = ''; nut.innerHTML = goc; $$('input, .btn-phu', l).forEach(e => e.disabled = false); }
+  finally { nut.disabled = false; nut.classList.remove('dang'); nut.innerHTML = goc; $$('input, .btn-phu', l).forEach(e => e.disabled = false); }
 }
 // </TAT2LOP>
 

@@ -93,6 +93,11 @@ class KiemChuoi(unittest.TestCase):
             self.assertIn(d, self.moi)
         self.assertIn('<div class="lop" id="h-matkhau"', self.html)                               # A4 áp cả hộp Đổi mật khẩu (.lop)
 
+    def test_l1_trang_dang_nhap_cao_du_man(self):                                                # SUA-090-L1 (CDO BT-090), ảnh chốt QĐ369 tràn sát mép
+        self.assertIn("#s01{display:flex;min-height:max(640px,100vh)}", self.html)
+        self.assertNotIn("100vh - 42px", self.html)
+        self.assertIn("#app:not(.mb) .cuon:has(#s01:not([hidden])){overflow-y:auto}", self.html)
+
     def test_dieu16_chu_cong_tac_dung_bang_chu(self):
         a = self.app
         k = a[a.index("const CHU_2LOP = {"):a.index("};", a.index("const CHU_2LOP = {")) + 2]
@@ -162,22 +167,51 @@ const $ = q => q === '#the-2lop [data-mo="h-2lop"]' ? (nutDoi.cha === undefined 
                        "[a, nutDoi.hidden, f1.con === nutDoi]")
         self.assertEqual(kq, [[True, False], False, True])
 
-    def test_f1_mat_ket_noi_o_hop_2lop_cau_co_dau_cham(self):                               # CDA SOAT-090 F1 (bản đồ 16l)
-        gia = r"""
+    GIA_HOP = r"""
 const CHU_DN = {dang: 'Đang xử lý…'}, ICON = {loader: '<svg stroke="#000" width="1" height="1">l</svg>'}, NB = '\u00a0', D = {};
 const icoMau = s => s, ma6 = () => '123456', xoa6 = () => {}, dongHop = () => {}, demSo = () => {}, napTaiKhoan = () => {};
 const bao_ = [], bao = t => bao_.push(t);
-const el = () => ({disabled: false, style: {}, innerHTML: 'x', value: 'mk'});
-const nut = el(), l = {id: 'h-tat2lop'};
-const $ = q => q === '.hop-chan .btn-chinh' ? nut : q === 'input[type="password"]' ? el() : l;
-const $$ = () => [el()];
-const api = async () => { const m = new Error('Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\u00a0lại'); m.matKetNoi = true; throw m; };
+const lop = () => { const s = new Set(); return {add: x => s.add(x), remove: x => s.delete(x), contains: x => s.has(x)}; };
+const el = () => ({disabled: false, hidden: false, style: {}, innerHTML: 'x', value: 'mk', classList: lop()});
+const nut = el(), dong = Object.assign(el(), {hidden: false}), span = el(), onhap = el(), o6 = el();
+onhap.classList.add('loi'); o6.style.borderColor = '#E22E28';
+const hop = {id: 'h-tat2lop'}, hop2 = {id: 'h-2lop'};
+const $ = (q, r) => q === '.hop-chan .btn-chinh' ? nut : q === 'input[type="password"]' ? el() : q === '[data-loi2lop]' ? (r === hop2 ? null : dong)
+  : q === 'span' ? span : hop;
+const $$ = q => q === '.o-nhap' ? [onhap] : q === '.o6' ? [o6] : [el()];
+let luc_goi = null;
+const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);   // chép app.js dòng 12
 """
-        ma = gia + self.chu + self.tat + "(async () => { await gui2Lop(true); await gui2Lop(false); console.log(JSON.stringify(bao_)); })();"
+
+    def test_f1_mat_ket_noi_o_hop_2lop_cau_co_dau_cham(self):                               # CDA SOAT-090 F1 (bản đồ 16l)
+        ma = self.GIA_HOP + self.chu + self.tat + (
+            "const api = async () => { const m = new Error('Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\\u00a0lại');"
+            " m.matKetNoi = true; throw m; };"
+            "(async () => { await gui2Lop(true); await gui2Lop(false); console.log(JSON.stringify(bao_)); })();")
         r = subprocess.run(["node", "-e", ma], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         cau = "Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\u00a0lại."   # QĐ361 + dấu chấm cuối
         self.assertEqual(json.loads(r.stdout), [cau, cau])                                         # hộp tắt và hộp bật lại
+
+    def test_l2_l3_dang_xu_ly_khong_mo_va_bo_bao_sai_cu(self):                              # SUA-090-L2, L3 (CDO BT-090)
+        self.assertIn(".lop .btn.dang{opacity:1;cursor:progress}", (GD / "index.html").read_text(encoding="utf-8"))
+        ma = self.GIA_HOP + self.chu + self.tat + (
+            "const api = async () => { luc_goi = {dang: nut.classList.contains('dang'), tat: nut.disabled, an: dong.hidden,"
+            " loi: onhap.classList.contains('loi'), vien: o6.style.borderColor}; return {doi: true}; };"
+            "(async () => { await gui2Lop(true); console.log(JSON.stringify([luc_goi, nut.classList.contains('dang')])); })();")
+        r = subprocess.run(["node", "-e", ma], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), [{"dang": True, "tat": True, "an": True, "loi": False, "vien": ""}, False])
+
+    def test_l4_so_di_lien_chu_va_l6_hop_doi_may_khoa_bao_nhanh(self):                       # SUA-090-L4, L6
+        ma = self.GIA_HOP + self.chu + self.tat + (
+            "loi2Lop(hop, {status: 400, ct: {con_lai: 4}}); const a = span.innerHTML;"
+            "loi2Lop(hop2, {status: 429, message: 'khoa', ct: {loi: 'khoa'}}); console.log(JSON.stringify([a, bao_]));")
+        r = subprocess.run(["node", "-e", ma], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a, b = json.loads(r.stdout)
+        self.assertIn(" Còn <b>04</b>&nbsp;lần thử: sai <b>05</b>&nbsp;lần trong 15&nbsp;phút sẽ tạm khóa <b>15</b>&nbsp;phút.", a)
+        self.assertEqual(b, ["Mã 02\u00a0lớp chưa đúng. Còn 00\u00a0lần thử: sai 05\u00a0lần trong 15\u00a0phút sẽ tạm khóa 15\u00a0phút."])
 
     def test_doi_vi_tri_va_bang_tha(self):
         ma = r"""
