@@ -147,6 +147,10 @@ const $ = q => PHAN[q] || null, D = {};
         at2 = self.chay(ma + "D.anToan = true; ve2Lop({da_bat_2lop: false, co_khoa_2lop: true});", "PHAN['#f1-2lop'].innerHTML")
         self.assertNotIn("disabled", at2)                                                          # đang tắt: bật vẫn được
 
+    def test_app_js_dung_cu_phap(self):                                                        # cả tệp chạy được (node --check)
+        r = subprocess.run(["node", "--check", str(GD / "app.js")], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_doi_vi_tri_va_bang_tha(self):
         ma = r"""
 const S = {xem: 'dt'};
