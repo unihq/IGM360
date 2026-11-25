@@ -26,6 +26,10 @@ Tài khoản và đăng nhập: người dùng (`nguoidung.py`), mật khẩu (`
 ## 5. Quyết định đã chốt – không tự đảo
 
 - QĐ90: chặn đoán mật khẩu.
+- QĐ390 (thay "02 lớp bắt buộc, không có cách tắt trên web"): 02 lớp mặc định bật; Chủ tắt được ở Cài đặt › Tài khoản và 02 lớp (đường `/api/2lop/tat`, hỏi mật khẩu + mã, sai đếm `chan.py`); bật lại bằng 01 mã của khóa cũ (`/api/2lop/bat`), không sinh khóa mới. Cờ P01 `dangnhap_2lop` chỉ ghi qua `thongso.ghi_co_2lop` (đường sửa, gạt thông số chung từ chối – `thongso.CHI_DUONG_RIENG`); đọc lỗi hoặc trống coi là bật. Lần đầu chưa có khóa vẫn bắt bật. Chế độ an toàn không cho tắt.
+- QĐ391: tắt 02 lớp không kiểm độ dài mật khẩu (`matkhau.py` giữ nguyên).
+- QĐ393: bật lại thì thu hồi mọi phiên khác (giữ phiên vừa bật); `datlai` (có hay không `--tat-2lop`) đặt cờ về bật, đóng chuông "đang tắt", ghi F04; không thêm hỏi lại ở đường nhạy cảm; đổi máy nhận mã đếm sai, đang khóa thì từ chối như đăng nhập.
+- QĐ398: 02 lớp đang tắt thì `/api/2lop/doimay/batdau`, `/xacnhan` từ chối (đọc cờ lúc xử lý, mã tạm cũ cũng bị từ chối).
 - QĐ266: không thêm thư mục này vào danh sách chặn tự gộp; giữ các bộ bài kiểm đăng nhập, tài khoản sẵn có.
 
 ## 6. Kiểm trước bàn giao

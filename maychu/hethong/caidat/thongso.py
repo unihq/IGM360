@@ -52,6 +52,11 @@ THEO_TEN = {d[0]: d for d in DANHMUC}
 CONG_TAC = {"saoluu_drive", "tunang_congcu_ai"}
 AN_O_THONGSO = {"tunang_congcu_ai"}   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
+# QĐ390 (phương án A, CDA 16g), SOAT-KH090 (a): cờ "Đăng nhập 02 lớp" là thông số hệ thống P01, không nằm trong DANHMUC
+# (không hiện ở ngăn Thông số, không đếm vào số đã đặt). Chỉ đổi qua 02 đường riêng /api/2lop/tat, /api/2lop/bat và lệnh
+# datlai, ghi bằng 01 hàm `ghi_co_2lop`; `dat()`, `gat()` (đường sửa chung, đường gạt chung) từ chối mọi tên trong tập này.
+CO_2LOP = "dangnhap_2lop"
+CHI_DUONG_RIENG = {CO_2LOP}
 
 
 def _hom_nay() -> str:
@@ -187,6 +192,20 @@ def cong_tac_bat(ten: str, thumuc: Path | None = None) -> bool:
     return doc_mot(ten, THEO_TEN[ten][5], thumuc) == "1"
 
 
+def co_2lop_bat(thumuc: Path | None = None) -> bool:
+    """QĐ390 (CDA 16g điều 5): "Đăng nhập 02 lớp" đang bật? Chỉ giá trị "0" là tắt; chưa có dòng, trống, đọc lỗi → bật."""
+    try:
+        return doc_mot(CO_2LOP, "1", thumuc) != "0"
+    except Exception:   # noqa: BLE001 - đọc cờ lỗi thì coi là bật (an toàn hơn)
+        return True
+
+
+def ghi_co_2lop(bat: bool, nguoi: str, ghichu: str, thumuc: Path | None = None) -> dict:
+    """01 hàm nội bộ duy nhất ghi cờ 02 lớp (SOAT-KH090 (a)); gọi từ `nguoidung` (tắt, bật lại, bật lần đầu) và `datlai`."""
+    aibam.kiem(nguoi)
+    return _ghi_gat(CO_2LOP, "1" if bat else "0", nguoi, ghichu, thumuc)
+
+
 def drive_bat(thumuc: Path | None = None) -> bool:
     """QĐ277: công tắc "Sao lưu Google Drive". Chưa có dòng nào thì coi là TẮT (mặc định thiết kế)."""
     return doc_mot("saoluu_drive", "0", thumuc) == "1"
@@ -197,9 +216,14 @@ def gat(ten: str, bat: bool, nguoi: str = "hethong", thumuc: Path | None = None)
     (`hieuluc_den` = hôm nay) rồi thêm 01 dòng từ hôm nay; gạt nhiều lần trong 01 ngày thì các dòng cũ cùng ngày có
     hieuluc_tu = hieuluc_den (không còn hiệu lực), lịch sử vẫn đủ."""
     aibam.kiem(nguoi)
-    if ten not in CONG_TAC:
+    if ten in CHI_DUONG_RIENG or ten not in CONG_TAC:   # SOAT-KH090 (a): cờ 02 lớp chỉ đổi qua đường riêng
         return {"loi": "Thông số này không phải công tắc"}
-    gt, ngay = "1" if bat else "0", _hom_nay()
+    return _ghi_gat(ten, "1" if bat else "0", nguoi, "Gạt công tắc", thumuc)
+
+
+def _ghi_gat(ten: str, gt: str, nguoi: str, ghichu: str, thumuc: Path | None) -> dict:
+    """Ghi 01 lần gạt (dùng chung cho `gat` và `ghi_co_2lop`): đóng dòng đang dùng, thêm 01 dòng từ hôm nay."""
+    ngay = _hom_nay()
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
         cn.execute("BEGIN IMMEDIATE")
@@ -209,10 +233,10 @@ def gat(ten: str, bat: bool, nguoi: str = "hethong", thumuc: Path | None = None)
             return {"ok": True, "doi": False}
         cn.execute("UPDATE thongso SET hieuluc_den = ? WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL",
                    (ngay, ten))
-        d = THEO_TEN[ten]
+        d = THEO_TEN.get(ten) or (ten, 1, "", "codong", "")
         cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                   (maso.tao(), ten, gt, d[3], d[4], ngay, nguoi, "Gạt công tắc", datetime.now(MUIGIO_VN).isoformat(timespec="seconds")))
+                   (maso.tao(), ten, gt, d[3], d[4], ngay, nguoi, ghichu, datetime.now(MUIGIO_VN).isoformat(timespec="seconds")))
         cn.execute("COMMIT")
     except Exception:
         cn.execute("ROLLBACK")
@@ -227,6 +251,8 @@ def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "
     `nguoi`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
     aibam.kiem(nguoi)
     giatri = (giatri or "").strip()
+    if ten in CHI_DUONG_RIENG:   # SOAT-KH090 (a): đường sửa chung không đổi được cờ 02 lớp
+        return {"loi": "Không có thông số này", "o": "giatri"}
     if ten in KHONG_SUA:
         return {"loi": KHONG_SUA[ten], "o": "giatri"}
     if ten in CONG_TAC:   # CDA Y49b N3: công tắc chỉ đổi bằng gat() (POST /thongso/{ten}/gat), giữ 01 đường ghi

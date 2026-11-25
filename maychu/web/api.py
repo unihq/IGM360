@@ -90,11 +90,14 @@ class TiepTuc(BaseModel):
 
 
 @router.post("/dangnhap")
-def dang_nhap(body: DangNhap, request: Request):
+def dang_nhap(body: DangNhap, request: Request, response: Response):
     _an_toan(request)
-    kq = nguoidung.buoc_matkhau(body.ten.strip(), body.matkhau, _ip(request))
+    kq = nguoidung.buoc_matkhau(body.ten.strip(), body.matkhau, _ip(request),
+                                thietbi=phien.thietbi_tu(request.headers.get("user-agent")))
     if "loi" in kq:
         _loi_dangnhap(kq)
+    if kq.get("buoc") == "vao":   # QĐ390: 02 lớp đang tắt → tạo phiên, đặt cookie ngay; không trả mã phiên
+        _dat_cookie(response, kq.pop("ma_phien"))
     return kq
 
 
@@ -217,20 +220,56 @@ def doi_mat_khau(body: DoiMatKhau, p: dict = Depends(can_dang_nhap)):
     return kq
 
 
+def _loi_2lop(kq: dict):
+    """Lỗi đường đổi máy nhận mã: đang khóa (QĐ393 (4)) trả 429 như đăng nhập; còn lại 400 với câu báo."""
+    if kq["loi"] == "khoa":
+        _loi_dangnhap(kq)
+    raise HTTPException(400, kq["loi"])
+
+
 @router.post("/2lop/doimay/batdau")
-def doi_may_batdau(body: MaCu, p: dict = Depends(can_dang_nhap)):
-    """Bước 1: nhập mã trên máy cũ; đúng thì trả QR của khóa mới."""
-    kq = nguoidung.kiem_ma_hien_tai(p["nguoidung_id"], body.ma)
+def doi_may_batdau(body: MaCu, request: Request, p: dict = Depends(can_dang_nhap)):
+    """Bước 1: nhập mã trên máy cũ; đúng thì trả QR của khóa mới. QĐ398: 02 lớp đang tắt thì từ chối."""
+    kq = nguoidung.kiem_ma_hien_tai(p["nguoidung_id"], body.ma, ip=_ip(request))
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
-    return nguoidung.bat_doi_may(p["nguoidung_id"])
+        _loi_2lop(kq)
+    kq = nguoidung.bat_doi_may(p["nguoidung_id"])
+    if "loi" in kq:
+        _loi_2lop(kq)
+    return kq
 
 
 @router.post("/2lop/doimay/xacnhan")
-def doi_may_xacnhan(body: Ma2Lop, p: dict = Depends(can_dang_nhap)):
-    kq = nguoidung.xac_nhan_doi_may(p["nguoidung_id"], body.ma_tam, body.ma)
+def doi_may_xacnhan(body: Ma2Lop, request: Request, p: dict = Depends(can_dang_nhap)):
+    kq = nguoidung.xac_nhan_doi_may(p["nguoidung_id"], body.ma_tam, body.ma, ip=_ip(request))
     if "loi" in kq:
-        raise HTTPException(400, kq["loi"])
+        _loi_2lop(kq)
+    return kq
+
+
+class Tat2Lop(BaseModel):
+    matkhau: str = ""
+    ma: str = ""
+
+
+@router.post("/2lop/tat")
+def tat_2lop(body: Tat2Lop, request: Request, p: dict = Depends(can_dang_nhap)):
+    """QĐ390: tắt 02 lớp – chỉ phiên đăng nhập, hỏi mật khẩu + mã hiện tại. Chế độ an toàn: không cho tắt (CDA 16g (4))."""
+    from maychu.hethong import antoan
+    if antoan.CHE_DO["an_toan"]:
+        raise HTTPException(403, nguoidung.CHU_2LOP["an_toan"])
+    kq = nguoidung.tat_2lop(p["nguoidung_id"], body.matkhau, body.ma, _ip(request))
+    if "loi" in kq:
+        _loi_dangnhap(kq)
+    return kq
+
+
+@router.post("/2lop/bat")
+def bat_2lop(body: MaCu, request: Request, p: dict = Depends(can_dang_nhap)):
+    """QĐ390, QĐ393 (1): bật lại bằng 01 mã của khóa cũ; mọi máy khác tự đăng xuất. Chế độ an toàn vẫn cho bật."""
+    kq = nguoidung.bat_lai_2lop(p["nguoidung_id"], body.ma, p["phien_id"], _ip(request))
+    if "loi" in kq:
+        _loi_dangnhap(kq)
     return kq
 
 

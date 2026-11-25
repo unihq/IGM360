@@ -3,6 +3,15 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.9.0
+Tóm tắt: Giao diện mới
+Nâng dữ liệu: không
+- Các màn trong phần mềm có phông nền xanh nhạt cùng kiểu trang đăng nhập; bảng, số liệu, biểu đồ vẫn nằm trên khối trắng để dễ đọc.
+- Trên máy tính: menu bên trái nằm trên phông, mục đang chọn là ô trắng; vùng làm việc thành khung nổi viền mảnh; Trò chuyện AI chia 02 khung: danh sách và hội thoại.
+- Chuông và tài khoản chuyển lên ngay dưới logo; bỏ thanh trên cùng, thu gọn menu bằng nút "Thu gọn menu" ở cuối menu.
+- Cài đặt › Tài khoản và 02 lớp có công tắc tắt, bật đăng nhập 02 lớp: tắt phải nhập mật khẩu và mã 06 số; khi đang tắt, chuông luôn nhắc; bật lại thì mọi máy khác tự đăng xuất.
+- Trên điện thoại cũng có phông nền mới.
+
 ## 0.8.10
 Tóm tắt: Sửa màn Cập nhật
 Nâng dữ liệu: không

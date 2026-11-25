@@ -40,7 +40,10 @@ LOAI = {
     "cli_loi": ("xem", "circle-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ271 Z20 dòng 15: Công cụ AI lỗi (vàng)
     "cli_o": ("xem", "hard-drive", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ307 Z20 dòng 18: thiếu ổ trống (vàng)
     "cli_mang": ("xem", "wifi-off", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ307 Z20 dòng 19: không kết nối được hãng
+    # QĐ390, QĐ397 (bảng chữ màn 09 dòng 12, BV04): mức Xem, icon shield-alert, mở suốt lúc 02 lớp tắt
+    "dangnhap_2lop_tat": ("xem", "shield-alert", "taikhoan", None, "Tài khoản"),
 }
+KHOA_2LOP_TAT = "dangnhap_2lop_tat"
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
 
@@ -267,6 +270,26 @@ def bao_cli_mang(thumuc: Path | None = None) -> None:
         _mo(w, "cli_mang", None, None)
 
 
+def bao_2lop_tat(thumuc: Path | None = None) -> None:
+    """QĐ390 (CDA 16g, 16h dòng 4): 01 dòng chuông "Đăng nhập 02 lớp đang tắt", mở suốt lúc tắt."""
+    with _Ghi(thumuc) as w:
+        _mo(w, KHOA_2LOP_TAT, None, None)
+
+
+def dong_2lop_tat(lydo: str, thumuc: Path | None = None) -> None:
+    """Đóng chuông "đang tắt" khi bật lại, bật lần đầu, lệnh datlai (QĐ393 (2))."""
+    with _Ghi(thumuc) as w:
+        _dong(w, KHOA_2LOP_TAT, lydo)
+
+
+def quet_2lop(thumuc: Path | None = None) -> None:
+    """Giữ chuông khớp cờ: cờ tắt mà chưa có chuông thì mở, cờ bật mà còn chuông thì đóng (mỗi lượt quét 10 phút)."""
+    if thongso.co_2lop_bat(thumuc):
+        dong_2lop_tat("Đăng nhập 02 lớp đang bật", thumuc)
+    else:
+        bao_2lop_tat(thumuc)
+
+
 def dong_cli(tien_to: str, lydo: str, thumuc: Path | None = None) -> None:
     with _Ghi(thumuc) as w:
         for k in _khoa_mo(w, tien_to):
@@ -333,7 +356,7 @@ def quet_banmoi(thumuc: Path | None = None, hoi_kho: bool = False) -> None:
             _mo(w, f"banmoi:{moi}", None)
 
 
-NGUON = (quet_goi, quet_khoa, quet_madaihan, quet_saoluu, quet_maychu, quet_banmoi, quet_drive_nen)
+NGUON = (quet_goi, quet_khoa, quet_madaihan, quet_saoluu, quet_maychu, quet_banmoi, quet_drive_nen, quet_2lop)
 
 
 def quet(thumuc: Path | None = None) -> dict:
@@ -443,6 +466,9 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
     if loai == "drive_nen":   # QĐ262 nguyên văn: "Bản sao Drive sau cập nhật {bản} chưa lên: {k}/07 tệp, đã thử 03 lần"
         return (f"Bản sao Drive sau cập nhật {sau} chưa lên: {_so(gt):02d}/{_so(ng):02d} tệp,"
                 f" đã thử {_nb(f'{SO_LAN_BAO_DRIVE:02d} lần')}")
+    if loai == "dangnhap_2lop_tat":   # QĐ397 bảng chữ màn 09 dòng 12
+        from maychu.hethong.taikhoan import nguoidung
+        return nguoidung.CHU_2LOP["chuong"]
     if loai == "capnhat_kiem":   # QĐ218 dòng 47: "Kiểm sau cập nhật bản 0.3.0: lịch chạy nền chưa bật"
         from maychu.hethong import capnhat
         ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")

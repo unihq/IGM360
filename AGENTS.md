@@ -24,6 +24,7 @@ Thư mục không có tệp riêng thì đọc tệp của thư mục cha gần 
 - Chữ người dùng thấy: tiếng Việt có dấu; số 1–9 trước danh từ đếm ghi 02 chữ số; mọi chữ viết dấu kiểu mới (xóa, khóa, hóa, hủy – QĐ304; Y50 đổi toàn kho theo QĐ298, QĐ302).
 - Không viết chữ cấm (tên mã gốc) trong maychu, kiemthu, mauketnoi (bài kiểm `kiemthu/test_chucam.py`).
 - Đổi số bản: sửa `VERSION` và thêm mục mới đầu `THAYDOI.md`; mục cũ không đổi dòng "Nâng dữ liệu".
+- Quy ước số bản (QĐ396): số đầu giữ 0; bản có tính năng mới: +1 số giữa, số cuối về 0 (0.9.0, 0.10.0); bản chỉ sửa lỗi: +1 số cuối (0.8.10, 0.9.1); mỗi lần gộp `main` = 01 bản. Máy cập nhật so từng phần số (`capnhat._khoa_so`, `tiendo.da_len`) nên số giữa lớn dần không cần đổi mã.
 - Tên tệp, thư mục, hàm, biến: tiếng Việt không dấu.
 - `.github/cua`: chỉ thư viện chuẩn Python; chỉ đọc phần đổi bằng git, không chạy mã của nhánh; in loại và vị trí, không in giá trị nhạy cảm.
 - `.github/CODEOWNERS`: không đổi người giữ `/.github/` khi chưa có QĐ (QĐ293, QĐ294).

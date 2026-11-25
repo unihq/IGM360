@@ -3,7 +3,7 @@
     docker compose exec igm360 python -m maychu.hethong.taikhoan.datlai [--tat-2lop]
 
 Hỏi mật khẩu mới 02 lần (không hiện chữ), thu hồi mọi phiên cũ, xóa bộ đếm chặn đoán mật khẩu (mở khóa ngay). --tat-2lop: tắt 02 lớp, lần đăng nhập
-sau phần mềm bắt bật lại. Chưa có tài khoản nào thì hỏi thêm tên đăng nhập và tạo tài khoản chủ.
+sau phần mềm bắt bật lại. QĐ393 (2): mọi lần chạy (có hay không --tat-2lop) đặt công tắc 02 lớp về bật, đóng chuông "đang tắt". Chưa có tài khoản nào thì hỏi thêm tên đăng nhập và tạo tài khoản chủ.
 """
 import getpass
 import sys
@@ -64,6 +64,7 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
     so = phien.thu_hoi(u[0], thumuc=thumuc)
     chan.xoa_het(thumuc)
     nguoidung.ghi_doi_matkhau(u[0], "lenh_vps", thumuc)
+    nguoidung.dat_lai_co_2lop(u[0], thumuc)   # QĐ393 (2): cờ 02 lớp về bật, đóng chuông "đang tắt", ghi F04
     print(f"ĐÃ ĐẶT LẠI MẬT KHẨU. Đã thu hồi {so:02d} phiên đăng nhập cũ. Đã mở khóa đăng nhập."
           + (" Đã tắt 02 lớp, lần đăng nhập sau sẽ bật lại." if "--tat-2lop" in thamso else ""))
     return 0

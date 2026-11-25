@@ -71,7 +71,19 @@ function ve() {
     else nutDn.innerHTML = D.nutDn;
     nutDn.classList.toggle('dang', S.lv === 'dang'); }
   if (S.g === '01') dongTacLv();   // 0.8.9: linh vật màn 01
+  doiViTri();   // 0.9.0 (QĐ387): chuông + tài khoản dưới logo ở khổ máy tính
   veNhom();   // Y52: thu gọn nhóm thanh trái
+}
+// 0.9.0 (QĐ387, khung ii-c2): khổ máy tính bỏ thanh trên, khối chuông + tài khoản (.vi-tri) đặt ngay dưới logo; điện thoại giữ ở thanh trên.
+function doiViTri() {
+  const vt = $('.vi-tri'), lg = $('nav.menu .logo'), tt = $('.thanh-tren'); if (!vt || !lg || !tt) return;
+  if (S.xem !== 'mb' && vt.parentElement !== lg.parentElement) lg.after(vt);
+  else if (S.xem === 'mb' && vt.parentElement !== tt) tt.append(vt);
+}
+// KH-090 2.2 (c), CDO P1: 02 bảng thả xuống mở từ cột menu nổi trên cùng (position: fixed), mép trái 08 px, ngay dưới chuông.
+function datTha(e) {
+  if (S.xem === 'mb' || e.hidden) { e.style.top = ''; return; }
+  const c = $('[data-chuong]').getBoundingClientRect(); e.style.top = Math.round(c.bottom + 8) + 'px';
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
 function dongHop() { $$('.lop').forEach(e => e.hidden = true); }
@@ -150,6 +162,7 @@ async function dangNhap() {
   try {
     const kq = await api('/dangnhap', {ten, matkhau: mk});
     D.maTam = kq.ma_tam; $('#mk').value = '';
+    if (kq.buoc === 'vao') { S.lv = 'xong'; ve(); await vaoPhanMem(); return; }   // QĐ390: 02 lớp đang tắt, máy chủ đã đặt cookie
     if (kq.buoc === 'bat2lop') { $('#qr-2lop').innerHTML = kq.qr_svg; S.dn = 'batdau2lop'; } else S.dn = 'ma2lop';
     ve(); const o = $('[data-s="dn:' + S.dn + '"] .o6'); if (o) o.focus();
   } catch (e) { if (e.status) loiDangNhap(e, false); }
@@ -327,6 +340,7 @@ async function napTaiKhoan() {
   $('#tk-ten-lon').textContent = chu; $('#tk-chu-lon').textContent = chu.slice(0, 1).toUpperCase();
   $('#phien-dem').textContent = hai(d.phien.length) + ' phiên · thu hồi là máy đó phải đăng nhập lại';
   $('#mk-luc').textContent = ngay(d.lan_doi_matkhau); $('[data-dxkhac]').hidden = d.phien.length < 2;
+  ve2Lop(d);   // 0.9.0 (QĐ390): công tắc 02 lớp
   const cot = 'grid-template-columns:2.2fr 1.4fr 1fr 110px';
   $$('#ds-phien .hang:not(.tieu-de)').forEach(e => e.remove());
   $('#ds-phien').insertAdjacentHTML('beforeend', d.phien.map(p => { const nay = p.id === d.phien_id;
@@ -354,11 +368,91 @@ async function doiMay() {
     } else {
       await api('/2lop/doimay/xacnhan', {ma_tam: D.maTamDoiMay, ma}); dongHop(); datLaiDoiMay(); bao('Đã đổi máy nhận mã 02 lớp.');
     }
-  } catch (e) { xoa6(hop); bao(e.message + '.'); }
+  } catch (e) { xoa6(hop); if (e.status === 429) { loi2Lop(hop, e); return; }   // QĐ393 (4): khóa như đăng nhập
+    if (/[.!?]$/.test(e.message)) bao(e.message); else bao(e.message + '.'); }   // QĐ398: câu từ chối có dấu chấm sẵn
 }
 function datLaiDoiMay() { D.maTamDoiMay = ''; const hop = $('#h-2lop'); xoa6(hop);
   $('.hop-than .t13', hop).textContent = 'Nhập mã 06 số trên máy cũ để xác nhận, rồi quét mã QR mới bằng máy mới.';
   $('[data-luu2lop]', hop).textContent = 'Tiếp tục'; }
+// <TAT2LOP> 0.9.0 (QĐ390–QĐ393, QĐ397, QĐ398): công tắc đăng nhập 02 lớp ở ngăn Tài khoản và 02 lớp (bản vẽ BV01–BV08).
+// Chữ bản A bảng chữ màn 09 khối "Công tắc đăng nhập 02 lớp" (anh duyệt QĐ397), chép bằng chương trình; số dòng ghi cuối.
+const CHU_2LOP = {
+  dangBat: "Đang bật",   // dòng 1
+  dangTat: "Đang tắt",   // dòng 1
+  gat: "Bật đăng nhập 02 lớp",   // dòng 2
+  giaiBat: "Đăng nhập trên máy mới cần thêm mã 06 số trên điện thoại.",   // dòng 3
+  giaiTat: "Chỉ cần mật khẩu là vào được phần mềm.",   // dòng 4
+  baoTat: "Đăng nhập 02 lớp đang tắt: ai có mật khẩu của bạn là vào được phần mềm, gồm cả khóa kết nối và số liệu tài chính.",   // dòng 5
+  nutBatLai: "Bật lại",   // dòng 5
+  hopTatTieu: "Tắt đăng nhập 02 lớp?",   // dòng 6
+  hopTatThan: "Khi tắt, ai có mật khẩu của bạn là vào được phần mềm. Bạn nhập mật khẩu và mã 06 số đang hiện trên điện thoại để xác nhận.",   // dòng 7
+  oMk: "Mật khẩu đang dùng",   // dòng 8
+  oMa: "Mã 06 số",   // dòng 8
+  huy: "Hủy",   // dòng 8
+  nutTat: "Tắt 02 lớp",   // dòng 8
+  saiTat: "Mật khẩu hoặc mã 06 số chưa đúng.",   // dòng 9
+  hopBatTieu: "Bật lại đăng nhập 02 lớp",   // dòng 10
+  hopBatThan: "Nhập mã 06 số đang hiện trên ứng dụng xác thực của điện thoại (máy đã cài lần trước, không cần quét lại mã QR).",   // dòng 10
+  nutBat: "Bật lại",   // dòng 10
+  antoan: "Đang ở chế độ an toàn: chưa tắt được đăng nhập 02 lớp.",   // dòng 11
+  daTat: "Đã tắt đăng nhập 02 lớp.",   // dòng 13
+  daBat: "Đã bật lại đăng nhập 02 lớp.",   // dòng 13
+  hopBatDx: "Bật lại xong, mọi máy khác tự đăng xuất.",   // dòng 15
+};
+function ve2Lop(d) {
+  const C = CHU_2LOP, tat = !d.da_bat_2lop && !!d.co_khoa_2lop, khoa = !!D.anToan && !tat;   // chế độ an toàn: không cho tắt, bật vẫn được
+  D.tat2lop = tat;
+  $('#vong-2lop').hidden = tat; $('#ico-2lop-tat').hidden = !tat;   // đang tắt: vòng xanh lá đổi thành ô icon cảnh báo (BV03)
+  if (tat) $('#ico-2lop-tat').innerHTML = icoMau(ICON['shield-alert'], '#8F5F00', 26);
+  $('#f1-2lop').innerHTML = '<div class="dong" style="gap:8px;align-items:center;justify-content:space-between"><div class="b7 nw">Đăng nhập 02&nbsp;lớp</div>'
+    + '<button class="gat-o nut-gat" data-gat2lop role="switch" aria-checked="' + !tat + '" aria-label="' + esc(C.gat) + '"'
+    + (khoa ? ' disabled style="margin-left:0;opacity:.4;cursor:not-allowed"' : ' style="margin-left:0"') + '>'
+    + '<input type="checkbox" tabindex="-1"' + (tat ? '' : ' checked') + '><span class="gat"></span></button></div>'
+    + '<div class="nhan ' + (tat ? 'n-canh' : 'n-dat') + '"><i></i>' + esc(tat ? C.dangTat : C.dangBat) + '</div>'
+    + '<div class="phu t13" style="margin-top:2px">' + cum(tat ? C.giaiTat : C.giaiBat) + '</div>'
+    + (khoa ? '<div class="dong t13 phu" style="gap:6px;margin-top:6px">' + icoMau(ICON.lock, '#646A73', 14) + '<span>' + cum(C.antoan) + '</span></div>' : '');
+  $('#f1-2lop').append($('#the-2lop [data-mo="h-2lop"]') || '');
+  $('#the-2lop [data-mo="h-2lop"]').hidden = tat;   // QĐ398: đang tắt thì ẩn "Đổi máy nhận mã"
+  const b = $('#bao-2lop'); b.hidden = !tat;   // dòng cảnh báo đầu ngăn khi tắt (BV03), nút "Bật lại" mở hộp bật lại
+  if (tat) b.innerHTML = icoMau(ICON['shield-alert'], '#8F5F00', 18) + '<span class="f1 xem-chu t13">' + cum(C.baoTat) + '</span>'
+    + '<button class="btn btn-chinh" data-bat2lopmo>' + icoMau(ICON['shield-check'], '#FFFFFF', 16) + esc(C.nutBatLai) + '</button>';
+}
+function hop2Lop(id) {   // hộp tắt, hộp bật lại (bản vẽ BV02, BV05, BV07, BV08); dựng 01 lần
+  const C = CHU_2LOP, o6 = '<div class="o6-hang">' + '<input class="o6" maxlength="1" inputmode="numeric">'.repeat(6) + '</div>';
+  if (!$('#' + id)) {
+    const tat = id === 'h-tat2lop', l = document.createElement('div'); l.className = 'lop'; l.id = id; l.hidden = true;
+    l.innerHTML = '<div class="hop" style="width:440px;max-width:100%"><div class="hop-dau">' + icoMau(ICON[tat ? 'shield-alert' : 'shield-check'], '#1F2329', 20)
+      + '<b class="f1 t16">' + cum(tat ? C.hopTatTieu : C.hopBatTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 18) + '</button></div>'
+      + '<div class="hop-than">' + (tat ? '<div class="t13">' + cum(C.hopTatThan) + '</div><label class="nhan-o">' + esc(C.oMk) + '<div class="o-nhap"><input type="password" autocomplete="current-password"></div></label>'
+          + '<div class="nhan-o">' + cum(C.oMa) + o6 + '</div>'
+        : '<div class="t13">' + cum(C.hopBatThan) + '</div>' + o6 + '<div class="dong t13 phu" style="gap:6px">' + icoMau(ICON.info, '#646A73', 16) + '<span>' + cum(C.hopBatDx) + '</span></div>')
+      + '<div class="dong t13" data-loi2lop style="gap:6px;color:#E22E28;align-items:flex-start" hidden>' + icoMau(ICON['circle-alert'], '#E22E28', 16) + '<span></span></div></div>'
+      + '<div class="hop-chan"><button class="btn btn-phu" data-dong>' + esc(C.huy) + '</button><button class="btn btn-chinh" ' + (tat ? 'data-tat2lop>' + cum(C.nutTat) : 'data-bat2lop>' + esc(C.nutBat)) + '</button></div></div>';
+    $('#h-2lop').before(l);
+  }
+  const l = $('#' + id); xoa6(l); $$('input', l).forEach(i => { i.value = ''; i.disabled = false; }); $$('.o6', l).forEach(i => i.style.borderColor = '');
+  $$('.o-nhap', l).forEach(e => e.classList.remove('loi')); $('[data-loi2lop]', l).hidden = true;
+  mo(id); const o = $(id === 'h-tat2lop' ? 'input[type="password"]' : '.o6', l); if (o) o.focus();
+}
+function loi2Lop(l, e) {   // bản vẽ BV07: câu báo sai + câu có sẵn số lần thử (đếm chung chặn đăng nhập)
+  const con = e.status === 429 ? 0 : e.ct && e.ct.con_lai, b = $('[data-loi2lop]', l);
+  $('span', b).innerHTML = cum(l.id === 'h-tat2lop' ? CHU_2LOP.saiTat : cau(e.message))
+    + (con != null ? ' Còn <b>' + hai(con) + '</b> lần thử: sai <b>05</b> lần trong 15&nbsp;phút sẽ tạm khóa <b>15</b> phút.' : '');
+  b.hidden = false; $$('.o-nhap', l).forEach(x => x.classList.add('loi')); $$('.o6', l).forEach(x => x.style.borderColor = '#E22E28');
+}
+async function gui2Lop(tat) {   // bản vẽ BV08: đang xử lý – nút giữ màu, không mờ (quy chuẩn 5.1)
+  const l = $(tat ? '#h-tat2lop' : '#h-bat2lop'), ma = ma6(l), nut = $('.hop-chan .btn-chinh', l), goc = nut.innerHTML;
+  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
+  const mk = tat ? $('input[type="password"]', l).value : '';
+  nut.disabled = true; nut.style.cursor = 'progress'; nut.innerHTML = icoMau(ICON.loader, '#FFFFFF', 16) + CHU_DN.dang;
+  $$('input, .btn-phu', l).forEach(e => e.disabled = true);
+  try {
+    const kq = await api(tat ? '/2lop/tat' : '/2lop/bat', tat ? {matkhau: mk, ma} : {ma});
+    dongHop(); bao((tat ? CHU_2LOP.daTat : CHU_2LOP.daBat).replace(/(\d) /g, '$1' + NB)); if (kq.doi !== false) demSo(); napTaiKhoan();
+  } catch (e) { if (e.matKetNoi) { bao(e.message); } else if (e.status === 403) { dongHop(); bao(cau(e.message)); } else { xoa6(l); loi2Lop(l, e); } }
+  finally { nut.disabled = false; nut.style.cursor = ''; nut.innerHTML = goc; $$('input, .btn-phu', l).forEach(e => e.disabled = false); }
+}
+// </TAT2LOP>
 
 // ---- Màn 09 ngăn Cập nhật
 // 0.7.9: chữ 05 lớp an toàn anh đã duyệt nguyên văn (QĐ218, bảng Z16 dòng 24–47), viết ở 01 chỗ này; số dòng ghi cuối câu.
@@ -1356,7 +1450,8 @@ const htmlChay = () => '<div class="tn ai" id="tn-chay" aria-busy="true"><div cl
 // H2–H4, T4: chữ qua cum() (thoát chữ), tách đoạn như tin đã xong; con trỏ .dang-viet::after ở cuối (H3: span rỗng, chữ giữ
 // màu chính). H5: chỉ bám đáy khi đang ở đáy (≤ 40 px).
 // SUA-H5 (CDO BT-N0 BT04): vùng cuộn thật – .tc-than khi có thanh cuộn riêng (sau QĐ317 B1), chưa có thì cả trang.
-const vungCuon = () => { const c = $('.tc-than'); return c && c.scrollHeight > c.clientHeight ? c : (document.scrollingElement || document.documentElement); };
+const vungCuon = () => { const c = $('.tc-than'); if (c && c.scrollHeight > c.clientHeight) return c;   // KH-090 2.2 (b): khổ máy tính trang cuộn ở .cuon-trong
+  const v = S.xem !== 'mb' && $('#app .cuon-trong'); return v && v.scrollHeight > v.clientHeight ? v : (document.scrollingElement || document.documentElement); };
 function veChay() { LUOT.hen = 0; const b = $('#tn-chay'), c = vungCuon(); if (!b) return;
   const day = !c || c.scrollHeight - c.scrollTop - c.clientHeight <= 40, doan = cum(LUOT.chu).split(/\n{2,}/);
   b.querySelector('.tn-noi').innerHTML = doan.map((o, i) => '<p>' + o.replace(/\n/g, '<br>')
@@ -1421,7 +1516,7 @@ document.addEventListener('click', async ev => {
   if (!('chuong' in d) && !('tk' in d) && !t.closest('.tha')) dongTha();
   if (d.set) { const [k, v] = d.set.split(':'); S[k] = v; }
   else if (D.anToan && ((d.trang && d.trang !== '09') || (d.tab && d.tab !== 'capnhat'))) { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
-  else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); const c = $('#app .cuon'); if (c) c.scrollTop = 0; if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }
+  else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); $$('#app .cuon, #app .cuon-trong').forEach(c => c.scrollTop = 0);   // KH-090 2.2 (a): khổ máy tính cuộn ở .cuon-trong if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (d.tab) { S.tab = d.tab; napTab(); }
   else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6)
@@ -1430,8 +1525,12 @@ document.addEventListener('click', async ev => {
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
     S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.'); }
-  else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; if (v) demSo(true); }
-  else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); e.hidden = !v; }
+  else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; datTha(e); if (v) demSo(true); }
+  else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); e.hidden = !v; datTha(e); }
+  else if ('gat2lop' in d) { if (D.tat2lop) hop2Lop('h-bat2lop'); else if (D.anToan) bao(CHU_2LOP.antoan); else hop2Lop('h-tat2lop'); }   // QĐ390
+  else if ('bat2lopmo' in d) hop2Lop('h-bat2lop');   // nút "Bật lại" ở dòng cảnh báo
+  else if ('tat2lop' in d) await gui2Lop(true);
+  else if ('bat2lop' in d) await gui2Lop(false);
   else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.'); } await demSo(); return; }
   else if (d.di && D.anToan && d.di !== 'capnhat') { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
   else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }

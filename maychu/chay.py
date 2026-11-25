@@ -41,6 +41,15 @@ def _bay() -> str:
     return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
 
 
+def _da_len(ban: str, den) -> bool:
+    """KH-090 2.8 (CDA SOAT-0810, bản đồ 16i): bản trong ảnh ≥ bản yêu cầu, so từng phần số như `tiendo.da_len`
+    (chay.py chạy trước phần mềm, không nhập `maychu`). Số bản lạ, trống → không coi là đã lên."""
+    try:
+        return bool(den) and tuple(int(x) for x in ban.split(".")) >= tuple(int(x) for x in str(den).split("."))
+    except ValueError:
+        return False
+
+
 def _doc(tep: Path) -> dict:
     try:
         d = json.loads(tep.read_text(encoding="utf-8"))
@@ -350,12 +359,13 @@ def canh_ban_truoc(noi: Path, tep: Path, cho_len: float = CHO_LEN_GIAY, hoi=da_l
 
 def moc_khoidong(dl: Path, goc: Path = GOC) -> None:
     """QĐ251: vùng chứa bản mới bắt đầu chạy = hết bước 5 (watchtower kéo gói, thay vùng chứa), vào bước 6.
-    Chỉ ghi khi lượt cập nhật đang chờ đúng bản trong ảnh này, 01 lần. Lỗi thì bỏ qua."""
+    Chỉ ghi khi bản trong ảnh này ≥ bản lượt cập nhật đang chờ (KH-090 2.8: watchtower kéo `latest` có thể mới hơn bản
+    ghi lúc bấm), 01 lần; quay về (bản trong ảnh thấp hơn) không ghi. Lỗi thì bỏ qua."""
     try:
         tep = dl / TEN_TEP
         tt = _doc(tep)
         td = tt.get("tien_do")
-        if isinstance(td, dict) and not td.get("xong") and not td.get("loi") and td.get("den") == _so(goc / "VERSION") \
+        if isinstance(td, dict) and not td.get("xong") and not td.get("loi") and _da_len(_so(goc / "VERSION"), td.get("den")) \
                 and "khoidong" not in (td.get("moc") or {}):
             td["moc"] = {**(td.get("moc") or {}), "khoidong": _bay()}
             td["buoc"] = "khoidong"
