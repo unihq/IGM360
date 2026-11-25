@@ -162,6 +162,23 @@ const $ = q => q === '#the-2lop [data-mo="h-2lop"]' ? (nutDoi.cha === undefined 
                        "[a, nutDoi.hidden, f1.con === nutDoi]")
         self.assertEqual(kq, [[True, False], False, True])
 
+    def test_f1_mat_ket_noi_o_hop_2lop_cau_co_dau_cham(self):                               # CDA SOAT-090 F1 (bản đồ 16l)
+        gia = r"""
+const CHU_DN = {dang: 'Đang xử lý…'}, ICON = {loader: '<svg stroke="#000" width="1" height="1">l</svg>'}, NB = '\u00a0', D = {};
+const icoMau = s => s, ma6 = () => '123456', xoa6 = () => {}, dongHop = () => {}, demSo = () => {}, napTaiKhoan = () => {};
+const bao_ = [], bao = t => bao_.push(t);
+const el = () => ({disabled: false, style: {}, innerHTML: 'x', value: 'mk'});
+const nut = el(), l = {id: 'h-tat2lop'};
+const $ = q => q === '.hop-chan .btn-chinh' ? nut : q === 'input[type="password"]' ? el() : l;
+const $$ = () => [el()];
+const api = async () => { const m = new Error('Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\u00a0lại'); m.matKetNoi = true; throw m; };
+"""
+        ma = gia + self.chu + self.tat + "(async () => { await gui2Lop(true); await gui2Lop(false); console.log(JSON.stringify(bao_)); })();"
+        r = subprocess.run(["node", "-e", ma], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cau = "Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\u00a0lại."   # QĐ361 + dấu chấm cuối
+        self.assertEqual(json.loads(r.stdout), [cau, cau])                                         # hộp tắt và hộp bật lại
+
     def test_doi_vi_tri_va_bang_tha(self):
         ma = r"""
 const S = {xem: 'dt'};

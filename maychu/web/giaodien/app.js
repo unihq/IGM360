@@ -449,7 +449,7 @@ async function gui2Lop(tat) {   // bản vẽ BV08: đang xử lý – nút gi�
   try {
     const kq = await api(tat ? '/2lop/tat' : '/2lop/bat', tat ? {matkhau: mk, ma} : {ma});
     dongHop(); bao((tat ? CHU_2LOP.daTat : CHU_2LOP.daBat).replace(/(\d) /g, '$1' + NB)); if (kq.doi !== false) demSo(); napTaiKhoan();
-  } catch (e) { if (e.matKetNoi) { bao(e.message); } else if (e.status === 403) { dongHop(); bao(cau(e.message)); } else { xoa6(l); loi2Lop(l, e); } }
+  } catch (e) { if (e.matKetNoi) { bao(cau(e.message)); } else if (e.status === 403) { dongHop(); bao(cau(e.message)); } else { xoa6(l); loi2Lop(l, e); } }
   finally { nut.disabled = false; nut.style.cursor = ''; nut.innerHTML = goc; $$('input, .btn-phu', l).forEach(e => e.disabled = false); }
 }
 // </TAT2LOP>
