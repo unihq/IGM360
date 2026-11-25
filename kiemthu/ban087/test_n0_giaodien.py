@@ -113,7 +113,7 @@ class KiemGiaoDienLuot(unittest.TestCase):
                            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         kq = json.loads(r.stdout)
-        self.assertEqual(kq["bao"], ["Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối lại."])
+        self.assertEqual(kq["bao"], ["Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\u00a0lại."])   # SUA-NBSP
         self.assertEqual((kq["k"], kq["o"], kq["ds"]), ("matketnoi", "Câu mới", ""))
 
     def test_sua_p3_xong_luot_bam_day_hoac_giu(self):

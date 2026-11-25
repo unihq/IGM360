@@ -41,7 +41,7 @@ async function api(duong, than) {
     r = await fetch('/api' + duong, {method: than === undefined ? 'GET' : 'POST', credentials: 'same-origin',
       headers: {'Content-Type': 'application/json', 'X-IGM360': '1'}, body: than === undefined ? undefined : JSON.stringify(than)});
   } catch (e) { S.k = 'matketnoi'; ve();   // QĐ361: thay chữ "Failed to fetch" của trình duyệt (dải đỏ giữ như cũ)
-    const m = new Error('Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối lại'); m.matKetNoi = true; throw m; }
+    const m = new Error('Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối\u00a0lại'); m.matKetNoi = true; throw m; }   // SUA-NBSP: "nối lại" không tách 02 dòng
   if (S.k === 'matketnoi') { S.k = 'binhthuong'; }
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && S.g !== '01') { S.g = '01'; S.dn = 'hethan'; ve(); }

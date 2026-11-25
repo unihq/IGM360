@@ -64,7 +64,12 @@ class KiemChu087(unittest.TestCase):
         js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
         cau = "Mất kết nối máy chủ, thao tác này chưa lưu được. Bạn thử lại khi đã nối lại"
         self.assertIn("} catch (e) { S.k = 'matketnoi'; ve();", js)                # dải đỏ giữ như cũ
-        self.assertIn("const m = new Error('" + cau + "'); m.matKetNoi = true; throw m; }", js)   # QĐ361 (A), đúng từng ký tự
+        i = js.index("const m = new Error('") + len("const m = new Error('")
+        nguon = js[i:js.index("')", i)]                                           # chữ trong mã, U+00A0 viết dạng mã JS
+        hien = nguon.replace("\\u00a0", "\u00a0")
+        self.assertEqual(hien.replace("\u00a0", " "), cau)                     # QĐ361 (A): đổi U+00A0 về cách thường thì đúng bảng chữ
+        self.assertEqual(hien.count("\u00a0"), 1)                                # SUA-NBSP: đúng 01 chỗ
+        self.assertIn("nối\u00a0lại", hien)                                     # ở cụm "nối lại" (Phần 3: không tách cụm)
         self.assertFalse(cau.endswith("."))                                         # báo nổi tự thêm dấu chấm
         self.assertEqual(js.count("bao(e.message + '.')"), 18)                      # 18 chỗ cùng hiện câu này, không sửa từng chỗ
 
