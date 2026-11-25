@@ -692,6 +692,8 @@ def gui_tin(body: TinMoi, p: dict = Depends(can_dang_nhap)):
         return trochuyen.gui(body.hoithoai_id, p["nguoidung_id"], body.noidung, mohinh_id=body.mohinh_id)
     except trochuyen.ChoCapNhat as e:   # QĐ347 H1, QĐ352: giao diện hiện câu báo trong khung chat, giữ câu hỏi ở ô nhập
         return JSONResponse({"detail": str(e), "ma": "cho_capnhat"}, status_code=409)
+    except trochuyen.DangTraLoi as e:   # N2: gửi trùng lượt là 409, không phải 404
+        raise HTTPException(409, str(e))
     except ValueError as e:
         raise HTTPException(400, str(e))
     except PermissionError as e:

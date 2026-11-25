@@ -627,6 +627,205 @@ class _ChoCho:
         return False
 
 
+# ---------------- N0 Đ3 (QĐ349, QĐ351): ChatGPT qua `codex app-server` cho lượt có người nghe (CDA K1–K7) ----------------
+# app-server có sẵn trong cùng tệp chạy `codex` bản ghim (rust-v0.172.0: cli/src/main.rs 179–180), nói JSON từng dòng qua
+# stdin/stdout. Mỗi lượt 01 tiến trình trong nhóm riêng (K2), 01 luồng mới, không lưu mã luồng (K6). Mô hình, chế độ chỉ
+# đọc, không hỏi duyệt đặt trong `thread/start` (K3, K4: app-server bỏ qua cờ dòng lệnh). Lỗi trước khi lượt bắt đầu →
+# `_CanExec` → chạy lại bằng `codex exec` cùng nguồn, không tính lỗi nguồn (K7).
+GIAY_KHOI_DAU_AS = 120   # initialize → thread/start → turn/start
+GIAY_KIEM_AS = 300   # K1e: giờ tối đa cả bước kiểm app-server của bản CLI mới (CTO đặt, chưa đo; SUA-K1)
+LOAI_BUOC_AS = ("commandExecution", "webSearch", "mcpToolCall")
+
+
+class _CanExec(Exception):
+    """app-server chưa bắt đầu được lượt (K7): chạy lại bằng `codex exec`."""
+
+
+def _chay_as(lenh: list, env: dict, cau: str, mohinh: str | None, nghe: "Nghe", giay: int = GIAY_TOIDA,
+             giay_khoi_dau: int = GIAY_KHOI_DAU_AS) -> dict:
+    """01 lượt qua app-server. Trả {chu, vao, ra, loi, hanmuc, mohinh_bao}; `loi` khác rỗng = lượt hỏng sau khi đã bắt
+    đầu (đi luồng lỗi như `exec`). Dừng → DaDung; quá `giay` → TimeoutExpired; chưa bắt đầu được → _CanExec."""
+    import queue
+    with tempfile.TemporaryDirectory() as cho_lam:
+        try:
+            pr = subprocess.Popen(lenh, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                  encoding="utf-8", errors="replace", env=env, cwd=cho_lam,
+                                  start_new_session=os.name != "nt")
+        except OSError as e:
+            raise _CanExec(str(e)) from e
+        hang: "queue.Queue[str | None]" = queue.Queue()
+        loi_ra: list[str] = []
+        ly_do = {"v": None}
+        xong = threading.Event()
+        het = time.monotonic() + giay
+
+        def doc_ra():
+            try:
+                for dong in pr.stdout:
+                    hang.put(dong)
+            except (OSError, ValueError):
+                pass
+            hang.put(None)
+
+        def doc_loi():
+            try:
+                loi_ra.append(pr.stderr.read())
+            except (OSError, ValueError):
+                pass
+
+        def canh():
+            while not xong.wait(0.2):
+                if nghe.dung.is_set():
+                    ly_do["v"] = "dung"
+                elif time.monotonic() >= het:
+                    ly_do["v"] = "quagio"
+                else:
+                    continue
+                dung_nhom(pr)
+                return
+
+        for f in (doc_ra, doc_loi, canh):
+            threading.Thread(target=f, daemon=True).start()
+        so = {"id": 0}
+
+        def gui(phuongthuc, thamso, thong_bao=False):
+            msg = {"method": phuongthuc, "params": thamso}
+            if not thong_bao:
+                so["id"] += 1
+                msg["id"] = so["id"]
+            pr.stdin.write(json.dumps(msg, ensure_ascii=False) + "\n")
+            pr.stdin.flush()
+            return so["id"]
+
+        def tu_choi(m):   # K3: mọi yêu cầu app-server gửi lên (duyệt lệnh, duyệt tệp…) trả từ chối ngay
+            pr.stdin.write(json.dumps({"id": m["id"], "error": {"code": -32601, "message": "IGM360 không cấp quyền"}}) + "\n")
+            pr.stdin.flush()
+
+        cho_lai: list[str] = []
+
+        def goi_cho(phuongthuc, thamso, han):
+            ma = gui(phuongthuc, thamso)
+            while True:
+                con = han - time.monotonic()
+                if con <= 0:
+                    raise _CanExec(phuongthuc + ": không trả lời")
+                try:
+                    dong = hang.get(timeout=con)
+                except queue.Empty:
+                    raise _CanExec(phuongthuc + ": không trả lời") from None
+                if dong is None:
+                    raise _CanExec(phuongthuc + ": app-server đã thoát")
+                try:
+                    m = json.loads(dong)
+                except ValueError:
+                    continue
+                if m.get("id") == ma and "method" not in m:
+                    if "error" in m:
+                        raise _CanExec(phuongthuc + ": " + str((m.get("error") or {}).get("message"))[:200])
+                    return m.get("result") or {}
+                if "method" in m and "id" in m:
+                    tu_choi(m)
+                    continue
+                cho_lai.append(dong)
+
+        kq = {"chu": [], "vao": 0, "ra": 0, "loi": "", "hanmuc": {}, "mohinh_bao": None}
+        try:
+            han = time.monotonic() + giay_khoi_dau
+            try:
+                goi_cho("initialize", {"clientInfo": {"name": "igm360", "version": "1"}}, han)
+                gui("initialized", {}, thong_bao=True)
+                ts = {"cwd": cho_lam, "sandbox": "read-only", "approvalPolicy": "never"}
+                if mohinh:
+                    ts["model"] = mohinh
+                bd = goi_cho("thread/start", ts, han)
+                luong = str((bd.get("thread") or {}).get("id") or "")
+                if not luong:
+                    raise _CanExec("thread/start: không có mã luồng")
+                kq["mohinh_bao"] = (str(bd.get("model") or "")[:80] or None)
+                lt = goi_cho("turn/start", {"threadId": luong, "input": [{"type": "text", "text": cau}]}, han)
+                luot_id = str((lt.get("turn") or {}).get("id") or "")
+                if not luot_id:
+                    raise _CanExec("turn/start: không có mã lượt")
+            except (OSError, ValueError) as e:
+                raise _CanExec(str(e)) from e
+            da_hien: set[str] = set()
+            while True:
+                dong = cho_lai.pop(0) if cho_lai else hang.get()
+                if dong is None:
+                    if ly_do["v"] is None and not kq["loi"]:
+                        kq["loi"] = (("".join(loi_ra)).strip().splitlines() or ["app-server dừng giữa chừng"])[-1][:300]
+                    break
+                try:
+                    m = json.loads(dong)
+                except ValueError:
+                    continue
+                pt, p = m.get("method"), (m.get("params") or {})
+                if pt and "id" in m:
+                    tu_choi(m)
+                    continue
+                if not pt or p.get("threadId") not in (None, luong) or p.get("turnId") not in (None, luot_id):
+                    continue
+                if pt == "item/agentMessage/delta":
+                    d, ma_muc = str(p.get("delta") or ""), str(p.get("itemId") or "")
+                    if d:
+                        if ma_muc not in da_hien and nghe.chu:
+                            nghe.them_chu("\n\n")
+                        da_hien.add(ma_muc)
+                        nghe.them_chu(d)
+                elif pt == "item/started" and (p.get("item") or {}).get("type") in LOAI_BUOC_AS:
+                    nghe.buoc(str(p["item"]["type"]))
+                elif pt == "item/completed" and (p.get("item") or {}).get("type") == "agentMessage":
+                    it = p["item"]
+                    if str(it.get("text") or "").strip():
+                        kq["chu"].append(str(it["text"]))   # K5: chữ lưu là tin đầy đủ, không ghép mẩu
+                        if str(it.get("id") or "") not in da_hien:
+                            if nghe.chu:
+                                nghe.them_chu("\n\n")
+                            nghe.them_chu(str(it["text"]))
+                elif pt == "thread/tokenUsage/updated":
+                    tg = (p.get("tokenUsage") or {}).get("total") or {}
+                    kq["vao"] = int(tg.get("inputTokens") or 0)
+                    kq["ra"] = int(tg.get("outputTokens") or 0) + int(tg.get("reasoningOutputTokens") or 0)
+                elif pt == "account/rateLimits/updated":
+                    kq["hanmuc"] = han_muc_codex(p.get("rateLimits") or {})
+                elif pt == "error" and not p.get("willRetry"):
+                    kq["loi"] = str((p.get("error") or {}).get("message") or kq["loi"])[:300]
+                elif pt == "turn/completed" and (p.get("turn") or {}).get("id") == luot_id:
+                    tr = p.get("turn") or {}
+                    if tr.get("status") == "failed":
+                        kq["loi"] = str((tr.get("error") or {}).get("message") or kq["loi"] or "lượt hỏng")[:300]
+                    break
+        finally:
+            xong.set()
+            try:
+                pr.stdin.close()
+            except (OSError, ValueError):
+                pass
+            dung_nhom(pr)   # K2: tiến trình chỉ sống trong lượt
+    if ly_do["v"] == "dung":
+        raise DaDung()
+    if ly_do["v"] == "quagio":
+        raise subprocess.TimeoutExpired(lenh, giay)
+    return kq
+
+
+def kiem_app_server(taikhoan: int, cau: str, cli: str, giay: int = GIAY_KIEM_AS) -> str:
+    """K1a–K1e (SUA-K1): kiểm thử bản CLI mới thêm 01 lượt app-server THẬT của bản đó: initialize → thread/start (chỉ
+    đọc, never) → turn/start câu ngắn. Nhóm tiến trình riêng, tối đa `giay` cho cả bước (hết giờ → TimeoutExpired).
+    Không ghi G02, không ghi G04 (gọi thẳng, như đường kiểm `exec`). Hết hạn mức → HetHanMuc; lỗi khác → RuntimeError."""
+    env = dangnhap_goi._env("chatgpt", taikhoan)
+    try:
+        a = _chay_as([cli, "app-server"], env, cau, None, Nghe(), giay=giay, giay_khoi_dau=min(GIAY_KHOI_DAU_AS, giay))
+    except _CanExec as e:
+        raise RuntimeError(f"app-server chưa chạy được: {str(e)[:200]}") from None
+    if a["loi"] or not a["chu"]:
+        loi = a["loi"] or "không có tin trả lời"
+        if any(x in loi.lower() for x in HET_HANMUC):
+            raise HetHanMuc(loi[:300], a["hanmuc"])
+        raise RuntimeError(f"app-server không trả lời được: {loi[:300]}")
+    return "\n".join(a["chu"])
+
+
 # QĐ195 (Y36e, lỗi H17): trò chuyện của anh không đặt trần lượt, được tra web; vẫn cấm lệnh máy, cấm ghi/sửa tệp
 # (giống Codex `--sandbox read-only`). Phanh kẹt vòng: 600 giây/câu (GIAY_TOIDA). Việc khác (Gọi thử, việc nền) giữ 01 lượt.
 _TRA_WEB: contextvars.ContextVar = contextvars.ContextVar("igm360_tra_web", default=False)
@@ -705,6 +904,24 @@ def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = 
     lenh.append("-")   # đọc câu hỏi từ đầu vào chuẩn
     env = dangnhap_goi._env("chatgpt", taikhoan)
     n = _NGHE.get() if cli is None else None   # N0: chỉ lượt trò chuyện có người nghe đọc dần
+    if n is not None:   # QĐ351: lượt có người nghe đi app-server (chữ hiện dần từng mẩu)
+        try:
+            a = _chay_as([dangnhap_goi._cli("chatgpt"), "app-server"], env, cau, mohinh, n)
+        except _CanExec:
+            if n.dung.is_set():
+                raise DaDung() from None
+            n.lam_lai()
+            a = None   # K7: chưa bắt đầu được lượt → chạy lại bằng `codex exec` cùng nguồn, không tính lỗi nguồn
+        if a is not None:
+            tm = Path(env["CODEX_HOME"]) if "CODEX_HOME" in env else None
+            hm = a["hanmuc"] or _doc_han_muc_codex(tm)   # K5: thông báo hạn mức; tệp phiên là đường dự phòng
+            if a["loi"] or not a["chu"]:
+                loi = a["loi"] or "không có tin trả lời"
+                if any(x in str(loi).lower() for x in HET_HANMUC):
+                    raise HetHanMuc(str(loi)[:300], hm)
+                raise RuntimeError(f"ChatGPT không trả lời được: {str(loi)[:300]}")
+            return {"chu": "\n".join(a["chu"]), "vao": a["vao"], "ra": a["ra"], "sotien": None, "sotien_thamkhao": None,
+                    "tien_ma": "USD", "hanmuc": hm, "mohinh_bao": a["mohinh_bao"] or _mohinh_codex(tm)}
     r = _chay_dan(lenh, env, cau, GIAY_TOIDA, n, _doc_dan_codex(n)) if n is not None else _chay(lenh, env, vao=cau)
     chu, vao, ra, loi = [], 0, 0, ""
     for dong in r.stdout.splitlines():

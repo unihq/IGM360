@@ -217,6 +217,8 @@ def _kiem_goi_ngan(goi: str, duong: str) -> str:
         if not dg.trang_thai(goi, 1).get("da_noi"):
             return "dat"
         (congai._goi_claude if goi == "claude" else congai._goi_chatgpt)(1, CAU_THU, None, cli=duong)
+        if goi == "chatgpt":   # QĐ351, K1a–K1e: thêm 01 lượt app-server thật của bản mới (đường exec ở trên giữ như cũ)
+            congai.kiem_app_server(1, CAU_THU, duong)
         return "dat"
     except congai.HetHanMuc:
         return "hoan"

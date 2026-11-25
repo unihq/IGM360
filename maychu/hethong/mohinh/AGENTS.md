@@ -26,6 +26,7 @@ Cổng AI 03 nguồn (`congai.py`: gói Claude, gói ChatGPT, khóa API), đăng
 - Hết hạn mức lúc kiểm thử bản mới thì hoãn, không ghi bản hỏng (QĐ306).
 - N0 (QĐ344, QĐ349, QĐ351): chỉ lượt trò chuyện có người nghe (`congai._NGHE`) đọc dần đầu ra CLI qua `_chay_dan` (nhóm tiến trình riêng; Dừng, quá giờ: TERM cả nhóm, chờ 02 giây, KILL). Việc nền, bot, Gọi thử, kiểm bản CLI mới (truyền `cli`) giữ `_chay`. Không đổi phần đọc kết quả, hết hạn mức, tự chuyển tài khoản, ghim, dòng vàng.
 - N0 `luot.py` (QĐ344, CDA KT-N0, S1–S5, X1–X4, C1–C2): mỗi lượt 01 dòng G02 `trochuyen`; vào sổ trước khi ghi G02, rời sổ sau khi đóng G02; đóng G02 chỉ bằng `WHERE id = ? AND trangthai = 'dangchay'` + `xong_luc`; không truyền `viecnen_id` vào `congai.goi`; tin ghi 01 lần qua `trochuyen._ghi_tin` rồi mới đóng G02; khởi động và lượt kẹt dùng chung `doi_chieu_dong`; chữ câu báo theo QĐ352.
+- N0 Đ3 (QĐ349, QĐ351, CDA K1–K7): lượt có người nghe gọi ChatGPT qua `codex app-server` (`_chay_as`): 01 tiến trình/lượt trong nhóm riêng, 01 luồng mới, `thread/start` mang `sandbox: read-only`, `approvalPolicy: never`, mô hình; mọi yêu cầu app-server gửi lên trả từ chối; chưa bắt đầu được lượt thì chạy lại `codex exec` cùng nguồn. Kiểm thử bản CLI mới thêm 01 lượt app-server thật (`kiem_app_server`, tối đa 300 giây, K1a–K1e); không ghi G02, G04.
 - Gói Claude: danh sách mô hình = 04 bí danh + tệp danh mục Claude Code tự tải theo tài khoản (`cache/model-catalog`); mô hình cần bản công cụ cao hơn hiện xám (QĐ265).
 
 ## 4. Được chứa / không được chứa

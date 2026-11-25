@@ -282,6 +282,16 @@ class KiemDuongGoi(Nen):
         self.nguoi = {"nguoidung_id": "nguoi-khac"}
         self.assertEqual(self.c.get(f"/api/trochuyen/luot/{kq['luot_id']}/sukien").status_code, 404)
 
+    def test_n2_gui_trung_luot_tra_409(self):
+        cho = threading.Event()
+        with mock.patch.object(congai, "goi", side_effect=lambda c, **k: cho.wait(5) and dict(TL)):
+            kq = self.c.post("/api/trochuyen", json={"noidung": "Câu", "nen": True}, headers={"X-IGM360": "1"}).json()
+            r = self.c.post("/api/trochuyen", json={"noidung": "Câu 02", "hoithoai_id": kq["hoithoai_id"]},
+                            headers={"X-IGM360": "1"})
+            cho.set()
+            self.cho_xong(kq["luot_id"])
+        self.assertEqual((r.status_code, r.json()["detail"]), (409, "Cuộc trò chuyện đang có câu trả lời chưa xong"))
+
     def test_khong_gui_nen_thi_tra_loi_dong_bo_nhu_cu(self):
         with mock.patch.object(congai, "goi", return_value=dict(TL)):
             r = self.c.post("/api/trochuyen", json={"noidung": "Câu"}, headers={"X-IGM360": "1"}).json()

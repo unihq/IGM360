@@ -19,6 +19,10 @@ GIU_CHU = 24_000
 VAI_CHU = {"nguoi": "Bạn", "ai": "Trợ lý"}   # QĐ221: lời gửi AI xưng "bạn"
 
 
+class DangTraLoi(Exception):
+    """Cuộc đang có lượt trả lời chưa xong (đường đồng bộ): API trả 409 (CDA SOAT-N0-2 N2)."""
+
+
 class ChoCapNhat(Exception):
     """QĐ347 H1: phần mềm đang chờ cập nhật – không mở lượt, không ghi tin; câu báo `luot.CHU_CHO_CAPNHAT` (QĐ352)."""
 
@@ -181,7 +185,7 @@ def gui(hoithoai_id: str | None, nguoidung_id: str, noidung: str, thumuc=None, m
     kq = bat_luot(hoithoai_id, nguoidung_id, noidung, thumuc, mohinh_id, nghe=False)
     lt = luot.lay(kq["luot_id"], nguoidung_id)
     if lt is None or kq.get("trung"):
-        raise PermissionError("Cuộc trò chuyện đang có câu trả lời chưa xong")
+        raise DangTraLoi("Cuộc trò chuyện đang có câu trả lời chưa xong")   # chữ giữ nguyên tới khi anh duyệt chữ mới (N2)
     lt.luong.join()
     if lt.loi_ngoai is not None:
         raise lt.loi_ngoai
