@@ -2,7 +2,7 @@
 // QĐ88, QĐ94; icon theo từ điển QĐ91; chặn đoán mật khẩu, phiên 30 ngày QĐ90).
 // Cách bật tắt khối theo trạng thái (data-s) giữ như bản vẽ; số liệu lấy từ máy chủ.
 'use strict';
-const S = {g: '01', dn: 'matkhau', k: 'binhthuong', trang: '03', tab: 'thongso', cn: 'moinhat', xem: 'dt', thu: 0, tc: 'rong'};
+const S = {g: '01', dn: 'matkhau', k: 'binhthuong', trang: '03', tab: 'thongso', cn: 'moinhat', xem: 'dt', thu: 0, tc: 'rong', lv: null};
 const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
 const D = {thongso: null, maTam: '', maTamDoiMay: '', xnCb: null, suaK: '', capnhat: null, hetLuc: null, khoaDen: 0,
   md: null, dn: {}, trung: {}, ht: [], htId: null, soLuc: ''};
@@ -64,7 +64,13 @@ function ve() {
   $$('[data-trang]').forEach(e => e.classList.toggle('on', e.dataset.trang === S.trang));
   $$('.tab').forEach(e => e.classList.toggle('on', e.dataset.tab === S.tab));
   $('#tieude-tren').innerHTML = (ICO[S.trang] || '') + '<b class="t16 nw">' + (TEN[S.trang] || '') + '</b>';
-  $('[data-dangnhap]').disabled = S.dn === 'khoa' || S.dn === 'khoatk';
+  const nutDn = $('[data-dangnhap]');   // 0.8.8 (CDA SOAT-KH-088 điểm 3): "Đang xử lý…" theo S.lv riêng; S.dn giữ 07 giá trị
+  nutDn.disabled = S.dn === 'khoa' || S.dn === 'khoatk' || S.lv === 'dang';
+  if ((S.lv === 'dang') !== nutDn.classList.contains('dang')) {
+    if (S.lv === 'dang') { D.nutDn = nutDn.innerHTML; nutDn.innerHTML = icoMau(ICON.loader, '#FFFFFF', 18).replace('<svg', '<svg aria-hidden="true"') + CHU_DN.dang; }
+    else nutDn.innerHTML = D.nutDn;
+    nutDn.classList.toggle('dang', S.lv === 'dang'); }
+  if (S.g === '01') dongTacLv();   // 0.8.8: linh vật màn 01
   veNhom();   // Y52: thu gọn nhóm thanh trái
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
@@ -139,23 +145,49 @@ function loiDangNhap(e, oMa) {
 async function dangNhap() {
   const ten = $('#dn-ten').value.trim(), mk = $('#mk').value;
   if (!ten || !mk) { hienLoiDn('Bạn nhập tên đăng nhập và mật khẩu.', null); return; }
+  if (S.lv === 'dang') return;
+  S.lv = 'dang'; ve();   // 0.8.8: nút "Đang xử lý…", linh vật đang làm; mọi nhánh (cả mất kết nối) trả lại ở finally
   try {
     const kq = await api('/dangnhap', {ten, matkhau: mk});
     D.maTam = kq.ma_tam; $('#mk').value = '';
     if (kq.buoc === 'bat2lop') { $('#qr-2lop').innerHTML = kq.qr_svg; S.dn = 'batdau2lop'; } else S.dn = 'ma2lop';
     ve(); const o = $('[data-s="dn:' + S.dn + '"] .o6'); if (o) o.focus();
   } catch (e) { if (e.status) loiDangNhap(e, false); }
+  finally { S.lv = null; ve(); }
 }
 async function xacNhanMa(nut) {
   const goc = nut.closest('[data-s]'), ma = ma6(goc);
   if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
   try {
     await api('/dangnhap/ma2lop', {ma_tam: D.maTam, ma});
+    S.lv = 'xong'; ve();   // 0.8.8: linh vật xong việc, không thêm thời gian chờ
     if (nut.dataset.xacnhan === 'bat') bao('Đã bật đăng nhập 02 lớp.');
     xoa6(goc); $('#qr-2lop').innerHTML = ''; await vaoPhanMem();
   } catch (e) { xoa6(goc); if (e.status === 429) { hienKhoa(e.ct); return; }
     if (/hết hạn/.test(e.message)) { S.dn = 'hethan'; ve(); bao(e.message); return; } loiDangNhap(e, true); }
+  finally { S.lv = null; ve(); }
 }
+
+// <LINHVAT> 0.8.8 (QĐ364, QĐ368, QĐ371): linh vật màn 01 đổi động tác theo S.lv || S.dn; chào mừng 01 lần khi màn 01 hiện.
+// Giảm chuyển động hoặc máy yếu (CDA SOAT-KH-088 2a) → lớp .tinh trên #s01, bỏ chào mừng. Lỗi ở đây không chặn ve() (L3 d).
+const CHU_DN = {hien: 'Hiện mật khẩu', an: 'Ẩn mật khẩu', dang: 'Đang xử lý…'};   // bảng chữ QĐ369 (6); quy chuẩn 5.1
+const LV = {matkhau: 'cho', dang: 'danglam', sai: 'loi', khoa: 'loi', khoatk: 'loi', hethan: 'loi', ma2lop: 'chay', batdau2lop: 'chay', xong: 'xong'};
+const lvTinh = () => matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.hardwareConcurrency <= 2
+  || (navigator.deviceMemory > 0 && navigator.deviceMemory <= 2);
+const LVC = {pha: '', da: false};   // chào mừng: 'vao' (0–1,8 giây) → 'chao' (1,8–3,6 giây) → đứng chờ
+function dongTacLv() {
+  try {
+    const s01 = $('#s01'), tinh = lvTinh(); s01.classList.toggle('tinh', tinh);
+    if (!LVC.da) { LVC.da = true;
+      if (!tinh) { LVC.pha = 'vao'; setTimeout(() => { LVC.pha = 'chao'; dongTacLv(); }, 1800); setTimeout(() => { LVC.pha = ''; dongTacLv(); }, 3600); } }
+    const dt = LVC.pha && !S.lv && S.dn === 'matkhau' ? LVC.pha : (LV[S.lv || S.dn] || 'cho');
+    $$('.lv-o', s01).forEach(o => { o.className = 'lv-o lv-xanh dt-' + dt; });
+  } catch (e) { /* linh vật lỗi: bỏ qua, ô đăng nhập vẫn dùng được */ }
+}
+addEventListener('pointermove', e => { const s01 = $('#s01');   // phông nền: lớp xa – gần lệch theo con trỏ (chỉ màn 01, không tĩnh)
+  if (S.g !== '01' || !s01 || s01.classList.contains('tinh')) return;
+  s01.style.setProperty('--mx', (e.clientX / innerWidth - .5).toFixed(3)); s01.style.setProperty('--my', (e.clientY / innerHeight - .5).toFixed(3)); });
+// </LINHVAT>
 
 // ---- Màn 02
 const DAU_SAU_CN = '#sau-capnhat';   // dấu trên địa chỉ trang khi tự tải lại sau cập nhật (CDO U21 G1)
@@ -1389,7 +1421,8 @@ document.addEventListener('click', async ev => {
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); const c = $('#app .cuon'); if (c) c.scrollTop = 0; if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (d.tab) { S.tab = d.tab; napTab(); }
-  else if ('mat' in d) { const i = $('#mk'); i.type = i.type === 'password' ? 'text' : 'password'; }
+  else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6)
+    t.innerHTML = icoMau(ICON[hien ? 'eye-off' : 'eye'], '#646A73', 18).replace('<svg', '<svg aria-hidden="true"'); t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien); }
   else if ('dangnhap' in d) { await dangNhap(); return; }
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
