@@ -18,6 +18,7 @@ const icoMau = (svg, mau) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"
 const noi = {innerHTML: ''}, bong = {querySelector: () => noi};
 const khung = {scrollHeight: 1000, scrollTop: 900, clientHeight: 100};
 const PHAN = {'#tn-chay': bong, '.tc-than': khung};
+const trang = {scrollHeight: 2000, scrollTop: 1100, clientHeight: 900}, document = {scrollingElement: trang};
 const $ = q => PHAN[q] || null;
 let khung_hinh = [];
 const requestAnimationFrame = f => { khung_hinh.push(f); return khung_hinh.length; };
@@ -68,6 +69,14 @@ class KiemGiaoDienLuot(unittest.TestCase):
                        " veChay(); const da_cuon = khung.scrollTop;", "[o_day, da_cuon]")
         self.assertEqual(kq, [1000, 800])                                         # ≤ 40 px thì bám đáy; đã cuộn lên thì giữ
 
+    def test_sua_h5_ca_trang_cuon_khi_khung_chat_khong_cuon_rieng(self):
+        """CDO BT04: .tc-than không có thanh cuộn riêng (cao = nội dung) → đo và cuộn cả trang; vẫn chỉ bám khi ở đáy."""
+        kq = self.chay("khung.scrollHeight = 500; khung.clientHeight = 500; khung.scrollTop = 0; LUOT.chu = 'a';"
+                       " veChay(); const o_day = [trang.scrollTop, khung.scrollTop];"
+                       " trang.scrollTop = 600; veChay(); const da_cuon = trang.scrollTop;", "[o_day, da_cuon]")
+        self.assertEqual(kq, [[2000, 0], 600])                                    # ở đáy: bám đáy trang; đã cuộn lên: giữ
+        self.assertIn("const c = vungCuon(); if (c) c.scrollTop = c.scrollHeight;   // vừa gửi: đưa tới đáy", self.app)
+
     def test_t2_t3_m2_n3_su_kien_luot(self):
         ma = ("async function xongLuot(ds, tl, gh) { goi_xong.push([ds.length, tl.noidung, gh]); }"
               " theoLuot('l1', [{vai: 'nguoi'}], 'k1'); const es = es_cuoi;"
@@ -102,6 +111,21 @@ class KiemGiaoDienLuot(unittest.TestCase):
         self.assertNotIn("Mở Mô hình AI", kq[0])
         self.assertIn("Mở Mô hình AI", kq[1])
         self.assertIn("Mở Mô hình AI", kq[2])                                     # tin cũ giữ nguyên
+
+    def test_n5_cuoc_dang_co_luot_chay(self):
+        """CDA SOAT-N0-4 N5 (cách a): máy chủ trả `trung` → câu hỏi về lại ô nhập, vẽ cuộc thật, không nghe lượt mới."""
+        a = self.app
+        gui = a[a.index("async function guiTin(chu) {"):a.index("\n}\n", a.index("async function guiTin(chu) {")) + 3]
+        ma = ("const o = {value: 'Câu mới'}, ds = {innerHTML: ''}; PHAN['#tc-o'] = o; PHAN['#ds-tin'] = ds;"
+              " const tinHtml = x => '<tin>'; const ghimKhoa = () => 'k1', luuGhim = () => {}, bao = t => { throw new Error(t); };"
+              " api = async () => ({hoithoai_id: 'cuoc-2', hoi: null, luot_id: 'l-cu', trung: true}); D.tin = []; S.tc = 'co';"
+              + gui +
+              " (async () => { await guiTin(); console.log(JSON.stringify({o: o.value, mo: goi_moHt, es: es_cuoi === null})); })();")
+        r = subprocess.run(["node", "-e", GIA_DOM.replace("const ghiHong = () => {}, veNutMh = () => {}, veDsHt = () => {}, api = async () => ({hoithoai: []});",
+                                                          "const ghiHong = () => {}, veNutMh = () => {}, veDsHt = () => {}; let api = async () => ({hoithoai: []});")
+                            + self.chu + self.luot + ma], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), {"o": "Câu mới", "mo": ["cuoc-2"], "es": True})
 
     def test_gui_nen_noi_lai_giam_chuyen_dong(self):
         self.assertIn("if (duong === '/trochuyen' && than) than = {...than, nen: true};", self.app)

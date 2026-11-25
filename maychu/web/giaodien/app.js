@@ -1319,7 +1319,9 @@ const htmlChay = () => '<div class="tn ai" id="tn-chay" aria-busy="true"><div cl
   + '</div><div class="tn-noi"><p><span class="dang-viet"></span></p></div></div>';
 // H2–H4, T4: chữ qua cum() (thoát chữ), tách đoạn như tin đã xong; con trỏ .dang-viet::after ở cuối (H3: span rỗng, chữ giữ
 // màu chính). H5: chỉ bám đáy khi đang ở đáy (≤ 40 px).
-function veChay() { LUOT.hen = 0; const b = $('#tn-chay'), c = $('.tc-than'); if (!b) return;
+// SUA-H5 (CDO BT-N0 BT04): vùng cuộn thật – .tc-than khi có thanh cuộn riêng (sau QĐ317 B1), chưa có thì cả trang.
+const vungCuon = () => { const c = $('.tc-than'); return c && c.scrollHeight > c.clientHeight ? c : (document.scrollingElement || document.documentElement); };
+function veChay() { LUOT.hen = 0; const b = $('#tn-chay'), c = vungCuon(); if (!b) return;
   const day = !c || c.scrollHeight - c.scrollTop - c.clientHeight <= 40, doan = cum(LUOT.chu).split(/\n{2,}/);
   b.querySelector('.tn-noi').innerHTML = doan.map((o, i) => '<p>' + o.replace(/\n/g, '<br>')
     + (i === doan.length - 1 ? '<span class="dang-viet"></span>' : '') + '</p>').join('');
@@ -1348,9 +1350,10 @@ async function guiTin(chu) {
   const o = $('#tc-o'), nd = (chu ?? o.value).trim(); if (!nd || S.tc === 'dang') return;
   o.value = ''; const cu = D.tin && D.htId ? D.tin : [], toi = tinHtml({vai: 'nguoi', noidung: nd});
   $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + toi + htmlChay(); S.tc = 'dang'; ve();
-  const c = $('.tc-than'); if (c) c.scrollTop = c.scrollHeight;
+  const c = vungCuon(); if (c) c.scrollTop = c.scrollHeight;   // vừa gửi: đưa tới đáy
   try { const ht0 = D.htId, gh = ghimKhoa();   // QĐ180: mỗi tin gửi kèm khóa mô hình ghim (trình duyệt nhớ)
     const kq = await api('/trochuyen', {hoithoai_id: D.htId, noidung: nd, mohinh_id: gh});   // api() thêm nen: true
+    if (kq.trung) { o.value = nd; await moHt(kq.hoithoai_id); return; }   // N5 (CDA, cách a): cuộc đang có lượt chạy (mở ở 02 nơi) → trả câu hỏi về ô nhập, vẽ cuộc thật, nối vào lượt đang chạy
     if (!D.htId) $('#tc-tieude').textContent = nd.slice(0, 80);
     D.htId = kq.hoithoai_id; if (!ht0 && D.ghimMoi) { luuGhim(D.htId, D.ghimMoi); D.ghimMoi = null; }
     theoLuot(kq.luot_id, [...cu, kq.hoi || {vai: 'nguoi', noidung: nd}], gh); }
