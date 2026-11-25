@@ -155,8 +155,8 @@ const vt = {parentElement: tt}, lg = {parentElement: nav, after(x) { x.parentEle
 const nut = {getBoundingClientRect: () => ({bottom: 112})}, tha = {hidden: false, style: {}};
 const $ = q => ({'.vi-tri': vt, 'nav.menu .logo': lg, '.thanh-tren': tt, '[data-chuong]': nut})[q];
 """ + self.vt
-        kq = self.chay(ma + "doiViTri(); const a = vt.parentElement.ten; datTha(tha); const top = tha.style.top;"
-                       " S.xem = 'mb'; doiViTri(); const b = vt.parentElement.ten; datTha(tha);", "[a, top, b, tha.style.top]")
+        kq = self.chay(ma + "doiViTri(); const a = vt.parentElement.ten; datTha(tha); const top = tha.style['top'];"
+                       " S.xem = 'mb'; doiViTri(); const b = vt.parentElement.ten; datTha(tha);", "[a, top, b, tha.style['top']]")
         self.assertEqual(kq, ["nav", "120px", "thanh", ""])                                         # dưới logo; ngay dưới chuông 08 px
 
     def test_vung_cuon_may_tinh_lay_cuon_trong(self):                                             # KH-090 2.2 (b)

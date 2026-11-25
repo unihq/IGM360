@@ -82,8 +82,8 @@ function doiViTri() {
 }
 // KH-090 2.2 (c), CDO P1: 02 bảng thả xuống mở từ cột menu nổi trên cùng (position: fixed), mép trái 08 px, ngay dưới chuông.
 function datTha(e) {
-  if (S.xem === 'mb' || e.hidden) { e.style.top = ''; return; }
-  const c = $('[data-chuong]').getBoundingClientRect(); e.style.top = Math.round(c.bottom + 8) + 'px';
+  if (S.xem === 'mb' || e.hidden) { e.style['top'] = ''; return; }
+  const c = $('[data-chuong]').getBoundingClientRect(); e.style['top'] = Math.round(c.bottom + 8) + 'px';
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
 function dongHop() { $$('.lop').forEach(e => e.hidden = true); }
@@ -425,7 +425,7 @@ function hop2Lop(id) {   // hộp tắt, hộp bật lại (bản vẽ BV02, BV0
       + '<b class="f1 t16">' + cum(tat ? C.hopTatTieu : C.hopBatTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 18) + '</button></div>'
       + '<div class="hop-than">' + (tat ? '<div class="t13">' + cum(C.hopTatThan) + '</div><label class="nhan-o">' + esc(C.oMk) + '<div class="o-nhap"><input type="password" autocomplete="current-password"></div></label>'
           + '<div class="nhan-o">' + cum(C.oMa) + o6 + '</div>'
-        : '<div class="t13">' + cum(C.hopBatThan) + '</div>' + o6 + '<div class="dong t13 phu" style="gap:6px">' + icoMau(ICON.info, '#646A73', 16) + '<span>' + cum(C.hopBatDx) + '</span></div>')
+        : '<div class="t13">' + cum(C.hopBatThan) + '</div>' + o6 + '<div class="dong t13 phu" style="gap:6px">' + icoMau(ICON['info'], '#646A73', 16) + '<span>' + cum(C.hopBatDx) + '</span></div>')
       + '<div class="dong t13" data-loi2lop style="gap:6px;color:#E22E28;align-items:flex-start" hidden>' + icoMau(ICON['circle-alert'], '#E22E28', 16) + '<span></span></div></div>'
       + '<div class="hop-chan"><button class="btn btn-phu" data-dong>' + esc(C.huy) + '</button><button class="btn btn-chinh" ' + (tat ? 'data-tat2lop>' + cum(C.nutTat) : 'data-bat2lop>' + esc(C.nutBat)) + '</button></div></div>';
     $('#h-2lop').before(l);
