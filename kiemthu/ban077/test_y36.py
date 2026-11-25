@@ -494,7 +494,7 @@ class KiemY36e(Nen):
                 congai.goi("x", **kw)
                 l = self.lenh[-1]
                 self.assertEqual(l[l.index("--max-turns") + 1], "1", kw)
-                self.assertNotIn("--tools", l, kw)
+                self.assertEqual(l[l.index("--tools") + 1], "", kw)   # QĐ374 (c): không công cụ nào (trước QĐ374: không có cờ --tools)
         self.assertFalse(congai._TRA_WEB.get())     # trả lại như cũ sau lượt gọi
 
     def test_b_loi_dung_loai(self):

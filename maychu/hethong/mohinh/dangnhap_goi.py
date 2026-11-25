@@ -80,12 +80,23 @@ def thu_muc(goi: str, taikhoan: int) -> Path | None:
     return goc / f"taikhoan_{taikhoan:02d}"
 
 
+# QĐ374 (b) (KIEM-BM-16d): CLI AI không nhận biến môi trường bí mật của vùng chứa. Codex mặc định đưa MỌI biến nó nhận
+# vào lệnh mô hình chạy (Codex 0.172.0 shell_environment_policy.rs 135–136). Bỏ đích danh mật khẩu quản trị, mã cập
+# nhật, và mọi biến có tên dạng mật khẩu, bí mật, mã, khóa. Mã dài hạn Claude đặt lại SAU bước lọc (madaihan).
+BIEN_CAM = frozenset({"IGM360_ADMIN_USER", "IGM360_ADMIN_PASSWORD", "WATCHTOWER_TOKEN"})
+_MAU_BIEN_CAM = re.compile(r"PASSWORD|PASSWD|SECRET|TOKEN|PRIVATE|CREDENTIAL|(^|_)KEY$|_KEY_", re.IGNORECASE)
+
+
+def bien_cam(ten: str) -> bool:
+    return ten in BIEN_CAM or bool(_MAU_BIEN_CAM.search(ten))
+
+
 def _env(goi: str, taikhoan: int, tao: bool = True, ma_daihan: bool = True) -> dict:
     """Môi trường 01 lần chạy CLI của 01 tài khoản. Gói Claude (0.7.8, PTD-09 Đ2): luôn bỏ khóa API
     (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` đứng trước mã dài hạn trong thứ tự của CLI) và mã của tài khoản khác;
     `ma_daihan` thì đặt mã dài hạn còn hạn của đúng tài khoản này. Đăng nhập, đăng xuất kiểu cũ, lấy mã: `ma_daihan=False`."""
     tm = thu_muc(goi, taikhoan)
-    env = dict(os.environ)
+    env = {k: v for k, v in os.environ.items() if not bien_cam(k)}   # QĐ374 (b)
     if tm is not None:
         if tao:
             tm.mkdir(parents=True, exist_ok=True)

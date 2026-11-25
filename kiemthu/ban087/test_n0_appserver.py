@@ -144,7 +144,7 @@ class KiemThuBanMoi(Nen):
 
     def test_k1a_chay_app_server_cua_ban_moi(self):
         kq, chay = self.kiem("thuong")
-        self.assertEqual(chay.lenh, ["ban-moi", "app-server"])
+        self.assertEqual(chay.lenh, ["ban-moi", "app-server", "--disable", "shell_tool"])   # QĐ374 (a): thêm cờ tắt công cụ chạy lệnh
         self.assertEqual(chay.giay, 300)                                         # K1e
         self.assertEqual(kq, "Xin chào bạn\nĐoạn sau")
         g = self.da_ghi()

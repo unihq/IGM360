@@ -818,7 +818,8 @@ def kiem_app_server(taikhoan: int, cau: str, cli: str, giay: int = GIAY_KIEM_AS)
     Không ghi G02, không ghi G04 (gọi thẳng, như đường kiểm `exec`). Hết hạn mức → HetHanMuc; lỗi khác → RuntimeError."""
     env = dangnhap_goi._env("chatgpt", taikhoan)
     try:
-        a = _chay_as([cli, "app-server"], env, cau, None, Nghe(), giay=giay, giay_khoi_dau=min(GIAY_KHOI_DAU_AS, giay))
+        a = _chay_as([cli, "app-server", *CODEX_TAT_LENH], env, cau, None, Nghe(), giay=giay,
+                     giay_khoi_dau=min(GIAY_KHOI_DAU_AS, giay))
     except _CanExec as e:
         raise RuntimeError(f"app-server chưa chạy được: {str(e)[:200]}") from None
     if a["loi"] or not a["chu"]:
@@ -834,6 +835,12 @@ def kiem_app_server(taikhoan: int, cau: str, cli: str, giay: int = GIAY_KIEM_AS)
 _TRA_WEB: contextvars.ContextVar = contextvars.ContextVar("igm360_tra_web", default=False)
 CONGCU_TRA_WEB = "WebSearch,WebFetch"                      # công cụ duy nhất có mặt và được phép
 CONGCU_CAM = "Bash,PowerShell,Write,Edit,MultiEdit,NotebookEdit"   # chặn thêm 01 lớp, phòng cài đặt máy bật lại
+# QĐ374 (KIEM-BM-16d): mô hình không có công cụ chạy lệnh máy.
+# (a) Codex: tắt tính năng shell_tool (Codex 0.172.0 spec_plan.rs 1289–1296: không đăng ký công cụ chạy lệnh);
+#     cờ `--disable` khai báo global, đặt sau lệnh con exec / app-server vẫn nhận (cli/src/main.rs 966–975, 1090–1092).
+# (c) Claude, lượt không phải trò chuyện: không công cụ nào (`--tools ""`), không MCP (`--strict-mcp-config`).
+CODEX_TAT_LENH = ["--disable", "shell_tool"]
+CLAUDE_KHONG_CONGCU = ["--tools", "", "--strict-mcp-config"]
 LOI_CLAUDE = {"error_max_turns": "chạm trần số lượt", "error_during_execution": "lỗi khi chạy",
               "error_max_budget_usd": "chạm trần chi phí", "error_max_structured_output_retries": "lỗi định dạng trả lời"}
 
@@ -864,7 +871,7 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = N
         lenh += ["--tools", CONGCU_TRA_WEB, "--allowedTools", CONGCU_TRA_WEB, "--disallowedTools", CONGCU_CAM,
                  "--strict-mcp-config"]
     else:
-        lenh += ["--max-turns", "1"]
+        lenh += ["--max-turns", "1", *CLAUDE_KHONG_CONGCU]   # QĐ374 (c)
     if mohinh:
         lenh += ["--model", mohinh]
     n = _NGHE.get() if cli is None else None   # N0: chỉ lượt trò chuyện có người nghe đọc dần
@@ -901,7 +908,8 @@ def _goi_claude(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = N
 
 
 def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = None) -> dict:
-    lenh = [cli or dangnhap_goi._cli("chatgpt"), "exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only"]
+    lenh = [cli or dangnhap_goi._cli("chatgpt"), "exec", *CODEX_TAT_LENH, "--json", "--skip-git-repo-check", "--sandbox",
+            "read-only"]   # QĐ374 (a)
     if mohinh:
         lenh += ["-m", mohinh]
     lenh.append("-")   # đọc câu hỏi từ đầu vào chuẩn
@@ -909,7 +917,7 @@ def _goi_chatgpt(taikhoan: int, cau: str, mohinh: str | None, cli: str | None = 
     n = _NGHE.get() if cli is None else None   # N0: chỉ lượt trò chuyện có người nghe đọc dần
     if n is not None:   # QĐ351: lượt có người nghe đi app-server (chữ hiện dần từng mẩu)
         try:
-            a = _chay_as([dangnhap_goi._cli("chatgpt"), "app-server"], env, cau, mohinh, n)
+            a = _chay_as([dangnhap_goi._cli("chatgpt"), "app-server", *CODEX_TAT_LENH], env, cau, mohinh, n)   # QĐ374 (a)
         except _CanExec:
             if n.dung.is_set():
                 raise DaDung() from None
