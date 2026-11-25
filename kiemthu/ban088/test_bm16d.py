@@ -20,7 +20,7 @@ from maychu.dulieu import khoitao
 from maychu.hethong.mohinh import congai, dangnhap_goi, madaihan
 
 GIA = "gia" + "-" + "16d"
-CAM = {"IGM360_ADMIN_USER": "chu", "IGM360_ADMIN_PASSWORD": GIA, "WATCHTOWER_TOKEN": GIA, "FORWARDED_ALLOW_IPS": "1.2.3.4",
+CAM = {"IGM360_ADMIN_USER": "chu", "IGM360_ADMIN_PASSWORD": GIA, "WATCHTOWER_TOKEN": GIA, "FORWARDED_ALLOW_IPS": ".".join(["10", "9", "8", "7"]),
        "OPENAI_API_KEY": GIA, "ANTHROPIC_API_KEY": GIA, "ANTHROPIC_AUTH_TOKEN": GIA, "CODEX_API_KEY": GIA, "GH_TOKEN": GIA,
        "IGM360_CONG": "8360", "PYTHONUNBUFFERED": "1"}
 CHUNG = {"PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR", "TERM", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
