@@ -211,7 +211,7 @@ class KiemTep088(unittest.TestCase):
         self.assertIn('data-mat aria-label="Hiện mật khẩu"', self.s01)
         self.assertIn("const CHU_DN = {hien: 'Hiện mật khẩu', an: 'Ẩn mật khẩu', dang: 'Đang xử lý…'};", self.js)
         self.assertIn("t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien)", self.js)
-        self.assertIn("ICON[hien ? 'eye-off' : 'eye']", self.js)
+        self.assertIn("ICON[hien ? 'eye' : 'eye-off']", self.js)                 # QĐ404 thay hình QĐ369 (6): hình theo trạng thái đang có
         ic = doc(GD / "icon.js")
         self.assertIn('"eye-off": "<svg', ic)
         self.assertIn("lucide-eye-off", ic)

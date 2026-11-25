@@ -1522,8 +1522,8 @@ document.addEventListener('click', async ev => {
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); $$('#app .cuon, #app .cuon-trong').forEach(c => c.scrollTop = 0); if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }   // KH-090 2.2 (a): khổ máy tính cuộn ở .cuon-trong
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (d.tab) { S.tab = d.tab; napTab(); }
-  else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6)
-    t.innerHTML = icoMau(ICON[hien ? 'eye-off' : 'eye'], '#646A73', 18).replace('<svg', '<svg aria-hidden="true"'); t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien); }
+  else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6), QĐ404
+    t.innerHTML = icoMau(ICON[hien ? 'eye' : 'eye-off'], '#646A73', 18).replace('<svg', '<svg aria-hidden="true"'); t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien); }
   else if ('dangnhap' in d) { await dangNhap(); return; }
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
