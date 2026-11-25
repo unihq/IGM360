@@ -134,6 +134,18 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .thu nav.menu{width:68px}
 .thu .muc{padding:0;justify-content:center;border-left-width:3px}
 .thu .muc>span:not(.bao),.thu .nhom,.thu .logo-chu,.thu .gd-sau{display:none}
+/* Y52 (QĐ321–QĐ331; Z27 · U40): thu gọn nhóm thanh trái, chỉ khổ máy tính */
+#app:not(.mb) .nhom-nut{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;cursor:pointer;text-align:left;font:inherit;font-size:11px;font-weight:700;color:var(--phu);padding:14px 14px 4px 20px;white-space:nowrap}
+#app:not(.mb) .nhom-nut:hover{color:var(--chu)}
+#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh)}
+#app:not(.mb) .nhom-nut .nhom-bao{margin-left:auto;display:flex;gap:4px;align-items:center}
+#app:not(.mb) .nhom-nut .nhom-mt{display:flex;margin-left:4px}
+#app:not(.mb) .nhom-nut .nhom-bao:empty+.nhom-mt{margin-left:auto}
+#app:not(.mb) .nhom-nut .bao{margin-left:0;font-size:11px;line-height:16px;padding:0 6px}
+#app:not(.mb) .nhom-ds.gap>.muc{display:none}
+#app:not(.mb) .nhom-ds.rieng{margin-top:8px}
+.thu .nhom-nut{display:none!important}
+.thu .nhom-ds.gap>.muc{display:flex!important}
 .thu .muc .bao{position:absolute;top:3px;right:6px;padding:0 4px;line-height:15px;font-size:10px}
 .thu .logo{justify-content:center;padding:0 0 12px}
 .vung{flex:1;min-width:0;display:flex;flex-direction:column}

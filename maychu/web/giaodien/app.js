@@ -63,10 +63,54 @@ function ve() {
   $$('.tab').forEach(e => e.classList.toggle('on', e.dataset.tab === S.tab));
   $('#tieude-tren').innerHTML = (ICO[S.trang] || '') + '<b class="t16 nw">' + (TEN[S.trang] || '') + '</b>';
   $('[data-dangnhap]').disabled = S.dn === 'khoa' || S.dn === 'khoatk';
+  veNhom();   // Y52: thu gọn nhóm thanh trái
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
 function dongHop() { $$('.lop').forEach(e => e.hidden = true); }
 function mo(id) { dongTha(); $('#' + id).hidden = false; }
+// <NHOM> Y52 (QĐ321–QĐ331, QĐ332; bản vẽ Z27 · U40): thu gọn 05 nhóm thanh trái, chỉ khổ máy tính (QĐ329).
+// L1 A: 01 nhóm mở 1 lúc, bấm lại thì gập · L2 A: mở trang thì nhóm chứa trang tự mở; anh tự gập thì tiêu đề tô xanh ·
+// L3 A: nhóm gập hiện số báo ở tiêu đề, giữ màu, rê chuột "<tên mục>: <số>" · L4 A: thu cả thanh giữ như nay ·
+// L5 B: nhóm 01 mục ("Trò chuyện AI") đứng riêng, bỏ tiêu đề · không lưu (QĐ327) · không câu rê chuột ở tiêu đề (QĐ330).
+// L6 (cuộn riêng) KHÔNG làm ở bản này: đi cùng QĐ317 B1.
+const NHOM = {ds: [], mo: new Set(), trangCu: null};
+// Hàm thuần (bài kiểm chạy bằng node): ds = [{ten, so: số mục, bao: [{ten, so, do}]}], mo = tên nhóm đang mở, cur = nhóm
+// chứa trang đang mở → [{ten, rieng, mo, coTrang, bao}].
+const tinhNhom = (ds, mo, cur) => ds.map(g => { const rieng = g.so === 1, m = rieng || mo.has(g.ten);
+  return {ten: g.ten, rieng, mo: m, coTrang: !m && g.ten === cur, bao: m ? [] : g.bao}; });
+const nhomCua = tr => NHOM.ds.find(g => g.ds.querySelector('[data-trang="' + tr + '"]'));
+function dungNhom() {   // gom mục của mỗi tiêu đề vào 01 khối, tiêu đề thành nút (01 lần)
+  const nav = $('nav.menu'); if (!nav || NHOM.ds.length) return;
+  [...nav.querySelectorAll(':scope > .nhom')].forEach(h => {
+    const ten = h.textContent.trim(), ds = document.createElement('div'); ds.className = 'nhom-ds';
+    let n = h.nextElementSibling;
+    while (n && n.classList.contains('muc') && !n.classList.contains('thu-gon')) { const x = n.nextElementSibling; ds.appendChild(n); n = x; }
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'nhom nhom-nut'; b.dataset.nhomNut = ten;
+    b.innerHTML = '<span class="nhom-ten">' + esc(ten) + '</span><span class="nhom-bao"></span><span class="nhom-mt"></span>';
+    h.replaceWith(b); b.after(ds); NHOM.ds.push({ten, b, ds});
+  });
+  const c = nhomCua(S.trang); NHOM.mo = new Set(c ? [c.ten] : []); NHOM.trangCu = S.trang;
+}
+const muiTen = mo => ICON[mo ? 'chevron-down' : 'chevron-right'].replace(/stroke="[^"]*"/, 'stroke="#646A73"')
+  .replace(/width="\d+"/, 'width="14"').replace(/height="\d+"/, 'height="14"');   // QĐ331
+function veNhom() {
+  if (!NHOM.ds.length) dungNhom();
+  if (!NHOM.ds.length) return;
+  const cur = nhomCua(S.trang);
+  if (S.trang !== NHOM.trangCu) { NHOM.trangCu = S.trang; if (cur) NHOM.mo = new Set([cur.ten]); }   // L2 A
+  const kq = tinhNhom(NHOM.ds.map(g => ({ten: g.ten, so: g.ds.querySelectorAll(':scope > .muc').length,
+    bao: [...g.ds.querySelectorAll('.bao')].filter(x => !x.hidden && x.textContent.trim())
+      .map(x => ({ten: x.closest('.muc').title, so: x.textContent.trim(), do: x.classList.contains('do')}))})),
+  NHOM.mo, cur && cur.ten);
+  NHOM.ds.forEach((g, i) => { const k = kq[i];
+    g.b.hidden = k.rieng; g.ds.classList.toggle('rieng', k.rieng); g.ds.classList.toggle('gap', !k.mo);
+    g.b.classList.toggle('co-trang', k.coTrang); g.b.setAttribute('aria-expanded', String(k.mo));
+    g.b.querySelector('.nhom-mt').innerHTML = muiTen(k.mo);
+    g.b.querySelector('.nhom-bao').innerHTML = k.bao.map(x => '<span class="bao' + (x.do ? ' do' : '') + '" title="'
+      + esc(x.ten + ': ' + x.so) + '">' + esc(x.so) + '</span>').join(''); });   // L3 A
+}
+function batNhom(ten) { if (NHOM.mo.has(ten)) NHOM.mo.delete(ten); else { NHOM.mo.clear(); NHOM.mo.add(ten); } veNhom(); }   // L1 A
+// </NHOM>
 function bao(t) { const e = $('#tb-msg'); e.textContent = t; e.hidden = false; clearTimeout(bao.h); bao.h = setTimeout(() => e.hidden = true, 3200); }
 function xacnhan(tieu, chu, nut, cb, ico) { const dau = $('#h-xacnhan .hop-dau svg');
   if (dau) { if (!xacnhan.goc) xacnhan.goc = dau.outerHTML; dau.outerHTML = ico ? icoMau(ICON[ico], '#1456F0', 20) : xacnhan.goc; }
@@ -160,6 +204,7 @@ async function demSo(mo) {
     const d = await api('/demso' + (mo ? '?mo=1' : ''));   // QĐ174: mở chuông thì dò bản mới nếu kết quả đã cũ
     $$('[data-trang="05"] .bao').forEach(b => { b.textContent = d.cuacho ? soVN(d.cuacho) : ''; b.hidden = !d.cuacho; });
     $$('[data-trang="10"] .bao, [data-them] .bao').forEach(g => { g.textContent = d.ket_ai ? soVN(d.ket_ai) : ''; g.hidden = !d.ket_ai; });
+    veNhom();   // Y52 L3: số báo ở tiêu đề nhóm gập theo số mới
     D.soLuc = new Date(Date.now() + 7 * 3600e3).toISOString().slice(11, 16);
     veChuong(d);
   } catch (e) { /* mất kết nối đã hiện dải báo */ }
@@ -1309,6 +1354,7 @@ document.addEventListener('click', async ev => {
   else if ('dong' in d) dongHop();
   else if (d.sua) { await moSua(d.sua); }
   else if (d.gat) { await gatCongTac(d.gat); }   // QĐ278: công tắc Thông số
+  else if (d.nhomNut !== undefined) { batNhom(d.nhomNut); return; }   // Y52 L1: bấm tiêu đề nhóm
   else if ('cagat' in d) { await gatCongCu(); }   // Y46 (Z20 dòng 1, 12, 13): công tắc Tự nâng mỗi ngày
   else if (d.canang) moNangCongCu(d.canang);   // Z20 dòng 7
   else if (d.cave) moVeCongCu(d.cave);   // Z20 dòng 11
