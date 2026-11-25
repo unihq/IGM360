@@ -1122,8 +1122,12 @@ function chuGhimHong(x) { const g = x.ghim_hong || x.md_hong, a = x.ghim_hong &&
     : a ? tenMh(a.m.ma, a.g.nhom, a.g, true) : g.ma ? tenMh(g.ma, null, null, true) : 'Mô hình đã chọn';   // N3
   const dung = mhThucDung(x) ? tenMh(mhThucDung(x), x.nguon_id, n, true) : (n ? tenLoai(n).replace(/ /g, ' ') : 'mô hình');   // U10b F2
   return esc(ten) + ' ' + (g.het_hanmuc ? nbsp('đang hết hạn mức') : 'chưa dùng được' + (g.loi ? ' (' + esc(nbsp(g.loi)) + ')' : '')) + ', đã dùng ' + esc(nbsp(dung + ' (mặc định)')); }
-const logoNhom = g => { const l = g.goi === 'claude' || g.hang === 'anthropic' ? ICON.logo_claude : g.goi === 'chatgpt' || g.hang === 'openai' ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16);
-  return '<span class="logo-n">' + l.replace(/width="\d+"/, 'width="18"').replace(/height="\d+"/, 'height="18"') + '</span>'; };
+// QĐ319 (Y46-7): tệp logo ChatGPT (chép nguyên của OpenAI, QĐ169, QĐ170) có hình chỉ chiếm 49,5% khung, ép về 18 px thì
+// hình còn ≈ 09 px. Giữ nguyên tệp, chỉ vẽ cỡ 32 px với lề âm 07 px trong ô 18 px: hình ≈ 16 px, cân logo Claude.
+const logoNhom = g => { const cl = g.goi === 'claude' || g.hang === 'anthropic', gpt = !cl && (g.goi === 'chatgpt' || g.hang === 'openai');
+  const l = cl ? ICON.logo_claude : gpt ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16), co = gpt ? 32 : 18;   // QĐ319: 32 px
+  const s = l.replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
+  return '<span class="logo-n">' + (gpt ? s.replace('<svg ', '<svg style="flex:none;margin:-7px" ') : s) + '</span>'; };   // lề âm 07 px
 function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 phu">Chưa có nguồn AI đã kết nối</span>';
   const ten = c.m ? tenMh(c.m.ma, c.g.nhom, c.g) : 'Mặc định', hong = c.ghim && D.hong[D.htId];
   const tieu = hong && hong.nghi ? chuNghi(hong.nghi, timNguon(hong.nghi.nguon_id)) + ' · tạm dùng ' + (timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình')

@@ -4,6 +4,7 @@ Loại 1 – bài đơn vị: giả tiến trình (npm, CLI), giả npm bằng h
 """
 import asyncio
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -969,6 +970,44 @@ class KiemK4VungChua(Nen):
         self.assertEqual(muc.count("\n- "), 7)
         self.assertIn("- Kiểm thử chưa đạt thì tự về bản trước và không thử lại bản đó; gói AI đang hết hạn mức thì hoãn, lượt kiểm"
                       " sau thử lại.\n", muc)
+
+
+class KiemLogoChatgptQd319(unittest.TestCase):
+    """Y46-7 (QĐ319, thay cách làm QĐ318): logo ChatGPT ở ô chọn mô hình hiện ≈ 16 px trong ô 18 px; tệp logo và mọi bản
+    chép giữ nguyên từng byte (QĐ169, QĐ170, Hướng dẫn thương hiệu OpenAI "Use the logo exactly as provided")."""
+    GD = Path(__file__).resolve().parents[2] / "maychu" / "web" / "giaodien"
+
+    def test_tep_logo_giu_nguyen(self):
+        import hashlib
+        tep = (self.GD / "logo" / "chatgpt.svg").read_bytes()
+        self.assertEqual((len(tep), hashlib.sha256(tep).hexdigest()[:12]), (2415, "75c1e9fffa5e"))
+        ico = (self.GD / "icon.js").read_text(encoding="utf-8")
+        d = json.loads(re.search(r'const ICON=(\{.*?\});?\s*\n', ico, re.S).group(1))
+        self.assertIn('<svg width="40" height="40" viewBox="0 0 716 716"', d["logo_chatgpt"])   # bản chép 40 px không đổi
+        self.assertIn(d["logo_chatgpt"], (self.GD / "index.html").read_text(encoding="utf-8"))  # hộp Thêm nguồn AI
+
+    @unittest.skipUnless(shutil.which("node"), "máy không có node")
+    def test_o_chon_mo_hinh_hinh_16_px(self):
+        js = (self.GD / "app.js").read_text(encoding="utf-8")
+        i = js.index("const logoNhom = ")
+        ham = js[i:js.index("\nfunction ", i)]
+        ico = (self.GD / "icon.js").read_text(encoding="utf-8")
+        d = json.loads(re.search(r'const ICON=(\{.*?\});?\s*\n', ico, re.S).group(1))
+        chay = ("const ICON = " + json.dumps({k: d[k] for k in ("logo_claude", "logo_chatgpt")}) + "; ICON['key-round'] = '<svg width=\"16\" height=\"16\"></svg>';\n"
+                "const icoMau = s => s;\n" + ham + "\nconsole.log(JSON.stringify([logoNhom({goi: 'chatgpt'}), logoNhom({goi: 'claude'}), logoNhom({hang: 'openai'})]));")
+        ra = subprocess.run(["node", "-e", chay], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(ra.returncode, 0, ra.stderr)
+        gpt, cl, khoa = json.loads(ra.stdout)
+        self.assertTrue(gpt.startswith('<span class="logo-n"><svg style="flex:none;margin:-7px" width="32" height="32" viewBox="0 0 716 716"'), gpt[:120])
+        self.assertTrue(cl.startswith('<span class="logo-n"><svg width="18" height="18" viewBox="0 0 24 24"'), cl[:120])   # Claude không đổi
+        self.assertEqual(gpt, khoa)                                               # nhận theo hãng cũng như theo gói
+        self.assertIn('fill="black"', gpt)                                        # không đổi màu
+        self.assertNotRegex(gpt, r'fill="#|stroke="#')
+        co, le = 32, -7
+        self.assertEqual(co + 2 * le, 18)                                         # chiếm đúng ô 18 px, không đẩy chữ bên cạnh
+        hinh = co * (535.173 - 180.500) / 716                                     # hình thật 180,500–535,173 trong khung 716 (đo cực trị)
+        self.assertTrue(15.5 <= hinh <= 17, hinh)                                 # ≈ 15,9 px, khoảng 88% ô (trước: 8,9 px)
+        self.assertLessEqual(hinh, 18)                                            # hình không tràn ra ngoài ô
 
 
 if __name__ == "__main__":
