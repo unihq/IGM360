@@ -37,6 +37,7 @@ _KHOA = threading.Lock()       # 01 lượt nâng / về bản trước tại 01
 _KHOA_TT = threading.Lock()    # CDA P1: đọc – sửa – ghi tệp trạng thái (tạm dừng giữa lúc đang nâng không bị mất)
 _DANG = {"goi": None, "ban": None, "cu": None, "cu_goi": None}   # lượt đang nâng (Z20 dòng 8)
 _LUONG = {"t": None}           # luồng nâng của nút "Nâng công cụ AI" (bài kiểm chờ luồng này)
+_LYDO = threading.local()      # LOI-NANGCLI-2: bước trượt + đoạn cuối câu lỗi, vào cột lydo_chan của dòng F04 kế tiếp
 CAU_THU = "Trả lời đúng 01 chữ: OK"   # P3: lượt gọi ngắn kiểm thử bản mới (gửi cho AI, không hiện trên màn)
 SO_BAN_RE = re.compile(r"(\d+\.\d+\.\d+)")
 
@@ -82,6 +83,13 @@ def _goi_tt(d: dict, goi: str) -> dict:
 
 def _bay() -> datetime:
     return datetime.now(MUIGIO_VN)
+
+
+def _duoi(chu, n: int = 200) -> str:
+    """LOI-NANGCLI-2: n ký tự cuối của câu lỗi, gộp khoảng trắng. Che mã dài hạn TRƯỚC khi cắt (cắt trước có thể để lọt
+    nửa mã mà mẫu che không còn nhận ra)."""
+    from maychu.hethong.kekhoa.che import che
+    return " ".join(che(str(chu or "")).split())[-n:]
 
 
 def _bin(goi: str, ban: str, thumuc: Path | None = None) -> Path:
@@ -188,7 +196,7 @@ def _uoc_giai_nen(goi: str, co_npm: int) -> int:
     return max(int(co_npm or 0), da_cai)
 
 
-def _kiem_dang_nhap(goi: str, duong: str, chay=subprocess.run) -> bool:
+def _kiem_dang_nhap(goi: str, duong: str, chay=subprocess.run, ghi: dict | None = None) -> bool:
     """Kiểm thử thêm khi tài khoản 01 đã đăng nhập (PTD-14 mục 5: CLI mới đọc được tệp đăng nhập cũ không): bản mới
     chạy lệnh xem trạng thái đăng nhập (0 hạn mức) với đúng thư mục đăng nhập; phải còn báo đã đăng nhập.
     Chưa đăng nhập thì bỏ qua (chỉ `--version`)."""
@@ -201,14 +209,22 @@ def _kiem_dang_nhap(goi: str, duong: str, chay=subprocess.run) -> bool:
                  env=dg._env(goi, 1, tao=False))
         chu = (r.stdout or "") + (r.stderr or "")
         if goi == "claude":
-            return r.returncode == 0 and (json.loads((r.stdout or "").strip() or "{}").get("loggedIn") is True
-                                          or dg.trang_thai(goi, 1).get("ma_daihan") is True)
-        return r.returncode == 0 and "logged in using chatgpt" in dg.MAU_RE.sub("", chu).lower()
-    except (OSError, subprocess.TimeoutExpired, ValueError):
+            dn = json.loads((r.stdout or "").strip() or "{}").get("loggedIn") if r.returncode == 0 else None
+            dat = r.returncode == 0 and (dn is True or dg.trang_thai(goi, 1).get("ma_daihan") is True)
+            vet = f"loggedIn={dn}"
+        else:
+            dat = r.returncode == 0 and "logged in using chatgpt" in dg.MAU_RE.sub("", chu).lower()
+            vet = "khong co dong logged in using chatgpt"
+        if not dat and ghi is not None:   # LOI-NANGCLI-2: không ghi stdout (có thể có email), chỉ đuôi stderr khi mã thoát khác 0
+            ghi["chu"] = f"ma {r.returncode}, {vet}" + (f", {_duoi(r.stderr, 120)}" if r.returncode and r.stderr else "")
+        return dat
+    except (OSError, subprocess.TimeoutExpired, ValueError) as e:
+        if ghi is not None:
+            ghi["chu"] = f"{type(e).__name__}: {_duoi(e, 160)}"
         return False
 
 
-def _kiem_goi_ngan(goi: str, duong: str) -> str:
+def _kiem_goi_ngan(goi: str, duong: str, ghi: dict | None = None) -> str:
     """CDA P3 (việc 2, QĐ263): khi tài khoản 01 đã đăng nhập, bản mới trả lời 01 câu rất ngắn qua đúng cách cổng AI gọi.
     Trả "dat" | "hoan" | "loi". QĐ306 (anh chọn B): hết hạn mức thì chưa kiểm được → "hoan" (giữ bản cũ, lượt sau thử
     lại), không tính đạt, không tính hỏng. Lỗi khác → "loi" (chưa đạt)."""
@@ -222,7 +238,9 @@ def _kiem_goi_ngan(goi: str, duong: str) -> str:
         return "dat"
     except congai.HetHanMuc:
         return "hoan"
-    except Exception:  # noqa: BLE001 - LoiAI, hết giờ, lỗi chạy: bản mới chưa đạt
+    except Exception as e:  # noqa: BLE001 - LoiAI, hết giờ, lỗi chạy: bản mới chưa đạt
+        if ghi is not None:   # LOI-NANGCLI-2
+            ghi["chu"] = f"{type(e).__name__}: {_duoi(e)}"
         return "loi"
 
 
@@ -269,7 +287,8 @@ def dang_nang() -> str | None:
 
 def _f04(lenhcon: str, tom: str, ketqua: str = "dat", nguoi: str | None = None, thumuc: Path | None = None) -> None:
     from maychu.hethong import nhatky
-    nhatky.ghi("cli", lenhcon, tom, ketqua=ketqua, nguoi_id=nguoi, thumuc=thumuc)
+    lydo, _LYDO.chu = getattr(_LYDO, "chu", None), None   # LOI-NANGCLI-2: dùng 01 lần, dòng F04 sau không mang theo
+    nhatky.ghi("cli", lenhcon, tom, ketqua=ketqua, nguoi_id=nguoi, lydo=lydo, thumuc=thumuc)
 
 
 def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | None = None, client=None,
@@ -340,13 +359,24 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         try:
             r = chay(lenh, capture_output=True, text=True, timeout=900, env=moi_truong)
             cai_dat = r.returncode == 0
-        except (OSError, subprocess.TimeoutExpired):
-            cai_dat = False
+            vet = "" if cai_dat else f"ma {r.returncode}: " + _duoi(f"{getattr(r, 'stderr', '') or ''} {getattr(r, 'stdout', '') or ''}")
+        except subprocess.TimeoutExpired:
+            cai_dat, vet = False, "het gio 900 giay"
+        except OSError as e:
+            cai_dat, vet = False, f"{type(e).__name__}: {_duoi(e)}"
         finally:
             shutil.rmtree(dem, ignore_errors=True)   # K1c
         duong_moi = str(_bin(goi, ban, thumuc))
-        dat = cai_dat and ban_cua(duong_moi, chay) == ban and _kiem_dang_nhap(goi, duong_moi, chay)
-        thu = _kiem_goi_ngan(goi, duong_moi) if dat else "loi"
+        ct, buoc = {}, None   # LOI-NANGCLI-2: cai_dat | so_ban | dang_nhap | goi_ngan
+        if not cai_dat:
+            buoc = "cai_dat"
+        elif (so := ban_cua(duong_moi, chay)) != ban:
+            buoc, vet = "so_ban", f"--version tra {so}, can {ban}"
+        elif not _kiem_dang_nhap(goi, duong_moi, chay, ghi=ct):
+            buoc, vet = "dang_nhap", ct.get("chu", "")
+        thu = _kiem_goi_ngan(goi, duong_moi, ghi=ct) if buoc is None else "loi"
+        if thu == "loi" and buoc is None:
+            buoc, vet = "goi_ngan", ct.get("chu", "")
         g["lan_cuoi"] = bay.isoformat(timespec="seconds")
         g.pop("hoan_ban", None)
         giu = _ban_dung(goi, g)
@@ -360,9 +390,10 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         if thu != "dat":
             g["hong"] = sorted(set(g.get("hong") or []) | {ban}, key=_khoa_so)
             g["ket_qua"] = "hong"
-            g["su_kien"] = {"loai": "hong", "luc": g["lan_cuoi"], "ban": ban, "giu": giu[0], "giu_goi": giu[1]}
+            g["su_kien"] = {"loai": "hong", "luc": g["lan_cuoi"], "ban": ban, "giu": giu[0], "giu_goi": giu[1], "buoc": buoc}
             shutil.rmtree(dich, ignore_errors=True)
             _sua_goi(goi, g, thumuc)
+            _LYDO.chu = f"{buoc}: {vet}"[:300]
             _f04("loi", f"{goi} {ban}: kiểm thử chưa đạt, giữ bản {dang}", "loi", nguoi, thumuc)
             _bao(goi, "cli_loi", _sau_giu(ban, giu), thumuc)
             return {"kq": "hong", "ban": ban, "giu": dang}
