@@ -9,7 +9,8 @@ GOC = Path(__file__).resolve().parents[2]
 
 class KiemChu091(unittest.TestCase):
     def test_version_va_muc_091_nguyen_van(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.9.1")
+        so = tuple(int(x) for x in (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))
+        self.assertGreaterEqual(so, (0, 9, 1))                                    # bản sau giữ mục 0.9.1 nguyên văn (0.9.2, LOI-NANGCLI-3)
         dong = (GOC / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
         i = dong.index("## 0.9.1")
         self.assertEqual(dong[i:i + 6], [
@@ -22,7 +23,7 @@ class KiemChu091(unittest.TestCase):
             "",
         ])                                                                        # PH-091, đúng từng ký tự
         self.assertEqual(dong[i + 6], "## 0.9.0")
-        self.assertEqual([d for d in dong if d.startswith("## ")][0], "## 0.9.1")   # mục mới ở đầu
+        self.assertLess(dong.index("## 0.9.1"), dong.index("## 0.9.0"))             # mục mới hơn đứng trên (0.9.2 đặt trên 0.9.1)
 
 
 if __name__ == "__main__":

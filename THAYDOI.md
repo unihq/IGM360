@@ -3,6 +3,11 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.9.2
+Tóm tắt: Sửa lỗi nhật ký nâng công cụ AI
+Nâng dữ liệu: không
+- Sửa lỗi nâng công cụ AI chưa đạt mà nhật ký không ghi bước nào chưa đạt: nay ghi bước và đoạn cuối câu lỗi (đã che mã).
+
 ## 0.9.1
 Tóm tắt: Sửa ô mật khẩu, màn Thông số
 Nâng dữ liệu: không
