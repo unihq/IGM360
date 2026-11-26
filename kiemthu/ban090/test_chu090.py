@@ -9,7 +9,8 @@ GOC = Path(__file__).resolve().parents[2]
 
 class KiemChu090(unittest.TestCase):
     def test_version_va_muc_090_nguyen_van(self):
-        self.assertEqual((GOC / "VERSION").read_text(encoding="utf-8").strip(), "0.9.0")
+        so = tuple(int(x) for x in (GOC / "VERSION").read_text(encoding="utf-8").strip().split("."))
+        self.assertGreaterEqual(so, (0, 9, 0))                                    # bản sau giữ mục 0.9.0 nguyên văn (0.9.1, QĐ577; tiền lệ test_chu0810)
         dong = (GOC / "THAYDOI.md").read_text(encoding="utf-8").splitlines()
         i = dong.index("## 0.9.0")
         self.assertEqual(dong[i:i + 9], [
@@ -24,7 +25,7 @@ class KiemChu090(unittest.TestCase):
             "",
         ])                                                                        # QĐ389 + QĐ397, đúng từng ký tự
         self.assertEqual(dong[i + 9], "## 0.8.10")
-        self.assertEqual([d for d in dong if d.startswith("## ")][0], "## 0.9.0")   # mục mới ở đầu
+        self.assertLess(dong.index("## 0.9.0"), dong.index("## 0.8.10"))             # mục mới hơn đứng trên (0.9.1 đặt trên 0.9.0)
 
     def test_qd396_quy_uoc_so_ban_ghi_o_agents(self):
         a = (GOC / "AGENTS.md").read_text(encoding="utf-8")

@@ -3,6 +3,12 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.9.1
+Tóm tắt: Sửa ô mật khẩu, màn Thông số
+Nâng dữ liệu: không
+- Ô mật khẩu: hình con mắt cho biết mật khẩu đang ẩn (mắt gạch chéo) hay đang hiện (mắt mở).
+- Cài đặt › Thông số trên cửa sổ hẹp: tên thông số không còn bị chữ đè; giá trị và nút Sửa luôn nằm bên phải, không bị tràn hay cắt.
+
 ## 0.9.0
 Tóm tắt: Giao diện mới
 Nâng dữ liệu: không
