@@ -38,6 +38,12 @@ _KHOA_TT = threading.Lock()    # CDA P1: đọc – sửa – ghi tệp trạng 
 _DANG = {"goi": None, "ban": None, "cu": None, "cu_goi": None}   # lượt đang nâng (Z20 dòng 8)
 _LUONG = {"t": None}           # luồng nâng của nút "Nâng công cụ AI" (bài kiểm chờ luồng này)
 _LYDO = threading.local()      # LOI-NANGCLI-2: bước trượt + đoạn cuối câu lỗi, vào cột lydo_chan của dòng F04 kế tiếp
+# QĐ593 (1): trượt do mạng / hết giờ thì hoãn, thử lại lượt sau; tổng THU_MANG_TOIDA lần trượt mạng của cùng 01 bản thì
+# lần cuối mới ghi hỏng. Mã lỗi npm: ETIMEDOUT, ECONNRESET, EAI_AGAIN, HTTP 5xx (npm in "code E503").
+THU_MANG_TOIDA = 3
+MANG_RE = re.compile(r"\b(ETIMEDOUT|ECONNRESET|EAI_AGAIN|E5\d\d)\b")
+# QĐ593 (2): gỡ khỏi danh sách hỏng ĐÚNG 01 lần khi lên bản sửa (bản trượt 26/11/2026 15:17 trước khi có nhật ký bước).
+GO_HONG_MOT_LAN = {"claude": ("2.1.332",)}
 CAU_THU = "Trả lời đúng 01 chữ: OK"   # P3: lượt gọi ngắn kiểm thử bản mới (gửi cho AI, không hiện trên màn)
 SO_BAN_RE = re.compile(r"(\d+\.\d+\.\d+)")
 
@@ -241,6 +247,7 @@ def _kiem_goi_ngan(goi: str, duong: str, ghi: dict | None = None) -> str:
     except Exception as e:  # noqa: BLE001 - LoiAI, hết giờ, lỗi chạy: bản mới chưa đạt
         if ghi is not None:   # LOI-NANGCLI-2
             ghi["chu"] = f"{type(e).__name__}: {_duoi(e)}"
+            ghi["mang"] = isinstance(e, subprocess.TimeoutExpired)   # QĐ593: lượt gọi ngắn hết giờ
         return "loi"
 
 
@@ -359,11 +366,13 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
         try:
             r = chay(lenh, capture_output=True, text=True, timeout=900, env=moi_truong)
             cai_dat = r.returncode == 0
-            vet = "" if cai_dat else f"ma {r.returncode}: " + _duoi(f"{getattr(r, 'stderr', '') or ''} {getattr(r, 'stdout', '') or ''}")
+            ra_npm = f"{getattr(r, 'stderr', '') or ''} {getattr(r, 'stdout', '') or ''}"
+            vet = "" if cai_dat else f"ma {r.returncode}: " + _duoi(ra_npm)
+            mang = not cai_dat and bool(MANG_RE.search(ra_npm))   # QĐ593
         except subprocess.TimeoutExpired:
-            cai_dat, vet = False, "het gio 900 giay"
+            cai_dat, vet, mang = False, "het gio 900 giay", True
         except OSError as e:
-            cai_dat, vet = False, f"{type(e).__name__}: {_duoi(e)}"
+            cai_dat, vet, mang = False, f"{type(e).__name__}: {_duoi(e)}", False
         finally:
             shutil.rmtree(dem, ignore_errors=True)   # K1c
         duong_moi = str(_bin(goi, ban, thumuc))
@@ -387,6 +396,19 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
             _sua_goi(goi, g, thumuc)
             _f04("hoan", f"{goi} {ban}: hoãn: hết hạn mức, giữ bản {dang}", "bichan", nguoi, thumuc)
             return {"kq": "hoan", "ban": ban, "giu": dang}
+        mang = (buoc == "cai_dat" and mang) or (buoc == "goi_ngan" and bool(ct.get("mang")))
+        tm = g.pop("thu_mang", None)
+        if thu != "dat" and mang:   # QĐ593 (1): đếm theo đúng bản; đổi bản thì đếm lại từ 01
+            lan = (tm["lan"] if tm and tm.get("ban") == ban else 0) + 1
+            if lan < THU_MANG_TOIDA:   # hoãn: không ghi hỏng, không đổi con trỏ, không chuông; su_kien bỏ để màn Cập nhật
+                # hiện dòng "có bản … Tự nâng lúc …" đã duyệt (dòng "hoan" của app.js nói hết hạn mức – không đúng ở đây)
+                g.update(ket_qua="hoan_mang", su_kien=None,
+                         thu_mang={"ban": ban, "lan": lan, "luc": g["lan_cuoi"], "buoc": buoc})
+                shutil.rmtree(dich, ignore_errors=True)
+                _sua_goi(goi, g, thumuc)
+                _LYDO.chu = f"{buoc}: {vet}"[:300]
+                _f04("hoan_mang", f"{goi} {ban}: lan {lan:02d}/{THU_MANG_TOIDA:02d}, giu ban {dang}", "bichan", nguoi, thumuc)
+                return {"kq": "hoan_mang", "ban": ban, "giu": dang, "lan": lan}
         if thu != "dat":
             g["hong"] = sorted(set(g.get("hong") or []) | {ban}, key=_khoa_so)
             g["ket_qua"] = "hong"
@@ -541,8 +563,44 @@ def tam_dung(ban_igm: str, thumuc: Path | None = None) -> None:
     _f04("tam_dung", f"quay về bản {ban_igm}: dùng bản trong gói, tự nâng tạm dừng", "dat", None, thumuc)
 
 
+def go_hong_mot_lan(thumuc: Path | None = None) -> list:
+    """QĐ593 (2): gỡ các bản trong GO_HONG_MOT_LAN khỏi danh sách hỏng ĐÚNG 01 lần (đánh dấu `da_go_hong`); chỉ gỡ đúng bản
+    đó, không xóa cả danh sách. Sự kiện hỏng của chính bản đó bỏ đi để màn Cập nhật hiện lại dòng "có bản …". Trả các bản đã gỡ."""
+    go = []
+    with _KHOA_TT:
+        d = doc_trangthai(thumuc)
+        doi = False
+        for goi, ds in GO_HONG_MOT_LAN.items():
+            g = d.get(goi)
+            if not isinstance(g, dict):
+                continue
+            da = g.setdefault("da_go_hong", [])
+            for ban in ds:
+                if ban in da:
+                    continue
+                da.append(ban)
+                doi = True
+                if ban in (g.get("hong") or []):
+                    g["hong"] = [x for x in g["hong"] if x != ban]
+                    sk = g.get("su_kien") or {}
+                    if sk.get("loai") == "hong" and sk.get("ban") == ban:
+                        g["su_kien"] = None
+                    go.append((goi, ban))
+        if doi:
+            ghi_trangthai(d, thumuc)
+    for goi, ban in go:
+        _f04("go_hong", f"{goi} {ban}: QĐ593", "dat", None, thumuc)
+    return go
+
+
 def mo_lai_neu_len_ban_moi(ban_dang: str, thumuc: Path | None = None) -> None:
-    """QĐ264: lên bản IGM360 mới hơn bản đã quay về thì bỏ tạm dừng (gọi lúc khởi động)."""
+    """QĐ264: lên bản IGM360 mới hơn bản đã quay về thì bỏ tạm dừng (gọi lúc khởi động). QĐ593 (2): trước đó gỡ 01 lần
+    bản hỏng trong GO_HONG_MOT_LAN (lỗi gỡ không chặn phần QĐ264)."""
+    try:
+        go_hong_mot_lan(thumuc)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("go_hong_mot_lan")
     d = doc_trangthai(thumuc)
     if d.get("tam_dung") and _khoa_so(ban_dang) > _khoa_so(d.get("tam_dung_ban")):
         mo_lai(thumuc, f"lên bản {ban_dang}")

@@ -49,13 +49,13 @@ class KiemBuocTruot(y46.Nen):
         return nangcli.doc_trangthai(self.dl)["claude"]["su_kien"].get("buoc")
 
     def test_cai_dat_ghi_ma_thoat_va_duoi_loi_da_che(self):
-        loi = "npm ERR! " + "x" * 300 + f" token {MA} npm ERR! code ETIMEDOUT"
+        loi = "npm ERR! " + "x" * 300 + f" token {MA} npm ERR! code ERESOLVE"   # lỗi thật (không phải mạng – QĐ593)
         kq, _ = self.nang(chay=ChayLoi(loi_npm=loi), ngay=True)
         self.assertEqual(kq["kq"], "hong")
         ld = self.lydo("loi")
         self.assertEqual(len(ld), 1)
         self.assertTrue(ld[0].startswith("cai_dat: ma 1: "), ld[0])
-        self.assertTrue(ld[0].endswith("npm ERR! code ETIMEDOUT"), ld[0])   # đoạn CUỐI câu lỗi
+        self.assertTrue(ld[0].endswith("npm ERR! code ERESOLVE"), ld[0])    # đoạn CUỐI câu lỗi
         self.assertNotIn("A" * 20, ld[0])                                     # mã dài hạn đã che trước khi cắt
         self.assertLessEqual(len(ld[0]), 300)
         self.assertEqual(self.buoc(), "cai_dat")
@@ -64,9 +64,9 @@ class KiemBuocTruot(y46.Nen):
 
     def test_cai_dat_het_gio(self):
         kq, _ = self.nang(chay=ChayLoi(het_gio=True), ngay=True)
-        self.assertEqual(kq["kq"], "hong")
-        self.assertEqual(self.lydo("loi"), ["cai_dat: het gio 900 giay"])
-        self.assertEqual(self.buoc(), "cai_dat")
+        self.assertEqual(kq["kq"], "hoan_mang")                               # QĐ593: hết giờ npm là hoãn, lần 01
+        self.assertEqual(self.lydo("hoan_mang"), ["cai_dat: het gio 900 giay"])
+        self.assertEqual(nangcli.doc_trangthai(self.dl)["claude"]["thu_mang"]["buoc"], "cai_dat")
 
     def test_so_ban_lech(self):
         kq, _ = self.nang(chay=y46.ChayGia(ban_cai="2.1.339"), ngay=True)
