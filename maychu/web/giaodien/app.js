@@ -274,12 +274,12 @@ function veThongSo() {
     + ds.map(t => { const gt = hienGt(t);
       if (t.cong_tac) return veCongTac(t, d);
       return '<div class="ts' + (gt ? '' : ' chua') + '"><div class="ts-ten">' + esc(t.nhan)
-        + (gt || !t.khi_trong ? '' : '<div class="t12 xem-chu">' + cum(t.khi_trong) + '</div>') + '</div><div class="ts-gt">'
+        + (gt || !t.khi_trong ? '' : '<div class="t12 xem-chu">' + cum(t.khi_trong) + '</div>') + '</div><div class="ts-phai"><div class="ts-gt">'
         + (gt ? '<span class="b7 so">' + esc(gt) + '</span><span class="t12 phu">Từ ' + ngay(t.hieuluc_tu) + ' · ' + (t.nguoi_dat === 'hethong' ? 'Mặc định' : 'Chủ') + '</span>'
              : '<span class="ttag xem">' + (t.ten === 'nhip_lay_dulieu' ? 'Chưa đặt loại nào' : 'Chưa đặt') + '</span>' + (t.ten === 'nhip_lay_dulieu' ? '' : '<span class="t12 phu">\u00a0</span>'))
         + '</div>' + (t.ten === 'nhip_lay_dulieu' ? '<button class="btn-chu" data-trang="11">' + ICON.sangtrang + 'Đặt ở Nguồn dữ liệu</button>'
           : t.khong_sua ? '<span class="t12 phu nw khoa-ts">' + ICON.khoats + esc(t.khong_sua) + '</span>'
-          : '<button class="btn-chu" data-sua="' + t.ten + '">' + ICON.pencil + 'Sửa</button>') + '</div>'; }).join('')
+          : '<button class="btn-chu" data-sua="' + t.ten + '">' + ICON.pencil + 'Sửa</button>') + '</div></div>'; }).join('')
     + sau.map(t => '<div class="dong t12 phu">' + ICON.khoats + '<span>' + cum(t.khong_sua + ': ' + t.nhan + '. ' + (t.khi_trong || '').replace(/^GĐ 1: /, 'GĐ 1 ')) + '</span></div>').join('')
     + '</div>'; }).join('');
 }
@@ -291,11 +291,11 @@ function veCongTac(t, d) {
   const bat = t.giatri === '1';
   return '<div class="ts"><div class="ts-ten">' + esc(t.nhan) + (t.giai_thich ? '<div class="t12 phu">' + cum(t.giai_thich) + '</div>' : '')
     + (bat && !d.drive_noi ? '<div class="t12 xem-chu" style="display:flex;align-items:center;gap:4px;margin-top:2px">'   // Z21_02 (QĐ278)
-      + icoMau(ICON['cloud-alert'], '#8F5F00', 13) + '<span>' + cum(CHU_Z21.chuaNoi) + '</span></div>' : '') + '</div><div class="ts-gt">'
+      + icoMau(ICON['cloud-alert'], '#8F5F00', 13) + '<span>' + cum(CHU_Z21.chuaNoi) + '</span></div>' : '') + '</div><div class="ts-phai"><div class="ts-gt">'
     + '<span class="b7 so">' + (bat ? CHU_Z21.bat : CHU_Z21.tat) + '</span><span class="t12 phu">'
     + (t.hieuluc_tu ? CHU_Z21.tu(ngay(t.hieuluc_tu)) + (t.nguoi_dat === 'hethong' ? CHU_Z21.macDinh : CHU_Z21.banDoi) : ' ') + '</span></div>'
     + '<button class="gat-o nut-gat" data-gat="' + esc(t.ten) + '" role="switch" aria-checked="' + bat + '" aria-label="' + esc(t.nhan) + '">'
-    + '<input type="checkbox" tabindex="-1"' + (bat ? ' checked' : '') + '><span class="gat"></span></button></div>';
+    + '<input type="checkbox" tabindex="-1"' + (bat ? ' checked' : '') + '><span class="gat"></span></button></div></div>';
 }
 async function gatCongTac(ten) {
   const t = D.thongso.thongso.find(x => x.ten === ten), bat = t.giatri !== '1';
