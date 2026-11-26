@@ -197,10 +197,10 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .luoi4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .luoi-tk{display:grid;grid-template-columns:1fr 1.2fr 1.2fr;gap:16px}
 .tieu{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--ke)}
-.ts{display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--ke)}
+.ts{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--ke)}
 .tieu+.ts{border-top:0}
-.ts-ten{flex:1;min-width:0}
-.ts-gt{display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none}
+.ts-ten{flex:1 1 160px;min-width:0}
+.ts-gt{display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex:none;margin-left:auto}
 .chi-chua .ts:not(.chua){display:none}
 .o{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
 .cau{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--phu);font-weight:600;white-space:nowrap}
