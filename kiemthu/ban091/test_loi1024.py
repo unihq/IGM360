@@ -65,6 +65,13 @@ class KiemKhoiPhai1024(unittest.TestCase):
         for x in ("display:flex", "align-items:center", "margin-left:auto"):
             self.assertIn(x, than)
 
+    def test_khoi_phai_xuong_hang_khong_tran(self):
+        """LOI-1024-NHANH-3 (CDO NT-1024-NHANH-2, ảnh 214): ở 768 khối bọc không xuống hàng, rộng hơn dòng 226 px, 14 dòng
+        tràn, 11 dòng bị cắt. Khối bọc phải tự xuống hàng, dồn về phải, không rộng quá dòng. Trượt trên 1ba8e84."""
+        than = _quy_tac(self.html, ".ts-phai").split(";")
+        for x in ("flex-wrap:wrap", "justify-content:flex-end", "max-width:100%"):
+            self.assertIn(x, than)
+
     def test_khoi_phai_dien_thoai_gian_du_dong(self):
         self.assertEqual(_quy_tac(self.html, ".mb .ts-phai"), "flex:1;margin-left:0")
 
