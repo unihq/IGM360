@@ -3,6 +3,11 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.9.4
+Tóm tắt: Sửa lỗi nâng công cụ AI không cài được
+Nâng dữ liệu: không
+- Sửa lỗi nâng công cụ AI luôn dừng ở bước cài đặt do 02 tệp cấu hình npm trùng nhau; Claude · Code 2.1.332 được thử lại 01 lần.
+
 ## 0.9.3
 Tóm tắt: Sửa lỗi nâng công cụ AI khi mạng chập chờn
 Nâng dữ liệu: không

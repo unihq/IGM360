@@ -44,6 +44,9 @@ THU_MANG_TOIDA = 3
 MANG_RE = re.compile(r"\b(ETIMEDOUT|ECONNRESET|EAI_AGAIN|E5\d\d)\b")
 # QĐ593 (2): gỡ khỏi danh sách hỏng ĐÚNG 01 lần khi lên bản sửa (bản trượt 26/11/2026 15:17 trước khi có nhật ký bước).
 GO_HONG_MOT_LAN = {"claude": ("2.1.332",)}
+# LOI-NANGCLI-8 (0.9.4): lần thử 0.9.3 vẫn trượt vì lỗi của IGM360 (02 biến cấu hình npm cùng trỏ 01 tệp) – gỡ thêm 01 lần, dấu riêng.
+GO_HONG_NPMRC = {"claude": ("2.1.332",)}
+NPMRC_RONG = ".npmrc_rong"   # tệp cấu hình npm toàn cục rỗng riêng (khác userconfig, nên npm không báo double-loading)
 CAU_THU = "Trả lời đúng 01 chữ: OK"   # P3: lượt gọi ngắn kiểm thử bản mới (gửi cho AI, không hiện trên màn)
 SO_BAN_RE = re.compile(r"(\d+\.\d+\.\d+)")
 
@@ -361,8 +364,12 @@ def nang(goi: str, thumuc: Path | None = None, ngay: bool = False, nguoi: str | 
                 "--no-audit", "--no-fund", "--omit=dev"] + (["--ignore-scripts"] if GOI_CLI[goi]["bo_cai_kem"] else []) \
             + [f"{GOI_CLI[goi]['npm']}@{ban}"]
         from maychu.hethong.mohinh import dangnhap_goi as dg
+        # LOI-NANGCLI-8: npm 10.9.9 (@npmcli/config 9.0.0 lib/index.js 541-544) từ chối khi user và global cùng 01 tệp
+        # ("double-loading config"). Giữ K5: user = devnull, global = 01 tệp rỗng riêng, ghi đè rỗng trước mỗi lần chạy.
+        rong = goc / NPMRC_RONG
+        rong.write_bytes(b"")
         moi_truong = {**dg.moi_truong_sach(), **{k: v for k, v in os.environ.items() if k.lower().startswith("npm_config_")},
-                      "npm_config_userconfig": os.devnull, "npm_config_globalconfig": os.devnull}   # K5; QĐ374 (b) danh sách trắng
+                      "npm_config_userconfig": os.devnull, "npm_config_globalconfig": str(rong)}   # K5; QĐ374 (b) danh sách trắng
         try:
             r = chay(lenh, capture_output=True, text=True, timeout=900, env=moi_truong)
             cai_dat = r.returncode == 0
@@ -593,6 +600,36 @@ def go_hong_mot_lan(thumuc: Path | None = None) -> list:
     return go
 
 
+def go_hong_loi_npmrc(thumuc: Path | None = None) -> list:
+    """LOI-NANGCLI-8: gỡ các bản trong GO_HONG_NPMRC khỏi danh sách hỏng ĐÚNG 01 lần nữa (dấu riêng `da_go_hong_npmrc`,
+    không đụng `da_go_hong` của QĐ593); chỉ gỡ đúng bản đó; bỏ sự kiện hỏng của chính bản đó. Trả các bản đã gỡ."""
+    go = []
+    with _KHOA_TT:
+        d = doc_trangthai(thumuc)
+        doi = False
+        for goi, ds in GO_HONG_NPMRC.items():
+            g = d.get(goi)
+            if not isinstance(g, dict):
+                continue
+            da = g.setdefault("da_go_hong_npmrc", [])
+            for ban in ds:
+                if ban in da:
+                    continue
+                da.append(ban)
+                doi = True
+                if ban in (g.get("hong") or []):
+                    g["hong"] = [x for x in g["hong"] if x != ban]
+                    sk = g.get("su_kien") or {}
+                    if sk.get("loai") == "hong" and sk.get("ban") == ban:
+                        g["su_kien"] = None
+                    go.append((goi, ban))
+        if doi:
+            ghi_trangthai(d, thumuc)
+    for goi, ban in go:
+        _f04("go_hong", f"{goi} {ban}: npmrc 0.9.4", "dat", None, thumuc)
+    return go
+
+
 def mo_lai_neu_len_ban_moi(ban_dang: str, thumuc: Path | None = None) -> None:
     """QĐ264: lên bản IGM360 mới hơn bản đã quay về thì bỏ tạm dừng (gọi lúc khởi động). QĐ593 (2): trước đó gỡ 01 lần
     bản hỏng trong GO_HONG_MOT_LAN (lỗi gỡ không chặn phần QĐ264)."""
@@ -601,6 +638,11 @@ def mo_lai_neu_len_ban_moi(ban_dang: str, thumuc: Path | None = None) -> None:
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("go_hong_mot_lan")
+    try:
+        go_hong_loi_npmrc(thumuc)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("go_hong_loi_npmrc")
     d = doc_trangthai(thumuc)
     if d.get("tam_dung") and _khoa_so(ban_dang) > _khoa_so(d.get("tam_dung_ban")):
         mo_lai(thumuc, f"lên bản {ban_dang}")
