@@ -13,6 +13,7 @@ Nguồn học cách làm: tailieu/Songuongoc.md (mục 0.7.9).
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -42,6 +43,9 @@ CHU = {
     "qv_het_han": "Không còn dữ liệu bản sao trước đó (đã xóa ngày {ngay}).",
     # CDA Y49b N1, QĐ296 (Z24 dòng 1b): không có dòng F04 ghi ngày xóa
     "qv_het_han_khong_ngay": "Không tìm thấy ngày xóa dữ liệu bản sao.",
+    # QUAYVE-CAIMOI-A (QĐ284, QĐ287; CDA 9.42): dữ liệu ở lược đồ mới hơn bản trước, không có bản chụp trước khi nâng.
+    # TẠM (QĐ648): DM soạn A/B cùng khuôn câu qv_het_han, CDO soát, CPO trình anh
+    "qv_luocdo_moi": "Không quay về được: dữ liệu tạo ở bản lược đồ mới, bản trước không đọc được.",
     "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
     "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
               "việc nhập sau lúc đó không giữ được.",                                                             # 40
@@ -327,6 +331,24 @@ def ban_truoc() -> str | None:
         return None
 
 
+def luocdo_ban_truoc() -> int | None:
+    """Số lược đồ của bản trước: đọc CHỮ dòng `PHIENBAN_LUOCDO = N` trong mã bản trước (không chạy mã bản cũ).
+    Không đọc được → None (không khóa: 0.9.4 chạy trên dữ liệu bản mới không đổi nội dung – CTO đo 27/11/2026)."""
+    try:
+        m = re.search(r"^PHIENBAN_LUOCDO\s*=\s*(\d+)\s*$",
+                      (GOC_MA / "ban_truoc" / "maychu" / "dulieu" / "khoitao.py").read_text(encoding="utf-8"), re.M)
+    except OSError:
+        return None
+    return int(m.group(1)) if m else None
+
+
+def luocdo_dulieu(thumuc: Path | None = None) -> int:
+    """Số lược đồ lớn nhất trong 07 tệp dữ liệu (PRAGMA user_version; tệp chưa có = 0)."""
+    from maychu.dulieu import khoitao
+    thumuc = thumuc or ketnoi.thumuc_dulieu()
+    return max(khoitao._phienban(t, thumuc) for t in ketnoi.CAC_FILE)
+
+
 def _gio(luc: str) -> str:
     """"10:05"; hôm khác thì thêm ngày "10:05 23/11"."""
     if len(luc or "") < 16:
@@ -352,6 +374,10 @@ def thong_tin_quayve(thumuc: Path | None = None) -> dict:
             return {"co": True, "khoa": True, "ban": bt, "mat_tu": None,
                     "chu": CHU["qv_het_han"].format(ngay=datetime.fromisoformat(ngay).strftime("%d/%m/%Y")) if ngay
                     else CHU["qv_het_han_khong_ngay"]}
+    if not mat:   # QUAYVE-CAIMOI-A: không có bản chụp của lần nâng ở bản này mà dữ liệu mới hơn bản trước → khóa
+        lt = luocdo_ban_truoc()
+        if lt is not None and luocdo_dulieu(thumuc) > lt:
+            return {"co": True, "khoa": True, "ban": bt, "mat_tu": None, "chu": CHU["qv_luocdo_moi"]}
     chu = (CHU["qv_mat"].format(luc=_gio(mat)) if mat else
            CHU["qv_an_toan"].format(luc=_gio(CHE_DO["luc"] or "")) if CHE_DO["an_toan"] else CHU["qv_giu"])
     return {"co": True, "ban": bt, "mat_tu": mat, "chu": chu}
