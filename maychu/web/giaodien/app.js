@@ -252,7 +252,7 @@ const tenMuiTb = (tz, qg) => tz === 'Asia/Ho_Chi_Minh' ? CHU_MG.vn : (nuocVi((qg
 const dong2Tb = x => x.mg ? tenMuiTb(x.mg[0], x.qg) + ' → ' + tenMuiTb(x.mg[1], x.qg) : x.phu || '';
 // QĐ551, QĐ553 (4) – CDA phiếu 06 mục 14.1: kêu khi có tin MỚI XUẤT HIỆN (mã chưa thấy ở lần tải trước), không theo "số tăng";
 // đang Tạm tắt chỉ kêu khi tin mới xuất hiện là tin đỏ (nghiêm trọng). Lần tải đầu: chưa có tập mã → không kêu.
-const canKeu = (daThay, ds, tat) => !!daThay && ds.some(x => x.moi && !daThay.has(x.id) && (!tat || x.muc === 'do'));
+const canKeu = (daThay, ds, tat) => !!daThay && ds.some(x => x.moi && !x.tat && !daThay.has(x.id) && (!tat || x.muc === 'do'));   // x.tat: loại đã tắt (QĐ553 (5))
 function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, chấm chưa đọc, "Hiện N tin đã đọc", chân bảng số bản + Có gì mới
   D.tbCuoi = d; const ds = d.thongbao || [], tat = !!d.tamtat, so = d.so_moi || 0;
   if (canKeu(D.tbDaThay, ds, tat) && amBat()) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng mới
@@ -264,7 +264,7 @@ function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, 
       + CHU_BA.docHet + '</button>' : '') + '</div>'
     + (tat ? '<div class="tl-dai" role="status">' + icoMau(ICON['bell-off'], 'var(--xem)', 18) + '<span class="nd3">' + cum(CHU_BA.daiTat) + '</span><button class="tl-nutchu x" data-tamtat>'
       + CHU_BA.moLai + '</button></div>' : '')
-    + '<div class="tl-the" role="tablist">' + [['tb', CHU_BA.thongBao, ds.filter(x => x.moi).length], ['cxl', CHU_BA.canXl, ds.filter(x => x.moi && x.muc === 'do').length]]
+    + '<div class="tl-the" role="tablist">' + [['tb', CHU_BA.thongBao, ds.filter(x => x.moi && !x.tat).length], ['cxl', CHU_BA.canXl, ds.filter(x => x.moi && x.muc === 'do').length]]
       .map(([k, t, n]) => '<button role="tab" aria-selected="' + (k === the) + '"' + (k === the ? ' class="on"' : '') + ' data-tbthe="' + k + '">' + t + (n ? ' <i>' + hai(n) + '</i>' : '') + '</button>').join('') + '</div>'
     + '<div class="tb-ds" id="chuong-ds">' + (!loc.length ? '<div class="tb-rong"><span class="ico-tron">' + icoMau(ICON.bell, 'var(--phu)', 20) + '</span><span class="t13 phu">' + CHU_BA.rong + '</span></div>'
       : moi.map(dongTb).join('') + (cu.length ? (D.tbHienDoc ? cu.map(dongTb).join('') : '<button class="tl-hien" data-tbhien>' + CHU_BA.hienDoc(hai(cu.length)) + '</button>') : '')) + '</div>'

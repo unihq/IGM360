@@ -185,6 +185,47 @@ class GatCongTac(BaseModel):
     bat: bool
 
 
+class LoaiThongBao(BaseModel):
+    loai: str
+    bat: bool
+
+
+class Tran5Gio(BaseModel):
+    tran: str | None = None
+
+
+@router.get("/thongbao/loai")
+def loai_thong_bao(p: dict = Depends(can_dang_nhap)):
+    """Ngăn Thông báo (QĐ553 (5), QĐ664, QĐ665): mọi loại trong bảng LOAI – mức, icon, đang tắt; 08 loại đỏ luôn báo."""
+    tat = thongso.doc_loai_tat()
+    return {"ds": [{"loai": k, "muc": v[0], "icon": v[1], "tat": k in tat and v[0] != "do", "luon": v[0] == "do"}
+                   for k, v in thongbao.LOAI.items()],
+            "tamtat": thongso.cong_tac_bat("chuong_tamtat")}
+
+
+@router.post("/thongbao/loai")
+def dat_loai_thong_bao(body: LoaiThongBao, p: dict = Depends(can_dang_nhap)):
+    kq = thongso.dat_loai_tat(body.loai, body.bat, nguoi=p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    if kq.get("doi"):
+        ghi_f04("thongso", "loai_thongbao", f"{body.loai} → {'bật' if body.bat else 'tắt'}", nguoi_id=p["nguoidung_id"])
+    return kq
+
+
+@router.post("/mucdung/tran")
+def dat_tran_5gio(body: Tran5Gio, p: dict = Depends(can_dang_nhap)):
+    """QĐ564: mức trần cửa sổ 05 giờ (token) ở ngăn Mức dùng; trống = so với đỉnh 60 ngày. Ghi F04."""
+    cu = thongso.doc_tran_5gio()
+    kq = thongso.dat_tran_5gio(body.tran, nguoi=p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    if kq.get("doi"):
+        ghi_f04("thongso", "tran_5gio", f"mucdung_tran_5gio: {cu or '(trống)'} → {kq['tran'] or '(trống)'}",
+                nguoi_id=p["nguoidung_id"])
+    return kq
+
+
 @router.post("/thongso/{ten}/gat")
 def gat_cong_tac(ten: str, body: GatCongTac, p: dict = Depends(can_dang_nhap)):
     """QĐ278 (Z21): gạt công tắc có hiệu lực ngay; ghi F04 01 dòng (ai, lúc, bật hay tắt) – PTD-15 mục 3."""

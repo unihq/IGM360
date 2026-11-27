@@ -33,6 +33,7 @@ LOAI = {
     "ocung_vuot": ("do", "hard-drive", *MAYCHU),
     "swap_vuot_nguong": ("do", "memory-stick", *MAYCHU),
     "banmoi": ("tin", "cloud-download", "capnhat", None, "Cài đặt › Cập nhật"),
+    "capnhat_xong": ("tin", "package-check", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ664: kiểm sau cập nhật đạt
     "capnhat_kiem": ("do", "shield-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # 0.7.9 lớp 4
     "quayve_loi": ("do", "rotate-ccw", "capnhat", None, "Cài đặt › Cập nhật"),   # Y38d: quay về hỏng
     "drive_nen": ("xem", "cloud-alert", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ261, QĐ262: Bản sao Drive lỗi
@@ -209,6 +210,12 @@ def quet_kiem_capnhat(ban: str, loi: list[str], thumuc: Path | None = None) -> N
                 _dong(w, k, f"Kiểm sau cập nhật bản {ban} đạt" if not loi else f"Đã lên bản {ban}")
         if loi:
             _mo(w, khoa, None, None, None, len(loi))
+        # QĐ664: kiểm đạt → 01 tin "Đã lên bản {bản}"; tin của bản cũ đóng (có bản mới thì quet_banmoi đóng)
+        for k in _khoa_mo(w, "capnhat_xong:"):
+            if loi or k != f"capnhat_xong:{ban}":
+                _dong(w, k, f"Đã lên bản {ban}" if not loi else f"Kiểm sau cập nhật bản {ban} chưa đạt")
+        if not loi:
+            _mo(w, f"capnhat_xong:{ban}", None)
 
 
 def quet_quayve_loi(thumuc: Path | None = None) -> None:
@@ -369,6 +376,8 @@ def quet_banmoi(thumuc: Path | None = None, hoi_kho: bool = False) -> None:
                 _dong(w, khoa, f"Có bản mới hơn {moi}")
         if kq["co_ban_moi"]:
             _mo(w, f"banmoi:{moi}", None)
+            for khoa in _khoa_mo(w, "capnhat_xong:"):   # QĐ664: tin "Cập nhật xong" đóng khi có bản mới
+                _dong(w, khoa, f"Có bản mới {moi}")
 
 
 NGUON = (quet_goi, quet_khoa, quet_madaihan, quet_saoluu, quet_maychu, quet_banmoi, quet_drive_nen, quet_2lop)
@@ -451,6 +460,8 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"Ổ cứng máy chủ dùng {gt}%, quá {_nb(f'ngưỡng {ng}%')}"
     if loai == "swap_vuot_nguong":
         return f"Máy chủ dùng tệp hoán đổi {_nb(f'{gt} MB')}, quá {_nb(f'{ng} MB')}"
+    if loai == "capnhat_xong":   # QĐ666 dòng 16
+        return f"Đã lên bản {sau}"
     if loai == "banmoi":
         return f"Có bản mới {sau}"
     if loai == "quayve_loi":   # QĐ219 A4, A5
@@ -538,6 +549,7 @@ def danh_sach(nguoi_id: str | None = None, thumuc: Path | None = None) -> dict:
     """Ngăn Thông báo (Z7b): dòng D03 còn mở qua `loc_quyen`; nhóm Mới (sau mốc đọc) rồi Đã xem, còn mở; trong nhóm
     đỏ → vàng → xanh rồi mới trước. Số trên chuông = số dòng Mới."""
     moc, moc_ma = thongso.doc_moc(thumuc)
+    tat = thongso.doc_loai_tat(thumuc)   # QĐ553 (5): loại đã tắt vẫn có trong bảng, không cộng số, không kêu
     cot = ("id", "khoa_chongtrung", "nguong", "giatri", "bang_nguon", "dong_nguon_id", "tao_luc")
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
@@ -561,7 +573,7 @@ def danh_sach(nguoi_id: str | None = None, thumuc: Path | None = None) -> dict:
                 log.warning("Bỏ qua tin chuông sai định dạng khóa: %s", khoa, exc_info=True)
             continue
         ds.append({"id": d["id"], "loai": loai, "muc": muc, "icon": icon, "di": di, "cuon": cuon, "noi": noi,
-                   "chu": chu, **d2, "luc": d["tao_luc"], "moi": _moi(d, moc, moc_ma)})
+                   "chu": chu, **d2, "luc": d["tao_luc"], "moi": _moi(d, moc, moc_ma), "tat": loai in tat and muc != "do"})
     ds.sort(key=lambda x: x["luc"] or "", reverse=True)
     ds.sort(key=lambda x: (not x["moi"], THU_TU_MUC[x["muc"]]))
-    return {"ds": ds, "so_moi": sum(1 for x in ds if x["moi"]), "moc_doc": moc}
+    return {"ds": ds, "so_moi": sum(1 for x in ds if x["moi"] and not x["tat"]), "moc_doc": moc}

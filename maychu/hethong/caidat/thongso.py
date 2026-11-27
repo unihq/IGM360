@@ -51,6 +51,12 @@ DANHMUC = [
     # QĐ634 (B): tên miền riêng, trống = chỉ tên gốc (.env). Đổi ở thẻ Chung qua đường riêng `doi_tenmien` (chỉ Chủ,
     # mật khẩu + mã 02 lớp) – không hiện ở ngăn Thông số. Không có giá trị khởi tạo.
     ("tenmien_rieng", 1, "Tên miền riêng", "chu", "", None, None, ""),   # nhãn nội bộ (AN_O_THONGSO)
+    # QĐ553 (5), QĐ665; CDA phiếu 06 mục 12.2, 13.3: khóa các loại thông báo đang tắt (phẩy ngăn), trống = bật hết; loại mới
+    # thêm sau mặc định bật. Chỉ đổi qua `dat_loai_tat` – máy chủ từ chối 08 loại đỏ (luôn báo). Ở ngăn Thông báo.
+    ("chuong_loai_tat", 2, "Loại thông báo đang tắt", "danhsach", "", None, None, ""),   # nhãn nội bộ (AN_O_THONGSO)
+    # QĐ564; CDA phiếu 16 mục 9.33, phiếu 06 mục 13.3 (1): mức trần cửa sổ 05 giờ (token) – trống = so với đỉnh 60 ngày.
+    # Ở ngăn Mức dùng, đổi qua `dat_tran_5gio`; không đếm vào "{n} thông số chưa đặt" (mục 13.3 (4)).
+    ("mucdung_tran_5gio", 2, "Mức trần 05 giờ", "so", "token", None, None, ""),   # nhãn nội bộ (AN_O_THONGSO)
 ]
 # Không sửa ở ngăn Thông số: giá xuất kho chưa cho đổi ở GĐ 1 (bản vẽ đợt 1); nhịp lấy đặt từng loại ở màn 11.
 KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulieu": "Đặt ở mục Nguồn dữ liệu",
@@ -65,14 +71,17 @@ AN_O_THONGSO = {"tunang_congcu_ai",   # công tắc đặt ở chỗ khác theo 
                 "muigio", "muigio_doisoat",   # QĐ636: đặt ở thẻ Chung
                 "tenmien_rieng",              # QĐ634: đặt ở thẻ Chung
                 "anh_ai_giu_dau_c2pa",        # QĐ627 (3): đặt ở thẻ Chung
-                "chuong_tamtat"}              # QĐ551: nút ở đầu bảng chuông
+                "chuong_tamtat",              # QĐ551: nút ở đầu bảng chuông
+                "chuong_loai_tat",            # QĐ553 (5): ngăn Thông báo
+                "mucdung_tran_5gio"}          # QĐ564: ngăn Mức dùng
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 # QĐ390 (phương án A, CDA 16g), SOAT-KH090 (a): cờ "Đăng nhập 02 lớp" là thông số hệ thống P01, không nằm trong DANHMUC
 # (không hiện ở ngăn Thông số, không đếm vào số đã đặt). Chỉ đổi qua 02 đường riêng /api/2lop/tat, /api/2lop/bat và lệnh
 # datlai, ghi bằng 01 hàm `ghi_co_2lop`; `dat()`, `gat()` (đường sửa chung, đường gạt chung) từ chối mọi tên trong tập này.
 CO_2LOP = "dangnhap_2lop"
 CHI_DUONG_RIENG = {CO_2LOP, "muigio", "muigio_doisoat",   # QĐ636: múi giờ chỉ đổi qua `doi_muigio`
-                   "tenmien_rieng"}                         # QĐ634: tên miền chỉ đổi qua `doi_tenmien`
+                   "tenmien_rieng",                         # QĐ634: tên miền chỉ đổi qua `doi_tenmien`
+                   "chuong_loai_tat", "mucdung_tran_5gio"}  # 0.10.0: chỉ đổi qua `dat_loai_tat`, `dat_tran_5gio`                         # QĐ634: tên miền chỉ đổi qua `doi_tenmien`
 
 
 def _hom_nay() -> str:
@@ -250,6 +259,45 @@ def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) ->
         from maychu.hethong.giamsat import thongbao
         thongbao.bao_su_kien("muigio_doi", giatri, thumuc, nhom=ten, truoc=cu)   # QĐ636: F04 + chuông; khóa riêng từng thông số (CDA); QĐ662 cũ → mới
     return kq
+
+
+CHU_LUON_BAO = "Tin nghiêm trọng luôn báo, không tắt được."   # TẠM (QĐ648): câu từ chối – giao diện không có nút tắt loại đỏ
+CHU_TRAN_SAI = "Mức trần là số token lớn hơn 0, hoặc để trống."   # TẠM (QĐ648)
+
+
+def doc_loai_tat(thumuc: Path | None = None) -> set[str]:
+    """Các loại thông báo đang tắt (QĐ553 (5)); trống = bật hết."""
+    return {x for x in (doc_mot("chuong_loai_tat", "", thumuc) or "").split(",") if x}
+
+
+def dat_loai_tat(loai: str, bat: bool, nguoi: str, thumuc: Path | None = None) -> dict:
+    """Bật / tắt 01 loại thông báo (QĐ553 (5), QĐ665). Từ chối loại mức đỏ (08 loại luôn báo). Có hiệu lực ngay."""
+    from maychu.hethong.giamsat import thongbao
+    aibam.kiem(nguoi)
+    if loai not in thongbao.LOAI:
+        return {"loi": "Không có loại thông báo này"}
+    if thongbao.LOAI[loai][0] == "do":
+        return {"loi": CHU_LUON_BAO}
+    ds = doc_loai_tat(thumuc)
+    ds = ds - {loai} if bat else ds | {loai}
+    kq = _ghi_gat("chuong_loai_tat", ",".join(sorted(ds)), nguoi, "Bật / tắt loại thông báo", thumuc)
+    return {**kq, "tat": sorted(ds)}
+
+
+def doc_tran_5gio(thumuc: Path | None = None) -> int | None:
+    gt = doc_mot("mucdung_tran_5gio", "", thumuc) or ""
+    return int(gt) if gt.isdigit() and int(gt) > 0 else None
+
+
+def dat_tran_5gio(giatri: str | None, nguoi: str, thumuc: Path | None = None) -> dict:
+    """Mức trần cửa sổ 05 giờ (token, QĐ564); trống = bỏ trần (so với đỉnh 60 ngày). Có hiệu lực ngay."""
+    aibam.kiem(nguoi)
+    gt = str(giatri or "").strip().replace(".", "").replace(",", "").replace(" ", "")
+    if gt and (not gt.isdigit() or int(gt) <= 0):
+        return {"loi": CHU_TRAN_SAI}
+    gt = str(int(gt)) if gt else ""
+    kq = _ghi_gat("mucdung_tran_5gio", gt, nguoi, "Đặt mức trần 05 giờ", thumuc)
+    return {**kq, "tran": int(gt) if gt else None}
 
 
 def doi_tenmien(giatri: str, nguoi: str, thumuc: Path | None = None) -> dict:
