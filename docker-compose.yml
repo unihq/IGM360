@@ -39,7 +39,7 @@ configs:
         reverse_proxy igm360:8360
       }
       http:// {
-        redir https://{host}{uri}
+        redir https://{host}{uri} 308
       }
 
 services:

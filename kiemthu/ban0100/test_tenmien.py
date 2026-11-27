@@ -289,6 +289,7 @@ class KiemCompose(unittest.TestCase):
         self.assertIn("on_demand", self.khoi("https://"))
         self.assertNotIn("on_demand", self.khoi("{$$DOMAIN_NAME}"))   # tên gốc cấp chứng chỉ như cũ, không qua ask
         self.assertEqual(self.cf.count("reverse_proxy "), 2)
+        self.assertIn("http:// {\n        redir https://{host}{uri} 308\n      }", self.cf)   # cùng 308 như tên gốc (QA T11)
 
     def test_bien_ten_goc_chi_o_igm360(self):
         igm = self.dc[self.dc.index("\n  igm360:"):self.dc.index("\n  gateway:")]
