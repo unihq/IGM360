@@ -295,7 +295,7 @@ async function demSo(mo) {
 
 // ---- Màn 09 ngăn Thông số
 // ---- Màn 09 khung Cài đặt B (QĐ573; menu 05 ngăn đã có nội dung – Thông báo, Mức dùng thêm ở bước của chúng; icon QĐ653)
-const NGAN_CD = [['chung', 'monitor-cog', 'Chung'], ['thongso', 'sliders-horizontal', 'Thông số'],
+const NGAN_CD = [['chung', 'monitor-cog', 'Chung'], ['thongso', 'sliders-horizontal', 'Thông số'], ['thongbao', 'bell', 'Thông báo'],   // QĐ573 L05, QĐ653
   ['taikhoan', 'user-round', 'Tài khoản và 02\u00a0lớp'], ['capnhat', 'cloud-download', 'Cập nhật'], ['ketkhoa', 'vault', 'Két khóa']];
 const NHOM_CD = ['Tài chính', 'Máy chủ, sao lưu', 'AI', 'Báo cáo, dữ liệu'];   // QĐ586 (nhóm Bộ não ẩn ở 0.10.0 – L16)
 const demChua = n => D.thongso ? D.thongso.thongso.filter(t => t.nhom === n && !giaiDoanSau(t) && !hienGt(t)).length : 0;
@@ -320,7 +320,7 @@ function danhDauMenuCd() {   // ngăn đang mở: nền --xam + chữ, icon --xa
   kd.innerHTML = ten;
   const n = !ts || !D.thongso ? 0 : S.nhom === 'gom' ? NHOM_CD.reduce((a, x) => a + demChua(x), 0)
     : D.thongso.thongso.filter(t => t.nhom === S.nhom && !giaiDoanSau(t)).length;
-  $('#cd-dem').textContent = n ? hai(n) + ' thông số' : '';
+  $('#cd-dem').textContent = S.tab === 'thongbao' && D.tbl ? CHU_TBL.dem(D.tbl.ds.length, D.tbl.ds.filter(x => x.tat).length) : n ? hai(n) + ' thông số' : '';
 }
 const NHOM_ICO = {'Tài chính': 'nhom0', 'Máy chủ, sao lưu': 'nhom1', 'AI': 'nhom2', 'Báo cáo, dữ liệu': 'nhom3'};
 const giaiDoanSau = t => /^Từ GĐ \d/.test(t.khong_sua || '');
@@ -1586,6 +1586,7 @@ async function napTab() {
     await napThongSo();   // QĐ574, QĐ583: khối tiến độ + nút lọc hiện ở mọi ngăn
     if (S.tab === 'chung') await napChung();
     else if (S.tab === 'ketkhoa') await napKetKhoa();
+    else if (S.tab === 'thongbao') await napThongBaoCd();
     else if (S.tab === 'taikhoan') await napTaiKhoan();
     else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }   // Y46: khối Công cụ AI
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.', 'loi'); }
@@ -1828,6 +1829,42 @@ async function nutKetKhoa(t, d) {
   return false;
 }
 
+// ---- Màn 09 ngăn Thông báo (bản DM-CAIDAT-010 15.Caidat_Mucdung_Thongbao; QĐ553 (5) bật / tắt theo loại, 08 loại đỏ luôn báo;
+// QĐ664 Cập nhật xong; QĐ665 02 lớp đang tắt có công tắc; chữ QĐ666 dòng 14, 15, 17). Tên nhóm = tên mức chuông đã dùng.
+ICON['package-check'] = ICON['package-check'] || svgLucide('package-check', ['m16 16 2 2 4-4',
+  'M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14', 'm7.5 4.27 9 5.15',
+  '<polyline points="3.29 7 12 12 20.71 7" />', '<line x1="12" x2="12" y1="22" y2="12" />']);   // Lucide (ISC) 0.468.0: tin Cập nhật xong (QĐ664)
+const CHU_TBL = {dem: (n, k) => hai(n) + ' loại' + (k ? ' · ' + hai(k) + ' đang tắt' : ''), luon: 'Luôn báo', chan: 'Từ GĐ 2: Chỉ số vượt ngưỡng.',
+  nhom: {do: 'Cần xử lý ngay', xem: 'Sắp tới hạn', tin: 'Tin mới'},
+  ten: {goi_hetphien: 'Gói AI hết phiên', khoa_hethan: 'Khóa hết hạn', madaihan_hethan: 'Mã hết hạn', saoluu_loi: 'Sao lưu lỗi',
+    ocung_vuot: 'Ổ cứng quá ngưỡng', swap_vuot_nguong: 'Hoán đổi quá ngưỡng', capnhat_kiem: 'Cập nhật hỏng', quayve_loi: 'Quay về hỏng',
+    hanmuc_tuan: 'Sắp hết hạn mức', khoa_saphethan: 'Khóa sắp hết hạn', madaihan_saphethan: 'Mã sắp hết hạn', drive_nen: 'Bản sao Drive lỗi',
+    cli_loi: 'Công cụ AI lỗi', cli_o: 'Thiếu ổ trống', cli_mang: 'Không kết nối hãng', dangnhap_2lop_tat: '02 lớp đang tắt',
+    banmoi: 'Có bản mới', capnhat_xong: 'Cập nhật xong', cli_nang: 'Nâng công cụ AI', tenmien_doi: 'Đổi tên miền riêng', muigio_doi: 'Đổi múi giờ'}};
+async function napThongBaoCd() { D.tbl = await api('/thongbao/loai'); D.tbTamTat = !!D.tbl.tamtat; veThongBaoCd(); }   // nút Mở lại / Tạm tắt dùng trạng thái mới nhất
+function veThongBaoCd() {
+  const g = $('#ngan-thongbao'); if (!g || !D.tbl) return; const C = CHU_TBL, ds = D.tbl.ds;
+  if (S.tab === 'thongbao') $('#cd-dem').textContent = C.dem(ds.length, ds.filter(x => x.tat).length);   // QĐ666 dòng 14
+  let h = D.tbl.tamtat ? '<div class="tbl-dai" role="status">' + icoMau(ICON['bell-off'], 'var(--xem)', 20) + '<span class="f1">' + cum(CHU_BA.daiTat)
+    + '</span><button class="tl-nutchu x" data-tamtat>' + CHU_BA.moLai + '</button></div>' : '';
+  for (const m of ['do', 'xem', 'tin']) {
+    const n = ds.filter(x => x.muc === m); if (!n.length) continue;
+    h += '<div class="tbl-nhm"><span class="tbl-cham ' + m + '"></span>' + C.nhom[m] + ' · ' + hai(n.length) + '</div>'
+      + n.map(x => { const ten = C.ten[x.loai] || x.loai;
+        return '<div class="tbl-h' + (x.tat ? ' tat' : '') + '"><span class="cg-ic">' + icoMau(ICON[x.icon] || ICON['circle-alert'], 'var(--phu)', 16) + '</span>'
+          + '<span class="f1">' + cum(ten) + '</span>' + (x.luon ? '<span class="tbl-luon">' + icoMau(ICON.lock, 'var(--phu)', 14) + C.luon + '</span>'
+            : '<button class="gat-o nut-gat" data-tblgat="' + esc(x.loai) + '" role="switch" aria-checked="' + !x.tat + '" aria-label="' + esc(ten) + '">'
+              + '<input type="checkbox" tabindex="-1"' + (x.tat ? '' : ' checked') + '><span class="gat"></span></button>') + '</div>'; }).join('');
+  }
+  g.innerHTML = h + '<div class="gd-dong">' + C.chan + '</div>';
+}
+async function nutThongBaoCd(t, d) {
+  if (!d.tblgat) return false;
+  const x = (D.tbl || {ds: []}).ds.find(k => k.loai === d.tblgat); if (!x) return true;
+  try { await api('/thongbao/loai', {loai: x.loai, bat: x.tat}); } catch (e) { if (e.status) bao(e.message + '.', 'loi'); }
+  await napThongBaoCd(); await demSo(); return true;
+}
+
 // ---- Bấm
 document.addEventListener('click', async ev => {
   if (ev.target.classList && ev.target.classList.contains('lop')) { dongHop(); return; }
@@ -1840,6 +1877,7 @@ document.addEventListener('click', async ev => {
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (S.trang === '09' && S.tab === 'chung' && await nutChung(t, d)) { /* ngăn Chung */ }
   else if (await nutKetKhoa(t, d)) { /* ngăn Két khóa */ }
+  else if (await nutThongBaoCd(t, d)) { /* ngăn Thông báo */ }
   else if (d.tab) { S.tab = d.tab; if (d.tab === 'thongso') S.nhom = d.nhom || NHOM_CD[0]; if (t.closest('#cd-menu')) S.cdMan = 2; napTab(); }
   else if ('cdLui' in d) S.cdMan = 1;   // điện thoại: về danh sách ngăn
   else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6), QĐ404
@@ -1849,7 +1887,8 @@ document.addEventListener('click', async ev => {
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
     S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.', 'xong'); }
   else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); D.tbHienDoc = false; if (D.tbCuoi) veChuong(D.tbCuoi); e.hidden = !v; datTha(e, t); if (v) demSo(true); }
-  else if ('tamtat' in d) { try { await api('/thongso/chuong_tamtat/gat', {bat: !D.tbTamTat}); } catch (er) { if (er.status) bao(er.message + '.', 'loi'); } await demSo(); }   // QĐ551
+  else if ('tamtat' in d) { try { await api('/thongso/chuong_tamtat/gat', {bat: !D.tbTamTat}); } catch (er) { if (er.status) bao(er.message + '.', 'loi'); } await demSo();   // QĐ551
+    if (S.tab === 'thongbao' && S.trang === '09') await napThongBaoCd(); }
   else if (d.tbthe) { D.tbThe = d.tbthe; D.tbHienDoc = false; if (D.tbCuoi) veChuong(D.tbCuoi); }
   else if ('tbhien' in d) { D.tbHienDoc = true; if (D.tbCuoi) veChuong(D.tbCuoi); }
   else if ('amthanh' in d) datAm(!amBat());   // QĐ547

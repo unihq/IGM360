@@ -878,6 +878,15 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
 #app:not(.mb) #p09{gap:16px}#p09 .cd-cum{margin-top:0}.mb #p09 .cd-cum{margin-top:4px}
 #p09 .cd-td>.phu{margin:0}
 .mb #p09 :is(.btn,.btn-chu,.cg-onhap,.o-nhap,.mg-o){min-height:44px}.mb #p09 input:not([type=checkbox]){min-height:42px}
+/* Ngăn Thông báo (DM-CAIDAT-010): nhóm theo mức, mỗi loại 01 dòng (icon · tên · công tắc hoặc "Luôn báo"); 0 vạch trái (QĐ575) */
+#ngan-thongbao{gap:0}
+.tbl-nhm{display:flex;align-items:center;gap:8px;padding:14px 4px 6px;font-size:13px;font-weight:700;color:var(--phu)}
+.tbl-cham{width:8px;height:8px;border-radius:50%;flex:none}.tbl-cham.do{background:var(--canh)}.tbl-cham.xem{background:var(--h-xem)}.tbl-cham.tin{background:var(--h-chinh)}
+.tbl-h{display:flex;align-items:center;gap:12px;padding:8px 4px;min-height:56px}.tbl-h+.tbl-h{border-top:1px solid var(--ke)}
+.tbl-h.tat>.f1{color:var(--phu)}
+.tbl-luon{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--phu);white-space:nowrap;min-width:96px;justify-content:flex-end}
+.tbl-dai{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--ke);border-radius:12px;padding:12px 14px;margin:8px 0 4px;font-size:13px}
+.mb .tbl-h{min-height:60px}
 .kk-tong{display:flex;align-items:center;gap:16px;padding:16px 20px}
 .kk-ic{width:52px;height:52px;border-radius:12px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
 .kk-thanh{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;margin:8px 0 6px;background:var(--xam)}.kk-thanh i{display:block}
@@ -1946,6 +1955,7 @@ html.toi ::placeholder{color:var(--goi-y)}
     <div class="bang"><div class="hang tieu-de" style="grid-template-columns:120px 1fr 160px"><span>Bản</span><span>Nội dung</span><span>Ngày cài</span></div>
       <div id="ls-capnhat"></div></div></div>
      <div data-s="tab:ketkhoa" class="cot-doc" id="ngan-ketkhoa"></div>
+     <div data-s="tab:thongbao" class="cot-doc" id="ngan-thongbao"></div>
        </div></section></div>
    </div>
    <div class="trang" id="p11" hidden><div class="dau-trang"><div class="ico-tron"><svg
