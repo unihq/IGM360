@@ -323,3 +323,34 @@ CREATE TABLE IF NOT EXISTS phien_cli (
   gan_luc TEXT,
   dong_luc TEXT
 );
+
+-- T01 Sổ sự việc (bản 5, QĐ96, QĐ632; Thietke mục 1.4): 01 dòng = 01 sự việc cho bộ não học. Chỉ ghi thêm qua 01 hàm;
+-- ngoại lệ duy nhất 02 cột trangthai_xuly, xuly_luc đổi 01 chiều (trigger sv__suthat, sv__xuly – dulieu/suviec.py).
+-- Không chép câu chữ: ghi mã bảng, mã dòng nguồn (QĐ98).
+CREATE TABLE IF NOT EXISTS bn_suviec (
+  id TEXT PRIMARY KEY NOT NULL,
+  luc TEXT NOT NULL,
+  loai TEXT NOT NULL,
+  nguon_loai TEXT,
+  bang_nguon TEXT,
+  dong_nguon_id TEXT,
+  khoa_chongtrung TEXT UNIQUE,
+  bonao TEXT,
+  doituong TEXT CHECK (doituong IS NULL OR doituong IN ('anh', 'nhanvien', 'khach', 'khong')),
+  nguoi_id TEXT,
+  co_dlcn INTEGER CHECK (co_dlcn IS NULL OR co_dlcn IN (0, 1)),
+  shop_id TEXT,
+  kenh_id TEXT,
+  nhatky_ai_id TEXT,
+  lydo_ma TEXT,
+  lydo_chu TEXT,
+  so_lan_sua INTEGER CHECK (so_lan_sua IS NULL OR so_lan_sua >= 0),
+  trithuc_ma TEXT,
+  danhgia TEXT CHECK (danhgia IS NULL OR danhgia IN ('co_ich', 'co_hai', 'trung_tinh')),
+  moc_json TEXT,
+  trangthai_xuly TEXT NOT NULL DEFAULT 'moi' CHECK (trangthai_xuly IN ('moi', 'dahoc', 'boqua')),
+  xuly_luc TEXT
+);
+CREATE INDEX IF NOT EXISTS bn_suviec_bonao_luc ON bn_suviec (bonao, luc);
+CREATE INDEX IF NOT EXISTS bn_suviec_cho ON bn_suviec (trangthai_xuly, loai);
+CREATE INDEX IF NOT EXISTS bn_suviec_trithuc ON bn_suviec (trithuc_ma, loai);

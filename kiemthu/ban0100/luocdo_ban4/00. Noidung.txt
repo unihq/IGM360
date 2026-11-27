@@ -1,0 +1,1 @@
+Lược đồ bản 4 đúng như mã 0.9.4 (fdae5bd), chép bằng máy (git show): dữ liệu kiểm nâng 4 → 5 và quay về 5 → 4 (0.10.0). Không sửa tay.

@@ -234,6 +234,8 @@ def kiem_sau_capnhat(lich_bat: bool, thumuc: Path | None = None) -> dict:
         except sqlite3.Error:
             tot = luocdo = False
     luocdo = luocdo and _luocdo_ban4_du(tt, ban, thumuc)
+    from maychu.dulieu import bonao
+    luocdo = luocdo and bonao.hop_le(thumuc)   # bản 5 (Đ-a, L03): `bonao/chung/` là kho git hợp lệ – không thêm điểm
     from maychu.hethong import tiendo
     tiendo.chi_tiet("kiem", thumuc, da=3, tong=6)   # QĐ251: đã chấm bản, tệp dữ liệu, lược đồ
     diem.update(dulieu=tot, luocdo=luocdo, lich=bool(lich_bat),

@@ -24,7 +24,7 @@ class KiemTaoFile(unittest.TestCase):
     def test_du_07_file_105_bang(self):
         kq = khoitao.tao_het(self.thumuc)
         self.assertEqual(kq, ketnoi.SO_BANG)
-        self.assertEqual(sum(kq.values()), 124)   # 0.8.0 bản 4 (V3)
+        self.assertEqual(sum(kq.values()), 125)   # 0.8.0 bản 4 (V3); 0.10.0 bản 5 (QĐ572): 124 → 125 (+T01)
         for ten in ketnoi.CAC_FILE:
             duong = ketnoi.duongdan(ten, self.thumuc)
             self.assertTrue(duong.exists())
@@ -32,7 +32,7 @@ class KiemTaoFile(unittest.TestCase):
 
     def test_chay_lai_khong_sao(self):
         khoitao.tao_het(self.thumuc)
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 124)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 125)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3); 0.10.0 bản 5 (QĐ572): 124 → 125 (+T01)
 
     def test_cai_dat_file(self):
         khoitao.tao_het(self.thumuc)

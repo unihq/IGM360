@@ -12,6 +12,9 @@ Chạy lại nhiều lần không sao. Số phiên bản lược đồ ghi ở P
   F2: H08); câu `CREATE VIRTUAL TABLE`, `CREATE INDEX` của lược đồ chạy riêng sau bước dựng lại, thêm cột (V4: dựng lại
   bảng làm mất chỉ mục của bảng đó); H07 có `trangthai` lạ thì dừng nâng (K4b); N01 đổi dòng trước cập nhật của 0.7.9
   (QĐ227); dựng chỉ mục tìm chữ H08 từ tin cũ bằng đúng hàm đổi đ/Đ của phần mềm (`timchu`).
+- Bản 5 (0.10.0; QĐ572, QĐ584, QĐ632; phiếu 16 mục 9.35–9.40; thiết kế mục 1.4): T01 `bn_suviec` mới (Viecnen); thêm
+  09 cột cuối bảng (H07, H15 `bonao`; H16 04 cột bóc chữ, thay bản; C17 `ky_loai`; G04 `mohinh_thucchay`, `lydo`);
+  D01 `chiso`, M02 `quytac_kiemdu` dựng lại để danh sách kỳ nhận thêm `quy`, `nam`. Trigger T01 tạo ở `_dong_khoitao`.
 """
 import os
 import re
@@ -19,10 +22,10 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from maychu.dulieu import aibam, dsmorong, ketnoi, phienban, songuoi, timchu
+from maychu.dulieu import aibam, bonao, dsmorong, ketnoi, phienban, songuoi, suviec, timchu
 from maychu.dulieu.saoluu import MUIGIO_VN
 
-PHIENBAN_LUOCDO = 4
+PHIENBAN_LUOCDO = 5
 THUMUC_LUOCDO = Path(__file__).resolve().parent / "luocdo"
 
 # Bảng phải dựng lại khi nâng lên từng bản (tên theo bản đó).
@@ -61,6 +64,11 @@ NANGCAP = {
         'Bot': ['hoithoai'],
         'Nhatky': ['saoluu'],
     },
+    # Bản 5 (0.10.0, QĐ572 II-2, II-3): D01 `ky_tinh`, M02 `ky_loai` thêm `quy`, `nam` – SQLite không sửa được CHECK
+    # (CDA thử: danh sách cũ chặn `quy`) nên dựng lại; số dòng không được ít đi (SO_DONG_KIEM).
+    5: {
+        'Dulieu_Chinh': ['chiso', 'quytac_kiemdu'],
+    },
 }
 # Bảng mới của từng bản (tạo theo lược đồ hiện hành trước khi dựng lại bảng khác).
 BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi'],
@@ -69,14 +77,22 @@ BANG_MOI = {3: {'Dulieu_Chinh': ['nguoi'],
             4: {'Dulieu_Chinh': ['canhbao_doc'],
                 'Viecnen': ['phien_cli'],
                 'Bot': ['nhom_trochuyen', 'tinnhan_dau', 'tailieu_gan', 'nhom_dahoc', 'chiase_lienket', 'muctieu',
-                        'tacdong_ai', 'tinnhan_camxuc', 'tinnhan_tim_noi']}}
+                        'tacdong_ai', 'tinnhan_camxuc', 'tinnhan_tim_noi']},
+            # Bản 5: T01 sổ sự việc (QĐ96, QĐ632) rỗng.
+            5: {'Viecnen': ['bn_suviec']}}
 # Cột thêm bằng `ALTER TABLE ADD COLUMN` (F2, PTD-10 mục 13.3): chỉ khi thêm cột cho phép trống ở cuối bảng, không đổi
 # ràng buộc cột cũ; giữ `rowid`, không chép bảng. {bản: {(file, bảng): [cột theo đúng thứ tự cuối lược đồ]}}
-THEM_COT = {4: {('Bot', 'tinnhan'): ['trangthai', 'phu_json', 'tra_loi_cho', 'kenh_nguon']}}
+THEM_COT = {4: {('Bot', 'tinnhan'): ['trangthai', 'phu_json', 'tra_loi_cho', 'kenh_nguon']},
+            # Bản 5 (phiếu 16 mục 9.39 (a)): 09 cột / 05 bảng, đều cho phép trống, thêm cuối bảng.
+            5: {('Bot', 'hoithoai'): ['bonao'], ('Bot', 'nhom_trochuyen'): ['bonao'],
+                ('Bot', 'tailieu_gan'): ['boc_trangthai', 'boc_ghichu', 'boc_luc', 'thay_cho_id'],
+                ('Dulieu_Chinh', 'kehoach_nguong'): ['ky_loai'],
+                ('Nhatky', 'nhatky_ai'): ['mohinh_thucchay', 'lydo']}}
 # K4b: giá trị H07 `trangthai` nhận ở bản 4; dòng cũ ngoài danh sách thì dừng nâng, không đổi im lặng (như QĐ143).
 TRANGTHAI_H07 = ('dung', 'luutru', 'daxoa')
 # Số dòng ghi lại lúc nâng để "Kiểm sau cập nhật" so (K4): {file: [bảng]}.
-SO_DONG_KIEM = {'Bot': ['hoithoai', 'tinnhan'], 'Viecnen': ['nguon_ai'], 'Nhatky': ['saoluu']}
+SO_DONG_KIEM = {'Bot': ['hoithoai', 'tinnhan'], 'Viecnen': ['nguon_ai'], 'Nhatky': ['saoluu'],
+                'Dulieu_Chinh': ['chiso', 'quytac_kiemdu']}   # bản 5: D01, M02 dựng lại
 # Điền cột mới bắt buộc cho dòng cũ khi nâng bản 3: {(file, bảng): {cột: biểu thức}}. Biểu thức ra NULL thì dòng đó
 # không nhận ra được: dừng nâng, không đoán (QĐ143). Y22a (QĐ161, PTD-05 mục 4 câu 06): G06 theo tiền tố mã cũ.
 DIEN_BAN3 = {("Viecnen", "nguon_ai"): {
@@ -360,6 +376,8 @@ def _dong_khoitao(cn: sqlite3.Connection, ten: str) -> None:
         # Trigger chặn mã trống, chặn sửa `ma` ở mọi bảng có phiên bản (QĐ142, QĐ143). Bảng dựng lại khi nâng mất
         # trigger cũ, nên tạo lại ở đây sau cả 02 đường: file mới và file nâng.
         phienban.tao_trigger(cn)
+        if ten == "Viecnen":   # QĐ632, L14: T01 chặn sửa 02 tầng; tạo lại sau mỗi lần nâng (như phienban.tao_trigger)
+            suviec.tao_trigger(cn)
         if ten == "Bot":
             bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
             for ma, ten_lich, gio, lap, ngay, gui in LICH_KHOITAO:
@@ -463,4 +481,5 @@ def tao_het(thumuc: Path | None = None, bao=None) -> dict:
         from maychu.hethong import capnhat
         antoan.ghi(thumuc, dang_nang=None, nang_luocdo={"den": PHIENBAN_LUOCDO, "ban": capnhat.ban_dang_chay(), "luc": luc,
                                                         "so_dong": so_dong})   # K4: kiểm sau cập nhật so số dòng
+    bonao.khoi_tao(thumuc)   # bản 5 (Đ-a, L03): thư mục bộ não + kho git `chung/` ngoài 07 tệp; chạy lại không sao
     return ketqua

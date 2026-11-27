@@ -11,7 +11,8 @@ from pathlib import Path
 
 CAC_FILE = ("Dulieu_Chinh", "Hotho", "Ketnoi", "Viecnen", "Bot", "Nhatky", "Baomat")
 # Bản 4 (QĐ229, V3): đếm `type='table'` gồm cả 06 dòng cụm tìm chữ H08 (bảng ảo + 04 bảng phụ + bảng nối) → tổng 124
-SO_BANG = {"Dulieu_Chinh": 55, "Hotho": 5, "Ketnoi": 6, "Viecnen": 20, "Bot": 25, "Nhatky": 5, "Baomat": 8}
+# Bản 5 (0.10.0, QĐ572 I-1): Viecnen +T01 `bn_suviec` → 21, tổng 125
+SO_BANG = {"Dulieu_Chinh": 55, "Hotho": 5, "Ketnoi": 6, "Viecnen": 21, "Bot": 25, "Nhatky": 5, "Baomat": 8}
 DO_BEN_FULL = {"Dulieu_Chinh", "Ketnoi", "Baomat"}
 CHO_BAN_MS = {"Viecnen": 30000}
 

@@ -785,7 +785,8 @@ CREATE TABLE IF NOT EXISTS kehoach_nguong (
   nguoi_dat TEXT,
   hieuluc_tu TEXT,
   hieuluc_den TEXT,
-  tao_luc TEXT
+  tao_luc TEXT,
+  ky_loai TEXT CHECK (ky_loai IS NULL OR ky_loai IN ('ngay', 'tuan', 'thang', 'quy', 'nam'))
 );
 
 -- C18 Kết quả thử SKU: 01 dòng = 01 SKU × 01 lần thử
@@ -891,7 +892,7 @@ CREATE TABLE IF NOT EXISTS chiso (
   cauhoi_quantri TEXT,
   module_lamchu TEXT,
   phamvi_chophep TEXT,
-  ky_tinh TEXT CHECK (ky_tinh IS NULL OR ky_tinh IN ('ngay', 'tuan', 'thang')),
+  ky_tinh TEXT CHECK (ky_tinh IS NULL OR ky_tinh IN ('ngay', 'tuan', 'thang', 'quy', 'nam')),
   chieu_tot TEXT CHECK (chieu_tot IS NULL OR chieu_tot IN ('tang', 'giam')),
   bang_nguon TEXT,
   quytac_du_ids TEXT,
@@ -1035,7 +1036,7 @@ CREATE TABLE IF NOT EXISTS quytac_kiemdu (
   nguong INTEGER,
   donvi_nguong TEXT CHECK (donvi_nguong IS NULL OR donvi_nguong IN ('dong', 'tyle', 'phut', 'gio', 'ngay')),
   phamvi_loai TEXT CHECK (phamvi_loai IS NULL OR phamvi_loai IN ('congty', 'shop')),
-  ky_loai TEXT CHECK (ky_loai IS NULL OR ky_loai IN ('ngay', 'tuan', 'thang')),
+  ky_loai TEXT CHECK (ky_loai IS NULL OR ky_loai IN ('ngay', 'tuan', 'thang', 'quy', 'nam')),
   chiso_anhhuong TEXT,
   nguoi_duyet TEXT,
   duyet_luc TEXT

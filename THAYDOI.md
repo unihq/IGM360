@@ -3,6 +3,12 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.10.0
+Tóm tắt: Nền dữ liệu mới cho bộ não
+Nâng dữ liệu: có
+- Nâng dữ liệu lên bản 5: thêm sổ sự việc để bộ não học; chỉ số và quy tắc kiểm đủ nhận thêm kỳ quý, năm.
+- Tạo thư mục bộ não chung, lưu lịch sử thay đổi.
+
 ## 0.9.4
 Tóm tắt: Sửa lỗi nâng công cụ AI không cài được
 Nâng dữ liệu: không

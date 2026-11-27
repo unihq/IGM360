@@ -65,7 +65,7 @@ class KiemFileMoiBan3(CoThuMuc):
         self.kq = khoitao.tao_het(self.thumuc)
 
     def test_105_bang_ban_3(self):
-        self.assertEqual(sum(self.kq.values()), 124)   # 0.8.0 bản 4 (V3)
+        self.assertEqual(sum(self.kq.values()), 125)   # 0.8.0 bản 4 (V3); 0.10.0 bản 5 (QĐ572): 124 → 125 (+T01)
         self.assertEqual(self.kq["Dulieu_Chinh"], 55)   # 0.8.0: + D05
         for ten in ketnoi.CAC_FILE:
             self.assertEqual(self.lay(ten, "PRAGMA user_version")[0][0], khoitao.PHIENBAN_LUOCDO)
@@ -174,7 +174,7 @@ class KiemNangBan2LenBan3(CoThuMuc):
         self.ghi("Bot", "INSERT INTO lich_baocao (id, ma, gio_gui) VALUES (?, 'cu_01', '07:00')", (maso.tao(),))
 
     def test_nang_giu_du_lieu_tao_a18_cua_anh(self):
-        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 124)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3)
+        self.assertEqual(sum(khoitao.tao_het(self.thumuc).values()), 125)   # 0.8.0 bản 4: 118 bảng + cụm tìm chữ (V3); 0.10.0 bản 5 (QĐ572): 124 → 125 (+T01)
         for ten in ketnoi.CAC_FILE:
             self.assertEqual(self.lay(ten, "PRAGMA user_version")[0][0], khoitao.PHIENBAN_LUOCDO)
             self.assertTrue((self.thumuc / "saoluu" / f"truoc_nangcap_v{khoitao.PHIENBAN_LUOCDO:02d}" / f"{ten}.sqlite3").exists())

@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS nhatky_ai (
   sotien_thamkhao INTEGER,
   tien_ma TEXT,
   ketqua TEXT CHECK (ketqua IS NULL OR ketqua IN ('xong', 'loi', 'het_hanmuc', 'huy', 'quagio')),
-  thoigian_ms INTEGER
+  thoigian_ms INTEGER,
+  mohinh_thucchay TEXT,
+  lydo TEXT
 );
 
 -- H05 Nhật ký nói hoặc im: 01 dòng = 01 tin bot đã xét

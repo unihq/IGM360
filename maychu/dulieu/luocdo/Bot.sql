@@ -107,7 +107,8 @@ CREATE TABLE IF NOT EXISTS hoithoai (
   mohinh_ghim TEXT,
   nhom_id TEXT REFERENCES nhom_trochuyen(id),
   tomtat_den_tin_id TEXT REFERENCES tinnhan(id),
-  tuychon_ghim_json TEXT
+  tuychon_ghim_json TEXT,
+  bonao TEXT
 );
 
 -- H08 Tin nhắn: 01 dòng = 01 tin trong 01 cuộc trò chuyện
@@ -202,7 +203,8 @@ CREATE TABLE IF NOT EXISTS nhom_trochuyen (
   nguoidung_id TEXT,
   trangthai TEXT,
   tao_luc TEXT,
-  cap_nhat_luc TEXT
+  cap_nhat_luc TEXT,
+  bonao TEXT
 );
 
 -- H13 Dấu trên tin (gói 1): 01 dòng = 01 dấu trên 01 tin. Chỉ ghi thêm, gỡ = điền `go_luc`
@@ -227,7 +229,11 @@ CREATE TABLE IF NOT EXISTS tailieu_gan (
   vai TEXT,
   ghim_luc TEXT,
   them_luc TEXT,
-  go_luc TEXT
+  go_luc TEXT,
+  boc_trangthai TEXT,
+  boc_ghichu TEXT,
+  boc_luc TEXT,
+  thay_cho_id TEXT
 );
 
 -- H17 Project đã học (gói 2): 01 dòng = 01 ghi chú Project đã học

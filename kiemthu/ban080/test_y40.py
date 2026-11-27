@@ -102,8 +102,8 @@ class KiemNangBan4(Nen):
             truoc[k] = self.lay(ten, f"SELECT count(*) FROM {bang}")[0][0]
         kq = khoitao.tao_het(self.dl)
         self.assertEqual(kq, ketnoi.SO_BANG)
-        self.assertEqual(sum(kq.values()), 124)                                       # V3: 118 bảng + cụm tìm chữ
-        self.assertEqual(set(self.ban().values()), {4})
+        self.assertEqual(sum(kq.values()), 125)                                       # V3: 118 bảng + cụm tìm chữ; 0.10.0 bản 5 (QĐ572): 124 → 125 (+T01)
+        self.assertEqual(set(self.ban().values()), {5})   # 0.10.0 bản 5 (QĐ572)
         for k, so in truoc.items():
             ten, bang = k.split(".", 1)
             self.assertEqual(self.lay(ten, f"SELECT count(*) FROM {bang}")[0][0], so, k)
@@ -114,7 +114,7 @@ class KiemNangBan4(Nen):
                                              " khoanchi_ma, ma, hang FROM nguon_ai"),
                          [(None,) * 7 + ("goi_claude_01", "anthropic")])
         self.assertEqual(len(self.lay("Viecnen", "PRAGMA table_info(nguon_ai)")), 30)   # G06 23 → 30 cột
-        self.assertEqual(len(self.lay("Bot", "PRAGMA table_info(hoithoai)")), 20)
+        self.assertEqual(len(self.lay("Bot", "PRAGMA table_info(hoithoai)")), 21)   # 0.10.0 bản 5: +`bonao` (QĐ584)
         self.assertEqual(len(self.lay("Bot", "PRAGMA table_info(tinnhan)")), 12)
         self.assertEqual(sorted(r[0] for r in self.lay("Nhatky", "SELECT loai FROM saoluu")), ["hangngay", "truoc_capnhat"])   # C4
         cn = ketnoi.mo("Bot", self.dl)
@@ -123,8 +123,8 @@ class KiemNangBan4(Nen):
         finally:
             cn.close()
         n = antoan.doc(self.dl)["nang_luocdo"]
-        self.assertEqual((n["den"], n["so_dong"]), (4, truoc))                       # K4: số dòng lúc nâng
-        self.assertTrue((self.dl / "saoluu" / "truoc_nangcap_v04" / "Bot.sqlite3").exists())
+        self.assertEqual((n["den"], n["so_dong"]), (5, {**truoc, "Dulieu_Chinh.chiso": 0, "Dulieu_Chinh.quytac_kiemdu": 0}))   # K4; 0.10.0 bản 5: + D01, M02
+        self.assertTrue((self.dl / "saoluu" / f"truoc_nangcap_v{khoitao.PHIENBAN_LUOCDO:02d}" / "Bot.sqlite3").exists())   # 0.10.0: chụp theo bản hiện hành
 
     def test_v4_tep_nang_giong_tep_moi_theo_pragma(self):
         dung_ban3(self.dl)
@@ -214,8 +214,8 @@ class KiemNangBan4(Nen):
 
     def test_moi_tao_du_124(self):
         kq = khoitao.tao_het(self.dl)
-        self.assertEqual((kq, set(self.ban().values())), (ketnoi.SO_BANG, {4}))
-        self.assertEqual(sum(ketnoi.SO_BANG.values()), 124)
+        self.assertEqual((kq, set(self.ban().values())), (ketnoi.SO_BANG, {5}))   # 0.10.0 bản 5 (QĐ572)
+        self.assertEqual(sum(ketnoi.SO_BANG.values()), 125)   # 0.10.0 bản 5 (QĐ572): 124 → 125 (+T01)
 
 
 class KiemC4V1b(Nen):
@@ -392,7 +392,7 @@ class KiemY40c(Nen):
         finally:
             cn.close()
         antoan.ghi(self.dl, chay_ban_truoc={"ban_anh": "0.8.0", "ban_truoc": "0.7.9", "nguoi": None,
-                                            "tra_du_lieu": {"thumuc": "truoc_nangcap_v04", "tep": list(ketnoi.CAC_FILE)}})
+                                            "tra_du_lieu": {"thumuc": f"truoc_nangcap_v{khoitao.PHIENBAN_LUOCDO:02d}", "tep": list(ketnoi.CAC_FILE)}})
         return chay, g
 
     def co(self, ten, bang, k):
@@ -442,7 +442,7 @@ class KiemY40c(Nen):
     def test_chay_02_lan_khong_ghi_doi(self):
         import shutil
         chay, g = self.dung()
-        chay._chep_giu(self.dl, self.dl / "saoluu" / "truoc_nangcap_v04")
+        chay._chep_giu(self.dl, self.dl / "saoluu" / f"truoc_nangcap_v{khoitao.PHIENBAN_LUOCDO:02d}")
         luu = self.g / "giu_luu.sqlite3"
         shutil.copy(self.dl / chay.TEP_GIU, luu)
         chay.chon(self.dl, g)

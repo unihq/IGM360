@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Image IGM360: Python 3.12 bản gọn + Node.js 22 (để chạy Claude Code CLI, Codex CLI).
 # Mã để chỉ đọc; mọi dữ liệu nằm ở ổ gắn ngoài /dulieu và 02 ổ giữ đăng nhập gói AI.
-# Không cài thêm gói hệ điều hành nào ngoài image nền.
+# Gói hệ điều hành cài thêm ngoài image nền: chỉ git (0.10.0, QĐ474 – kho git bộ não), ghim đúng bản.
 
 # 0.7.9 lớp 3 (QĐ213, QĐ215): ảnh liền trước trên kho ảnh (công khai, không cần khóa). Mã của nó được để sẵn ở
 # /app/ban_truoc để nút "Quay về bản trước" chạy lại bản đó mà không cần mạng, không cần quyền Docker.
@@ -35,6 +35,14 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && node --version
 
 WORKDIR /app
+
+# 0.10.0 (QĐ474, QĐ626): git cho kho bộ não (`maychu/dulieu/bonao.py`: mỗi bộ não 01 kho git, hoàn tác từng mẻ học).
+# Ghim đúng bản Debian trixie đã đo ở thử thật ⑤ (+35 MB tải, +140 MB đĩa); --no-install-recommends, xóa danh sách apt.
+# Lớp ít đổi nên đặt trước thư viện Python (QĐ258). Nâng git = đổi số bản ở dòng dưới, anh duyệt.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends "git=1:2.47.3-0+deb13u1" \
+    && rm -rf /var/lib/apt/lists/* \
+    && git --version
 
 # 0.8.2 (QĐ258): thứ tự lớp từ ít đổi đến hay đổi: thư viện Python → Codex CLI → Claude CLI → mã.
 # Thư viện Python để riêng 01 lớp: sửa mã không phải cài lại thư viện.
