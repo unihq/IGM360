@@ -714,6 +714,79 @@ body:not(.dien-thoai) .luoi-tk{grid-template-columns:repeat(auto-fit,minmax(280p
 #app:not(.mb) .cuon:has(#s01:not([hidden])){overflow-y:auto}
 .lop .btn.dang{opacity:1;cursor:progress}
 
+/* QĐ573, QĐ574, QĐ580, QĐ583 (0.10.0): khung Cài đặt B – tiến độ trên cùng trải ngang; dưới: menu 232 | khối chi tiết */
+.cd-cum{display:grid;grid-template-columns:232px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:16px 24px;margin-top:16px}
+.cd-cum>.the{padding:0;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.cd-cum>.cd-td{grid-column:1/-1;gap:8px;padding:14px 20px 16px;overflow:visible}
+.cd-h1{display:flex;align-items:center;gap:16px}.cd-h1 b{font-weight:600;font-size:16px;line-height:22px;flex:1;min-width:0}
+.cd-h2{display:flex;align-items:center;gap:12px}
+.cd-thg{flex:1;height:8px;border-radius:4px;background:var(--xam);overflow:hidden}.cd-thg i{display:block;height:100%;border-radius:4px;background:var(--h-chinh)}
+.cd-h2 span{font-size:13px;color:var(--phu);white-space:nowrap}.cd-h2 span b{font-weight:600;font-size:14px;color:var(--chu)}
+.cd-loc{display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--vien);border-radius:8px;white-space:nowrap;flex:none}
+.cd-loc.on{background:var(--xam);color:var(--xanh-chu);font-weight:600}
+.cd-mtc{padding:8px;display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:0;flex:1}
+.cd-mm{display:flex;align-items:center;gap:10px;min-height:36px;width:100%;padding:0 12px;border-radius:8px;color:var(--chu);white-space:nowrap;text-align:left;flex:none}
+.cd-mm svg{width:16px;height:16px;flex:none}
+.cd-mm:hover{background:var(--xam)}
+.cd-mm.on{color:var(--xanh-chu);font-weight:600;background:var(--xam)}.cd-mm.on svg{color:var(--xanh-chu)!important}
+.cd-mm.cd-con{padding-left:38px}
+.cd-sv{margin-left:auto;font-weight:600;font-size:12px;line-height:18px;padding:0 6px;border:1px solid var(--xem);color:var(--xem);border-radius:6px;background:var(--khoi)}
+.cd-kd{flex:none;display:flex;align-items:center;gap:12px;padding:0 20px 0 16px;height:56px;border-bottom:1px solid var(--ke)}
+.cd-ic{width:32px;height:32px;border-radius:8px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
+.cd-ten{font-weight:600;font-size:16px;line-height:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-dem{margin-left:auto;font-size:12px;color:var(--phu);white-space:nowrap}
+.cd-than{flex:1;min-height:0;overflow-y:auto;padding:8px 20px 20px}
+.cd-than>.cot-doc{gap:16px}
+.cd-nhom{font-size:13px;font-weight:700;color:var(--phu);padding:12px 0 4px}
+#ds-thongso .ts:first-child,.cd-nhom+.ts{border-top:0}
+#ds-thongso .ts{padding:12px 4px}
+/* QĐ627 ngăn Chung (bản DM Chung_Banthu): dòng · dải chọn chế độ màu · tên miền (QĐ634, QĐ650, QĐ651) · múi giờ (QĐ636, QĐ652) */
+#ngan-chung{gap:0}
+.cg-d{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:10px 8px 10px 4px;min-height:60px}
+.cg-d+.cg-d{border-top:1px solid var(--ke)}
+.cg-tt{flex:1 1 220px;min-width:0;line-height:20px}
+.cg-pt{display:block;font-size:12px;line-height:18px;color:var(--phu);margin-top:2px}
+.cg-ic{width:30px;height:30px;border-radius:8px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
+.cg-ic.trong{border-color:transparent}
+.cg-seg{display:inline-flex;gap:2px;padding:2px;border-radius:10px;background:var(--xam)}
+.cg-sg{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;font-size:13px;color:var(--chu);white-space:nowrap}
+.cg-sg.on{background:var(--xanh);color:var(--chu-tren-nut);font-weight:600}
+.cg-tm,.cg-mg{align-items:flex-start;flex-wrap:nowrap}.cg-tm>.cg-ic,.cg-mg>.cg-ic{margin-top:-4px}
+.tm-k{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;line-height:20px}
+.tm-b{border:1px solid var(--ke);border-radius:8px;overflow:hidden}
+.tm-r{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.3fr);gap:0 12px;padding:8px 12px;align-items:center}
+.tm-r+.tm-r{border-top:1px solid var(--ke)}
+.tm-th{background:var(--xam);font-size:12px;font-weight:600;color:var(--phu);padding:6px 12px}
+.tm-c{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.tm-c b{font-weight:600;overflow-wrap:anywhere}
+.tm-g{font-size:12px;color:var(--phu)}.tm-nl{display:none;font-size:12px;color:var(--phu);min-width:56px}
+.tm-t{display:inline-flex;align-items:center;gap:6px;font-size:13px}.tm-t.xem{color:var(--xem);font-weight:600}.tm-t.pt0{color:var(--phu)}
+.tm-w{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:20px;border:1px solid var(--ke);border-radius:8px;padding:8px 12px}.tm-w svg{margin-top:2px}
+.tm-n{display:flex;flex-direction:column;gap:6px}
+.tm-l{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--phu)}
+.tm-h{display:flex;gap:8px;align-items:center}
+.cg-onhap{height:40px;border:1px solid var(--vien);border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;background:var(--khoi);flex:1;min-width:0}
+.cg-onhap input{border:0;outline:0;flex:1;min-width:0;height:100%;background:transparent;font-size:14px;color:var(--chu)}
+.cg-onhap.tat{background:var(--xam)}.cg-onhap.tat input{color:var(--phu)}
+.cg-onhap:focus-within{border-color:var(--xanh-chu)}
+.tm-x{display:flex;gap:16px}
+.tm-k2{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--phu)}
+.cg-mg{position:relative}
+.mg-o{height:40px;border:1px solid var(--vien);border-radius:8px;padding:0 10px 0 12px;display:flex;align-items:center;gap:8px;background:var(--khoi);flex:1;min-width:0;max-width:420px;text-align:left}
+.mg-och{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mg-o.mo{border-color:var(--xanh-chu);outline:1px solid var(--xanh-chu)}.mg-o.tat{background:var(--xam);color:var(--phu)}
+.mg-p{width:420px;max-width:100%;background:var(--khoi);border:1px solid var(--ke);border-radius:12px;box-shadow:0 12px 32px -12px rgba(var(--bong),.25);padding:8px}
+.mg-t{flex:none;margin-bottom:6px}
+.mg-ds{max-height:280px;overflow-y:auto}
+.mg-n{font-size:12px;font-weight:600;color:var(--phu);padding:8px 8px 4px}
+.mg-i{display:flex;align-items:center;gap:8px;min-height:36px;width:100%;padding:0 8px;border-radius:8px;font-size:14px;text-align:left}
+.mg-i:hover{background:var(--xam)}.mg-i i{width:16px;flex:none}.mg-i.on{color:var(--xanh-chu);font-weight:600}
+.mg-l{margin:10px 0 0 20px;display:flex;flex-direction:column;gap:4px}
+.xm-l{margin-top:12px}
+@media (max-width:1199px){.cg-d .cg-seg{flex-basis:auto}}
+body.dien-thoai .cg-seg{flex-basis:100%;margin-left:42px}body.dien-thoai .cg-sg{height:44px}
+body.dien-thoai .tm-r{grid-template-columns:1fr;gap:4px}body.dien-thoai .tm-th{display:none}body.dien-thoai .tm-nl{display:inline-block}
+body.dien-thoai .tm-h{flex-wrap:wrap}body.dien-thoai .tm-h .cg-onhap,body.dien-thoai .tm-h .btn,body.dien-thoai .mg-o{flex:1 1 100%;height:44px;max-width:none}
+body.dien-thoai .mg-p{width:auto}body.dien-thoai .mg-i,body.dien-thoai .tm-x .btn-chu{min-height:44px}
 /* QĐ612 thanh cuộn kiểu C (Quychuan 5.20): mọi vùng cuộn trên máy tính; điện thoại dùng thanh của máy */
 body:not(.dien-thoai) ::-webkit-scrollbar{width:12px;height:12px}
 body:not(.dien-thoai) ::-webkit-scrollbar-track,body:not(.dien-thoai) ::-webkit-scrollbar-corner{background:transparent}
@@ -1586,89 +1659,9 @@ html.toi ::placeholder{color:var(--goi-y)}
   <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
   <circle cx="12" cy="12" r="3" />
 </svg></div><div class="f1"><div class="t20 b7">Cài đặt</div><div class="phu t13">Thông số tính toán, tài&nbsp;khoản, bản phần&nbsp;mềm và khóa kết nối</div></div></div>
-     <div class="tabs">
-      <button class="tab" data-tab="thongso"><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-sliders-horizontal"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M10 5H3" />
-  <path d="M12 19H3" />
-  <path d="M14 3v4" />
-  <path d="M16 17v4" />
-  <path d="M21 12h-9" />
-  <path d="M21 19h-5" />
-  <path d="M21 5h-7" />
-  <path d="M8 10v4" />
-  <path d="M8 12H3" />
-</svg>Thông số</button>
-      <button class="tab" data-tab="taikhoan"><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-user-round"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <circle cx="12" cy="8" r="5" />
-  <path d="M20 21a8 8 0 0 0-16 0" />
-</svg>Tài khoản và 02&nbsp;lớp</button>
-      <button class="tab" data-tab="capnhat"><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-cloud-download"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 13v8l-4-4" />
-  <path d="m12 21 4-4" />
-  <path d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284" />
-</svg>Cập nhật<span class="cham-xanh" data-s="cn:coban"></span></button>
-      <button class="tab" data-tab="ketkhoa"><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-vault"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <rect width="18" height="18" x="3" y="3" rx="2" />
-  <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-  <path d="m7.9 7.9 2.7 2.7" />
-  <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
-  <path d="m13.4 10.6 2.7-2.7" />
-  <circle cx="7.5" cy="16.5" r=".5" fill="currentColor" />
-  <path d="m7.9 16.1 2.7-2.7" />
-  <circle cx="16.5" cy="16.5" r=".5" fill="currentColor" />
-  <path d="m13.4 13.4 2.7 2.7" />
-  <circle cx="12" cy="12" r="2" />
-</svg>Két khóa</button>
-     </div>
-     <div data-s="tab:thongso" class="cot-doc"><div class="the tom">
-      <div class="giua" style="width:88px;height:88px"><span id="ts-vong"><svg width="88" height="88" viewBox="0 0 88 88"><circle style="stroke:var(--xam)" cx="44.0" cy="44.0" r="38.5" fill="none" stroke-width="9"/><circle style="stroke:var(--h-chinh)" cx="44.0" cy="44.0" r="38.5" fill="none" stroke-width="9" stroke-linecap="round" stroke-dasharray="167.5 241.9" transform="rotate(-90 44.0 44.0)"/></svg></span><b id="ts-dem"></b></div>
-      <div class="tom-chu"><div class="t16 b7" id="ts-chua"></div>
-      <div class="phu t13">Thông số chưa đặt: phần&nbsp;mềm chạy cách an toàn nhất, ghi rõ hệ quả dưới tên. Đổi một thông số: giá trị mới chạy từ ngày bạn chọn, giá trị cũ vẫn giữ để tính lại các kỳ trước.</div></div>
-      <button class="chip" data-loc-chua><svg
+     <!-- QĐ573 khung Cài đặt B: tiến độ trên cùng (QĐ574, QĐ580), menu trái | khối chi tiết (dựng ở app.js veMenuCd) -->
+     <div class="cd-cum">
+      <div class="the cd-td"><div class="cd-h1"><b id="ts-chua"></b><button class="cd-loc" data-loc-chua><svg
   style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-filter"
   xmlns="http://www.w3.org/2000/svg"
   width="14"
@@ -1681,8 +1674,14 @@ html.toi ::placeholder{color:var(--goi-y)}
   stroke-linejoin="round"
 >
   <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z" />
-</svg> Chỉ hiện mục chưa đặt</button></div>
-      <div class="luoi2" id="ds-thongso"></div><div class="gd-dong">Thông số dạng danh sách nhiều mục (loại kênh, loại giá, nguồn tỷ giá…) không hiện ở đây, sửa ở màn dùng chúng.</div></div>
+</svg>Chỉ hiện mục chưa đặt</button></div>
+       <div class="cd-h2"><div class="cd-thg"><i id="ts-thanh"></i></div><span id="ts-dem"></span></div>
+       <p class="phu t13">Thông số chưa đặt: phần&nbsp;mềm chạy cách an toàn nhất, ghi rõ hệ quả dưới tên. Đổi một thông số: giá trị mới chạy từ ngày bạn chọn, giá trị cũ vẫn giữ để tính lại các kỳ trước.</p></div>
+      <nav class="the cd-menu" id="cd-menu" aria-label="Cài đặt"></nav>
+      <section class="the cd-ct"><div class="cd-kd"><span class="cd-ic" id="cd-ic"></span><b class="cd-ten" id="cd-ten"></b><span class="cd-dem" id="cd-dem"></span></div>
+       <div class="cd-than">
+     <div data-s="tab:chung" class="cot-doc" id="ngan-chung"></div>
+     <div data-s="tab:thongso" class="cot-doc"><div id="ds-thongso"></div><div class="gd-dong">Thông số dạng danh sách nhiều mục (loại kênh, loại giá, nguồn tỷ giá…) không hiện ở đây, sửa ở màn dùng chúng.</div></div>
      <div data-s="tab:taikhoan" class="cot-doc"><div class="bao-vang" id="bao-2lop" style="margin-bottom:16px;align-items:center" hidden></div><div class="luoi-tk">
      <div class="the o-tk"><div class="anh-dd" id="tk-chu-lon"></div><div><div class="t16 b7" id="tk-ten-lon"></div><div class="phu t13">Vai trò: Chủ<br><span class="nw">Tài khoản duy nhất ở GĐ 1</span></div></div></div>
      <div class="the o-tk" id="the-2lop" style="align-items:flex-start"><div class="giua" id="vong-2lop" style="width:56px;height:56px"><svg width="56" height="56" viewBox="0 0 56 56"><circle style="stroke:var(--xam)" cx="28.0" cy="28.0" r="23.5" fill="none" stroke-width="7"/><circle style="stroke:var(--h-dat)" cx="28.0" cy="28.0" r="23.5" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="147.7 147.7" transform="rotate(-90 28.0 28.0)"/></svg><b><svg
@@ -1897,6 +1896,7 @@ html.toi ::placeholder{color:var(--goi-y)}
     <div class="bang"><div class="hang tieu-de" style="grid-template-columns:120px 1fr 160px"><span>Bản</span><span>Nội dung</span><span>Ngày cài</span></div>
       <div id="ls-capnhat"></div></div></div>
      <div data-s="tab:ketkhoa" class="cot-doc"><div class="the cho-dung"><div class="phu">Két khóa có ở bản sau (cùng màn 11&nbsp;Nguồn dữ liệu).</div></div></div>
+       </div></section></div>
    </div>
    <div class="trang" id="p11" hidden><div class="dau-trang"><div class="ico-tron"><svg
   style="flex:none;vertical-align:middle;color:var(--xanh-chu)" class="lucide lucide-database"

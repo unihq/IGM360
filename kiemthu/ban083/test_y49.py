@@ -71,7 +71,7 @@ class KiemCongTac(Nen):
         d = thongso.doc_het(self.thumuc)
         t = next(x for x in d["thongso"] if x["ten"] == "saoluu_drive")
         self.assertEqual((t["nhom"], t["nhan"], t["giatri"], t["giatri_chu"], t["cong_tac"], t["nguoi_dat"]),
-                         ("Máy chủ và bảo mật", "Sao lưu Google Drive", "0", "Tắt", True, "hethong"))
+                         ("Máy chủ, sao lưu", "Sao lưu Google Drive", "0", "Tắt", True, "hethong"))
         self.assertEqual(t["giai_thich"], "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive.")
         ten = [x["ten"] for x in d["thongso"]]
         self.assertEqual(ten.index("saoluu_drive") + 1, ten.index("nguong_cho_day_drive"))   # Z21: đứng trên ngưỡng chờ Drive

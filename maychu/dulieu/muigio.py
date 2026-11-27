@@ -124,6 +124,25 @@ def danh_sach() -> list[str]:
     return ds or [MAC_DINH]
 
 
+_QG: dict[str, str] = {}
+
+
+def quoc_gia() -> dict[str, str]:
+    """{múi: mã nước 02 chữ} đọc từ zone.tab của cơ sở múi giờ trên máy (ảnh Linux: /usr/share/zoneinfo/zone.tab) – để giao
+    diện hiện tên nước tiếng Việt như bản vẽ ("Nhật Bản – Tokyo (UTC+9)"). Máy không có tệp: rỗng (chỉ hiện tên thành phố)."""
+    if not _QG:
+        for p in (Path("/usr/share/zoneinfo/zone.tab"),):
+            try:
+                for d in p.read_text(encoding="utf-8").splitlines():
+                    if d and not d.startswith("#"):
+                        cot = d.split("\t")
+                        if len(cot) >= 3:
+                            _QG[cot[2]] = cot[0]
+            except OSError:
+                continue
+    return dict(_QG)
+
+
 def xoa_dem() -> None:
     with _KHOA:
         _DEM.clear()

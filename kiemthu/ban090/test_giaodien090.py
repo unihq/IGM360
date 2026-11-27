@@ -32,7 +32,8 @@ CHU_2LOP = {
 }
 # Quy tắc có box-shadow trong phần CSS 0.9.0 (KH-090 mục 3; CDA 16j điểm 5: bóng thẻ đúng ảnh anh duyệt)
 BONG = {".the", "#app:not(.mb) nav.menu .muc.on", "#app:not(.mb) .vung", "#app:not(.mb) .vung:has(#p08:not([hidden]))",
-        "#app:not(.mb) #p08 .tc-trai,#app:not(.mb) #p08 .tc-giua", ".lop .o-nhap:focus-within"}
+        "#app:not(.mb) #p08 .tc-trai,#app:not(.mb) #p08 .tc-giua", ".lop .o-nhap:focus-within",
+        ".mg-p"}   # 0.10.0: bảng chọn múi giờ nổi trên khối (bản DM Chung_Banthu ĐẠT, QĐ636)
 
 
 def quy_tac(css):

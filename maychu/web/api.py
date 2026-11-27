@@ -260,7 +260,14 @@ class DoiMuiGio(BaseModel):
 def xem_muigio(p: dict = Depends(can_dang_nhap)):
     """QĐ636: múi đang dùng (② ngày số liệu, ③ giờ hiện) + múi đối soát + danh sách chọn cho thẻ Chung."""
     return {"muigio": thongso.doc_mot(muigio.TEN, muigio.MAC_DINH), "muigio_doisoat": thongso.doc_mot(muigio.TEN_DOISOAT, muigio.MAC_DINH),
-            "danh_sach": muigio.danh_sach(), "hom_nay": muigio.hom_nay(), "ban": muigio.ly_do_ban()}
+            "danh_sach": muigio.danh_sach(), "quoc_gia": muigio.quoc_gia(), "hom_nay": muigio.hom_nay(), "ban": muigio.ly_do_ban(),
+            "la_chu": p.get("vaitro") == "chu"}
+
+
+@router.get("/caidat/chung")
+def xem_chung(p: dict = Depends(can_dang_nhap)):
+    """QĐ627 (3), QĐ649: công tắc "Giữ dấu ảnh AI" của ngăn Chung (gạt qua đường gạt chung /thongso/{ten}/gat)."""
+    return {"c2pa": thongso.cong_tac_bat("anh_ai_giu_dau_c2pa")}
 
 
 @router.post("/muigio")

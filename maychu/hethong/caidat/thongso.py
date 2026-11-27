@@ -9,7 +9,7 @@ from pathlib import Path
 from maychu.dulieu import muigio
 from maychu.dulieu import aibam, ketnoi, maso
 
-NHOM = ("Tài chính", "Máy chủ và bảo mật", "AI", "Báo cáo, dữ liệu")   # QĐ139 (từ điển dòng 44)
+NHOM = ("Tài chính", "Máy chủ, sao lưu", "AI", "Báo cáo, dữ liệu")   # QĐ139; QĐ586: "Máy chủ, sao lưu" (nhóm Bộ não ẩn ở 0.10.0 – L16)
 
 # ten, nhóm, nhãn, kiểu, đơn vị, mặc định, lựa chọn {giá trị: chữ}, câu khi trống
 DANHMUC = [
@@ -25,12 +25,14 @@ DANHMUC = [
     ("nguong_cho_day_drive", 1, "Dữ liệu chờ đẩy lên Drive tối đa", "so", "GB", "5", None, ""),
     ("songay_giu_banghigoc_vps", 1, "Số ngày giữ bản ghi gốc trên máy chủ", "so", "ngày", None, None,
      "Đang giữ mãi, không tự xóa"),
-    ("songay_baotruoc_khoa_hethan", 1, "Báo trước khi khóa kết nối hết hạn", "so", "ngày", "5", None, ""),
+    ("songay_baotruoc_khoa_hethan", 3, "Báo trước khi khóa kết nối hết hạn", "so", "ngày", "5", None, ""),
     # QĐ263, QĐ271 (Z20 dòng 1): công tắc "Tự nâng mỗi ngày" của khối Công cụ AI, mặc định bật; hiện ở màn Cập nhật,
     # không hiện ở ngăn Thông số (AN_O_THONGSO)
     ("tunang_congcu_ai", 2, "Tự nâng mỗi ngày", "codong", "", "1", {"0": "Tắt", "1": "Bật"}, ""),
     ("so_viec_ai_songsong", 2, "Số việc AI chạy cùng lúc", "so", "việc", "3", None, ""),
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
+    # QĐ627 (3), QĐ649: công tắc "Giữ dấu ảnh AI" ở ngăn Chung, mặc định bật; không hiện ở ngăn Thông số (AN_O_THONGSO)
+    ("anh_ai_giu_dau_c2pa", 2, "Giữ dấu ảnh AI", "codong", "", "1", {"0": "Tắt", "1": "Bật"}, ""),
     ("tyle_bao_hanmuc_tuan", 2, "Báo khi gói AI dùng quá hạn mức tuần", "so", "%", "80", None, ""),   # QĐ165, PTD-06 mục 10
     ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tự duyệt", "so", "đ", None, None,
      "GĐ 1: AI chỉ đề xuất, mọi việc chờ bạn bấm."),
@@ -56,10 +58,11 @@ KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulie
 GIAIDOAN_SAU = {"nguong_tien_ai_tuapdung"}
 THEO_TEN = {d[0]: d for d in DANHMUC}
 # QĐ278 (Z21 dòng 1): thông số gạt công tắc, đổi có hiệu lực ngay trong ngày (không qua hộp "Sửa" chọn ngày áp dụng)
-CONG_TAC = {"saoluu_drive", "tunang_congcu_ai"}
+CONG_TAC = {"saoluu_drive", "tunang_congcu_ai", "anh_ai_giu_dau_c2pa"}   # + QĐ627 (3)
 AN_O_THONGSO = {"tunang_congcu_ai",   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
                 "muigio", "muigio_doisoat",   # QĐ636: đặt ở thẻ Chung
-                "tenmien_rieng"}              # QĐ634: đặt ở thẻ Chung
+                "tenmien_rieng",              # QĐ634: đặt ở thẻ Chung
+                "anh_ai_giu_dau_c2pa"}        # QĐ627 (3): đặt ở thẻ Chung
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 # QĐ390 (phương án A, CDA 16g), SOAT-KH090 (a): cờ "Đăng nhập 02 lớp" là thông số hệ thống P01, không nằm trong DANHMUC
 # (không hiện ở ngăn Thông số, không đếm vào số đã đặt). Chỉ đổi qua 02 đường riêng /api/2lop/tat, /api/2lop/bat và lệnh

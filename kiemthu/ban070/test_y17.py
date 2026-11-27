@@ -173,7 +173,7 @@ class KiemChuGiaoDien(unittest.TestCase):
         self.assertIn("Ngoại lệ cần duyệt: đề xuất AI hoặc 01&nbsp;trong 03&nbsp;cách xử lý", self.html)
         self.assertIn("(đổi ở Cài&nbsp;đặt&nbsp;›&nbsp;Thông&nbsp;số)", self.html)   # đường dẫn có "›": không thêm "mục"
         self.assertIn("Két khóa có ở bản sau (cùng màn 11&nbsp;Nguồn dữ liệu)", self.html)   # CPO xác nhận giữ
-        self.assertEqual(thongso.NHOM, ("Tài chính", "Máy chủ và bảo mật", "AI", "Báo cáo, dữ liệu"))
+        self.assertEqual(thongso.NHOM, ("Tài chính", "Máy chủ, sao lưu", "AI", "Báo cáo, dữ liệu"))   # QĐ586
         self.assertEqual(congai.dung_duoc({"ma": "khoa_thu_01", "loai": "khoa_api", "tran_tien_thang": None, "id": "x"})[1], "chưa đặt hạn mức")
 
     def test_05_loi_nho(self):
