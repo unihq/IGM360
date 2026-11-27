@@ -36,12 +36,12 @@ _DANG = re.compile(r"^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z
 _LUONG = ThreadPoolExecutor(max_workers=4, thread_name_prefix="tenmien_dns")      # dò DNS
 _LUONG_DONG = ThreadPoolExecutor(max_workers=2, thread_name_prefix="tenmien_dong")  # 02 dòng bảng kiểm song song
 
-# Chữ máy chủ trả về. Dòng có "TẠM" chưa có trong bảng chữ anh duyệt (QĐ648: hỏi khi dựng ngăn Chung).
+# Chữ máy chủ trả về – QĐ651, QĐ657 (anh "Duyệt A nhưng sửa…").
 CHU_TENMIEN = {
     "chua_bat": "Chưa bật đổi tên miền: máy chủ cần chạy 01 lệnh nâng cấu hình. Tên gốc vẫn chạy.",   # QĐ651
-    "sai_dang": "Tên miền chưa đúng dạng.",                                                      # TẠM
-    "trung_goc": "Tên này đang là tên gốc, không cần thêm.",                                       # TẠM
-    "sai_host": "IGM360 không mở ở địa chỉ này. Dùng tên miền gốc hoặc tên miền riêng đang cài.",   # TẠM (QĐ656: DM soạn A/B)
+    "sai_dang": "Tên miền chưa đúng định dạng: nhập giống ví dụ igm.tencongty.vn, chỉ gồm chữ, số, dấu chấm, gạch nối.",   # QĐ657 (2)
+    "trung_goc": "Tên này là tên gốc, luôn dùng được: nhập tên miền riêng khác.",                 # QĐ657 (3)
+    "sai_host": "Tên miền này đã bỏ, không còn dùng cho IGM360. Mở IGM360 bằng tên đang dùng: ",   # QĐ657 (6) + liên kết tên gốc
 }
 DUONG_MIEN = ("/tls-check",)   # có cách kiểm riêng (cho_cap); /suckhoe qua cổng HTTPS VẪN kiểm (CPO chốt QD656-SUCKHOE, CDA PTD-20 mục 6)
 
@@ -125,6 +125,16 @@ def can_chan(duong: str, tieude, thumuc: Path | None = None) -> bool:
         return host != ten_rieng(thumuc)
     except Exception:   # noqa: BLE001
         return False
+
+
+def trang_421() -> str:
+    """QĐ657 (6): 01 dòng chữ + liên kết về tên gốc (luôn chạy – ưu tiên hơn tên riêng đang lưu, có thể chưa có chứng
+    chỉ hoặc chưa trỏ DNS)."""
+    import html
+    goc = html.escape(ten_goc())
+    return ('<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,'
+            'initial-scale=1"><title>IGM360</title></head><body style="font-family:sans-serif;padding:24px;line-height:1.5">'
+            f'<p>{html.escape(CHU_TENMIEN["sai_host"])}<a href="https://{goc}/">{goc}</a></p></body></html>')
 
 
 # ---------------- Kiểm DNS (chỉ cảnh báo) ----------------

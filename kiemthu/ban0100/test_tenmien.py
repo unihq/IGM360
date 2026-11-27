@@ -281,7 +281,8 @@ class KiemTenHost(unittest.TestCase):
         for host in (TEN_GOC, TEN_GOC.upper() + ".:443", TEN_RIENG, "IGM.vidu.test:443"):
             self.assertEqual(self.hoi(host).status_code, 200, host)
         r = self.hoi("la.vidu.test")
-        self.assertEqual((r.status_code, r.text), (421, tenmien.CHU_TENMIEN["sai_host"]))
+        self.assertEqual(r.status_code, 421)
+        self.assertIn(tenmien.CHU_TENMIEN["sai_host"] + f'<a href="https://{TEN_GOC}/">{TEN_GOC}</a>', r.text)   # QĐ657 (6): liên kết tên gốc
         self.assertEqual(self.hoi("la.vidu.test", "/api/toi").status_code, 421)   # đường gọi cũng chặn
         self.assertEqual(self.hoi("").status_code, 421)                              # thiếu Host
 
@@ -312,13 +313,18 @@ class KiemTenHost(unittest.TestCase):
         thongso.doi_tenmien("", "hethong", self.dl)
         self.assertEqual(self.hoi(TEN_RIENG, "/suckhoe").status_code, 421)   # tên vừa bỏ
         js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
-        self.assertEqual(js.count("if (r.status === 421) { const e = new Error(await r.text()); e.s421 = true; throw e; }"), 2)   # 02 vòng chờ
+        self.assertEqual(js.count("if (r.status === 421) { const e = new Error((await r.text()).replace(/<[^>]*>/g, '')); e.s421 = true; throw e; }"), 2)   # 02 vòng chờ
         self.assertIn("if (e.s421) { tieuDangCn(e.message); return; }", js)    # gặp 421: dừng chờ, hiện chữ
         self.assertIn("if (e.s421) { S.cn = 'hong'; $('#cn-lydo').textContent = e.message; ve(); return; }", js)
 
     def test_chu_tam(self):
         src = (GOC / "maychu/hethong/caidat/tenmien.py").read_text(encoding="utf-8")
-        self.assertIn("# TẠM (QĐ656: DM soạn A/B)", src.split('"sai_host"')[1].split("\n")[0])
+        self.assertNotIn("TẠM", src)   # QĐ657: bỏ hết TẠM của tên miền
+        C = tenmien.CHU_TENMIEN
+        self.assertEqual((C["sai_dang"], C["trung_goc"], C["sai_host"]), (
+            "Tên miền chưa đúng định dạng: nhập giống ví dụ igm.tencongty.vn, chỉ gồm chữ, số, dấu chấm, gạch nối.",
+            "Tên này là tên gốc, luôn dùng được: nhập tên miền riêng khác.",
+            "Tên miền này đã bỏ, không còn dùng cho IGM360. Mở IGM360 bằng tên đang dùng: "))
 
 
 class KiemCompose(unittest.TestCase):

@@ -538,7 +538,7 @@ function moQuayVe() {   // 39–44
     catch (e) { if (e.status) bao(e.message); return; }
     bao(CHU_CN.qvBao); S.cn = 'dangcn'; tieuDangCn(CHU_CN.qvDang + q.ban); ve(); veQuayVe(D.capnhat); const het = Date.now() + 3 * 60e3;   // N32
     let roi = false;   // đã thấy máy chủ dừng
-    const cho = async () => { try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error(await r.text()); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
+    const cho = async () => { try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error((await r.text()).replace(/<[^>]*>/g, '')); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
       if (k.phienban === q.ban) { location.reload(); return; }
       if (roi && k.phienban) { const s = await api('/capnhat').catch(() => ({}));   // Y38d: lên lại bằng bản mới = quay về hỏng
         if (s.quayve_loi) { tieuDangCn(cau(s.quayve_loi.chu_hien)); $('[data-s="cn:dangcn"] .phu').textContent = ''; setTimeout(() => location.reload(), 5000); return; } }
@@ -940,7 +940,7 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
     datHet(t, s.dang_sao); veTienDo(t, {...D.td.o, bay: Date.now() + D.td.lech}); return true; };
   if (s0) hien(s0, {});
   const cho = async () => {
-    try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error(await r.text()); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
+    try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error((await r.text()).replace(/<[^>]*>/g, '')); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
       // QĐ258 (đổi QĐ253): bản mới chạy là tải lại ngay; kiểm 06 điểm chạy nền, kết quả hiện sau (theoKiem)
       if (k.phienban && k.phienban !== cu) { location.hash = DAU_SAU_CN; location.reload(); return; } else {   // G1: về Cập nhật
         const s = await api('/capnhat');   // lớp 5: bước bản sao đang chạy; lỗi bản sao thì dừng, không gửi lệnh
@@ -1566,14 +1566,14 @@ const CHU_CG = {mau: 'Chế độ màu', seg: [['sang', 'sun', 'Sáng'], ['toi',
   c2paHc: 'Dấu cho biết ảnh do AI tạo; Facebook đọc dấu này để gắn nhãn nội dung AI. Chỉ áp dụng cho ảnh tạo từ lúc này, ảnh đã tạo không đổi.',
   c2paHn: 'Gỡ dấu', mk: 'Mật khẩu đang dùng', ma: 'Mã 06 số'};
 const CHU_TM = {ten: 'Tên miền', cot: ['Địa chỉ', 'DNS', 'HTTPS'], goc: 'Tên gốc', rieng: 'Tên riêng', dok: 'Đã trỏ đúng', dsai: 'Chưa trỏ về máy chủ',
-  hok: 'Đang chạy · đến {n}', hcho: 'Chờ DNS', hchua: 'Chưa đọc được', onhan: 'Tên miền riêng', ogy: 'Ví dụ: igm.tencongty.vn',
+  hok: 'Đang chạy · đến {n}', hcho: 'Chờ DNS', hchua: 'Chưa đọc được', dkr: 'Chưa kiểm được, bấm Kiểm tra lại', onhan: 'Tên miền riêng', ogy: 'Ví dụ: igm.tencongty.vn',
   luu: 'Lưu và kiểm tra', kt: 'Kiểm tra lại', bo: 'Bỏ tên riêng',
   cdns: 'Tên miền chưa trỏ về máy chủ này: trỏ bản ghi A về cùng địa chỉ với tên gốc, rồi bấm Kiểm tra lại. Trong lúc chờ vẫn vào bằng tên gốc.',
   cbat: 'Chưa bật đổi tên miền: máy chủ cần chạy 01 lệnh nâng cấu hình. Tên gốc vẫn chạy.',
   ghi: 'Đổi tên miền thì đăng nhập lại ở địa chỉ mới. Nối lại Google Drive: thêm địa chỉ mới ở Google Cloud. Tên gốc luôn dùng được.',
   khoa: 'Chỉ tài khoản Chủ đổi tên miền', ht: 'Đổi tên miền?', hn: 'Lưu tên miền',
   hc: 'IGM360 sẽ mở được ở {moi}; tên gốc {goc} vẫn dùng được. Nhập mật khẩu và mã 06 số đang hiện trên điện thoại để xác nhận.',
-  // TẠM (QĐ648): hộp "Bỏ tên riêng" – DM soạn A/B, CDO soát, CPO hỏi anh
+  // QĐ657 (4), (5) cột B: hộp "Bỏ tên riêng"
   boHt: 'Bỏ tên riêng?', boHn: 'Bỏ tên riêng',
   boHc: 'IGM360 chỉ còn mở ở tên gốc {goc}. Nhập mật khẩu và mã 06 số đang hiện trên điện thoại để xác nhận.'};
 const CHU_MG = {ten: 'Múi giờ', vn: 'Việt Nam – Hồ Chí Minh (UTC+7)', tim: 'Tìm thành phố hoặc nước', goiy: 'Gợi ý', tatca: 'Tất cả múi giờ · {n}',
@@ -1614,7 +1614,7 @@ function veTenMien() {
   const tt = (ic, cls, t) => '<span class="tm-t ' + cls + '">' + (ic ? icoMau(ICON[ic], cls === 'dat' ? 'var(--dat)' : 'var(--xem)', 16) : '') + '<span>' + t + '</span></span>';
   const https = x => !x ? tt('', 'pt0', '–') : x.https === 'chay' ? tt('circle-check', 'dat', C.hok.replace('{n}', ngay(x.den)))
     : tt('', 'pt0', x.https === 'cho_dns' ? C.hcho : C.hchua);   // QĐ650
-  const dns = x => !x || x.dns === 'khong_ro' ? tt('', 'pt0', '–') : x.dns === 'dung' ? tt('circle-check', 'dat', C.dok) : tt('circle-alert', 'xem', C.dsai);
+  const dns = x => !x ? tt('', 'pt0', '–') : x.dns === 'khong_ro' ? tt('', 'pt0', C.dkr) : x.dns === 'dung' ? tt('circle-check', 'dat', C.dok) : tt('circle-alert', 'xem', C.dsai);
   const dong = (ten, nhan, d, ht) => '<div class="tm-r"><div class="tm-c"><b>' + esc(ten) + '</b><span class="tm-g">' + nhan + '</span></div><div class="tm-c"><span class="tm-nl">'
     + C.cot[1] + '</span>' + d + '</div><div class="tm-c"><span class="tm-nl">' + C.cot[2] + '</span>' + ht + '</div></div>';
   let s = '<div class="cg-d cg-tm">' + icCg('globe') + '<div class="tm-k"><div>' + C.ten + '</div><div class="tm-b" role="table"><div class="tm-r tm-th">'
@@ -1627,7 +1627,7 @@ function veTenMien() {
     s += '<div class="tm-n"><label class="tm-l" for="tm-o">' + C.onhan + '</label><div class="tm-h"><span class="cg-onhap' + (tm.bat ? '' : ' tat') + '"><input id="tm-o"'
       + (tm.bat ? '' : ' disabled') + ' value="' + esc(tm.rieng || '') + '" placeholder="' + C.ogy + '" autocomplete="off" spellcheck="false"></span>'
       + '<button class="btn btn-chinh" data-tm-luu' + (tm.bat ? '' : ' disabled') + '>' + C.luu + '</button></div>';
-    if (tm.rieng) s += '<div class="tm-x">' + (k && k.rieng && k.rieng.dns === 'chua' ? '<button class="btn-chu" data-tm-kiem>' + C.kt + '</button>' : '')
+    if (tm.rieng) s += '<div class="tm-x">' + (k && k.rieng && (k.rieng.dns === 'chua' || k.rieng.dns === 'khong_ro') ? '<button class="btn-chu" data-tm-kiem>' + C.kt + '</button>' : '')
       + '<button class="btn-chu" data-tm-bo>' + C.bo + '</button></div>';
     s += '</div>';
   } else s += '<div class="tm-k2">' + icoMau(ICON.lock, 'var(--phu)', 14) + '<span>' + C.khoa + '</span></div>';

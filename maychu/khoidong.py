@@ -113,11 +113,10 @@ app.mount("/tainguyen", StaticFiles(directory=GIAODIEN), name="tainguyen")
 
 @app.middleware("http")
 async def kiem_ten_mien(request, call_next):
-    """QĐ656: lời qua cổng HTTPS mang tên lạ (không phải tên gốc, tên riêng đang lưu) → 421 + 01 dòng chữ."""
+    """QĐ656: lời qua cổng HTTPS mang tên lạ (không phải tên gốc, tên riêng đang lưu) → 421 + 01 dòng chữ QĐ657 (6)."""
     from maychu.hethong.caidat import tenmien
     if tenmien.can_chan(request.url.path, request.headers):
-        from fastapi.responses import PlainTextResponse
-        return PlainTextResponse(tenmien.CHU_TENMIEN["sai_host"], status_code=421)
+        return HTMLResponse(tenmien.trang_421(), status_code=421)
     return await call_next(request)
 
 

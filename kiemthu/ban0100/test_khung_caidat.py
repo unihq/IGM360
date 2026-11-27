@@ -60,7 +60,10 @@ class KiemKhung(unittest.TestCase):
                     "Đổi tên miền thì đăng nhập lại ở địa chỉ mới. Nối lại Google Drive: thêm địa chỉ mới ở Google Cloud. Tên gốc luôn dùng được.",
                     "khoa: 'Chỉ tài khoản Chủ đổi tên miền'", "khoa: 'Chỉ tài khoản Chủ đổi múi giờ'", "hn: 'Đổi múi giờ'"):
             self.assertIn(chu, js, chu)
-        self.assertIn("// TẠM (QĐ648): hộp \"Bỏ tên riêng\"", js)   # chữ chờ DM soạn A/B, CPO hỏi anh
+        for chu in ("boHt: 'Bỏ tên riêng?', boHn: 'Bỏ tên riêng'", "dkr: 'Chưa kiểm được, bấm Kiểm tra lại'",   # QĐ657 (1), (4)
+                    "boHc: 'IGM360 chỉ còn mở ở tên gốc {goc}. Nhập mật khẩu và mã 06 số đang hiện trên điện thoại để xác nhận.'"):   # (5) cột B
+            self.assertIn(chu, js, chu)
+        self.assertNotIn("TẠM (QĐ648): hộp", js)
         self.assertIn("if (bat) await lam(); else xacnhan(CHU_CG.c2paHt", js)   # QĐ647: chỉ hỏi khi gạt sang gỡ dấu
         self.assertIn("CHEDO.dat(d.chedo)", js)                                 # QĐ411: dải chọn dùng chedo.js
 
