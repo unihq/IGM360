@@ -842,6 +842,26 @@ body.dien-thoai .nut-gat{min-height:44px;min-width:44px;display:inline-flex;alig
 .tl-cong.bat::after{left:19px}
 .tha-cd .tha-muc.on{color:var(--xanh-chu);font-weight:600}
 body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-the button,body.dien-thoai .tl-chan button{min-height:44px}
+/* 0.10.0 bước 7a – ngăn Két khóa (DM-03NGAN-0100 cột A): khối tổng, ghi chú, bảng 06 cột; hẹp: hàng gọn + nút ⋯ */
+.kk-tong{display:flex;align-items:center;gap:16px;padding:16px 20px}
+.kk-ic{width:52px;height:52px;border-radius:12px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
+.kk-thanh{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;margin:8px 0 6px;background:var(--xam)}.kk-thanh i{display:block}
+.kk-chu{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--phu)}.kk-chu i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.kk-ghi{gap:8px;align-items:flex-start;color:var(--phu)}.kk-ghi svg{margin-top:3px;flex:none}
+.kk-bang{border:1px solid var(--ke);border-radius:12px;overflow:hidden}
+.kk-h{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--ke);font-size:14px}
+.kk-h.kk-dau{border-top:0;background:var(--xam);font-size:12px;font-weight:600;color:var(--phu);padding:8px 14px}
+.kk-ten{display:flex;flex-direction:column;min-width:0}.kk-ten b{overflow-wrap:anywhere}
+.kk-tt{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap}.kk-tt i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.kk-tt.dat{color:var(--dat)}.kk-tt.xem{color:var(--xem)}.kk-tt.canh{color:var(--canh)}
+.kk-tac{display:flex;gap:12px;justify-content:flex-end}.kk-ba{display:none}
+@media (max-width:1199px){
+ .kk-h{grid-template-columns:minmax(0,1fr) auto auto;row-gap:2px}.kk-h.kk-dau{display:none}
+ .kk-h>span:nth-child(3),.kk-h>span:nth-child(4){grid-column:1/2;font-size:12px;color:var(--phu)}
+ .kk-h>span:nth-child(3)::before,.kk-h>span:nth-child(4)::before{content:attr(data-l) " "}
+ .kk-tac{display:none}.kk-ba{display:flex}
+}
+.tha-kk{width:180px}
 /* QĐ612 thanh cuộn kiểu C (Quychuan 5.20): mọi vùng cuộn trên máy tính; điện thoại dùng thanh của máy */
 body:not(.dien-thoai) ::-webkit-scrollbar{width:12px;height:12px}
 body:not(.dien-thoai) ::-webkit-scrollbar-track,body:not(.dien-thoai) ::-webkit-scrollbar-corner{background:transparent}
@@ -1890,7 +1910,7 @@ html.toi ::placeholder{color:var(--goi-y)}
     <div class="dau-muc"><span class="t16 b7">Lịch sử cập nhật</span></div>
     <div class="bang"><div class="hang tieu-de" style="grid-template-columns:120px 1fr 160px"><span>Bản</span><span>Nội dung</span><span>Ngày cài</span></div>
       <div id="ls-capnhat"></div></div></div>
-     <div data-s="tab:ketkhoa" class="cot-doc"><div class="the cho-dung"><div class="phu">Két khóa có ở bản sau (cùng màn 11&nbsp;Nguồn dữ liệu).</div></div></div>
+     <div data-s="tab:ketkhoa" class="cot-doc" id="ngan-ketkhoa"></div>
        </div></section></div>
    </div>
    <div class="trang" id="p11" hidden><div class="dau-trang"><div class="ico-tron"><svg

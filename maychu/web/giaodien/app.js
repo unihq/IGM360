@@ -1565,6 +1565,7 @@ async function napTab() {
   try {
     await napThongSo();   // QĐ574, QĐ583: khối tiến độ + nút lọc hiện ở mọi ngăn
     if (S.tab === 'chung') await napChung();
+    else if (S.tab === 'ketkhoa') await napKetKhoa();
     else if (S.tab === 'taikhoan') await napTaiKhoan();
     else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }   // Y46: khối Công cụ AI
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
@@ -1752,6 +1753,59 @@ function veCheDoTha() {
 }
 dienIco(document); veBa();
 
+// ---- Màn 09 ngăn Két khóa (bản DM-03NGAN-0100; QĐ661: 1440 bảng, 1024 và 390 hàng gọn + nút ⋯ mở Đổi / Xóa; chữ bản GĐ 1 màn 09, QĐ297)
+ICON.ellipsis = ICON.ellipsis || svgLucide('ellipsis', ['<circle cx="12" cy="12" r="1" />', '<circle cx="19" cy="12" r="1" />', '<circle cx="5" cy="12" r="1" />']);   // Lucide (ISC): nút ⋯
+const CHU_KK = {tong: (n, h, s) => hai(n) + ' khóa · ' + hai(h) + ' hết hạn · ' + hai(s) + ' sắp hết hạn',
+  ghi: n => 'Khóa được mã hóa, AI không đọc được. Màn này chỉ hiện 04 ký tự cuối. Báo trước <b>' + hai(n) + ' ngày</b> khi khóa sắp hết hạn, đổi số ngày ở ngăn Thông số.',
+  cot: ['Dịch vụ · dùng cho', 'Khóa', 'Hạn', 'Dùng lần cuối', 'Trạng thái'], dung: 'Đang dùng', sap: 'Sắp hết hạn', het: 'Hết hạn',
+  con: n => 'Còn ' + hai(n) + ' ngày', khongHan: 'Không đặt hạn', doi: 'Đổi', xoa: 'Xóa', them: 'Đổi, Xóa', chung: 'Dùng chung',
+  doiT: t => 'Đổi khóa · ' + t, khoa: 'Khóa', han: 'Hạn (nếu có)', luuGhi: 'Lưu xong, khóa được mã hóa và chỉ hiện 04 ký tự cuối.', luu: 'Lưu khóa',
+  daLuu: 'Đã lưu khóa. Màn chỉ hiện 04 ký tự cuối.', xoaT: t => 'Xóa khóa ' + t + '?', xoaN: 'Xóa khóa', daXoa: 'Đã xóa khóa.',
+  xoaC: 'Nguồn đang dùng khóa này sẽ ngừng lấy số cho tới khi có khóa mới. Xóa rồi không lấy lại được.', rong: 'Chưa có khóa nào trong két.'};   // rong: TẠM
+async function napKetKhoa() { D.kk = await api('/kekhoa'); veKetKhoa(); }
+function veKetKhoa() {
+  const g = $('#ngan-ketkhoa'); if (!g || !D.kk) return; const k = D.kk, C = CHU_KK, dem = k.dem || {};
+  const sap = dem.saphet || 0, het = dem.hethan || 0, dung = (dem.dung || 0) + (dem.khong_han || 0);
+  const tt = x => x.tinhtrang === 'hethan' ? ['canh', C.het] : x.tinhtrang === 'saphet' ? ['xem', C.con(Math.max(0, x.con_ngay || 0))] : ['dat', C.dung];
+  const nhan = x => { const [m, t] = tt(x); return '<span class="kk-tt ' + m + '"><i></i>' + cum(t) + '</span>'; };
+  const han = x => x.han ? ngay(x.han) : C.khongHan, dung1 = x => x.lan_dung_cuoi ? luc(x.lan_dung_cuoi) : '–';
+  const tac = x => '<button class="btn-chu" data-kkdoi="' + esc(x.id) + '">' + icoMau(ICON.replace || ICON['refresh-cw'], 'var(--xanh-chu)', 15) + C.doi + '</button>'
+    + '<button class="btn-chu do" data-kkxoa="' + esc(x.id) + '">' + icoMau(ICON['trash-2'], 'var(--canh)', 15) + C.xoa + '</button>';
+  let h = '<div class="the kk-tong"><span class="kk-ic">' + icoMau(ICON.vault, 'var(--xanh-chu)', 22) + '</span><div class="f1"><b class="t16">' + cum(C.tong(k.tong, het, sap)) + '</b>'
+    + '<div class="kk-thanh"><i style="flex:' + dung + ';background:var(--h-dat)"></i><i style="flex:' + sap + ';background:var(--h-xem)"></i><i style="flex:' + het + ';background:var(--h-canh)"></i></div>'
+    + '<div class="kk-chu"><span><i style="background:var(--h-dat)"></i>' + C.dung + '</span><span><i style="background:var(--h-xem)"></i>' + C.sap + '</span><span><i style="background:var(--h-canh)"></i>' + C.het + '</span></div></div></div>'
+    + '<div class="dong t13 kk-ghi">' + icoMau(ICON['lock-keyhole'] || ICON.lock, 'var(--dat)', 15) + '<span>' + C.ghi(k.songay_baotruoc) + '</span></div>';
+  if (!k.ds.length) h += '<div class="the cho-dung"><div class="phu">' + C.rong + '</div></div>';
+  else h += '<div class="kk-bang"><div class="kk-h kk-dau">' + C.cot.map(x => '<span>' + x + '</span>').join('') + '<span></span></div>'
+    + k.ds.map(x => '<div class="kk-h"><span class="kk-ten"><b>' + esc(x.ten) + '</b><span class="t12 phu">' + C.chung + '</span></span><span class="so">•••• ' + esc(x.kytu_cuoi || '') + '</span>'
+      + '<span class="nw" data-l="' + C.cot[2] + '">' + esc(han(x)) + '</span><span class="nw" data-l="' + C.cot[3] + '">' + esc(dung1(x)) + '</span><span>' + nhan(x) + '</span>'
+      + '<span class="phai kk-tac">' + tac(x) + '</span><button class="nut-ico kk-ba" data-kkba="' + esc(x.id) + '" aria-label="' + C.them + '" title="' + C.them + '">' + icoMau(ICON.ellipsis || ICON['more-horizontal'] || '', 'var(--phu)', 18) + '</button></div>').join('') + '</div>';
+  g.innerHTML = h;
+}
+function moDoiKhoa(id) {
+  const x = D.kk.ds.find(k => k.id === id); if (!x) return; const C = CHU_KK;
+  if (!$('#h-kkdoi')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-kkdoi" hidden><div class="hop"><div class="hop-dau">' + icoMau(ICON['key-round'], 'var(--xanh-chu)', 20)
+    + '<b class="f1 t16" data-tieu></b><button class="nut-ico" data-dong aria-label="Đóng">' + icoMau(ICON.x, 'var(--phu)', 18) + '</button></div><div class="hop-than">'
+    + '<label class="tm-l">' + C.khoa + '<span class="o-nhap cg-onhap"><input id="kk-gt" autocomplete="off" spellcheck="false"></span></label>'
+    + '<label class="tm-l xm-l">' + C.han + '<span class="o-nhap cg-onhap"><input id="kk-han" type="date"></span></label><div class="t12 phu" style="margin-top:10px">' + C.luuGhi + '</div></div>'
+    + '<div class="hop-chan"><button class="btn btn-phu" data-dong>Hủy</button><button class="btn btn-chinh" data-kkluu>' + C.luu + '</button></div></div></div>');
+  $('#h-kkdoi [data-tieu]').textContent = C.doiT(x.ten); $('#kk-gt').value = ''; $('#kk-han').value = x.han ? String(x.han).split('T')[0] : ''; D.kkDoi = id; mo('h-kkdoi'); $('#kk-gt').focus();
+}
+async function nutKetKhoa(t, d) {
+  if (d.kkdoi) { dongTha(); moDoiKhoa(d.kkdoi); return true; }
+  if (d.kkxoa) { dongTha(); const x = D.kk.ds.find(k => k.id === d.kkxoa); if (!x) return true;
+    xacnhan(CHU_KK.xoaT(x.ten), cum(CHU_KK.xoaC), CHU_KK.xoaN, async () => { try { await api('/kekhoa/' + encodeURIComponent(x.id) + '/xoa', {}); bao(CHU_KK.daXoa); }
+      catch (e) { if (e.status) bao(e.message + '.'); } await napKetKhoa(); }, 'trash-2'); return true; }
+  if ('kkluu' in d) { const gt = $('#kk-gt').value.trim(); if (!gt) { $('#kk-gt').focus(); return true; }
+    try { await api('/kekhoa/' + encodeURIComponent(D.kkDoi) + '/doi', {giatri: gt, han: $('#kk-han').value || null}); dongHop(); bao(CHU_KK.daLuu); }
+    catch (e) { if (e.status) bao(e.message + '.'); } $('#kk-gt').value = ''; await napKetKhoa(); return true; }
+  if (d.kkba) { const e = $('#tha-kk') || (() => { $('#khung').insertAdjacentHTML('beforeend', '<div class="tha tha-kk" id="tha-kk" hidden role="menu"></div>'); return $('#tha-kk'); })();
+    const v = e.hidden; dongTha(); e.innerHTML = '<button class="tha-muc" data-kkdoi="' + esc(d.kkba) + '">' + icoMau(ICON.replace || ICON['refresh-cw'], 'currentColor', 16) + CHU_KK.doi + '</button>'
+      + '<button class="tha-muc do-chu" data-kkxoa="' + esc(d.kkba) + '">' + icoMau(ICON['trash-2'], 'var(--canh)', 16) + CHU_KK.xoa + '</button>';
+    e.hidden = !v; const r = t.getBoundingClientRect(); e.style.position = 'fixed'; e.style['top'] = Math.round(r.bottom + 4) + 'px'; e.style['left'] = Math.round(Math.max(8, r.right - 180)) + 'px'; return true; }
+  return false;
+}
+
 // ---- Bấm
 document.addEventListener('click', async ev => {
   if (ev.target.classList && ev.target.classList.contains('lop')) { dongHop(); return; }
@@ -1763,6 +1817,7 @@ document.addEventListener('click', async ev => {
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); $$('#app .cuon, #app .cuon-trong').forEach(c => c.scrollTop = 0); if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }   // KH-090 2.2 (a): khổ máy tính cuộn ở .cuon-trong
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (S.trang === '09' && S.tab === 'chung' && await nutChung(t, d)) { /* ngăn Chung */ }
+  else if (await nutKetKhoa(t, d)) { /* ngăn Két khóa */ }
   else if (d.tab) { S.tab = d.tab; if (d.tab === 'thongso') S.nhom = d.nhom || NHOM_CD[0]; if (t.closest('#cd-menu')) S.cdMan = 2; napTab(); }
   else if ('cdLui' in d) S.cdMan = 1;   // điện thoại: về danh sách ngăn
   else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6), QĐ404
