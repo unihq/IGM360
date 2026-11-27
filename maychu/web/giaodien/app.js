@@ -1801,7 +1801,7 @@ const CHU_KK = {tong: (n, h, s) => hai(n) + ' khóa · ' + hai(h) + ' hết hạ
   con: n => 'Còn ' + hai(n) + ' ngày', khongHan: 'Không đặt hạn', doi: 'Đổi', xoa: 'Xóa', them: 'Đổi, Xóa', chung: 'Dùng chung',
   doiT: t => 'Đổi khóa · ' + t, khoa: 'Khóa', han: 'Hạn (nếu có)', luuGhi: 'Lưu xong, khóa được mã hóa và chỉ hiện 04 ký tự cuối.', luu: 'Lưu khóa',
   daLuu: 'Đã lưu khóa. Màn chỉ hiện 04 ký tự cuối.', xoaT: t => 'Xóa khóa ' + t + '?', xoaN: 'Xóa khóa', daXoa: 'Đã xóa khóa.',
-  xoaC: 'Nguồn đang dùng khóa này sẽ ngừng lấy số cho tới khi có khóa mới. Xóa rồi không lấy lại được.', rong: 'Chưa có khóa nào trong két.'};   // rong: TẠM
+  xoaC: 'Nguồn đang dùng khóa này sẽ ngừng lấy số cho tới khi có khóa mới. Xóa rồi không lấy lại được.', rong: 'Chưa có khóa nào trong két.'};   // rong: QĐ670 (anh duyệt)
 async function napKetKhoa() { D.kk = await api('/kekhoa'); veKetKhoa(); }
 function veKetKhoa() {
   const g = $('#ngan-ketkhoa'); if (!g || !D.kk) return; const k = D.kk, C = CHU_KK, dem = k.dem || {};
@@ -1900,7 +1900,7 @@ const CHU_MDG = {hmGoi: 'Hạn mức gói', phien: 'Phiên 05 giờ', tuan: 'Tu�
   chua: 'Chưa đủ lượt để so', coLuot: n => 'Có ' + hai(n) + ' lượt AI trong 24 giờ qua', coLuotNgan: n => 'có ' + hai(n) + ' lượt',
   nganSach: 'Ngân sách', tran5: 'Mức trần 05 giờ', viDu: 'Ví dụ: 500.000', deTrong: d => 'Để trống: so với đỉnh 60 ngày' + (d ? ' (' + d + ' token)' : ''),
   luu: 'Lưu', hmThangTen: 'Hạn mức chi tháng', chuaDat: 'Chưa đặt', datTs: 'Đặt ở Thông số', daLuu: 'Đã lưu mức trần 05 giờ.',
-  chan: 'Token đếm từ lượt AI chạy qua IGM360; % hạn mức gói lấy từ hãng.'};   // daLuu: TẠM (QĐ648) – câu báo xong sau khi bấm Lưu
+  chan: 'Token đếm từ lượt AI chạy qua IGM360; % hạn mức gói lấy từ hãng.'};   // daLuu: QĐ670 (anh duyệt) – câu báo xong sau khi bấm Lưu
 const fTok = v => !v ? '0' : v >= 1e6 ? soVN(Math.round(v / 1e5) / 10) + ' triệu' : v >= 1000 ? soVN(Math.round(v / 1000)) + ' nghìn' : soVN(v);
 const fUsd = v => { const x = Math.round((v || 0) / 1e4) / 100; return x ? soVN(x) : '0'; };   // phần triệu USD → USD, tối đa 02 số lẻ
 const mucMd = t => t >= .9 ? 'canh' : t >= .7 ? 'xem' : '';

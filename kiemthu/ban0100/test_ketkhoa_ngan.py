@@ -32,7 +32,7 @@ class KiemKetKhoa(unittest.TestCase):
                   "xoaC: 'Nguồn đang dùng khóa này sẽ ngừng lấy số cho tới khi có khóa mới. Xóa rồi không lấy lại được.'",
                   "them: 'Đổi, Xóa'", "' khóa · ' + hai(h) + ' hết hạn · ' + hai(s) + ' sắp hết hạn'"):
             self.assertIn(c, self.js, c)
-        self.assertIn("rong: 'Chưa có khóa nào trong két.'};   // rong: TẠM", self.js)
+        self.assertIn("rong: 'Chưa có khóa nào trong két.'};   // rong: QĐ670 (anh duyệt)", self.js)
 
     def test_hep_hang_gon_nut_ba(self):
         self.assertIn(".kk-tac{display:none}.kk-ba{display:flex}", self.h)   # QĐ661: 1024, 390 hàng gọn + nút ⋯ (nhãn đọc màn hình "Đổi, Xóa")

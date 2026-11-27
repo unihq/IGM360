@@ -4,11 +4,24 @@ Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp n
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
 ## 0.10.0
-Tóm tắt: Nền dữ liệu mới cho bộ não
+Tóm tắt: Cài đặt mới, tên miền riêng, chế độ tối
 Nâng dữ liệu: có
+- Cài đặt bố trí lại thành 07 ngăn: Chung, Thông số, Thông báo, Mức dùng, Tài khoản và 02 lớp, Cập nhật, Két khóa; khối thông số chưa đặt ở trên; trên điện thoại chọn ngăn rồi mới mở nội dung.
+- Ngăn Chung: chọn màu Sáng, Tối hoặc Theo hệ thống; đổi múi giờ; giữ dấu ảnh AI; đổi tên miền riêng (máy chủ cần chạy 01 lệnh nâng cấu hình, tên gốc luôn dùng được).
+- Ngăn Thông báo: bật, tắt từng loại thông báo; 08 loại nghiêm trọng luôn báo; có loại mới "Cập nhật xong".
+- Ngăn Mức dùng: hạn mức gói AI, lượng token cửa sổ 05 giờ so với đỉnh 60 ngày, biểu đồ token theo giờ, giờ bận trong 07 ngày, chi phí AI tháng; đặt mức trần 05 giờ.
+- Ngăn Két khóa: xem các khóa, hạn dùng, khóa sắp hết hạn; đổi hoặc xóa khóa.
+- Ngăn Tài khoản và Cập nhật bố trí lại cho dễ đọc; Công cụ AI hiện dạng danh sách trên màn hẹp.
+- Chuông, âm thanh, chế độ màu nằm ở góc phải khung; chuông chia 02 thẻ Thông báo và Cần xử lý; Tạm tắt thông báo, tin nghiêm trọng vẫn báo; có tiếng báo khi có tin mới.
+- Tài khoản chuyển vào nhóm HỆ THỐNG, bấm mở menu tài khoản: vai trò, Tài khoản và 02 lớp, Có gì mới, Trợ giúp, Đăng xuất.
+- Chuông báo khi đổi tên miền, đổi múi giờ (ghi rõ cũ → mới) và khi cập nhật xong.
+- Hộp báo nhanh có biểu tượng theo loại: lỗi, xong, thông tin; báo lỗi và thông tin giữ tới khi bấm Đóng.
+- Giờ trên màn, ngày số liệu theo múi giờ đã chọn.
+- Quay về bản trước bị khóa khi phần mềm vừa cài mới, chưa có dữ liệu của bản trước (ghi rõ lý do).
+- Bỏ vạch màu bên trái ở mục đang chọn, dải cảnh báo, hộp báo.
 - Nâng dữ liệu lên bản 5: thêm sổ sự việc để bộ não học; chỉ số và quy tắc kiểm đủ nhận thêm kỳ quý, năm.
 - Tạo thư mục bộ não chung, lưu lịch sử thay đổi.
-- Sửa bài kiểm: 04 bài kiểm chạy lỗi trên máy Windows do ghi tệp thử không khai bảng mã.
+- Sửa lỗi: chuông không còn hỏng cả bảng khi có 01 tin lỗi; tin đến cùng giây lúc bấm Đọc hết không bị tính là đã đọc; giờ kiểm công cụ AI kế tiếp ghi đúng ngày; nút trên điện thoại không còn bị cắt chữ.
 
 ## 0.9.4
 Tóm tắt: Sửa lỗi nâng công cụ AI không cài được
