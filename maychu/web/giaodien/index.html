@@ -853,6 +853,7 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
  #p09 .the.cn{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px 20px;align-items:center}
  #p09 .the.cn>.giua{grid-row:1/3;width:72px!important;height:72px!important}#p09 .the.cn>.giua>svg{width:72px;height:72px}
  #p09 .the.cn>.cn-nut{grid-column:2;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 16px}
+ #p09 .the.cn>.btn{grid-column:2;justify-self:start}   /* CDO P1-3: thẻ Có bản mới / Cập nhật hỏng – nút là con trực tiếp của thẻ */
  #khoi-cl .cl-hang.tieu-de{display:none}
  #khoi-cl .cl-hang.cl5{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 16px;border:1px solid var(--ke);border-radius:10px;margin-top:8px}
  #khoi-cl .cl-hang.cl5>b{grid-column:1;grid-row:1;font-size:14px}
@@ -865,7 +866,8 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
 /* điện thoại 390 (Caidat03_03 390): vòng 56, nút xuống hàng riêng dưới vòng */
 .mb #p09 .the.cn{padding:16px;gap:12px 16px;grid-template-columns:56px minmax(0,1fr)}.mb #p09 .the.cn .t20{font-size:18px;line-height:24px}
 .mb #p09 .the.cn>.giua{grid-row:1;width:56px!important;height:56px!important}.mb #p09 .the.cn>.giua>svg{width:56px;height:56px}
-.mb #p09 .the.cn>.cn-nut{grid-column:1/-1}
+.mb #p09 .the.cn>.cn-nut,.mb #p09 .the.cn>.btn{grid-column:1/-1}
+.mb #p09 .kk-ba{width:44px;height:44px}.mb #tha-kk .tha-muc{min-height:44px}   /* CDO P3: nút ⋯ và mục Đổi / Xóa Két khóa ≥ 44 trên điện thoại */
 /* SOAT-CAIDAT-SUA (CDO 5.361): P1-1 cụm cuối thanh trái (Hiện thêm khi tới giai đoạn · Thu gọn menu) dính đáy (QĐ576, QĐ582) –
    dòng "#app:not(.mb) nav.menu .muc{margin:0 8px…}" đè margin-top:auto của .thu-gon từ 0.9.0; cụm bắt đầu ở .gd-sau.
    P2 khối tiến độ cao 142 như bản vẽ (QĐ574): bỏ lề chữ 13 px, khe đầu trang 16. P3-1 vùng bấm điện thoại ≥ 44 px. */

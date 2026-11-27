@@ -33,6 +33,11 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("#p09 .cd-td>.phu{margin:0}", self.h)                                             # khối tiến độ 142 (QĐ574)
         self.assertIn(".mb #p09 :is(.btn,.btn-chu,.cg-onhap,.o-nhap,.mg-o){min-height:44px}", self.h)
 
+    def test_p1_3_nut_con_truc_tiep_cua_the_va_ket_khoa_44(self):   # CDO 5.364
+        self.assertIn(" #p09 .the.cn>.btn{grid-column:2;justify-self:start}", self.h)              # "Cập nhật ngay", "Thử cập nhật lại"
+        self.assertIn(".mb #p09 .the.cn>.cn-nut,.mb #p09 .the.cn>.btn{grid-column:1/-1}", self.h)  # 390: không bị ép vào cột vòng 56
+        self.assertIn(".mb #p09 .kk-ba{width:44px;height:44px}.mb #tha-kk .tha-muc{min-height:44px}", self.h)
+
     def test_p3_2_khong_trong_goi_lo_lung(self):
         self.assertIn("caCum(x.trong_goi ? (x.ban ? CA.oGoi(x.ban) : '–') : x.ban)", self.js)
 
