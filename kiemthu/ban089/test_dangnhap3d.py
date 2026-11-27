@@ -57,7 +57,7 @@ class KiemTep088(unittest.TestCase):
     # ---- L1: 0 thư viện, 0 tệp JS ngoài
     def test_l1_dung_02_the_script(self):
         self.assertEqual(re.findall(r"<script[^>]*>", self.ix),
-                         ['<script src="/tainguyen/icon.js">', '<script src="/tainguyen/app.js">'])
+                         ['<script src="/tainguyen/chedo.js">', '<script src="/tainguyen/icon.js">', '<script src="/tainguyen/app.js">'])   # QĐ562: + chế độ màu
 
     # ---- L2: mọi tệp cùng nguồn, CSP không nới
     def test_l2_khong_dia_chi_ngoai(self):
@@ -93,7 +93,7 @@ class KiemTep088(unittest.TestCase):
             self.assertTrue(any("pointer-events:none" in k for k in khoi), chon)
         # 09 icon trang trí trong ô đăng nhập có aria-hidden (bản chốt)
         phai = self.s01[self.s01.index('<div class="dn-phai">'):]
-        self.assertEqual(phai.count('<svg aria-hidden="true"\n  style="flex:none;vertical-align:middle"'), 9)
+        self.assertEqual(phai.count('<svg aria-hidden="true"\n  style="flex:none;vertical-align:middle;color:'), 9)
 
     def test_l3_css_o_dang_nhap_nam_trong_index(self):
         st = self.ix[self.ix.index("<style>/* 0.8.9"):self.ix.index("</head>")]
@@ -374,7 +374,7 @@ class KiemLinhVat088(unittest.TestCase):
     def test_nut_dang_xu_ly_va_tra_chu_goc(self):
         kq = self.chay("", "LVC.da = true; S.lv = 'dang'; ve(); const a = nutDn.innerHTML, b = nutDn.disabled; S.lv = null; ve();",
                        "[a, b, nutDn.innerHTML, nutDn.disabled, nutCl.has('dang')]")
-        self.assertTrue(kq[0].startswith('<svg aria-hidden="true" stroke="#FFFFFF"'), kq[0])
+        self.assertTrue(kq[0].startswith('<svg aria-hidden="true" stroke="var(--chu-tren-nut)"'), kq[0])
         self.assertTrue(kq[0].endswith("Đang xử lý…"))
         self.assertEqual(kq[1:], [True, "Đăng nhập", False, False])
 

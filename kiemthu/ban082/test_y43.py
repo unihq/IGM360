@@ -251,7 +251,7 @@ class KiemTrang(unittest.TestCase):
         d3 = h.split('3. Bản sao Drive</span>', 1)
         self.assertIn('<div class="td8-dong cho">', d3[0][-900:])
         self.assertIn("lucide-cloud-upload", d3[0][-700:])
-        self.assertIn('stroke="#646A73"', d3[0][-700:])
+        self.assertIn('color:var(--phu)', d3[0][-700:])
         self.assertTrue(d3[1].startswith('<span class="td8-m">sau khi lên bản</span>'))
         self.assertIn('8. Kiểm sau cập nhật</span><span class="td8-m">sau khi tải lại</span>', h)
         self.assertNotIn("undefined", h)

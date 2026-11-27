@@ -138,7 +138,8 @@ async def dau_bao_ve(request, call_next):
 # Y17 (b): đường tệp mã giao diện gắn số bản (`?v=`), cập nhật xong trình duyệt buộc tải tệp mới ngay lần mở đầu.
 TRANG_CHINH = (GIAODIEN / "index.html").read_text(encoding="utf-8").replace(
     'src="/tainguyen/icon.js"', f'src="/tainguyen/icon.js?v={PHIENBAN}"').replace(
-    'src="/tainguyen/app.js"', f'src="/tainguyen/app.js?v={PHIENBAN}"')
+    'src="/tainguyen/app.js"', f'src="/tainguyen/app.js?v={PHIENBAN}"').replace(
+    'src="/tainguyen/chedo.js"', f'src="/tainguyen/chedo.js?v={PHIENBAN}"')   # QĐ562: chế độ màu
 
 
 @app.get("/tls-check")

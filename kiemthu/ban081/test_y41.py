@@ -138,7 +138,7 @@ class KiemTheTienDo(unittest.TestCase):
         h = k["html"]
         for chu in ("Đang cập nhật lên 0.3.0", "<b>Bước 2/8:</b> Sao lưu dữ liệu · 04/07 tệp", "Đã chạy 00:08 · còn khoảng",
                     "phút (ước tính)", "Trang tự tải lại khi xong. Bạn không cần bấm gì thêm.", "04/07 tệp</span>",
-                    "lucide-loader", "stroke=\"#1456F0\"", "1. Kiểm ổ trống</span><span class=\"td8-m\">00:02"):
+                    "lucide-loader", "color:var(--xanh-chu)", "1. Kiểm ổ trống</span><span class=\"td8-m\">00:02"):
             self.assertIn(chu, h)
         self.assertEqual(h.count("td8-dong"), 8)
         self.assertNotIn("data-cnngay", h)
@@ -159,7 +159,7 @@ class KiemTheTienDo(unittest.TestCase):
         h, r = k["html"], k["r"]
         self.assertTrue(r["cham"])
         for chu in ("Tải gói cài (ước tính) lâu hơn thường lệ", "chưa ước tính được thời gian còn lại",
-                    "Phần mềm vẫn đang chờ. Bạn không cần bấm gì thêm.", "lâu hơn ước tính</span>", "lucide-clock", "#8F5F00"):
+                    "Phần mềm vẫn đang chờ. Bạn không cần bấm gì thêm.", "lâu hơn ước tính</span>", "lucide-clock", "var(--xem)"):
             self.assertIn(chu, h)
         tong = sum(DU.values())
         self.assertLessEqual(r["pt"], int(100 * (23 + 0.95 * 300) / tong))   # % dừng dưới mức cuối của bước 5
@@ -171,7 +171,7 @@ class KiemTheTienDo(unittest.TestCase):
         h = self.the(td, 600, cu="0.2.0")["html"]
         for chu in ("Chưa cập nhật được lên 0.3.0", "<b>Dừng ở bước 2/8:</b> Sao lưu dữ liệu chưa được (tệp Bot)", "Đã chạy 00:15<",
                     "Chưa gửi lệnh cập nhật nên bản 0.2.0 và dữ liệu giữ nguyên. Lỗi ghi vào nhật ký.", "data-cnngay",
-                    "Thử lại</button>", "lucide-circle-alert", "chưa được</span>", "#E22E28"):
+                    "Thử lại</button>", "lucide-circle-alert", "chưa được</span>", "var(--canh)"):
             self.assertIn(chu, h)
         self.assertNotIn("còn khoảng", h)
 
@@ -251,12 +251,12 @@ class KiemTheTienDo(unittest.TestCase):
         td = _td("xong", {"o_trong": 0, "chup": 2, "gui": 11, "tai": 12, "nang": 230, "kiem": 352},
                  xong="2026-11-24T10:05:58+07:00")
         h = self.the(td, 999, kiem={"chu": "05/06 · lịch chạy nền chưa bật", "dat": False})["html"]
-        self.assertIn('<div class="td-buoc" style="color:#258832"><b>Xong 08/08 bước</b> · <span style="color:#E22E28">', h)
-        do = h.split('<span style="color:#E22E28">', 1)[1].split("</span>", 1)[0]
+        self.assertIn('<div class="td-buoc" style="color:var(--dat)"><b>Xong 08/08 bước</b> · <span style="color:var(--canh)">', h)
+        do = h.split('<span style="color:var(--canh)">', 1)[1].split("</span>", 1)[0]
         self.assertIn("lucide-circle-alert", do)
         self.assertIn("Kiểm sau cập nhật: 05/06 · lịch chạy nền chưa bật", do)
         h2 = self.the(td, 999, kiem={"chu": "06/06 đạt", "dat": True})["html"]
-        self.assertNotIn('<span style="color:#E22E28">', h2)
+        self.assertNotIn('<span style="color:var(--canh)">', h2)
 
     def luong(self, kich_ban: str) -> dict:
         """Chạy choCapNhat với /suckhoe, /api/capnhat theo kịch bản (n: lần hỏi thứ n; null = máy chủ không trả lời)."""

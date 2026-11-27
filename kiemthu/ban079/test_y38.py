@@ -910,11 +910,11 @@ class KiemY38f(NenAT):
         h = self.chay_js("console.log(JSON.stringify(baoLayLai(" + json.dumps(self.A[8][:-1]) + ", 2)));")
         self.assertTrue(h.startswith('<div class="bao-lai t13"><div class="loi-o"><svg data-i="circle-alert"/>'), h)
         self.assertIn("<b>Lấy&nbsp;tên,&nbsp;gói</b>", h)
-        self.assertIn('<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="2"><svg data-i="log-in" stroke="#1F2329"/>Lấy&nbsp;tên,&nbsp;gói</button>', h)   # icon tối trên nút trắng
+        self.assertIn('<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="2"><svg data-i="log-in" stroke="var(--chu)"/>Lấy&nbsp;tên,&nbsp;gói</button>', h)   # icon tối trên nút trắng
         self.assertNotIn("user-round", h)
         css = (GD / "index.html").read_text(encoding="utf-8")
         o = css[css.index(".bao-lai{"):css.index("}", css.index(".bao-lai{"))]
-        self.assertIn("background:#fff", o)                                         # không nền đỏ
+        self.assertIn("background:var(--khoi)", o)                                         # không nền đỏ
         js = (GD / "app.js").read_text(encoding="utf-8")
         self.assertIn("D.trungTk = {...(D.trungTk || {}), claude: (e.ct || {}).lay_lai ? dn.tk : 0}", js)
 
@@ -1309,7 +1309,7 @@ class KiemChu(unittest.TestCase):
     def test_khong_nen_do(self):
         html = (GD / "index.html").read_text(encoding="utf-8")
         doan = html[html.index(".dai-antoan{"):html.index("#cn-antoan .dong")]
-        self.assertIn("background:#fff", doan)
+        self.assertIn("background:var(--khoi)", doan)
         self.assertNotIn("background:var(--canh)", doan)
 
 

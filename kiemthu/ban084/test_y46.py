@@ -720,7 +720,7 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         self.assertNotIn("data-canang", tam)                                      # nút nâng khóa
         self.assertIn("Hoãn nâng Claude · Code 2.1.332: gói Claude đang hết hạn mức nên chưa kiểm thử được. Vẫn dùng bản 2.1.331;"
                       " lượt kiểm 03:00 ngày mai thử lại.", hoan)
-        self.assertIn("<i clock m=#646A73>", hoan)                                # dòng xám, icon clock
+        self.assertIn("<i clock m=var(--phu)>", hoan)                                # dòng xám, icon clock
 
     def test_cdo_u36_cho_1_ngay_khac_va_khac_nam(self):
         h = self.chu("[caLuc(Date.parse('2026-11-23T03:00:00Z'), Date.parse('2026-11-24T14:30:00+07:00')),"
@@ -910,7 +910,7 @@ class KiemPhanD(Nen):
                   "(m.moi ? ' <span class=\"mh-moi\">' + CHU_D.moi + '</span>' : '')"):
             self.assertIn(x, app)
         html = (Path(__file__).resolve().parents[2] / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
-        self.assertIn(".mh-moi{font-size:11px;color:#258832;border:1px solid #258832;border-radius:8px;padding:0 6px;margin-left:4px}", html)
+        self.assertIn(".mh-moi{font-size:11px;color:var(--dat);border:1px solid var(--dat);border-radius:8px;padding:0 6px;margin-left:4px}", html)
 
 
 class KiemK4VungChua(Nen):

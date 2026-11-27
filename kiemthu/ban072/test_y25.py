@@ -261,7 +261,7 @@ class KiemChuong(unittest.TestCase):
                   "d === q ? 'Hôm qua ' + gio(iso)", "d.di === 'capnhat'", "esc(lucTb(x.luc)) + ' · ' + esc(x.noi)"):
             self.assertIn(c, js)
         for c in ("<b>Thông báo</b>", 'id="tb-dochet" data-dochet', ">Đã đọc hết<", "#tha-chuong{width:380px;max-height:min(560px,75vh)",
-                  ".mb #tha-chuong{width:auto;max-height:70vh}", ".tin-n{border-color:#A9C1F7}"):
+                  ".mb #tha-chuong{width:auto;max-height:70vh}", ".tin-n{border-color:var(--vien-tin)}"):
             self.assertIn(c, html)
         self.assertNotIn("Cảnh báo mới", html)
         self.assertNotIn(".mb .vi-tri .tha{", html)   # U6 S1: điện thoại dùng .mb .tha (fixed, cách 02 mép 08) như 0.7.1

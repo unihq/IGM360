@@ -69,8 +69,8 @@ class KiemChuoi(unittest.TestCase):
                  and "body:not(.dien-thoai)" not in s]
         self.assertEqual(ngoai, [])
         self.assertIn(("#app:not(.mb) .thanh-tren", "display:none"), quy_tac(self.pn))                 # khổ máy tính bỏ thanh trên
-        self.assertIn(("#app:not(.mb) .vung", "margin:8px 8px 8px 0;border:1px solid #DEE0E3;border-radius:12px;overflow:hidden;"
-                       "background:rgba(255,255,255,.72);box-shadow:0 1px 2px rgba(31,35,41,.04),0 12px 32px -16px rgba(14,68,196,.25)"),
+        self.assertIn(("#app:not(.mb) .vung", "margin:8px 8px 8px 0;border:1px solid var(--ke);border-radius:12px;overflow:hidden;"
+                       "background:rgba(var(--khoi-rgb),.72);box-shadow:0 1px 2px rgba(var(--bong),.04),0 12px 32px -16px rgba(var(--bong-xanh),.25)"),
                       quy_tac(self.pn))
 
     def test_bong_chi_o_danh_sach_muc_3(self):
@@ -88,8 +88,8 @@ class KiemChuoi(unittest.TestCase):
         for d in (".o-tk .nut-gat{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}",
                   'body.dien-thoai [data-s="tab:taikhoan"] .btn,body.dien-thoai .lop .btn,body.dien-thoai .lop .nut-ico,body.dien-thoai .bao-vang .btn{min-height:44px;min-width:44px}',
                   "body:not(.dien-thoai) .luoi-tk{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}",
-                  ".lop .o-nhap:focus-within{border-color:#1456F0;box-shadow:0 0 0 3px rgba(20,86,240,.2)}",
-                  ".o-tk .nut-gat:focus-visible,.bao-vang .btn:focus-visible,.lop .btn:focus-visible,.lop .nut-ico:focus-visible{outline:2px solid #1456F0;outline-offset:2px}"):
+                  ".lop .o-nhap:focus-within{border-color:var(--xanh-chu);box-shadow:0 0 0 3px rgba(var(--xanh-rgb),.2)}",
+                  ".o-tk .nut-gat:focus-visible,.bao-vang .btn:focus-visible,.lop .btn:focus-visible,.lop .nut-ico:focus-visible{outline:2px solid var(--xanh-chu);outline-offset:2px}"):
             self.assertIn(d, self.moi)
         self.assertIn('<div class="lop" id="h-matkhau"', self.html)                               # A4 áp cả hộp Đổi mật khẩu (.lop)
 

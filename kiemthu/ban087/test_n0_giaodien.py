@@ -151,7 +151,7 @@ class KiemGiaoDienLuot(unittest.TestCase):
     def test_h1_qd352_cau_bao_cho_cap_nhat(self):
         h = self.chay("", "htmlChoCn(" + json.dumps(CHU_CHO, ensure_ascii=False) + ")")
         self.assertTrue(h.startswith('<div class="tn-bao">'))                     # khung "Cần xem", không phải tn-bao do
-        self.assertIn('stroke="#8F5F00"', h)
+        self.assertIn('stroke="var(--xem)"', h)
         self.assertIn("Phần mềm đang chờ cập&nbsp;nhật nên chưa nhận câu hỏi mới. Câu hỏi vẫn ở ô nhập, bạn gửi lại sau khi"
                       " cập&nbsp;nhật xong.</span></div>", h)                  # đúng chữ QĐ352 qua cum(), không thêm dấu
         self.assertIn("if (e.ma === 'cho_capnhat') { $('#ds-tin').innerHTML = cu.map(tinHtml).join('') + toi + htmlChoCn(e.message);"

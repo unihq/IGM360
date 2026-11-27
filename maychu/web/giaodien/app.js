@@ -71,7 +71,7 @@ function ve() {
   const nutDn = $('[data-dangnhap]');   // 0.8.9 (CDA SOAT-KH-088 điểm 3): "Đang xử lý…" theo S.lv riêng; S.dn giữ 07 giá trị
   nutDn.disabled = S.dn === 'khoa' || S.dn === 'khoatk' || S.lv === 'dang';
   if ((S.lv === 'dang') !== nutDn.classList.contains('dang')) {
-    if (S.lv === 'dang') { D.nutDn = nutDn.innerHTML; nutDn.innerHTML = icoMau(ICON.loader, '#FFFFFF', 18).replace('<svg', '<svg aria-hidden="true"') + CHU_DN.dang; }
+    if (S.lv === 'dang') { D.nutDn = nutDn.innerHTML; nutDn.innerHTML = icoMau(ICON.loader, 'var(--chu-tren-nut)', 18).replace('<svg', '<svg aria-hidden="true"') + CHU_DN.dang; }
     else nutDn.innerHTML = D.nutDn;
     nutDn.classList.toggle('dang', S.lv === 'dang'); }
   if (S.g === '01') dongTacLv();   // 0.8.9: linh vật màn 01
@@ -115,7 +115,7 @@ function dungNhom() {   // gom mục của mỗi tiêu đề vào 01 khối, ti�
   });
   const c = nhomCua(S.trang); NHOM.mo = new Set(c ? [c.ten] : []); NHOM.trangCu = S.trang;
 }
-const muiTen = mo => ICON[mo ? 'chevron-down' : 'chevron-right'].replace(/stroke="[^"]*"/, 'stroke="#646A73"')
+const muiTen = mo => ICON[mo ? 'chevron-down' : 'chevron-right'].replace(/color:[^;"]*/, 'color:var(--phu)')
   .replace(/width="\d+"/, 'width="14"').replace(/height="\d+"/, 'height="14"');   // QĐ331
 function veNhom() {
   if (!NHOM.ds.length) dungNhom();
@@ -137,7 +137,7 @@ function batNhom(ten) { if (NHOM.mo.has(ten)) NHOM.mo.delete(ten); else { NHOM.m
 // </NHOM>
 function bao(t) { const e = $('#tb-msg'); e.textContent = t; e.hidden = false; clearTimeout(bao.h); bao.h = setTimeout(() => e.hidden = true, 3200); }
 function xacnhan(tieu, chu, nut, cb, ico) { const dau = $('#h-xacnhan .hop-dau svg');
-  if (dau) { if (!xacnhan.goc) xacnhan.goc = dau.outerHTML; dau.outerHTML = ico ? icoMau(ICON[ico], '#1456F0', 20) : xacnhan.goc; }
+  if (dau) { if (!xacnhan.goc) xacnhan.goc = dau.outerHTML; dau.outerHTML = ico ? icoMau(ICON[ico], 'var(--xanh-chu)', 20) : xacnhan.goc; }
   $('#h-xacnhan [data-tieu]').textContent = tieu; $('#xn-chu').innerHTML = chu;
   $('#xn-nut').textContent = nut; D.xnCb = cb; mo('h-xacnhan'); }
 const ma6 = goc => $$('.o6', goc).map(i => i.value).join('');
@@ -221,11 +221,11 @@ async function vaoPhanMem() {
   if (S.trang === '09') napTab();
 }
 // ---- Chuông thông báo bước 1 (QĐ165, bản vẽ Z7b): số = dòng Mới (sau mốc đọc); nhóm Mới rồi Đã xem, còn mở
-const MAU_TB = {do: ['do-n', '#E22E28'], xem: ['xem-n', '#C97A00'], tin: ['tin-n', '#1456F0']};
+const MAU_TB = {do: ['do-n', 'var(--canh)'], xem: ['xem-n', 'var(--xem)'], tin: ['tin-n', 'var(--xanh-chu)']};
 const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10), d = hien(iso).slice(0, 10);
   return d === h ? gio(iso) : d === q ? 'Hôm qua ' + gio(iso) : d.slice(8, 10) + '/' + d.slice(5, 7); };
 const icoTb = x => (ICON[x.icon] || ICON['circle-alert']).replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')
-  .replace(/stroke="#[0-9A-Fa-f]{6}"/, 'stroke="' + MAU_TB[x.muc][1] + '"');
+  .replace(/color:[^;"]*/, 'color:' + MAU_TB[x.muc][1]);
 const dongTb = x => '<button class="tha-muc tb-dong" data-di="' + esc(x.di) + '"' + (x.cuon ? ' data-cuon="' + esc(x.cuon) + '"' : '') + '><span class="ico-tron nho '
   + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + cum(x.chu) + '</span><span class="t12 phu">'
   + esc(lucTb(x.luc)) + ' · ' + esc(x.noi) + '</span></span></button>';
@@ -295,7 +295,7 @@ function veCongTac(t, d) {
   const bat = t.giatri === '1';
   return '<div class="ts"><div class="ts-ten">' + esc(t.nhan) + (t.giai_thich ? '<div class="t12 phu">' + cum(t.giai_thich) + '</div>' : '')
     + (bat && !d.drive_noi ? '<div class="t12 xem-chu" style="display:flex;align-items:center;gap:4px;margin-top:2px">'   // Z21_02 (QĐ278)
-      + icoMau(ICON['cloud-alert'], '#8F5F00', 13) + '<span>' + cum(CHU_Z21.chuaNoi) + '</span></div>' : '') + '</div><div class="ts-phai"><div class="ts-gt">'
+      + icoMau(ICON['cloud-alert'], 'var(--xem)', 13) + '<span>' + cum(CHU_Z21.chuaNoi) + '</span></div>' : '') + '</div><div class="ts-phai"><div class="ts-gt">'
     + '<span class="b7 so">' + (bat ? CHU_Z21.bat : CHU_Z21.tat) + '</span><span class="t12 phu">'
     + (t.hieuluc_tu ? CHU_Z21.tu(ngay(t.hieuluc_tu)) + (t.nguoi_dat === 'hethong' ? CHU_Z21.macDinh : CHU_Z21.banDoi) : ' ') + '</span></div>'
     + '<button class="gat-o nut-gat" data-gat="' + esc(t.ten) + '" role="switch" aria-checked="' + bat + '" aria-label="' + esc(t.nhan) + '">'
@@ -407,30 +407,30 @@ function ve2Lop(d) {
   const C = CHU_2LOP, tat = !d.da_bat_2lop && !!d.co_khoa_2lop, khoa = !!D.anToan && !tat;   // chế độ an toàn: không cho tắt, bật vẫn được
   D.tat2lop = tat;
   $('#vong-2lop').hidden = tat; $('#ico-2lop-tat').hidden = !tat;   // đang tắt: vòng xanh lá đổi thành ô icon cảnh báo (BV03)
-  if (tat) $('#ico-2lop-tat').innerHTML = icoMau(ICON['shield-alert'], '#8F5F00', 26);
+  if (tat) $('#ico-2lop-tat').innerHTML = icoMau(ICON['shield-alert'], 'var(--xem)', 26);
   $('#f1-2lop').innerHTML = '<div class="dong" style="gap:8px;align-items:center;justify-content:space-between"><div class="b7 nw">Đăng nhập 02&nbsp;lớp</div>'
     + '<button class="gat-o nut-gat" data-gat2lop role="switch" aria-checked="' + !tat + '" aria-label="' + esc(C.gat) + '"'
     + (khoa ? ' disabled style="margin-left:0;opacity:.4;cursor:not-allowed"' : ' style="margin-left:0"') + '>'
     + '<input type="checkbox" tabindex="-1"' + (tat ? '' : ' checked') + '><span class="gat"></span></button></div>'
     + '<div class="nhan ' + (tat ? 'n-canh' : 'n-dat') + '"><i></i>' + esc(tat ? C.dangTat : C.dangBat) + '</div>'
     + '<div class="phu t13" style="margin-top:2px">' + cum(tat ? C.giaiTat : C.giaiBat) + '</div>'
-    + (khoa ? '<div class="dong t13 phu" style="gap:6px;margin-top:6px">' + icoMau(ICON.lock, '#646A73', 14) + '<span>' + cum(C.antoan) + '</span></div>' : '');
+    + (khoa ? '<div class="dong t13 phu" style="gap:6px;margin-top:6px">' + icoMau(ICON.lock, 'var(--phu)', 14) + '<span>' + cum(C.antoan) + '</span></div>' : '');
   D.nutDoiMay = D.nutDoiMay || $('#the-2lop [data-mo="h-2lop"]');   // giữ tham chiếu: vẽ lại innerHTML không làm mất nút
   $('#f1-2lop').append(D.nutDoiMay); D.nutDoiMay.hidden = tat;   // QĐ398: đang tắt thì ẩn "Đổi máy nhận mã"
   const b = $('#bao-2lop'); b.hidden = !tat;   // dòng cảnh báo đầu ngăn khi tắt (BV03), nút "Bật lại" mở hộp bật lại
-  if (tat) b.innerHTML = icoMau(ICON['shield-alert'], '#8F5F00', 18) + '<span class="f1 xem-chu t13">' + cum(C.baoTat) + '</span>'
-    + '<button class="btn btn-chinh" data-bat2lopmo>' + icoMau(ICON['shield-check'], '#FFFFFF', 16) + esc(C.nutBatLai) + '</button>';
+  if (tat) b.innerHTML = icoMau(ICON['shield-alert'], 'var(--xem)', 18) + '<span class="f1 xem-chu t13">' + cum(C.baoTat) + '</span>'
+    + '<button class="btn btn-chinh" data-bat2lopmo>' + icoMau(ICON['shield-check'], 'var(--chu-tren-nut)', 16) + esc(C.nutBatLai) + '</button>';
 }
 function hop2Lop(id) {   // hộp tắt, hộp bật lại (bản vẽ BV02, BV05, BV07, BV08); dựng 01 lần
   const C = CHU_2LOP, o6 = '<div class="o6-hang">' + '<input class="o6" maxlength="1" inputmode="numeric">'.repeat(6) + '</div>';
   if (!$('#' + id)) {
     const tat = id === 'h-tat2lop', l = document.createElement('div'); l.className = 'lop'; l.id = id; l.hidden = true;
-    l.innerHTML = '<div class="hop" style="width:440px;max-width:100%"><div class="hop-dau">' + icoMau(ICON[tat ? 'shield-alert' : 'shield-check'], '#1F2329', 20)
-      + '<b class="f1 t16">' + cum(tat ? C.hopTatTieu : C.hopBatTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 18) + '</button></div>'
+    l.innerHTML = '<div class="hop" style="width:440px;max-width:100%"><div class="hop-dau">' + icoMau(ICON[tat ? 'shield-alert' : 'shield-check'], 'var(--chu)', 20)
+      + '<b class="f1 t16">' + cum(tat ? C.hopTatTieu : C.hopBatTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, 'var(--phu)', 18) + '</button></div>'
       + '<div class="hop-than">' + (tat ? '<div class="t13">' + cum(C.hopTatThan) + '</div><label class="nhan-o">' + esc(C.oMk) + '<div class="o-nhap"><input type="password" autocomplete="current-password"></div></label>'
           + '<div class="nhan-o">' + cum(C.oMa) + o6 + '</div>'
-        : '<div class="t13">' + cum(C.hopBatThan) + '</div>' + o6 + '<div class="dong t13 phu" style="gap:6px">' + icoMau(ICON['info'], '#646A73', 16) + '<span>' + cum(C.hopBatDx) + '</span></div>')
-      + '<div class="dong t13" data-loi2lop style="gap:6px;color:#E22E28;align-items:flex-start" hidden>' + icoMau(ICON['circle-alert'], '#E22E28', 16) + '<span></span></div></div>'
+        : '<div class="t13">' + cum(C.hopBatThan) + '</div>' + o6 + '<div class="dong t13 phu" style="gap:6px">' + icoMau(ICON['info'], 'var(--phu)', 16) + '<span>' + cum(C.hopBatDx) + '</span></div>')
+      + '<div class="dong t13" data-loi2lop style="gap:6px;color:var(--canh);align-items:flex-start" hidden>' + icoMau(ICON['circle-alert'], 'var(--canh)', 16) + '<span></span></div></div>'
       + '<div class="hop-chan"><button class="btn btn-phu" data-dong>' + esc(C.huy) + '</button><button class="btn btn-chinh" ' + (tat ? 'data-tat2lop>' + cum(C.nutTat) : 'data-bat2lop>' + esc(C.nutBat)) + '</button></div></div>';
     $('#h-2lop').before(l);
   }
@@ -444,14 +444,14 @@ function loi2Lop(l, e) {   // bản vẽ BV07: câu báo sai + câu có sẵn s�
     + (con != null ? ' Còn <b>' + hai(con) + '</b>&nbsp;lần thử: sai <b>05</b>&nbsp;lần trong 15&nbsp;phút sẽ tạm khóa <b>15</b>&nbsp;phút.' : '');   // L4: số đi liền chữ sau
   if (!b) { bao(chu.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, NB)); return; }   // SUA-090-L6: hộp Đổi máy nhận mã không có dòng báo → báo nhanh
   $('span', b).innerHTML = chu;
-  b.hidden = false; $$('.o-nhap', l).forEach(x => x.classList.add('loi')); $$('.o6', l).forEach(x => x.style.borderColor = '#E22E28');
+  b.hidden = false; $$('.o-nhap', l).forEach(x => x.classList.add('loi')); $$('.o6', l).forEach(x => x.style.borderColor = 'var(--canh)');
 }
 async function gui2Lop(tat) {   // bản vẽ BV08: đang xử lý – nút giữ màu, không mờ (quy chuẩn 5.1)
   const l = $(tat ? '#h-tat2lop' : '#h-bat2lop'), ma = ma6(l), nut = $('.hop-chan .btn-chinh', l), goc = nut.innerHTML;
   if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
   const mk = tat ? $('input[type="password"]', l).value : '';
   $('[data-loi2lop]', l).hidden = true; $$('.o-nhap', l).forEach(x => x.classList.remove('loi')); $$('.o6', l).forEach(x => x.style.borderColor = '');   // L3: bỏ báo sai lần trước
-  nut.disabled = true; nut.classList.add('dang'); nut.innerHTML = icoMau(ICON.loader, '#FFFFFF', 16) + CHU_DN.dang;   // L2: .lop .btn.dang không mờ
+  nut.disabled = true; nut.classList.add('dang'); nut.innerHTML = icoMau(ICON.loader, 'var(--chu-tren-nut)', 16) + CHU_DN.dang;   // L2: .lop .btn.dang không mờ
   $$('input, .btn-phu', l).forEach(e => e.disabled = true);
   try {
     const kq = await api(tat ? '/2lop/tat' : '/2lop/bat', tat ? {matkhau: mk, ma} : {ma});
@@ -483,7 +483,7 @@ function veAnToan(d) {   // lớp 2 theo bản vẽ Z16: dải trên (35, nút �
   let o = $('#dai-antoan'); const the = $('#cn-the-antoan'), qv = (d.quay_ve || {}).co;
   const nut = c => qv ? '<button class="btn btn-chinh' + c + '" data-quayve>' + ICON['rotate-ccw'] + nbsp(CHU_CN.quayve) + '</button>' : '';
   if (the) { the.hidden = !d.an_toan; if (d.an_toan) the.innerHTML = '<div class="giua" style="width:96px;height:96px">'
-    + icoMau(ICON['shield-alert'], '#E22E28', 40) + '</div><div class="f1"><div class="t20 b7">' + CHU_CN.theTieu + '</div>'
+    + icoMau(ICON['shield-alert'], 'var(--canh)', 40) + '</div><div class="f1"><div class="t20 b7">' + CHU_CN.theTieu + '</div>'
     + '<ul class="at-ds"><li>' + cum(CHU_CN.theDong1) + '</li><li>' + cum(CHU_CN.theDong2) + '</li></ul></div>' + nut(''); }
   if (!d.an_toan) { if (o) o.hidden = true; return; }
   if (!o) { const m = $('.vach[data-s="k:matketnoi"]');
@@ -491,7 +491,7 @@ function veAnToan(d) {   // lớp 2 theo bản vẽ Z16: dải trên (35, nút �
     o = $('#dai-antoan'); }
   o.hidden = false;
   const c = String(d.an_toan), i = c.indexOf(':');   // "Chế độ an toàn:" in đậm như bản vẽ
-  o.innerHTML = icoMau(ICON['shield-alert'], '#E22E28', 18) + '<span class="f1"><b>' + cum(c.slice(0, i + 1)) + '</b>' + cum(c.slice(i + 1)) + '</span>' + nut(' nho');
+  o.innerHTML = icoMau(ICON['shield-alert'], 'var(--canh)', 18) + '<span class="f1"><b>' + cum(c.slice(0, i + 1)) + '</b>' + cum(c.slice(i + 1)) + '</span>' + nut(' nho');
 }
 function veQuayVe(d) {   // lớp 3 theo bản vẽ Z16: nút chữ dưới "Kiểm tra lại", câu 38 ở rê; khóa khi đang cập nhật (N33)
   const q = d.quay_ve || {}, dang = S.cn === 'dangcn' || ['chup', 'day', 'qua_gio', 'cho_viec', 'gui', 'tai'].includes(d.dang_sao);
@@ -520,7 +520,7 @@ function tieuDangCn(chu) {   // tiêu đề thẻ đang cập nhật: mặc đ�
   if (chu) e.textContent = chu; else e.innerHTML = tieuDangCn.goc; }
 function moHopDrive(loai, cheDo) {   // lớp 5: hộp "Cập nhật khi chưa có bản sao Drive?" (30–34)
   if (!$('#h-cndrive')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-cndrive" hidden><div class="hop"><div class="hop-dau">'
-    + ICON['cloud-upload'] + '<b class="f1 t16">' + cum(CHU_CN.hopTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div>'
+    + ICON['cloud-upload'] + '<b class="f1 t16">' + cum(CHU_CN.hopTieu) + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, 'var(--phu)', 20) + '</button></div>'
     + '<div class="hop-than" id="cndrive-than"></div><div class="hop-chan" id="cndrive-chan"></div></div></div>');
   D.cnDrive = {loai, cheDo};
   $('#cndrive-than').innerHTML = '<div class="dong t13 xem-chu">' + ICON['circle-alert'] + '<span>' + cum(loai === 'qua_gio' ? D.capnhat.chu_qua_gio : D.capnhat.chu_drive) + '</span></div>'
@@ -543,36 +543,36 @@ function veCapNhat(d) {
   const cot = 'grid-template-columns:120px 1fr 160px';
   const tdk = d.tien_do, dangKiemDong = tdk && tdk.den === d.ban_dang && !tdk.loi && !tdk.treo && ['nang', 'kiem'].includes(tdk.buoc);
   const kiem = x => !x.kiem ? (dangKiemDong && x.ban === d.ban_dang   // QĐ261 dòng 9: kiểm đang chạy nền
-      ? '<span class="ks">' + icoMau(ICON.loader, '#1456F0', 13) + '<span>' + cum(SL.dangKiem(tdk.buoc === 'kiem' ? +(tdk.chi_tiet || {}).da || 0 : 0,
+      ? '<span class="ks">' + icoMau(ICON.loader, 'var(--xanh-chu)', 13) + '<span>' + cum(SL.dangKiem(tdk.buoc === 'kiem' ? +(tdk.chi_tiet || {}).da || 0 : 0,
         tdk.buoc === 'kiem' ? (tdk.chi_tiet || {}).tong || 6 : 6)) + '</span></span>' : '')
     : '<span class="ks ' + (x.kiem.dat ? 'dat' : 'canh') + '">' + icoMau(ICON[x.kiem.dat ? 'circle-check' : 'circle-alert'],
-    x.kiem.dat ? '#258832' : '#E22E28', 13) + '<span>' + CHU_CN.kiem + cum(x.kiem.chu) + '</span></span>';   // lớp 4, N36 (b)
+    x.kiem.dat ? 'var(--dat)' : 'var(--canh)', 13) + '<span>' + CHU_CN.kiem + cum(x.kiem.chu) + '</span></span>';   // lớp 4, N36 (b)
   $('#ls-capnhat').innerHTML = d.lichsu.map(x => '<div class="hang" style="' + cot + '"><b class="so">' + esc(x.ban)
     + '</b><span data-l="Nội dung">' + cum(tomTat(x.ban)) + kiem(x) + '</span><span data-l="Ngày cài" class="so">' + ngay(x.luc) + '</span></div>').join('');
   veAnToan(d); veQuayVe(d);
   const o = d.o_trong || {du: true}, oc = $('#cn-otrong');
-  if (oc) oc.innerHTML = !o.chu ? '' : '<div class="ot-dong ' + (o.du ? 'dat' : 'canh') + '">' + icoMau(ICON[o.du ? 'circle-check' : 'hard-drive'], o.du ? '#258832' : '#E22E28', 14)
+  if (oc) oc.innerHTML = !o.chu ? '' : '<div class="ot-dong ' + (o.du ? 'dat' : 'canh') + '">' + icoMau(ICON[o.du ? 'circle-check' : 'hard-drive'], o.du ? 'var(--dat)' : 'var(--canh)', 14)
     + '<span>' + cum(o.chu) + '</span></div>' + (o.lam ? '<div class="t12 phu" style="margin-top:2px">' + cum(o.lam) + '</div>' : '');   // N36 (b)
   if (oc && d.co_ban_moi && d.drive_bat === false) {   // QĐ278 Z21 dòng 4 (thay 02 dòng nâng dữ liệu), QĐ280, QĐ282 dòng 7
-    oc.insertAdjacentHTML('beforeend', '<div class="ot-dong">' + icoMau(ICON['cloud-off'], '#646A73', 14) + '<span class="phu">' + cum(SL.tat) + '</span></div>'
-      + (d.nang_dulieu === true ? '<div class="ot-dong xem-chu">' + icoMau(ICON.database, '#8F5F00', 14) + '<span>' + cum(SL.tatNd) + '</span></div>' : ''));
+    oc.insertAdjacentHTML('beforeend', '<div class="ot-dong">' + icoMau(ICON['cloud-off'], 'var(--phu)', 14) + '<span class="phu">' + cum(SL.tat) + '</span></div>'
+      + (d.nang_dulieu === true ? '<div class="ot-dong xem-chu">' + icoMau(ICON.database, 'var(--xem)', 14) + '<span>' + cum(SL.tatNd) + '</span></div>' : ''));
   } else if (oc && d.co_ban_moi && typeof d.nang_dulieu === 'boolean') {   // QĐ261 dòng 1: thẻ Có bản mới biết trước có nâng dữ liệu không
-    const mau = d.nang_dulieu ? '#8F5F00' : '#646A73';
+    const mau = d.nang_dulieu ? 'var(--xem)' : 'var(--phu)';
     oc.insertAdjacentHTML('beforeend', '<div class="ot-dong">' + icoMau(ICON.database, mau, 14) + '<span>' + cum(d.nang_dulieu ? SL.ndCo : SL.ndKhong) + '</span></div>');
   }
   const sl = veSauLen(d);   // QĐ261 dòng 4–8: thẻ bản đang dùng sau khi tải lại
   const kl = $('#cn-kiemloi'), k = d.kiem_hien;   // N36 (e): lỗi kiểm sau cập nhật hiện cả ở thẻ đầu
-  if (kl) { kl.hidden = !k || k.dat || sl.co; if (k && !k.dat) kl.innerHTML = icoMau(ICON['circle-alert'], '#E22E28', 13) + '<span>' + CHU_CN.kiem + cum(k.chu) + '</span>'; }
+  if (kl) { kl.hidden = !k || k.dat || sl.co; if (k && !k.dat) kl.innerHTML = icoMau(ICON['circle-alert'], 'var(--canh)', 13) + '<span>' + CHU_CN.kiem + cum(k.chu) + '</span>'; }
   const qk = (d.quay_ve || {}).khoa;   // QĐ287 (Z24): bản sao trước khi nâng đã xóa → nút hiện, khóa; dòng báo dưới dòng bản
   $$('[data-qv-nut]').forEach(b => {   // QĐ261 dòng 7: kiểm chưa đạt thì "Quay về bản trước" thành nút viền (mở hộp quay về Z16)
     b.className = sl.loiKiem ? 'btn btn-phu' : 'btn-chu';
-    b.innerHTML = icoMau(ICON['rotate-ccw'], sl.loiKiem ? '#1F2329' : '#1456F0', sl.loiKiem ? 16 : 14) + nbsp(CHU_CN.quayve);
-    if (qk) { b.className = 'btn-chu qv-khoa'; b.innerHTML = icoMau(ICON.lock, '#646A73', 14) + nbsp(CHU_CN.quayve);   // Z24 dòng 2
+    b.innerHTML = icoMau(ICON['rotate-ccw'], sl.loiKiem ? 'var(--chu)' : 'var(--xanh-chu)', sl.loiKiem ? 16 : 14) + nbsp(CHU_CN.quayve);
+    if (qk) { b.className = 'btn-chu qv-khoa'; b.innerHTML = icoMau(ICON.lock, 'var(--phu)', 14) + nbsp(CHU_CN.quayve);   // Z24 dòng 2
       b.disabled = true; b.title = d.quay_ve.chu; } });
   const qkd = $('#cn-qvkhoa');
-  if (qkd) { qkd.hidden = !qk; qkd.innerHTML = qk ? icoMau(ICON['archive-x'], '#646A73', 14) + '<span>' + cum(d.quay_ve.chu) + '</span>' : ''; }
+  if (qkd) { qkd.hidden = !qk; qkd.innerHTML = qk ? icoMau(ICON['archive-x'], 'var(--phu)', 14) + '<span>' + cum(d.quay_ve.chu) + '</span>' : ''; }
   if (d.quayve_loi) $('#ls-capnhat').insertAdjacentHTML('afterbegin', '<div class="hang" style="' + cot + '"><b class="so">' + esc(d.ban_dang)   // Y38d
-    + '</b><span data-l="Nội dung"><span class="ks canh">' + icoMau(ICON['rotate-ccw'], '#E22E28', 13) + '<span>' + cum(cau(d.quayve_loi.chu_hien))
+    + '</b><span data-l="Nội dung"><span class="ks canh">' + icoMau(ICON['rotate-ccw'], 'var(--canh)', 13) + '<span>' + cum(cau(d.quayve_loi.chu_hien))
     + '</span></span></span><span data-l="Ngày cài" class="so">' + ngay(d.quayve_loi.luc) + '</span></div>');
   $$('[data-s="cn:coban"] [data-capnhat]').forEach(b => { b.disabled = !o.du; b.title = o.du ? '' : CHU_CN.khoaRe; });
   $('.tab[data-tab="capnhat"] .cham-xanh').hidden = !d.co_ban_moi;
@@ -599,15 +599,15 @@ function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt v�
   if (!co) { if (e) e.innerHTML = ''; return {}; }
   const moc = t.moc || {}, luc = moc.kiem || t.xong || moc.nang || '';
   const dong = (lop, ico, mau, chu) => '<div class="ks ' + lop + '">' + icoMau(ICON[ico], mau, 14) + '<span>' + cum(chu) + '</span></div>';
-  let h = dong('dat', 'circle-check', '#258832', SL.vuaLen(t.den, gio(luc), mmss((Date.parse(luc) - Date.parse(t.bat_dau)) / 1000)));
+  let h = dong('dat', 'circle-check', 'var(--dat)', SL.vuaLen(t.den, gio(luc), mmss((Date.parse(luc) - Date.parse(t.bat_dau)) / 1000)));
   const dangKiem = t.buoc !== 'xong', loiKiem = !dangKiem && !!k && !k.dat;
-  if (dangKiem) { const c = t.buoc === 'kiem' ? t.chi_tiet || {} : {}; h += dong('', 'loader', '#1456F0', SL.dangKiem(+c.da || 0, c.tong || 6)); }
-  else if (k) h += dong(k.dat ? 'dat' : 'canh', k.dat ? 'circle-check' : 'circle-alert', k.dat ? '#258832' : '#E22E28', CHU_CN.kiem + k.chu)
+  if (dangKiem) { const c = t.buoc === 'kiem' ? t.chi_tiet || {} : {}; h += dong('', 'loader', 'var(--xanh-chu)', SL.dangKiem(+c.da || 0, c.tong || 6)); }
+  else if (k) h += dong(k.dat ? 'dat' : 'canh', k.dat ? 'circle-check' : 'circle-alert', k.dat ? 'var(--dat)' : 'var(--canh)', CHU_CN.kiem + k.chu)
     + (k.dat ? '' : '<div class="t12 phu">' + cum(SL.vanChay(d.ban_dang)) + '</div>');
   const dn = t.drive_nen;
-  if (t.drive_tat) h += '<div class="ks phu">' + icoMau(ICON['cloud-off'], '#646A73', 14) + '<span>' + cum(SL.tatSau) + '</span></div>';   // QĐ278 Z21 dòng 6
-  if (dn && dn.tong) h += dn.da >= dn.tong ? dong('dat', 'cloud-check', '#258832', SL.daLen(dn.tong))
-    : dn.loi ? dong('xem', 'cloud-alert', '#8F5F00', SL.chuaLenHet(dn.da, dn.tong, gio(dn.hen || ''))) : dong('', 'cloud-upload', '#1456F0', SL.dangDay(dn.da, dn.tong));
+  if (t.drive_tat) h += '<div class="ks phu">' + icoMau(ICON['cloud-off'], 'var(--phu)', 14) + '<span>' + cum(SL.tatSau) + '</span></div>';   // QĐ278 Z21 dòng 6
+  if (dn && dn.tong) h += dn.da >= dn.tong ? dong('dat', 'cloud-check', 'var(--dat)', SL.daLen(dn.tong))
+    : dn.loi ? dong('xem', 'cloud-alert', 'var(--xem)', SL.chuaLenHet(dn.da, dn.tong, gio(dn.hen || ''))) : dong('', 'cloud-upload', 'var(--xanh-chu)', SL.dangDay(dn.da, dn.tong));
   e.innerHTML = h;
   if (the) the.classList.toggle('vien-loi', loiKiem);
   return {co, loiKiem, keoDrive: !!(dn && dn.tong && dn.da < dn.tong)};   // CDO U21 G2: Drive lỗi vẫn theo dõi (tự đẩy lại)
@@ -644,13 +644,13 @@ const TD8 = {ma: ['o_trong', 'chup', 'drive', 'gui', 'tai', 'khoidong', 'nang', 
   phuQua: 'Bạn chọn ở hộp đang mở.', phuLoi: b => 'Chưa gửi lệnh cập nhật nên bản ' + b + ' và dữ liệu giữ nguyên. Lỗi ghi vào nhật ký.',
   phuXong: 'Trang tự tải lại sau 03 giây.', thuLai: 'Thử lại',
   NGUONG_CHAM: 2,   // điểm (a): bước ước tính chạy quá 02 lần thời gian dự kiến thì chuyển "lâu hơn ước tính"
-  mau: {dang: '#1456F0', cham: '#8F5F00', loi: '#E22E28', xong: '#258832', cho: '#646A73', chu: '#1F2329'}};
+  mau: {dang: 'var(--xanh-chu)', cham: 'var(--xem)', loi: 'var(--canh)', xong: 'var(--dat)', cho: 'var(--phu)', chu: 'var(--chu)'}};
 ICON.circle = ICON.circle || ICON['circle-check'].replace(/\s*<path[^>]*\/>/, '');   // `circle` xám: bước chưa tới (bỏ dấu tích)
 ICON['circle-minus'] = ICON['circle-minus'] || ICON['circle-check'].replace('lucide-circle-check', 'lucide-circle-minus')
   .replace(/<path d="[^"]*"/, '<path d="M8 12h8"');   // QĐ255 điểm 3: bước 3 bỏ qua (Lucide circle-minus)
 // QĐ261, QĐ262 (bản vẽ Z19): 02 icon Lucide (giấy phép ISC) lấy đúng nét trong bản vẽ: Drive đã lên đủ, Drive lỗi / chuông.
-const svgLucide = (ten, net) => '<svg\n  style="flex:none;vertical-align:middle" class="lucide lucide-' + ten + '"\n  xmlns="http://www.w3.org/2000/svg"\n'
-  + '  width="16"\n  height="16"\n  viewBox="0 0 24 24"\n  fill="none"\n  stroke="#1F2329"\n  stroke-width="2"\n  stroke-linecap="round"\n'
+const svgLucide = (ten, net) => '<svg\n  style="flex:none;vertical-align:middle;color:var(--chu)" class="lucide lucide-' + ten + '"\n  xmlns="http://www.w3.org/2000/svg"\n'
+  + '  width="16"\n  height="16"\n  viewBox="0 0 24 24"\n  fill="none"\n  stroke="currentColor"\n  stroke-width="2"\n  stroke-linecap="round"\n'
   + '  stroke-linejoin="round"\n>\n' + net.map(d => d.startsWith('<') ? '  ' + d + '\n' : '  <path d="' + d + '" />\n').join('') + '</svg>';
 ICON['cloud-check'] = ICON['cloud-check'] || svgLucide('cloud-check', ['m17 15-5.5 5.5L9 18', 'M5 17.743A7 7 0 1 1 15.71 10h1.79a4.5 4.5 0 0 1 1.5 8.742']);
 // QĐ278, QĐ287 (bản vẽ Z21, Z24): Drive tắt, không còn bản sao để quay về, nút khóa
@@ -688,7 +688,7 @@ const CA = {tieu: 'Công cụ AI', gat: 'Tự nâng mỗi ngày',
     + '; lượt kiểm 03:00 ' + n + ' thử lại.',   // QĐ307 dòng 20 (QĐ306): dòng xám, không chuông; n theo QĐ308 điểm 11
   goiTen: {claude: 'Claude', chatgpt: 'ChatGPT'}, homNay: 'hôm nay', ngayMai: 'ngày mai',
   chuaNang: 'Chưa nâng',   // QĐ308 điểm 4: cột "Nâng gần nhất" khi chưa nâng lần nào
-  mau: {dat: '#258832', xem: '#8F5F00', xam: '#646A73', xanh: '#1456F0'}};
+  mau: {dat: 'var(--dat)', xem: 'var(--xem)', xam: 'var(--phu)', xanh: 'var(--xanh-chu)'}};
 ICON['circle-pause'] = ICON['circle-pause'] || svgLucide('circle-pause', ['<circle cx="12" cy="12" r="10" />',
   '<line x1="10" x2="10" y1="15" y2="9" />', '<line x1="14" x2="14" y1="15" y2="9" />']);
 ICON['circle-arrow-up'] = ICON['circle-arrow-up'] || svgLucide('circle-arrow-up', ['<circle cx="12" cy="12" r="10" />', 'm16 12-4-4-4 4', 'M12 16V8']);
@@ -719,7 +719,7 @@ function caDich(c) {   // gói nút "Nâng công cụ AI" nâng (gói đầu ti�
   return c.goi.find(x => { const h = caMoi(x); return h && h.uoc_chu; }) || null;
 }
 function htmlCongCu(c, bay) {
-  const dong = (mau, ico, chu, phu) => '<span class="ks"' + (mau ? ' style="color:' + mau + '"' : '') + '>' + icoMau(ICON[ico], mau || '#1F2329', 14)
+  const dong = (mau, ico, chu, phu) => '<span class="ks"' + (mau ? ' style="color:' + mau + '"' : '') + '>' + icoMau(ICON[ico], mau || 'var(--chu)', 14)
     + '<span>' + caCum(chu) + '</span></span>' + (phu ? '<div class="t12 phu" style="margin-top:4px">' + caCum(phu) + '</div>' : '');
   const bat = c.bat && !c.tam_dung, dn = c.dang_nang;
   let h = '<div class="dong" style="gap:8px;align-items:center">' + ICON.wrench + '<span class="t16 b7 f1">' + CA.tieu + '</span><span class="t13">'
@@ -742,8 +742,8 @@ function htmlCongCu(c, bay) {
       + '</span><span data-l="' + CA.cot[2] + '">' + o3 + '</span>'
       + '<span data-l="' + CA.cot[3] + '">' + (gan ? ngay(caVn(gan)) + ' ' + caVn(gan).slice(11, 16) : CA.chuaNang) + '</span><span class="phai">'
       + (!coVe ? '' : c.chan ? '<button class="btn-chu nho qv-khoa" disabled' + (c.chan_chu ? ' title="' + esc(c.chan_chu) + '"' : '') + '>'
-        + icoMau(ICON['rotate-ccw'], '#646A73', 14) + CA.ve + '</button>'
-        : '<button class="btn-chu nho" data-cave="' + esc(x.goi) + '">' + icoMau(ICON['rotate-ccw'], '#1456F0', 14) + CA.ve + '</button>') + '</span></div>';
+        + icoMau(ICON['rotate-ccw'], 'var(--phu)', 14) + CA.ve + '</button>'
+        : '<button class="btn-chu nho" data-cave="' + esc(x.goi) + '">' + icoMau(ICON['rotate-ccw'], 'var(--xanh-chu)', 14) + CA.ve + '</button>') + '</span></div>';
   });
   // dòng trạng thái (01 dòng): đang nâng > tạm dừng > việc vừa xảy ra hôm nay > tắt > hãng có bản mới > mới nhất
   let tt;
@@ -768,8 +768,8 @@ function htmlCongCu(c, bay) {
   else tt = dong(CA.mau.dat, 'circle-check', CA.thuong(caKiemTiep(c, bay)));
   const dich = caDich(c);
   const nut = dn ? '<button class="btn khoa" disabled>' + ICON.loader + CA.dangNut + '</button>'
-    : dich ? '<button class="btn btn-chinh" data-canang="' + esc(dich.goi) + '">' + icoMau(ICON['circle-arrow-up'], '#FFFFFF', 16) + CA.nut + '</button>'
-    : '<button class="btn khoa" disabled' + (c.chan_chu ? ' title="' + esc(c.chan_chu) + '"' : c.tam_dung || c.chan ? '' : ' title="' + CA.nutKhoa + '"') + '>' + icoMau(ICON['circle-arrow-up'], '#646A73', 16) + CA.nut + '</button>';
+    : dich ? '<button class="btn btn-chinh" data-canang="' + esc(dich.goi) + '">' + icoMau(ICON['circle-arrow-up'], 'var(--chu-tren-nut)', 16) + CA.nut + '</button>'
+    : '<button class="btn khoa" disabled' + (c.chan_chu ? ' title="' + esc(c.chan_chu) + '"' : c.tam_dung || c.chan ? '' : ' title="' + CA.nutKhoa + '"') + '>' + icoMau(ICON['circle-arrow-up'], 'var(--phu)', 16) + CA.nut + '</button>';
   return h + '<div class="cl-chan"><div class="f1">' + tt + '</div>' + nut + '</div>';
 }
 // </CA>
@@ -847,15 +847,15 @@ function htmlTienDo(td, o) {   // o: {bay, cu (bản đang chạy), kiem (kiểm
   const hang = r.thu.map((x, i) => { const y = o.quaGio && i === 2 ? {tt: 'cham', cot: TD8.quaGio} : x;
     return '<div class="td8-dong ' + (y.tt === 'xong' || y.tt === 'cho' ? y.tt : y.tt === 'bo' || y.tt === 'nen' ? 'cho' : 'dang') + '">' + icoMau(ICON[ico[y.tt][0]], ico[y.tt][1], 15)
       + '<span class="f1">' + (i + 1) + '. ' + TD8.ten[i] + '</span><span class="td8-m">' + y.cot + '</span></div>'; }).join('');
-  const vong = c => '<circle cx="48.0" cy="48.0" r="42.0" fill="none" stroke="' + c + '" stroke-width="10"';
-  return '<div class="giua" style="width:96px;height:96px"><svg width="96" height="96" viewBox="0 0 96 96">' + vong('#F5F6F7') + '/>' + vong(mau)
+  const vong = c => '<circle cx="48.0" cy="48.0" r="42.0" fill="none" style="stroke:' + c + '" stroke-width="10"';
+  return '<div class="giua" style="width:96px;height:96px"><svg width="96" height="96" viewBox="0 0 96 96">' + vong('var(--xam)') + '/>' + vong(mau)
     + ' stroke-linecap="round" stroke-dasharray="' + (r.pt / 100 * 263.9).toFixed(1) + ' 263.9" transform="rotate(-90 48.0 48.0)"/></svg>'
     + '<b class="td-so" style="color:' + mau + '">' + r.pt + '%</b></div><div class="f1"><div class="t20 b7">'
     + esc(r.xong ? TD8.daLen(td.den) : td.loi ? TD8.chuaLen(td.den) : TD8.dang(td.den)) + '</div>'
     + '<div class="td-buoc" style="color:' + (tt === 'dang' ? M.chu : mau) + '">' + dong + '</div>'
     + '<div class="td" style="height:10px;margin-top:8px"><div class="tdf" style="width:' + r.pt + '%;background:' + mau + '"></div></div>'
     + '<div class="td-gio phu">' + gio + '</div><div class="phu" style="margin-top:4px">' + cum(phu) + '</div>'
-    + (td.loi ? '<div class="dong" style="margin-top:10px"><button class="btn btn-chinh nho" data-cnngay>' + icoMau(ICON['refresh-cw'], '#FFFFFF', 16)
+    + (td.loi ? '<div class="dong" style="margin-top:10px"><button class="btn btn-chinh nho" data-cnngay>' + icoMau(ICON['refresh-cw'], 'var(--chu-tren-nut)', 16)
       + TD8.thuLai + '</button></div>' : '') + '<div class="td8">' + hang + '</div></div>';
 }
 function veTienDo(td, o) {   // td = null: thẻ cũ (quay về bản trước, máy chủ chưa có tiến độ)
@@ -971,7 +971,7 @@ const timNguon = id => id && D.md ? D.md.nguon.find(n => n.id === id) : null;
 const mhThucDung = x => x.mohinh_bao || x.mohinh || null;
 // QĐ189 (Z11): dòng nguồn ghi "Hãng · Công cụ · Mô hình", không ghi tài khoản; tài khoản thực chạy chỉ hiện khi rê chuột
 // Z11b (QĐ189): cảnh báo khi thêm tài khoản thứ 02 cho cùng 01 gói; chữ IGM360 tự viết
-const canhTk = ten => '<div class="canh-tk">' + icoMau(ICON['circle-alert'], '#8F5F00', 14) + '<span>Lưu ý: dùng nhiều tài khoản ' + ten
+const canhTk = ten => '<div class="canh-tk">' + icoMau(ICON['circle-alert'], 'var(--xem)', 14) + '<span>Lưu ý: dùng nhiều tài khoản ' + ten
   + ' trên cùng phần mềm, hãng có thể khóa tài&nbsp;khoản.</span></div>';
 const tenLoai = n => n && n.goi ? TEN_NGUON_GOI[n.goi] : tenNguon(n);
 const nhanTraLoi = x => { const n = timNguon(x.nguon_id), mh = mhThucDung(x);
@@ -995,7 +995,7 @@ const pct = v => v == null ? null : Math.max(0, Math.min(100, Number(v)));
 D.hmCu = {};
 function thanhHm(ten, v, k) { const p = pct(v), cu = k && k in D.hmCu ? D.hmCu[k] : (p ?? 0); if (k) D.hmCu[k] = p ?? 0;
   return '<div class="hm"><span class="t12 phu nw">' + ten + '</span><div class="td" style="height:8px"><div class="tdf" data-w="' + (p ?? 0) + '" style="width:'
-  + cu + '%;background:' + (p >= 90 ? '#E22E28' : '#1456F0') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : Math.round(p) + '%') + '</b></div>'; }
+  + cu + '%;background:' + (p >= 90 ? 'var(--h-canh)' : 'var(--h-chinh)') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : Math.round(p) + '%') + '</b></div>'; }
 // Y36b, Y36c N4: "Opus của tài khoản 1 hết hạn mức đến 20:45" (khác ngày: "đến 20:45 ngày 26/11"); dùng chung màn 13 và khung chat
 const denLuc = iso => !iso ? '' : gio(iso) + (hien(iso).slice(0, 10) !== homNay() ? ' ngày ' + hien(iso).slice(8, 10) + '/' + hien(iso).slice(5, 7) : '');
 const tenHet = (m, n) => m.ma ? tenMh(m.ma, n && n.id, n, true) : m.ten_khung || (m.bao ? tenMh(m.bao, n && n.id, n, true) : '');
@@ -1040,24 +1040,24 @@ const CHU_Z15 = {
 const coBaoLayLai = (g, tk) => !!(D.trung[g] && (D.trungTk || {})[g] === tk && (D.trungChu || {})[g]);   // Y38f L3, Y38h L4
 const baoLayLai = (chu, tk) => '<div class="bao-lai t13"><div class="loi-o">' + ICON['circle-alert'] + '<span>'
   + cum(cau(chu)).split(CHU_Z15.hdNut).join('<b>' + nbsp(CHU_Z15.hdNut) + '</b>') + '</span></div>'
-  + '<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="' + tk + '">' + icoMau(ICON['log-in'], '#1F2329', 16) + nbsp(CHU_Z15.hdNut) + '</button></div>';
+  + '<button class="btn btn-phu nho" data-dn-goi="claude" data-dn-tk="' + tk + '">' + icoMau(ICON['log-in'], 'var(--chu)', 16) + nbsp(CHU_Z15.hdNut) + '</button></div>';
 const giuTienTo = h => String(h).split('sk-ant-oat01-').join('<span class="nw">sk-ant-oat01-</span>');   // Y38d N42
 // N28 (a): làm sạch mã dán vào như máy chủ (bỏ khoảng trắng, xuống dòng, ký tự ẩn; nhận dạng TÊN=mã, dấu nháy)
 function lamSachMa(s) { let m = String(s || '').replace(/[\s\u200b\u200c\u200d\u2060\ufeff]+/g, '');
   const i = m.indexOf('sk-ant-oat01-'); if (i > 0) m = m.slice(i);   // Y38c R9: chữ đứng trước mã bỏ đi
   return m.replace(/^['"`]+|['"`]+$/g, ''); }
-const nutMdGt = () => '<button class="nut-i" data-md-gt title="' + CHU_Z15.iRe + '">' + icoMau(ICON['info'], '#646A73', 14) + '</button>';   // 01
+const nutMdGt = () => '<button class="nut-i" data-md-gt title="' + CHU_Z15.iRe + '">' + icoMau(ICON['info'], 'var(--phu)', 14) + '</button>';   // 01
 const gioKiem = iso => hien(iso).slice(0, 10) === homNay() ? gio(iso) : hien(iso).slice(8, 10) + '/' + hien(iso).slice(5, 7) + ' ' + gio(iso);   // hôm khác ghi ngày
 function theMd(x, go) {
   const md = x.ma_daihan, tk = x.taikhoan, canh = md && (md.het || md.vang), k = x.kiem_md;
   let h = '';
-  if (md) h += '<div class="md-chip' + (canh ? ' canh' : '') + '">' + icoMau(ICON['key-round'], canh ? '#E22E28' : '#258832', 13)
+  if (md) h += '<div class="md-chip' + (canh ? ' canh' : '') + '">' + icoMau(ICON['key-round'], canh ? 'var(--canh)' : 'var(--dat)', 13)
     + (md.het ? CHU_MDH + ' hết hạn ' + esc(ngay(md.han)) : CHU_MDH + ' ••••' + esc(md.kytu_cuoi || '')) + '</div>' + nutMdGt()
     + (md.het ? '<div class="md-han canh">tài khoản ' + tk + ' ngừng&nbsp;chạy</div>'
       : '<div class="md-han' + (canh ? ' canh' : '') + '">hết hạn ' + esc(ngay(md.han)) + '</div><div class="md-han' + (canh ? ' canh' : '') + '">còn ' + hai(md.con_ngay) + '&nbsp;ngày</div>');
   else if (x.da_noi) h += '<div class="md-chip xem">Đăng nhập kiểu&nbsp;cũ</div>' + nutMdGt() + '<div class="md-han xem">có thể hết phiên giữa&nbsp;chừng</div>';
-  if (md && k) h += k.dat ? '<div class="md-han dat-chu dong-i">' + icoMau(ICON['circle-check'], '#258832', 13) + nbsp(CHU_Z15.kiemDat + gioKiem(k.luc)) + '</div>'   // 16
-    : '<div class="md-han canh dong-i" title="' + (k.het_hanmuc ? CHU_Z15.kiemHanMucRe : CHU_Z15.kiemLoiRe) + '">' + icoMau(ICON['circle-alert'], '#E22E28', 13) + nbsp(CHU_Z15.kiemLoi + gioKiem(k.luc)) + '</div>';   // 17
+  if (md && k) h += k.dat ? '<div class="md-han dat-chu dong-i">' + icoMau(ICON['circle-check'], 'var(--dat)', 13) + nbsp(CHU_Z15.kiemDat + gioKiem(k.luc)) + '</div>'   // 16
+    : '<div class="md-han canh dong-i" title="' + (k.het_hanmuc ? CHU_Z15.kiemHanMucRe : CHU_Z15.kiemLoiRe) + '">' + icoMau(ICON['circle-alert'], 'var(--canh)', 13) + nbsp(CHU_Z15.kiemLoi + gioKiem(k.luc)) + '</div>';   // 17
   const chuaKiem = md && !md.het && x.chua_kiem_trung;   // QĐ216 N6
   if (chuaKiem) h += '<div class="md-han xem" title="' + CHU_Z15.chuaKiemRe + '">' + nbsp(CHU_Z15.chuaKiem) + '</div>';   // 18
   h += '<div class="md-nut">';
@@ -1070,15 +1070,15 @@ function theMd(x, go) {
 }
 function moMdGt() {   // hộp (i) "Mã dài hạn" (QĐ214, Z15 dòng 02–10)
   if (!$('#h-mdgt')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-mdgt" hidden><div class="hop" style="max-width:500px"><div class="hop-dau">'
-    + ICON['key-round'] + '<b class="f1 t16">' + CHU_Z15.iTieu + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div><div class="hop-than">'
-    + CHU_Z15.iDong.map(([i, c]) => '<div class="dong t13 md-gt">' + icoMau(ICON[i], '#1456F0', 16) + '<span>'
+    + ICON['key-round'] + '<b class="f1 t16">' + CHU_Z15.iTieu + '</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, 'var(--phu)', 20) + '</button></div><div class="hop-than">'
+    + CHU_Z15.iDong.map(([i, c]) => '<div class="dong t13 md-gt">' + icoMau(ICON[i], 'var(--xanh-chu)', 16) + '<span>'
       + cum(c).replace(CHU_Z15.lenh, '<span class="nw">' + CHU_Z15.lenh + '</span>') + '</span></div>').join('')   // lệnh không ngắt dòng
     + '<div class="bao-vang t13">' + ICON['circle-alert'] + '<span>' + cum(CHU_Z15.iNhac) + '</span></div></div>'
     + '<div class="hop-chan"><button class="btn btn-chinh" data-dong>' + CHU_Z15.iNut + '</button></div></div></div>');
   mo('h-mdgt'); }
 // Z13 trạng thái 4c: ô báo viền đỏ dưới ô tài khoản có mã hết hạn
 const theMdHet = (x, ds) => { const con = (ds || []).find(y => y.taikhoan !== x.taikhoan && y.da_noi && !(y.ma_daihan && y.ma_daihan.het));
-  return '<div class="md-het"><div class="dong t13 b6">' + icoMau(ICON['clock'], '#E22E28', 16) + '<span>' + CHU_MDH + ' tài khoản ' + x.taikhoan + ' hết hạn '
+  return '<div class="md-het"><div class="dong t13 b6">' + icoMau(ICON['clock'], 'var(--canh)', 16) + '<span>' + CHU_MDH + ' tài khoản ' + x.taikhoan + ' hết hạn '
   + esc(ngay(x.ma_daihan.han)) + '</span></div><div class="t12 phu">' + (con ? 'Tài&nbsp;khoản&nbsp;' + x.taikhoan + ' ngừng chạy; phần mềm dùng tài&nbsp;khoản&nbsp;' + con.taikhoan
     + ' rồi tới nguồn kế&nbsp;tiếp.' : 'Claude ngừng chạy; phần mềm dùng nguồn kế&nbsp;tiếp.') + '</div>'
   + '<button class="btn btn-chinh nho" data-md-lay="' + x.taikhoan + '">' + ICON['refresh-cw'] + 'Lấy mã&nbsp;mới</button></div>'; };
@@ -1099,7 +1099,7 @@ const theMdKetNoi = (tk, k) => '<div class="md-hop"><div class="b6 t13">' + (tkC
 D.mdDan = null;   // {tk, loi, tin}
 function moMdDan(tk, tin) {
   if (!$('#h-mdh')) $('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-mdh" hidden><div class="hop"><div class="hop-dau">' + ICON['key-round']
-    + '<b class="f1 t16" id="mdh-tieu"></b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div><div class="hop-than" id="mdh-than"></div>'
+    + '<b class="f1 t16" id="mdh-tieu"></b><button class="nut-ico" data-dong>' + icoMau(ICON.x, 'var(--phu)', 20) + '</button></div><div class="hop-than" id="mdh-than"></div>'
     + '<div class="hop-chan"><button class="btn btn-phu" data-dong>Hủy</button><button class="btn btn-chinh" id="mdh-luu" data-md-luu="1">Lưu mã</button></div></div></div>');
   D.mdDan = {tk, loi: '', tin: tin || ''}; veMdDan(); mo('h-mdh'); const o = $('#md-ma-dan'); if (o) o.focus(); }
 function veMdDan() { const k = D.mdDan; if (!k) return;
@@ -1225,7 +1225,7 @@ function veMoHinh() {
   $('#ds-mohinh').innerHTML = '<div class="hang tieu-de" style="' + cot + '"><span>Loại việc</span><span>Mô hình</span><span>Nguồn</span><span></span></div>'
     + Object.entries(LV).map(([k, v]) => { const x = mdLoai(k);   // Z10c: x.m trống = "Mặc định của nguồn" x.g
       const mat = ((D.dsmh && D.dsmh.macdinh_ct) || {})[k] && D.dsmh.macdinh_ct[k].mat;   // Đ6: nhóm đã đặt không còn tài khoản
-      const iVn = k === 'viecnen_chung' ? ' <button class="nut-ico nho" data-ivn title="' + CHU_VN + '">' + icoMau(ICON['info'], '#646A73', 14) + '</button>' : '';
+      const iVn = k === 'viecnen_chung' ? ' <button class="nut-ico nho" data-ivn title="' + CHU_VN + '">' + icoMau(ICON['info'], 'var(--phu)', 14) + '</button>' : '';
       return '<div class="hang" style="' + cot + '"><b class="rong-mb' + (iVn ? ' ten-i' : '') + '">' + (iVn ? '<span>' + cum(v) + '</span>' : esc(v)) + iVn + '</b><span data-l="Mô hình"' + (x && x.m ? ' title="Bản cụ thể: ' + esc(x.m.ma) + '"'
         : mat ? ' title="Nguồn đã đặt không còn tài khoản nào: dùng nguồn ưu tiên 1"' : '') + '>'
         + (x && x.m ? esc(tenMh(x.m.ma, x.g.nhom, x.g)) : 'Mặc định của nguồn') + '</span><span data-l="Nguồn">'
@@ -1259,8 +1259,8 @@ async function danMaClaude() {
 // ---- Ô chọn mô hình màn 08 + hộp "Đổi" màn 13 (QĐ178–QĐ183, PTD-08, bản vẽ Z10, Z10b): 01 danh sách G08 dùng chung
 const MH = {noi: null, tim: '', mo: null, dich: null, cu: false};   // cu: dòng "Bản cũ (n)" đang mở (QĐ311 G2)   // noi: 'chat' (bảng xổ màn 08) | 'md' (hộp màn 13); dich: loại việc
 D.hong = {};   // {mã cuộc: {het, dung, nguon_id}}: mô hình ghim không dùng được ở lượt gần nhất (nút vàng tới khi dùng lại được)
-// Y31b S5: đổi màu nét mọi dạng mã màu, kể cả "#fff" của icon dấu cộng
-const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
+// Y31b S5; QĐ562: icon vẽ bằng currentColor, màu đặt ở `color` trong style của thẻ svg (biến màu theo vai trò)
+const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="currentColor"').replace(/(<svg\b[^>]*?style="[^"]*?)color:[^;"]*/, '$1color:' + mau).replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
 // Y34: chỉ lượt tải mới nhất được ghi (lượt mạng về muộn thì bỏ); trả true khi danh sách đổi. Bảng đang mở chỉ vẽ lại khi
 // danh sách đổi thật, để lượt bấm của anh không rơi vào lúc bảng đang được vẽ lại (nguồn học: tailieu/Songuongoc.md).
 let luotDs = 0;
@@ -1308,7 +1308,7 @@ function chuGhimHong(x) { const g = x.ghim_hong || x.md_hong, a = x.ghim_hong &&
 // QĐ319 (Y46-7): tệp logo ChatGPT (chép nguyên của OpenAI, QĐ169, QĐ170) có hình chỉ chiếm 49,5% khung, ép về 18 px thì
 // hình còn ≈ 09 px. Giữ nguyên tệp, chỉ vẽ cỡ 32 px với lề âm 07 px trong ô 18 px: hình ≈ 16 px, cân logo Claude.
 const logoNhom = g => { const cl = g.goi === 'claude' || g.hang === 'anthropic', gpt = !cl && (g.goi === 'chatgpt' || g.hang === 'openai');
-  const l = cl ? ICON.logo_claude : gpt ? ICON.logo_chatgpt : icoMau(ICON['key-round'], '#646A73', 16), co = gpt ? 32 : 18;   // QĐ319: 32 px
+  const l = cl ? ICON.logo_claude : gpt ? ICON.logo_chatgpt : icoMau(ICON['key-round'], 'var(--phu)', 16), co = gpt ? 32 : 18;   // QĐ319: 32 px
   const s = l.replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
   return '<span class="logo-n">' + (gpt ? s.replace('<svg ', '<svg style="flex:none;margin:-7px" ') : s) + '</span>'; };   // lề âm 07 px
 function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 phu">Chưa có nguồn AI đã kết nối</span>';
@@ -1316,9 +1316,9 @@ function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 
   const tieu = hong && hong.nghi ? chuNghi(hong.nghi, timNguon(hong.nghi.nguon_id)) + ' · tạm dùng ' + (timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình')
     : hong ? ten + (hong.het ? ' đang hết hạn mức' : ' chưa dùng được') + ' · tạm dùng ' + (hong.dung ? tenMh(hong.dung, hong.nguon_id, null, true) : timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình') + ' (mặc định)' + (hong.het ? ' cho tới khi đặt lại' : '')
     : tenNguon(c.g).replace(/\u00a0/g, ' ') + ' · ' + ten + (c.m ? ' · Bản cụ thể: ' + c.m.ma : '') + (c.ghim ? ' · đã ghim cho cuộc trò chuyện này' : ' · theo mặc định chung');
-  return '<button type="button" class="mh-nut' + (MH.noi === 'chat' ? ' mo' : '') + '" data-mhnut title="' + esc(tieu) + '"><span class="mh-cham"' + (hong ? ' style="background:#8F5F00"' : '') + '></span>' + esc(ten)
-    + (c.ghim ? '<span aria-label="' + (hong ? 'ghim chưa dùng được' : 'đã ghim') + '">' + icoMau(ICON.pin, hong ? '#8F5F00' : '#646A73', 13) + '</span>' : '')
-    + icoMau(ICON['chevron-down'], '#646A73', 14) + '</button>'; }
+  return '<button type="button" class="mh-nut' + (MH.noi === 'chat' ? ' mo' : '') + '" data-mhnut title="' + esc(tieu) + '"><span class="mh-cham"' + (hong ? ' style="background:var(--xem)"' : '') + '></span>' + esc(ten)
+    + (c.ghim ? '<span aria-label="' + (hong ? 'ghim chưa dùng được' : 'đã ghim') + '">' + icoMau(ICON.pin, hong ? 'var(--xem)' : 'var(--phu)', 13) + '</span>' : '')
+    + icoMau(ICON['chevron-down'], 'var(--phu)', 14) + '</button>'; }
 // N1: loại việc chưa đặt thì hộp "Đổi" ✓ ở "Mặc định của nguồn" của nguồn chính
 const chonDang = noi => noi === 'chat' ? dangChonChat() : (MH.dich && mdLoai(MH.dich)) || {g: nhomChinh(), m: null};
 const CHU_MD = 'Mặc định của nguồn';
@@ -1347,40 +1347,40 @@ function dsMhHtml(noi) { const q = MH.tim.trim().toLowerCase(), nh = D.dsmh ? D.
     if (q && !tenKhop && !hien.length && !coMd) continue;
     co++; const mo = q ? true : moId === g.nhom;
     h += '<button type="button" class="mh-nhom" data-mhnhom="' + esc(g.nhom) + '">' + logoNhom(g) + '<span>' + esc(tg) + '</span>'
-      + (g.chinh ? '<span title="Nguồn chính · ưu tiên 1">' + icoMau(ICON.check, '#258832', 14) + '</span>' : '') + '<span class="f1"></span>'
-      + icoMau(ICON[mo ? 'chevron-down' : 'chevron-right'], '#646A73', 16) + '</button>';
+      + (g.chinh ? '<span title="Nguồn chính · ưu tiên 1">' + icoMau(ICON.check, 'var(--dat)', 14) + '</span>' : '') + '<span class="f1"></span>'
+      + icoMau(ICON[mo ? 'chevron-down' : 'chevron-right'], 'var(--phu)', 16) + '</button>';
     if (!mo) continue;
     if (coMd) {   // N2: khung chat chưa ghim thì ✓ ở đây (kể cả khi loại việc đặt 01 mô hình); hộp "Đổi": khi đặt về mặc định của nguồn
       const onMd = !dang.m && dang.g && dang.g.nhom === g.nhom;   // U10b F1 (QĐ190)
       h += '<button type="button" class="mh-dong' + (onMd ? ' on' : '') + '" data-mhmd="' + esc(g.nhom) + '"'
         + (noi === 'chat' ? ' title="Bỏ ghim · cuộc này và các cuộc mới dùng mô hình mặc định của nguồn"' : '') + '><span class="f1">' + CHU_MD + '</span>'
-        + (onMd ? icoMau(ICON.check, '#1456F0', 16) : '') + '</button>'; }
-    if (g.dang_tai) { h += '<div class="mh-tai">' + icoMau(ICON.loader, '#1456F0', 14) + 'Đang tải danh sách mô hình…</div>'; continue; }
+        + (onMd ? icoMau(ICON.check, 'var(--xanh-chu)', 16) : '') + '</button>'; }
+    if (g.dang_tai) { h += '<div class="mh-tai">' + icoMau(ICON.loader, 'var(--xanh-chu)', 14) + 'Đang tải danh sách mô hình…</div>'; continue; }
     if (!hien.length) { h += '<div class="mh-tai">Chưa có danh sách: dùng mô hình mặc định của nguồn</div>'; continue; }
     const veMh = m => { const on = !!dang.m && dang.m.khoa === m.khoa;   // U10b F1: ✓ đúng mô hình nút đang ghi (cả khi chưa ghim)
       if (m.can_nang) return '<div class="mh-dong mh-xam" title="' + esc(CHU_D.re(m.can_nang, m.ban_dang)) + '"><span class="f1">' + esc(ten(m))   // Z20 dòng 16
         + '<span class="mh-phu">' + CHU_D.can + '</span></span></div>';
       return '<button type="button" class="mh-dong' + (on ? ' on' : '') + '" data-mhchon="' + esc(m.khoa) + '" title="Bản cụ thể: ' + esc(m.ma) + '"><span class="f1">' + esc(ten(m))
         + (m.moi ? ' <span class="mh-moi">' + CHU_D.moi + '</span>' : '') + '</span>'   // Z20 dòng 17
-        + (on ? icoMau(ICON.check, '#1456F0', 16) : '') + '</button>'; };
+        + (on ? icoMau(ICON.check, 'var(--xanh-chu)', 16) : '') + '</button>'; };
     const {chinh, cu} = !q && g.nhom === 'goi_claude' ? tachBanCu(hien, dang.m && dang.m.khoa) : {chinh: hien, cu: []};   // QĐ311 G2; đang tìm thì hiện hết
     chinh.forEach(m => { h += veMh(m); });
-    if (cu.length) { h += '<button type="button" class="mh-dong mh-cu" data-mhcu>' + icoMau(ICON[MH.cu ? 'chevron-down' : 'chevron-right'], '#646A73', 14)
+    if (cu.length) { h += '<button type="button" class="mh-dong mh-cu" data-mhcu>' + icoMau(ICON[MH.cu ? 'chevron-down' : 'chevron-right'], 'var(--phu)', 14)
       + '<span class="f1">' + CHU_D.banCu(cu.length) + '</span></button>'; if (MH.cu) cu.forEach(m => { h += veMh(m); }); } }
   if (!co) h += q ? '<div class="mh-rong">Không có nguồn hoặc mô hình khớp "' + esc(MH.tim) + '"</div>' : '<div class="mh-rong">Chưa có nguồn AI nào đã kết nối</div>';
   return h; }
-const bangMhHtml = noi => '<div class="mh-bang" data-mhbang="' + noi + '"><label class="mh-tim">' + icoMau(ICON.search, '#646A73', 15)
+const bangMhHtml = noi => '<div class="mh-bang" data-mhbang="' + noi + '"><label class="mh-tim">' + icoMau(ICON.search, 'var(--phu)', 15)
   + '<input data-mhtim placeholder="Tìm nguồn, mô hình…" value="' + esc(MH.tim) + '"></label><div class="mh-ghi" title="'
   + 'Nhiều tài khoản cùng loại: dùng tài khoản đang chạy, hết hạn mức mới sang tài khoản dự phòng">'
   + (noi === 'chat' ? 'Dùng ngay cho cuộc này và các cuộc mới' : 'Mô hình mặc định cho loại việc này · chỉ hiện nguồn đã kết nối') + '</div>'
   + '<div class="mh-ds">' + dsMhHtml(noi) + '</div><div class="mh-chan"><button type="button" class="mh-nhom" data-trang="13" data-mhdong>'
-  + icoMau(ICON.plus, '#1456F0', 16) + '<span style="color:#1456F0">Thêm nguồn AI ở mục Mô hình AI</span></button></div></div>';
+  + icoMau(ICON.plus, 'var(--xanh-chu)', 16) + '<span style="color:var(--xanh-chu)">Thêm nguồn AI ở mục Mô hình AI</span></button></div></div>';
 function veNutMh() { const e = $('#mh-chat'); if (e) e.innerHTML = nutMh() + (MH.noi === 'chat' ? bangMhHtml('chat') : ''); }
 function veLaiMh() { const b = MH.noi === 'md' ? $('#h-chonmh .mh-ds') : MH.noi === 'chat' ? $('#mh-chat .mh-ds') : null;
   if (b) b.innerHTML = dsMhHtml(MH.noi); if (MH.noi !== 'md') { const n = $('#mh-chat .mh-nut'); if (n) n.outerHTML = nutMh(); else veNutMh(); } }
 function dongMh() { MH.noi = null; MH.tim = ''; MH.mo = null; veNutMh(); }
-$('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-chonmh" hidden><div class="hop mh-hop"><div class="hop-dau">' + icoMau(ICON['brain-circuit'], '#1456F0', 20)
-  + '<b class="f1 t16" id="mh-tieu">Chọn mô hình</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, '#646A73', 20) + '</button></div><div class="hop-than" id="mh-than13"></div></div></div>');
+$('#h-them').insertAdjacentHTML('afterend', '<div class="lop" id="h-chonmh" hidden><div class="hop mh-hop"><div class="hop-dau">' + icoMau(ICON['brain-circuit'], 'var(--xanh-chu)', 20)
+  + '<b class="f1 t16" id="mh-tieu">Chọn mô hình</b><button class="nut-ico" data-dong>' + icoMau(ICON.x, 'var(--phu)', 20) + '</button></div><div class="hop-than" id="mh-than13"></div></div></div>');
 document.addEventListener('click', async ev => {
   const b = ev.target.closest('[data-mhnut],[data-mhnhom],[data-mhchon],[data-mhmd],[data-doimd],[data-mhdong],[data-ivn],[data-mhcu]');
   if (!b) { if (MH.noi === 'chat' && !ev.target.closest('#mh-chat')) dongMh(); return; }
@@ -1434,7 +1434,7 @@ function tinHtml(x) {
   if (x.vai === 'hethong') return '<div class="tn-bao do">' + ICON['circle-alert'] + '<span class="f1">' + cum(x.noidung) + '</span>'
     + (x.phu && x.phu.loai === 'luot_cat' ? '' : '<button class="btn btn-phu nho" data-trang="13">Mở Mô hình AI</button>') + '</div>';   // QĐ350
   return '<div class="tn ai"><div class="tn-ico">' + (ICON.tn_ai || ICON.sparkles) + '</div><div class="tn-noi">' + cum(x.noidung).split(/\n{2,}/).map(o => '<p>' + o.replace(/\n/g, '<br>') + '</p>').join('')
-    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || x.md_hong || {}).loi_ct ? ' title="' + esc((x.ghim_hong || x.md_hong).loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], '#8F5F00', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
+    + (x.ghim_hong || x.md_hong ? '<div class="tn-meta mh-vang"' + ((x.ghim_hong || x.md_hong || {}).loi_ct ? ' title="' + esc((x.ghim_hong || x.md_hong).loi_ct) + '"' : '') + '>' + icoMau(ICON['circle-alert'], 'var(--xem)', 13) + '<span>' + chuGhimHong(x) + '</span></div>' : '')
     + '<div class="tn-meta"' + (tieuTraLoi(x) ? ' title="' + esc(tieuTraLoi(x)) + '"' : '') + '>' + cum(nhanTraLoi(x)) + '<button class="nut-ico nho" title="Chép" data-chep-tin="' + esc(x.id) + '">' + ICON.copy + '</button></div></div></div>';
 }
 function veTin(ds, giu) { D.tin = ds; $('#ds-tin').innerHTML = ds.map(tinHtml).join(''); S.tc = ds.length ? 'co' : 'rong'; ve();
@@ -1481,7 +1481,7 @@ function theoLuot(id, ds, gh) { boLuot(); LUOT.id = id;
     try { await api('/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); } catch (e) { bao(e.message + '.'); } }); } }; }
 // QĐ347 H1, QĐ352: đang chờ cập nhật – câu báo ngay dưới câu hỏi vừa gửi (khung "Cần xem", không ghi vào hội thoại,
 // vẽ lại khung chat thì mất), câu hỏi trở lại ô nhập. Chữ đúng chữ máy chủ trả (đã duyệt), không thêm dấu.
-const htmlChoCn = t => '<div class="tn-bao">' + icoMau(ICON['cloud-download'], '#8F5F00', 16) + '<span class="f1">' + cum(t) + '</span></div>';
+const htmlChoCn = t => '<div class="tn-bao">' + icoMau(ICON['cloud-download'], 'var(--xem)', 16) + '<span class="f1">' + cum(t) + '</span></div>';
 // </LUOT>
 async function moHt(id) { boLuot(); const d = await api('/trochuyen/' + encodeURIComponent(id)); D.htId = id;
   $('#tc-tieude').textContent = d.tieude; veTin(d.tinnhan); veDsHt(); dongMh();
@@ -1527,7 +1527,7 @@ document.addEventListener('click', async ev => {
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (d.tab) { S.tab = d.tab; napTab(); }
   else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6), QĐ404
-    t.innerHTML = icoMau(ICON[hien ? 'eye' : 'eye-off'], '#646A73', 18).replace('<svg', '<svg aria-hidden="true"'); t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien); }
+    t.innerHTML = icoMau(ICON[hien ? 'eye' : 'eye-off'], 'var(--phu)', 18).replace('<svg', '<svg aria-hidden="true"'); t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien); }
   else if ('dangnhap' in d) { await dangNhap(); return; }
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }

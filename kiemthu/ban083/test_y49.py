@@ -362,7 +362,7 @@ class KiemChu(unittest.TestCase):
                 "const t = g => ({ten: 'saoluu_drive', nhan: 'Sao lưu Google Drive', giatri: g, giai_thich: 'x', hieuluc_tu: '2026-11-24', nguoi_dat: 'a'});\n"
                 "console.log(JSON.stringify([veCongTac(t('1'), {drive_noi: false}), veCongTac(t('1'), {drive_noi: true}), veCongTac(t('0'), {drive_noi: false})]));\n")
         ra = json.loads(subprocess.run(["node", "-e", chay], capture_output=True, text=True, encoding="utf-8", check=True).stdout)
-        icon = '<i data-ico="cloud-alert" data-mau="#8F5F00" data-co="13"></i><span>Drive chưa nối: bản sao chỉ nằm trên máy chủ.</span>'
+        icon = '<i data-ico="cloud-alert" data-mau="var(--xem)" data-co="13"></i><span>Drive chưa nối: bản sao chỉ nằm trên máy chủ.</span>'
         self.assertIn(icon, ra[0])                                                 # bật mà chưa nối: icon đứng trước chữ
         for h in ra[1:]:                                                           # đã nối, hoặc tắt: không có dòng nhắc
             self.assertNotIn("Drive chưa nối", h)

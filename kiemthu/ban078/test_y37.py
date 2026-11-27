@@ -413,7 +413,7 @@ class KiemGiaoDien(unittest.TestCase):
         doan = js[js.index("const CHU_MDH"):js.index("function theGoi")].lower().replace(khoi.lower(), "")
         self.assertNotIn("token", doan)
         for chu in (".mb .lop{position:fixed!important}", ".mb #h-xacnhan,.mb #h-mdh{align-items:center;padding:16px}",      # N22
-                    ".md-chip.canh{border-color:#F2A7A5;color:var(--canh)}", ".md-han.canh{color:var(--canh);font-weight:600}",  # N12
+                    ".md-chip.canh{border-color:var(--vien-canh);color:var(--canh)}", ".md-han.canh{color:var(--canh);font-weight:600}",  # N12
                     ".md-nut{display:flex;flex-direction:column;", ".md-khoi{padding:0 0 6px 40px}", ".md-chip{white-space:nowrap;"):                                                          # N11
             self.assertIn(chu, self.html, chu)
 
@@ -432,9 +432,9 @@ class KiemGiaoDien(unittest.TestCase):
               + "\nconst c = theMd(x, go), c2 = theMdHet(x), c3 = theMdHet(x, [x, {taikhoan: 2, da_noi: true, ma_daihan: null}]);"
               + "\nconst k = theMdKetNoi(1, {url: 'https://claude.ai/oauth/authorize?x=1', loi: 'Mã chưa đúng', ct: 'Error: invalid code'});"
               + "\nconsole.log(JSON.stringify(["
-              + " a.includes('md-chip canh'), a.includes('[#E22E28]'), a.includes('••••ab12'), a.includes('hết hạn 23/11/2027'), a.includes('còn 05&nbsp;ngày'),"
+              + " a.includes('md-chip canh'), a.includes('[var(--canh)]'), a.includes('••••ab12'), a.includes('hết hạn 23/11/2027'), a.includes('còn 05&nbsp;ngày'),"
               + " a.includes('md-nut') && a.indexOf('md-nut') > a.indexOf('còn 05'), a.endsWith(go + '</div>'), !a.includes('data-md-ngat'),"
-              + " !a2.includes('canh'), a2.includes('[#258832]'),"
+              + " !a2.includes('canh'), a2.includes('[var(--dat)]'),"
               + " b.includes('Đăng nhập kiểu&nbsp;cũ'), b.includes('Chuyển sang'),"
               + " c.includes('Mã dài hạn hết hạn 23/11/2027'), c.includes('ngừng&nbsp;chạy'), c2.includes('md-het'), c2.includes('data-md-lay=\"1\"'),"
               + " k.includes('Xác nhận mã'), k.includes('Lấy link mới'), k.includes('title=\"Error: invalid code\"'), !k.includes('>Error'),"

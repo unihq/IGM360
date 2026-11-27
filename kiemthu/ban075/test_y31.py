@@ -321,8 +321,8 @@ class KiemGiaoDien(unittest.TestCase):
                     ") cho cuộc này và các cuộc mới.'", "Nguồn chính · ưu tiên 1", 'title="Bản cụ thể: ',
                     "' (mặc định)' + (hong.het ? ' cho tới khi đặt lại' : '')", "'Chọn mô hình · '", "data-doimd", "api('/mohinh/macdinh'"):
             self.assertIn(chu, self.js, chu)
-        self.assertIn("#8F5F00", self.js)                                   # chữ vàng tương phản 5,5:1
-        self.assertIn(".tn-meta.mh-vang{color:#8F5F00}", self.html)
+        self.assertIn("var(--xem)", self.js)                                # chữ vàng tương phản 5,5:1
+        self.assertIn(".tn-meta.mh-vang{color:var(--xem)}", self.html)
         self.assertNotIn("effort", self.js.lower())                         # QĐ182: không có nút mức suy nghĩ
         ico = (GD / "icon.js").read_text(encoding="utf-8")
         self.assertIn("lucide-pin", ico)
@@ -332,8 +332,8 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertNotIn("document.body.insertAdjacentHTML", self.js)
         self.assertIn('id="h-them"', self.html)
         dong = next(x for x in self.js.splitlines() if x.startswith("const icoMau"))                       # S5
-        self.assertEqual(dong, """const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="' + mau + '"').replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');""")
-        self.assertIn("icoMau(ICON.plus, '#1456F0', 16)", self.js)
+        self.assertEqual(dong, r"""const icoMau = (svg, mau, co) => svg.replace(/stroke="[^"]*"/, 'stroke="currentColor"').replace(/(<svg\b[^>]*?style="[^"]*?)color:[^;"]*/, '$1color:' + mau).replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');""")   # QĐ562: currentColor + color trong style
+        self.assertIn("icoMau(ICON.plus, 'var(--xanh-chu)', 16)", self.js)
 
     @unittest.skipUnless(shutil.which("node"), "máy không có node")
     def test_y31b_s5_chay_that(self):
@@ -346,7 +346,8 @@ class KiemGiaoDien(unittest.TestCase):
             r = subprocess.run(["node", str(p)], capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         svg = json.loads(r.stdout)
-        self.assertIn('stroke="#1456F0"', svg)
+        self.assertIn('stroke="currentColor"', svg)
+        self.assertIn('color:#1456F0"', svg)   # QĐ562: màu đặt ở style của thẻ svg
         self.assertNotIn('stroke="#fff"', svg)
         self.assertIn('width="16"', svg)
 
