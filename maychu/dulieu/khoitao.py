@@ -19,11 +19,10 @@ Chạy lại nhiều lần không sao. Số phiên bản lược đồ ghi ở P
 import os
 import re
 import sqlite3
-from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import aibam, bonao, dsmorong, ketnoi, phienban, songuoi, suviec, timchu
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 PHIENBAN_LUOCDO = 5
 THUMUC_LUOCDO = Path(__file__).resolve().parent / "luocdo"
@@ -379,10 +378,10 @@ def _dong_khoitao(cn: sqlite3.Connection, ten: str) -> None:
         if ten == "Viecnen":   # QĐ632, L14: T01 chặn sửa 02 tầng; tạo lại sau mỗi lần nâng (như phienban.tao_trigger)
             suviec.tao_trigger(cn)
         if ten == "Bot":
-            bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+            bay = muigio.gio_luu()
             for ma, ten_lich, gio, lap, ngay, gui in LICH_KHOITAO:
                 if not cn.execute("SELECT 1 FROM lich_baocao WHERE ma = ?", (ma,)).fetchone():
-                    phienban.them(cn, "lich_baocao", {"ma": ma, "ten": ten_lich, "hieuluc_tu": bay[:10], "phienban": 1,
+                    phienban.them(cn, "lich_baocao", {"ma": ma, "ten": ten_lich, "hieuluc_tu": muigio.hom_nay(), "phienban": 1,
                                                       "nguoi_khai": "hethong", "tao_luc": bay, "gio_gui": gio,
                                                       "lap_lai": lap, "ngay_trongthang": ngay, "gui_tin": gui})
         cn.execute("COMMIT")
@@ -457,7 +456,7 @@ def tao_het(thumuc: Path | None = None, bao=None) -> dict:
     so_dong = _dem_dong(thumuc, ban) if can_nang else {}
     if can_nang:
         _chup_het(thumuc, co_san)
-        luc = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+        luc = muigio.gio_luu()
         antoan.ghi(thumuc, dang_nang={"tu": min(b for b in ban.values() if b > 0), "den": PHIENBAN_LUOCDO, "luc": luc,
                                       "tep": co_san}, chup_luc=luc)
     try:

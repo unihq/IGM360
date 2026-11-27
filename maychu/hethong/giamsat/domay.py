@@ -9,12 +9,12 @@ Số của cả máy lấy từ hệ điều hành; số của riêng container 
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import psutil
 
-MUIGIO_VN = timezone(timedelta(hours=7))
+from maychu.dulieu import muigio
+
 MB = 1024 * 1024
 CGROUP = Path("/sys/fs/cgroup")
 TEN_TIENTRINH_AI = ("claude", "codex")
@@ -67,7 +67,7 @@ def do_may(thumuc_dulieu: str | None = None) -> dict:
     o = psutil.disk_usage(thumuc)
     tai = os.getloadavg()
     return {
-        "luc": datetime.now(MUIGIO_VN).strftime("%d/%m/%Y %H:%M:%S"),
+        "luc": muigio.bay_chon().strftime("%d/%m/%Y %H:%M:%S"),   # ③ QĐ636
         "may_ram_tong_mb": ram.total // MB,
         "may_ram_dung_mb": (ram.total - ram.available) // MB,
         "may_ram_con_mb": ram.available // MB,
@@ -148,7 +148,7 @@ def ghi_n02(thumuc=None) -> dict:
     finally:
         chinh.close()
     dong = {
-        "id": maso.tao(), "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
+        "id": maso.tao(), "luc": muigio.gio_luu(),
         "tyle_ocung": int(round(s["ocung_dung_tyle"] * 100)), "ram_dung": s["may_ram_dung_mb"],
         "so_viec_dangchay": so_viec, "so_viec_ai_dangchay": so_viec_ai, "thoigian_cho_ghi_ms": cho_ms,
         "swap_dung": s["may_hoandoi_dung_mb"],

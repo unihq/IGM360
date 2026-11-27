@@ -3,11 +3,11 @@
 Màn 09 ngăn Két khóa (ngày 05) chỉ đọc danh sách không có bản mã. Khóa không có hạn: `han` để trống, màn hiện
 "Không có hạn". Khóa sắp hết hạn: còn ít ngày hơn hoặc bằng thông số `songay_baotruoc_khoa_hethan` (mặc định 05).
 """
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import aibam, ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import khoachu
 
 
@@ -39,7 +39,7 @@ def doc(ma: str, thumuc: Path | None = None) -> str:
         if not dong:
             raise KeyError(ma)
         c.execute("UPDATE kekhoa SET lan_dung_cuoi = ? WHERE id = ?",
-                  (datetime.now(MUIGIO_VN).isoformat(timespec="seconds"), ma))
+                  (muigio.gio_luu(), ma))
     finally:
         c.close()
     return khoachu.giai_ma(dong[0], thumuc).decode()
@@ -75,7 +75,7 @@ def tinh_trang(han: str | None, songay_baotruoc: int, hom_nay: date | None = Non
     """('khong_han' | 'dung' | 'saphet' | 'hethan', số ngày còn lại)."""
     if not han:
         return "khong_han", None
-    con = (date.fromisoformat(han[:10]) - (hom_nay or datetime.now(MUIGIO_VN).date())).days
+    con = (date.fromisoformat(muigio.ngay_cua(han)) - (hom_nay or muigio.ngay_so_lieu())).days   # ② QĐ636 (CDA 5.5)
     if con < 0:
         return "hethan", con
     return ("saphet" if con <= songay_baotruoc else "dung"), con

@@ -5,17 +5,16 @@
   (người gọi đã mở BEGIN IMMEDIATE trên Dulieu_Chinh) để 02 nguồn tạo người cùng lúc không ra 01 số.
 - Dòng của anh (`loai` = `anh`) có đúng 01; tài khoản chủ F01 trỏ về dòng này.
 """
-from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 MA_TOIDA = 9_999_999
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def cap_ma(cn) -> str:

@@ -9,11 +9,10 @@ QĐ390 (thay "02 lớp bắt buộc, không có cách tắt trên web"): 02 lớ
 import os
 import secrets
 import time
-from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso, phienban, songuoi
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong import nhatky
 from maychu.hethong.caidat import thongso
 from maychu.hethong.giamsat import thongbao
@@ -33,7 +32,7 @@ CHU_2LOP = {
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def tao_quantri_tu_env(thumuc: Path | None = None) -> bool:
@@ -51,7 +50,7 @@ def tao_quantri_tu_env(thumuc: Path | None = None) -> bool:
     nguoi_id = songuoi.lay_hoac_tao_anh(ten, "hethong", thumuc)
     cn = ketnoi.mo("Baomat", thumuc)
     try:
-        phienban.them(cn, "nguoidung", {"ma": ten, "ten": ten, "hieuluc_tu": _bay_gio()[:10], "phienban": 1,
+        phienban.them(cn, "nguoidung", {"ma": ten, "ten": ten, "hieuluc_tu": muigio.hom_nay(), "phienban": 1,
                                         "nguoi_khai": "hethong", "vaitro": "chu",
                                         "matkhau_bam": matkhau.bam(mk), "nguoi_id": nguoi_id})
         return True
@@ -77,6 +76,31 @@ def _ma_tam(nguoidung_id: str, khoa_moi: str | None = None) -> str:
 def _doc_ma_tam(ma: str | None) -> dict | None:
     v = _MA_TAM.get(ma or "")
     return v if v and v["het"] >= time.time() else None
+
+
+# Câu "không phải Chủ" theo từng mục (QĐ651 tên miền, QĐ652 múi giờ – bảng chữ Chung_Banthu TMC.a, MGC.a)
+CHU_XACMINH = {"tenmien": "Chỉ tài khoản Chủ đổi tên miền", "muigio": "Chỉ tài khoản Chủ đổi múi giờ"}
+
+
+def xac_minh_lai(nguoidung_id: str, mk: str, ma: str, muc: str, ip: str = "khong_ro", thumuc: Path | None = None) -> dict:
+    """QĐ634, QĐ636: trước khi đổi tên miền, múi giờ – chỉ Chủ, hỏi mật khẩu đang dùng + mã 02 lớp hiện tại (02 lớp
+    đang tắt thì chỉ mật khẩu). Sai đếm vào `chan.py` như hộp tắt 02 lớp. Đúng: {"ok": True}."""
+    k = chan.dang_khoa(ip, thumuc)
+    if k:
+        return _bao_khoa(k)
+    cn = ketnoi.mo("Baomat", thumuc)
+    try:
+        u = _lay(cn, ma_id=nguoidung_id)
+        la_chu = bool(u) and (cn.execute("SELECT vaitro FROM nguoidung WHERE id = ?", (nguoidung_id,)).fetchone() or [None])[0] == "chu"
+    finally:
+        cn.close()
+    if not la_chu:
+        return {"loi": CHU_XACMINH[muc]}
+    can_ma = thongso.co_2lop_bat(thumuc) and u["totp_khoa_id"]
+    if not matkhau.kiem(mk or "", u["matkhau_bam"]) or (can_ma and not _kiem_ma(nguoidung_id, kho.doc(u["totp_khoa_id"], thumuc), ma or "")):
+        return _sai(ip, CHU_2LOP["sai_tat"], thumuc)
+    chan.thanh_cong(ip, thumuc)
+    return {"ok": True}
 
 
 def _bao_khoa(k: dict) -> dict:

@@ -5,13 +5,12 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 
 import httpx
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 ANH = os.environ.get("IGM360_IMAGE", "unihq/igm360")
 KHO_MA = os.environ.get("IGM360_KHO_MA", "unihq/IGM360")
@@ -137,7 +136,7 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
                 _NHO["loi"] = f"Chưa tải được nội dung thay đổi (mã trả về {ma_tra}), số bản mới vẫn đúng"
     moi = _NHO["ban_moi"]
     return {"ban_dang": dang, "ban_moi": moi, "co_ban_moi": bool(moi and _khoa_so(moi) > _khoa_so(dang)),
-            "luc_kiem": datetime.fromtimestamp(_NHO["luc_dat"], MUIGIO_VN).isoformat(timespec="seconds") if _NHO["luc_dat"] else None,
+            "luc_kiem": muigio.tu_so_giay(_NHO["luc_dat"]) if _NHO["luc_dat"] else None,
             "nhip_phut": nhip_kiem_giay() // 60,
             "thaydoi": _NHO["thaydoi"] if moi else [], "tomtat": _NHO["tomtat"], "loi": _NHO["loi"],
             "nang_dulieu": co_nang_dulieu(dang, moi, _NHO["thaydoi"])}   # QĐ258: trang biết trước khi bấm
@@ -148,7 +147,7 @@ def _ghi_f04(lenhcon: str, tomtat: str, ketqua: str, lydo: str | None = None, ng
     try:
         cn.execute("INSERT INTO nhatky_thaotac (id, luc, nguoi_loai, nguoi_id, congcu, lenhcon, thamso_tomtat, ketqua, lydo_chan)"
                    " VALUES (?, ?, ?, ?, 'capnhat', ?, ?, ?, ?)",
-                   (maso.tao(), datetime.now(MUIGIO_VN).isoformat(timespec="seconds"), "anh" if nguoi_id else None,
+                   (maso.tao(), muigio.gio_luu(), "anh" if nguoi_id else None,
                     nguoi_id, lenhcon, tomtat, ketqua, lydo))
     finally:
         cn.close()
@@ -276,7 +275,7 @@ def _gui(nguoi_id: str, ban_moi: str | None, len_drive: bool, thumuc=None) -> No
             time.sleep(NGHI_DAY_GIAY)
         _SAO["buoc"] = "gui"
     try:
-        antoan.ghi(thumuc, yeu_cau={"tu": ban_dang_chay(), "den": ban_moi, "luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
+        antoan.ghi(thumuc, yeu_cau={"tu": ban_dang_chay(), "den": ban_moi, "luc": muigio.gio_luu(),
                                     "drive": len_drive})
         r = cap_nhat_ngay(nguoi_id, thumuc)
         if "loi" in r:

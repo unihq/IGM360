@@ -18,8 +18,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 BUOC = ("o_trong", "chup", "drive", "gui", "tai", "khoidong", "nang", "kiem")
 UOC_TINH = ("tai", "khoidong", "nang")   # bước 5–7: trang ghi rõ "ước tính"
@@ -40,7 +40,7 @@ _log = logging.getLogger(__name__)
 
 
 def _bay() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def _giay(a: str | None, b: str | None) -> float | None:
@@ -282,7 +282,7 @@ def hien(thumuc: Path | None = None, bay_gio: datetime | None = None) -> dict | 
     du = {b: max(0.0, float((td.get("du_kien") or {}).get(b, MAC_DINH_GIAY[b]))) for b in BUOC}
     tong = sum(du.values()) or 1.0
     buoc = td.get("buoc")
-    bay = (bay_gio or datetime.now(MUIGIO_VN)).isoformat(timespec="seconds")
+    bay = muigio.gio_luu(bay_gio)
     chung = {"moc": td.get("moc", {}), "du_kien": du, "tu": td.get("tu"), "den": td.get("den"), "bat_dau": td.get("bat_dau"),
              "luc": bay,   # luc: giờ máy chủ, trang tự tính % giữa 02 lần hỏi và lúc máy chủ đang thay bản (QĐ253)
              "drive": (td.get("chi_tiet") or {}).get("drive"),   # QĐ255 điểm 3: số tệp đã lên Drive / tổng, kể cả khi đã qua bước 3

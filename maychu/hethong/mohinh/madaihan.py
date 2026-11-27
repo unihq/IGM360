@@ -28,8 +28,8 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.kekhoa.che import che  # noqa: F401 - nơi khác gọi `madaihan.che`
 
@@ -109,12 +109,12 @@ def thong_tin(tk: int, thumuc=None, bay: datetime | None = None) -> dict | None:
     if not d:
         return None
     _, cuoi, han = d
-    bay = bay or datetime.now(MUIGIO_VN)
+    bay = bay or muigio.bay()
     try:
         h = datetime.fromisoformat(han)
     except (TypeError, ValueError):
         return {"kytu_cuoi": cuoi, "han": None, "luu_luc": None, "con_ngay": None, "het": False, "vang": False}
-    con = (h.date() - bay.date()).days
+    con = (muigio.ngay_so_lieu(h) - muigio.ngay_so_lieu(bay)).days   # ② QĐ636
     return {"kytu_cuoi": cuoi, "han": han, "luu_luc": (h - timedelta(days=SO_NGAY)).isoformat(timespec="seconds"),
             "con_ngay": con, "het": h <= bay, "vang": con <= SO_NGAY_VANG}
 
@@ -125,7 +125,7 @@ def lay(tk: int, thumuc=None) -> str | None:
     if not d:
         return None
     try:
-        if datetime.fromisoformat(d[2]) <= datetime.now(MUIGIO_VN):
+        if datetime.fromisoformat(d[2]) <= muigio.bay():
             return None
     except (TypeError, ValueError):
         return None
@@ -140,7 +140,7 @@ def luu(tk: int, ma: str, thumuc=None, nguoi: str = "hethong") -> dict:
     ma = lam_sach(ma)
     if not hop_le(ma):
         raise ValueError(chu_loi_dan(ma))
-    han = (datetime.now(MUIGIO_VN) + timedelta(days=SO_NGAY)).isoformat(timespec="seconds")
+    han = muigio.gio_luu(muigio.bay() + timedelta(days=SO_NGAY))
     cu = kho.tim(dichvu(tk), thumuc)
     if cu:
         kho.doi(cu, ma, thumuc, han=han)

@@ -8,8 +8,8 @@ import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 
 NGAY_KHONG_THAOTAC = 30
@@ -17,7 +17,7 @@ NGAY_TOIDA = 30
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def het_luc(lan_dung_cuoi: str, het_han: str) -> str:
@@ -47,7 +47,7 @@ def tao(nguoidung_id: str, thietbi: str, thumuc: Path | None = None) -> str:
     ma = secrets.token_urlsafe(32)
     cn = ketnoi.mo("Baomat", thumuc)
     try:
-        bay = datetime.now(MUIGIO_VN)
+        bay = muigio.bay()
         cn.execute("INSERT INTO phien_truycap (id, nguoidung_id, loai, mabam, tao_luc, het_han, lan_dung_cuoi, thietbi)"
                    " VALUES (?, ?, 'phien_web', ?, ?, ?, ?, ?)",
                    (maso.tao(), nguoidung_id, _bam(ma), bay.isoformat(timespec="seconds"),

@@ -12,10 +12,10 @@ mục 2, 8; điều kiện CDA KT-N0 (1)–(6), S1–S5, X1–X4, C1–C2).
 import json
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 BOOT_ID = maso.tao()   # mã lần khởi động: dòng G02 `dangchay` mang mã khác là lượt bị cắt do khởi động lại
 GIU_SU_KIEN_GIAY = 300
@@ -29,7 +29,7 @@ KET_THUC = ("xong", "dung", "loi")
 
 
 def bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 class Luot:
@@ -106,7 +106,7 @@ def dang_trong_so(luot_id: str) -> bool:
 # ---------------- G02 ----------------
 def mo_g02(luot_id: str, hoithoai_id: str, tin_hoi_id: str, thumuc=None) -> str | None:
     """Ghi 01 dòng G02 `dangchay`. Cuộc đang có lượt chạy (cùng `khoa_chongtrung`) thì không ghi, trả mã lượt đó."""
-    bd = datetime.now(MUIGIO_VN)
+    bd = muigio.bay()
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cn.execute("BEGIN IMMEDIATE")
@@ -220,7 +220,7 @@ def dong_luot_ket(thumuc=None) -> int:
 def xoa_dong_cu(thumuc=None) -> int:
     """QĐ348 (X1–X4): xóa dòng G02 `trochuyen` đã đóng quá 24 giờ, bỏ qua dòng còn được G05 `suco` trỏ tới.
     01 lệnh DELETE trong BEGIN IMMEDIATE; chạy lại không đổi gì; không ghi F04. H08, G04 không đụng."""
-    moc = (datetime.now(MUIGIO_VN) - timedelta(hours=24)).isoformat(timespec="seconds")
+    moc = muigio.gio_luu(muigio.bay() - timedelta(hours=24))
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         cn.execute("BEGIN IMMEDIATE")

@@ -21,8 +21,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 REGISTRY = "https://registry.npmjs.org/"   # K5: ghi cứng, không đọc .npmrc
 GOI_CLI = {
@@ -91,7 +91,7 @@ def _goi_tt(d: dict, goi: str) -> dict:
 
 
 def _bay() -> datetime:
-    return datetime.now(MUIGIO_VN)
+    return muigio.bay()
 
 
 def _duoi(chu, n: int = 200) -> str:
@@ -468,7 +468,7 @@ def _bao_khac(viec: str, thumuc: Path | None = None, *doi) -> None:
 
 
 def da_kiem_hom_nay(bay: datetime | None = None, thumuc: Path | None = None) -> bool:
-    return doc_trangthai(thumuc).get("kiem_ngay") == (bay or _bay()).strftime("%Y-%m-%d")
+    return doc_trangthai(thumuc).get("kiem_ngay") == muigio.ngay_so_lieu(bay or _bay()).isoformat()   # ③ lịch theo múi chọn
 
 
 def luot_hang_ngay(thumuc: Path | None = None, bay: datetime | None = None) -> dict:
@@ -477,7 +477,7 @@ def luot_hang_ngay(thumuc: Path | None = None, bay: datetime | None = None) -> d
     bay = bay or _bay()
     with _KHOA_TT:
         d = doc_trangthai(thumuc)
-        d["kiem_ngay"] = bay.strftime("%Y-%m-%d")
+        d["kiem_ngay"] = muigio.ngay_so_lieu(bay).isoformat()
         ghi_trangthai(d, thumuc)
     ra = {}
     for goi in GOI_CLI:

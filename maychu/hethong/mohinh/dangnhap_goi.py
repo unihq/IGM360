@@ -40,8 +40,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import aibam, ketnoi, phienban
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 GOI = {
     "claude": {"ten": "Gói Claude", "hang": "anthropic", "cli_bien": "IGM360_CLAUDE_CLI", "cli": "claude", "bien_thumuc": "CLAUDE_CONFIG_DIR",
@@ -345,7 +345,7 @@ def chup_song(taikhoan: int) -> dict | None:
         return None
     hs = ho_so("claude", taikhoan, song=True)
     return {"ten_hien": hs["ten_hien"], "goi_ten": hs["goi_ten"], "email_bam": _bam(dd[0]), "tochuc_bam": _bam(dd[1]),
-            "chup_luc": datetime.now(MUIGIO_VN).isoformat(timespec="seconds")}
+            "chup_luc": muigio.gio_luu()}
 
 
 def ghi_chup(taikhoan: int, c: dict) -> None:
@@ -574,7 +574,7 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
     `nguoi`: "ai bấm" (mã tài khoản F01 hoặc mã máy, QĐ108)."""
     aibam.kiem(nguoi)
     ma = ma_nguon(goi, taikhoan)
-    bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    bay = muigio.gio_luu()
     cn = ketnoi.mo("Viecnen", thumuc)
     try:
         d = cn.execute("SELECT id FROM nguon_ai WHERE ma = ?", (ma,)).fetchone()
@@ -583,7 +583,7 @@ def ghi_nguon(goi: str, taikhoan: int, thumuc: Path | None = None, nguoi: str = 
             return d[0]
         uu = (cn.execute("SELECT coalesce(max(uutien), 0) FROM nguon_ai").fetchone()[0] or 0) + 1
         return phienban.them(cn, "nguon_ai", {"ma": ma, "ten": f"{GOI[goi]['ten']} · tài khoản {taikhoan:02d}",
-                                              "hieuluc_tu": bay[:10], "phienban": 1, "nguoi_khai": nguoi, "tao_luc": bay,
+                                              "hieuluc_tu": muigio.hom_nay(), "phienban": 1, "nguoi_khai": nguoi, "tao_luc": bay,
                                               "loai": "goi", "dungchung": 1, "uutien": uu,
                                               "hang": GOI[goi]["hang"], "cach_goi": "cli"})
     finally:
@@ -645,7 +645,7 @@ def danh_sach(thumuc: Path | None = None) -> list[dict]:
     finally:
         cn.close()
     gan = _mohinh_gannhat(thumuc)
-    bay = datetime.now(MUIGIO_VN)
+    bay = muigio.bay()
     for d in dong:
         d["mohinh_gannhat"] = gan.get(d["id"])
         for tl, dl in (("tyle_5gio", "datlai_5gio_luc"), ("tyle_tuan", "datlai_tuan_luc")):   # 0.7.7: qua giờ đặt lại = 0%

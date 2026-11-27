@@ -13,10 +13,14 @@ const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n)
 const soVN = v => { const n = Number(v); if (!Number.isFinite(n)) return v;
   if (Number.isInteger(n) && n < 10) return hai(n);
   const [a, b] = String(n).split('.'); return a.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (b ? ',' + b : ''); };
-const ngay = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
-const gio = iso => iso ? iso.slice(11, 16) : '';
-const homNay = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
-const luc = iso => !iso ? '' : (iso.slice(0, 10) === homNay() ? gio(iso) + '\u00a0hôm\u00a0nay' : ngay(iso) + ' · ' + gio(iso));
+// QĐ636 (D-a): giờ hiện theo múi đã chọn (③). Máy chủ lưu giờ +07:00; chuỗi chỉ có ngày (② ngày số liệu) hiện nguyên.
+let MUI = 'Asia/Ho_Chi_Minh', _MUI_F = null;   // múi lấy ở /api/toi
+const theoMui = t => { const ms = typeof t === 'number' ? t : Date.parse(t); if (Number.isNaN(ms)) return String(t ?? ''); if (!_MUI_F || _MUI_F.tz !== MUI) _MUI_F = {tz: MUI, f: new Intl.DateTimeFormat('en-CA', {timeZone: MUI, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'})}; const p = Object.fromEntries(_MUI_F.f.formatToParts(ms).map(x => [x.type, x.value])); return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute + ':' + p.second; };
+const hien = iso => !iso || !/(Z|[+-]\d\d:\d\d)$/.test(String(iso)) ? String(iso ?? '') : theoMui(iso);   // chuỗi giờ lưu (có độ lệch) → "YYYY-MM-DDTHH:MM:SS" theo múi đã chọn; chuỗi ngày, chuỗi đã đổi: giữ nguyên
+const ngay = iso => { if (!iso) return ''; const [y, m, d] = hien(iso).slice(0, 10).split('-'); return d + '/' + m + '/' + y; };
+const gio = iso => iso ? hien(iso).slice(11, 16) : '';
+const homNay = () => theoMui(Date.now()).slice(0, 10);
+const luc = iso => !iso ? '' : (hien(iso).slice(0, 10) === homNay() ? gio(iso) + '\u00a0hôm\u00a0nay' : ngay(iso) + ' · ' + gio(iso));
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 // Không tách cụm từ khi xuống dòng (chữ do máy chủ gửi): nối các cụm thường gặp bằng dấu cách không ngắt
 // U4 (S1, S3): cụm "mục + tên màn" dài hơn đặt trước để nối trước khi cụm ngắn hơn được nối.
@@ -142,7 +146,7 @@ const xoa6 = goc => $$('.o6', goc).forEach(i => i.value = '');
 // ---- Màn 01
 function hienLoiDn(t, con) { $('#dn-loi').textContent = t; $('#dn-con').textContent = con == null ? '' : hai(con);
   $('#dn-con-cau').hidden = con == null; S.dn = 'sai'; ve(); }
-const gioPhut = sec => { const d = new Date(sec * 1000 + 7 * 3600e3).toISOString(); return d.slice(11, 16) + (d.slice(0, 10) === homNay() ? '' : ' ngày ' + ngay(d)); };
+const gioPhut = sec => { const d = theoMui(sec * 1000); return d.slice(11, 16) + (d.slice(0, 10) === homNay() ? '' : ' ngày ' + ngay(d)); };
 function hienKhoa(k) {
   S.dn = k.loai === 'taikhoan' ? 'khoatk' : 'khoa'; D.khoaDen = k.den;
   $('#k-thoigian').textContent = k.phut < 60 ? hai(k.phut) + ' phút' : hai(k.phut / 60) + ' giờ';
@@ -208,7 +212,7 @@ async function vaoPhanMem() {
   const toi = await api('/toi');
   const chu = (toi.ten || toi.ten_dangnhap || '').trim();
   $('#tk-chu').textContent = chu.slice(0, 1).toUpperCase(); $('#tk-ten').textContent = chu;
-  D.hetLuc = toi.het_luc; S.g = '02'; S.dn = 'matkhau';
+  D.hetLuc = toi.het_luc; S.g = '02'; S.dn = 'matkhau'; if (toi.muigio) MUI = toi.muigio;   // QĐ636
   try { D.anToan = !!(await (await fetch('/suckhoe', {cache: 'no-store'})).json()).an_toan; } catch (e) { D.anToan = false; }
   if (D.anToan) { S.trang = '09'; S.tab = 'capnhat'; ve(); napTab(); return; }   // 0.7.9 lớp 2: chỉ mở Cài đặt › Cập nhật
   if (location.hash === DAU_SAU_CN) {   // CDO U21 G1: vừa tải lại sau cập nhật → mở đúng Cài đặt › Cập nhật để thấy thẻ kết quả
@@ -218,7 +222,7 @@ async function vaoPhanMem() {
 }
 // ---- Chuông thông báo bước 1 (QĐ165, bản vẽ Z7b): số = dòng Mới (sau mốc đọc); nhóm Mới rồi Đã xem, còn mở
 const MAU_TB = {do: ['do-n', '#E22E28'], xem: ['xem-n', '#C97A00'], tin: ['tin-n', '#1456F0']};
-const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10), d = iso.slice(0, 10);
+const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10), d = hien(iso).slice(0, 10);
   return d === h ? gio(iso) : d === q ? 'Hôm qua ' + gio(iso) : d.slice(8, 10) + '/' + d.slice(5, 7); };
 const icoTb = x => (ICON[x.icon] || ICON['circle-alert']).replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')
   .replace(/stroke="#[0-9A-Fa-f]{6}"/, 'stroke="' + MAU_TB[x.muc][1] + '"');
@@ -252,7 +256,7 @@ async function demSo(mo) {
     $$('[data-trang="05"] .bao').forEach(b => { b.textContent = d.cuacho ? soVN(d.cuacho) : ''; b.hidden = !d.cuacho; });
     $$('[data-trang="10"] .bao, [data-them] .bao').forEach(g => { g.textContent = d.ket_ai ? soVN(d.ket_ai) : ''; g.hidden = !d.ket_ai; });
     veNhom();   // Y52 L3: số báo ở tiêu đề nhóm gập theo số mới
-    D.soLuc = new Date(Date.now() + 7 * 3600e3).toISOString().slice(11, 16);
+    D.soLuc = theoMui(Date.now()).slice(11, 16);
     veChuong(d);
   } catch (e) { /* mất kết nối đã hiện dải báo */ }
 }
@@ -311,7 +315,7 @@ async function moSua(ten) {
   $('#sua-o').hidden = chon; $('#sua-chon').hidden = !chon;
   if (chon) $('#sua-chon').innerHTML = t.luachon.map(l => '<option value="' + esc(l.giatri) + '"' + (l.giatri === t.giatri ? ' selected' : '') + '>' + esc(l.chu) + '</option>').join('');
   else { $('#sua-gt').value = t.giatri ?? ''; $('#sua-dv').textContent = t.donvi || ''; $('#sua-gt').placeholder = t.ten === 'gio_baocao_sang' ? '07:30' : ''; }
-  const mai = new Date(Date.now() + 31 * 3600e3).toISOString().slice(0, 10);
+  const mai = theoMui(Date.now() + 864e5).slice(0, 10);   // ② ngày mai theo múi đã chọn
   $('#sua-tu').value = ngay(mai); $('#sua-loi').hidden = true; $('#sua-moc').textContent = ngay(t.hieuluc_tu);
   $('#h-sua input[placeholder^="Vì sao"]').value = '';
   $('#sua-ls').innerHTML = '<span class="phu">Đang tải</span>'; mo('h-sua');
@@ -595,7 +599,7 @@ function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt v�
   if (!co) { if (e) e.innerHTML = ''; return {}; }
   const moc = t.moc || {}, luc = moc.kiem || t.xong || moc.nang || '';
   const dong = (lop, ico, mau, chu) => '<div class="ks ' + lop + '">' + icoMau(ICON[ico], mau, 14) + '<span>' + cum(chu) + '</span></div>';
-  let h = dong('dat', 'circle-check', '#258832', SL.vuaLen(t.den, luc.slice(11, 16), mmss((Date.parse(luc) - Date.parse(t.bat_dau)) / 1000)));
+  let h = dong('dat', 'circle-check', '#258832', SL.vuaLen(t.den, gio(luc), mmss((Date.parse(luc) - Date.parse(t.bat_dau)) / 1000)));
   const dangKiem = t.buoc !== 'xong', loiKiem = !dangKiem && !!k && !k.dat;
   if (dangKiem) { const c = t.buoc === 'kiem' ? t.chi_tiet || {} : {}; h += dong('', 'loader', '#1456F0', SL.dangKiem(+c.da || 0, c.tong || 6)); }
   else if (k) h += dong(k.dat ? 'dat' : 'canh', k.dat ? 'circle-check' : 'circle-alert', k.dat ? '#258832' : '#E22E28', CHU_CN.kiem + k.chu)
@@ -603,7 +607,7 @@ function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt v�
   const dn = t.drive_nen;
   if (t.drive_tat) h += '<div class="ks phu">' + icoMau(ICON['cloud-off'], '#646A73', 14) + '<span>' + cum(SL.tatSau) + '</span></div>';   // QĐ278 Z21 dòng 6
   if (dn && dn.tong) h += dn.da >= dn.tong ? dong('dat', 'cloud-check', '#258832', SL.daLen(dn.tong))
-    : dn.loi ? dong('xem', 'cloud-alert', '#8F5F00', SL.chuaLenHet(dn.da, dn.tong, (dn.hen || '').slice(11, 16))) : dong('', 'cloud-upload', '#1456F0', SL.dangDay(dn.da, dn.tong));
+    : dn.loi ? dong('xem', 'cloud-alert', '#8F5F00', SL.chuaLenHet(dn.da, dn.tong, gio(dn.hen || ''))) : dong('', 'cloud-upload', '#1456F0', SL.dangDay(dn.da, dn.tong));
   e.innerHTML = h;
   if (the) the.classList.toggle('vien-loi', loiKiem);
   return {co, loiKiem, keoDrive: !!(dn && dn.tong && dn.da < dn.tong)};   // CDO U21 G2: Drive lỗi vẫn theo dõi (tự đẩy lại)
@@ -688,7 +692,7 @@ const CA = {tieu: 'Công cụ AI', gat: 'Tự nâng mỗi ngày',
 ICON['circle-pause'] = ICON['circle-pause'] || svgLucide('circle-pause', ['<circle cx="12" cy="12" r="10" />',
   '<line x1="10" x2="10" y1="15" y2="9" />', '<line x1="14" x2="14" y1="15" y2="9" />']);
 ICON['circle-arrow-up'] = ICON['circle-arrow-up'] || svgLucide('circle-arrow-up', ['<circle cx="12" cy="12" r="10" />', 'm16 12-4-4-4 4', 'M12 16V8']);
-const caVn = t => new Date((typeof t === 'number' ? t : Date.parse(t)) + 7 * 3600e3).toISOString();   // giờ Việt Nam
+const caVn = t => theoMui(t);   // QĐ636: giờ theo múi đã chọn (tên cũ giữ, dùng trong khối Công cụ AI)
 const caSo = b => String(b || '0.0.0').split('.').map(x => parseInt(x, 10) || 0);
 const caCao = (a, b) => { const x = caSo(a), y = caSo(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
 // QĐ386 (LOI-CN-089): bản đang chạy ≥ bản yêu cầu là đã lên (watchtower kéo bản mới nhất, có thể mới hơn bản ghi lúc bấm).
@@ -703,7 +707,7 @@ function caLuc(t, bay) {   // "10:00 hôm nay" · "10:00 ngày mai" · ngày kh�
 }
 const caCum = s => cum(s).replace(/(ngày|hôm) (mai|nay)|kiểm thử( đạt)?|trong gói/g, x => x.replace(/ /g, '&nbsp;'));   // U36 L1, L3; U37a L5
 const caKiemToi = (t, gk) => {   // lượt kiểm 03:00 kế tiếp sau lúc t (ms)
-  const v = caVn(t), moc = Date.parse(v.slice(0, 10) + 'T' + hai(gk) + ':00:00+07:00');
+  const v = caVn(t), lech = Date.parse(v + 'Z') - Math.floor(Date.parse(t) / 1000) * 1000, moc = Date.parse(v.slice(0, 10) + 'T' + hai(gk) + ':00:00Z') - lech;   // giờ kiểm theo múi đã chọn
   return Date.parse(t) < moc ? moc : moc + 864e5; };
 const caKiemTiep = (c, bay) => hai(c.gio_kiem ?? 3) + ':00 ' + (c.kiem_ngay === caVn(bay).slice(0, 10) ? CA.ngayMai : CA.homNay);   // dòng 5
 const caHomNay = (t, bay) => !!t && caVn(t).slice(0, 10) === caVn(bay).slice(0, 10);
@@ -993,7 +997,7 @@ function thanhHm(ten, v, k) { const p = pct(v), cu = k && k in D.hmCu ? D.hmCu[k
   return '<div class="hm"><span class="t12 phu nw">' + ten + '</span><div class="td" style="height:8px"><div class="tdf" data-w="' + (p ?? 0) + '" style="width:'
   + cu + '%;background:' + (p >= 90 ? '#E22E28' : '#1456F0') + '"></div></div><b class="t12 so">' + (p == null ? 'chưa&nbsp;đo' : Math.round(p) + '%') + '</b></div>'; }
 // Y36b, Y36c N4: "Opus của tài khoản 1 hết hạn mức đến 20:45" (khác ngày: "đến 20:45 ngày 26/11"); dùng chung màn 13 và khung chat
-const denLuc = iso => !iso ? '' : gio(iso) + (String(iso).slice(0, 10) !== homNay() ? ' ngày ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');
+const denLuc = iso => !iso ? '' : gio(iso) + (hien(iso).slice(0, 10) !== homNay() ? ' ngày ' + hien(iso).slice(8, 10) + '/' + hien(iso).slice(5, 7) : '');
 const tenHet = (m, n) => m.ma ? tenMh(m.ma, n && n.id, n, true) : m.ten_khung || (m.bao ? tenMh(m.bao, n && n.id, n, true) : '');
 const chuHetMh = (m, n, tk) => chuHoa(tenHet(m, n) || 'mô hình mặc định') + ' của tài khoản ' + tk + ' hết hạn mức' + (m.den ? ' đến ' + denLuc(m.den) : '');
 // N5: cả tài khoản đang tạm nghỉ thì ghi lý do tài khoản (như dòng vàng P3b); chỉ 01 mô hình hết riêng thì ghi tên mô hình
@@ -1043,7 +1047,7 @@ function lamSachMa(s) { let m = String(s || '').replace(/[\s\u200b\u200c\u200d\u
   const i = m.indexOf('sk-ant-oat01-'); if (i > 0) m = m.slice(i);   // Y38c R9: chữ đứng trước mã bỏ đi
   return m.replace(/^['"`]+|['"`]+$/g, ''); }
 const nutMdGt = () => '<button class="nut-i" data-md-gt title="' + CHU_Z15.iRe + '">' + icoMau(ICON['info'], '#646A73', 14) + '</button>';   // 01
-const gioKiem = iso => iso.slice(0, 10) === homNay() ? gio(iso) : iso.slice(8, 10) + '/' + iso.slice(5, 7) + ' ' + gio(iso);   // hôm khác ghi ngày
+const gioKiem = iso => hien(iso).slice(0, 10) === homNay() ? gio(iso) : hien(iso).slice(8, 10) + '/' + hien(iso).slice(5, 7) + ' ' + gio(iso);   // hôm khác ghi ngày
 function theMd(x, go) {
   const md = x.ma_daihan, tk = x.taikhoan, canh = md && (md.het || md.vang), k = x.kiem_md;
   let h = '';
@@ -1416,7 +1420,7 @@ document.addEventListener('click', async ev => {
 document.addEventListener('input', ev => { if (!ev.target.matches || !ev.target.matches('[data-mhtim]')) return; MH.tim = ev.target.value; veLaiMh(); });
 
 // ---- Màn 08 Trò chuyện AI
-function nhomNgay(iso) { const d = (iso || '').slice(0, 10), h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10);
+function nhomNgay(iso) { const d = hien(iso || '').slice(0, 10), h = homNay(), q = new Date(Date.parse(h) - 86400e3).toISOString().slice(0, 10);
   return d === h ? 'Hôm nay' : d === q ? 'Hôm qua' : 'Trước đó'; }
 function veDsHt() {
   const tim = (($('#tc-tim input') || {}).value || '').trim().toLowerCase(); let nhom = '', h = '';

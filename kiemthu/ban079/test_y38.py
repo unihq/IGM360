@@ -1038,6 +1038,7 @@ class KiemY38h(NenAT):
         js = (GD / "app.js").read_text(encoding="utf-8").split("\n")
         f = lambda p: next(i for i, x in enumerate(js) if x.startswith(p))   # noqa: E731
         ma = ("const ICON = new Proxy({}, {get: () => '<svg/>'}); const gio = s => s; const homNay = () => '2026-11-24';\n"
+              "const hien = s => s;\n"   # 0.10.0 QĐ636: hàm giờ theo múi (giả như gio, homNay)
               + "\n".join(js[f("const esc ="):f("const cau =") + 1] + js[f("const MAU_TB ="):f("function veChuong(")]
                           + [js[f("const coBaoLayLai =")]]) + "\n" + them)
         with tempfile.TemporaryDirectory() as tm:

@@ -607,6 +607,8 @@ class KiemGiaoDienKhoi(unittest.TestCase):
 
     def ve(self, *ca, bay=None):
         dau = ("const esc = x => String(x ?? ''), cum = x => String(x);\n"
+               + "\n".join(self.app[self.app.index(d):self.app.index("\n", self.app.index(d))]   # 0.10.0 QĐ636: hàm giờ theo múi
+                           for d in ("let MUI = ", "const theoMui = ")) + "\n"
                "const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n);\n"
                "const ngay = iso => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };\n"
                "const icoMau = (s, mau, co) => '<i ' + s + ' m=' + mau + '></i>';\n"
@@ -623,7 +625,8 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         return h
 
     def chu(self, cau):
-        ra = subprocess.run(["node", "-e", "const hai = n => String(n), ngay = iso => { const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };\nconst svgLucide = t => t, ICON = {};\n" + self.ma
+        mui = "\n".join(self.app[self.app.index(d):self.app.index("\n", self.app.index(d))] for d in ("let MUI = ", "const theoMui = "))   # 0.10.0 QĐ636
+        ra = subprocess.run(["node", "-e", "const hai = n => String(n), ngay = iso => { const [y, m, d] = iso.slice(0, 10).split('-'); return d + '/' + m + '/' + y; };\nconst svgLucide = t => t, ICON = {};\n" + mui + "\n" + self.ma
                              + f"console.log(JSON.stringify({cau}));"], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(ra.returncode, 0, ra.stderr)
         return json.loads(ra.stdout.replace("\u00a0", " "))

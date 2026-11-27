@@ -354,7 +354,7 @@ class KiemY36c(Nen):
 
     def test_giao_dien(self):
         js = (GD / "app.js").read_text(encoding="utf-8")
-        for chu in ("const denLuc = iso => !iso ? '' : gio(iso) + (String(iso).slice(0, 10) !== homNay() ? ' ngày ' + iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');",
+        for chu in ("const denLuc = iso => !iso ? '' : gio(iso) + (hien(iso).slice(0, 10) !== homNay() ? ' ngày ' + hien(iso).slice(8, 10) + '/' + hien(iso).slice(5, 7) : '');",   # 0.10.0 QĐ636: giờ theo múi đã chọn
                     "' (dự phòng, ' + (dp.rieng ? chuHetMh(dp, timNguon(x.nguon_id), dp.tk)",
                     "const g = x.ghim_hong || x.md_hong,",
                     "+ (x.ghim_hong || x.md_hong ? '<div class=\"tn-meta mh-vang\"'",
@@ -370,7 +370,8 @@ class KiemY36c(Nen):
         import tempfile
         js = (GD / "app.js").read_text(encoding="utf-8")
         lay = lambda dau: js[js.index(dau):js.index("\n", js.index(dau))]
-        ma = "\n".join([lay("const gio = "), lay("const homNay = "), lay("const denLuc = "),
+        ma = "\n".join([lay("let MUI = "), lay("const theoMui = "), lay("const hien = "),   # 0.10.0 QĐ636: hàm giờ theo múi
+                         lay("const gio = "), lay("const homNay = "), lay("const denLuc = "),
                          "const h = homNay(); console.log(JSON.stringify([denLuc(h + 'T20:45:00+07:00'), denLuc('2099-11-26T20:45:00+07:00')]));"])
         with tempfile.TemporaryDirectory() as tm:
             p = Path(tm) / "thu.js"

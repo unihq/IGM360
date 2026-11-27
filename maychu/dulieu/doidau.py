@@ -9,11 +9,10 @@
 gọi bọc lỗi); (4) chạy lại không đổi gì, có đổi thì ghi 01 dòng F04; (5) `loi_cuoi` chỉ đổi theo đúng chữ cũ.
 Không đổi dòng F04 cũ, tin chuông cũ. 0 đổi lược đồ. Chữ cũ viết bằng mã ký tự để tệp không còn chữ kiểu cũ (QĐ302).
 """
-from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, phienban
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 LICH_MA = "nhac_khoa_tygia_thang"
 LICH_CU = "Nhắc kho\u00e1 tỷ giá tháng"
@@ -54,7 +53,7 @@ def _doi_loi_ketnoi(thumuc: Path | None) -> int:
 
 def doi_khi_khoidong(thumuc: Path | None = None) -> dict:
     """Gọi 01 lần lúc khởi động, ngoài chế độ an toàn (khoidong). Trả {lich, ketnoi}: số dòng đã đổi."""
-    hom_nay = datetime.now(MUIGIO_VN).date().isoformat()
+    hom_nay = muigio.hom_nay()   # ② QĐ636
     kq = {"lich": _doi_lich(thumuc, hom_nay), "ketnoi": _doi_loi_ketnoi(thumuc)}
     if kq["lich"] or kq["ketnoi"]:                    # đk 4: 01 dòng F04, ghi số dòng đổi ở mỗi bảng
         from maychu.hethong import nhatky

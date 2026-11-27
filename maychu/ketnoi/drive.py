@@ -11,14 +11,14 @@ import json
 import secrets
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlencode
 
 import httpx
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, phienban
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 
 URL_XIN = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -38,7 +38,7 @@ _MA_TRUYCAP: dict = {}
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def _client(client):
@@ -109,7 +109,7 @@ def ve_trang(code: str, state: str, thumuc: Path | None = None, client=None) -> 
                        " loi_cuoi = NULL WHERE id = ?", (khoa_id, bay, d[0]))
             ma = d[0]
         else:
-            ma = phienban.them(cn, "ketnoi", {"ma": MA_KETNOI, "ten": "Google Drive", "hieuluc_tu": bay[:10], "phienban": 1,
+            ma = phienban.them(cn, "ketnoi", {"ma": MA_KETNOI, "ten": "Google Drive", "hieuluc_tu": muigio.hom_nay(), "phienban": 1,
                                               "nguoi_khai": v["nguoi_id"], "tao_luc": bay, "mau_ketnoi": "google_drive.json",
                                               "cach_noi": "ketnoi_chinhthuc", "khoa_id": khoa_id,
                                               "trangthai_phien": "dang_noi", "lan_battay_cuoi": bay})
@@ -217,7 +217,7 @@ def _day_hang_cho(thumuc: Path | None, client, gioi_han: int) -> dict:
         except Exception as e:  # noqa: BLE001
             so = (lan or 0) + 1
             cho = min(THU_LAI_PHUT * 2 ** (so - 1), THU_LAI_TOIDA_PHUT)
-            ke = (datetime.now(MUIGIO_VN) + timedelta(minutes=cho)).isoformat(timespec="seconds")
+            ke = muigio.gio_luu(muigio.bay() + timedelta(minutes=cho))
             _dat(thumuc, ma, trangthai="loi", so_lan_thu=so, lan_thu_ke=ke, loi_ganhat=f"{type(e).__name__}: {str(e)[:200]}")
             loi += 1
     if day and not loi:

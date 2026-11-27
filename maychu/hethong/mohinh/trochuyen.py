@@ -9,10 +9,9 @@ Tin trả lời ghi `trangthai` (`xong`, `dung`) và `tra_loi_cho` = mã tin h�
 """
 import json
 import threading
-from datetime import datetime
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso, timchu
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.mohinh import congai, luot
 
 GIU_CHU = 24_000
@@ -28,7 +27,7 @@ class ChoCapNhat(Exception):
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def _ghi_tin(cn, hoithoai_id: str, vai: str, noidung: str, nhatky_ai_id=None, *, ma: str | None = None,

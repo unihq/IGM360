@@ -9,10 +9,9 @@
 """
 import json
 import sqlite3
-from datetime import datetime
 
+from maychu.dulieu import muigio
 from maychu.dulieu import maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 # Giá trị khởi tạo theo thiết kế mục 0.6 (danh sách trống: chờ anh duyệt hoặc lấy theo nguồn khi nối).
 KHOITAO = {
@@ -96,14 +95,14 @@ def anh_xa_day_du(cn: sqlite3.Connection) -> dict[str, list[tuple[str, str]]]:
 
 def khoi_tao(cn: sqlite3.Connection) -> int:
     """Ghi 21 thông số danh sách chưa có dòng nào (chạy lại không sao). Người gọi giữ giao dịch hoặc không."""
-    bay = datetime.now(MUIGIO_VN)
+    bay = muigio.bay()
     them = 0
     for ten, gt in KHOITAO.items():
         if cn.execute("SELECT 1 FROM thongso WHERE ten = ? AND congty_id IS NULL", (ten,)).fetchone():
             continue
         cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
                    " VALUES (?, ?, ?, 'danhsach', '', ?, 'hethong', 'Giá trị khởi tạo theo thiết kế mục 0.6', ?)",
-                   (maso.tao(), ten, json.dumps(gt, ensure_ascii=False), bay.date().isoformat(), bay.isoformat(timespec="seconds")))
+                   (maso.tao(), ten, json.dumps(gt, ensure_ascii=False), muigio.ngay_so_lieu(bay).isoformat(), muigio.gio_luu(bay)))
         them += 1
     return them
 

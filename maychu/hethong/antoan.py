@@ -19,8 +19,8 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 # ---- Ngưỡng (01 chỗ) ----
 HE_SO_DULIEU = 3                  # bản chụp trước khi nâng + bản sao + bản mã hóa (học kiemtruoc_ban3: ≥ 03 lần)
@@ -111,7 +111,7 @@ def ghi(thumuc: Path | None = None, **muc) -> dict:
 
 
 def _bay() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 # ---------------- Lớp 1: ổ trống ----------------
@@ -304,7 +304,7 @@ def quay_ve_loi_gan(thumuc: Path | None = None, luc: str | None = None) -> dict 
     try:
         d = cn.execute("SELECT luc, thamso_tomtat FROM nhatky_thaotac WHERE congcu = 'capnhat' AND lenhcon = 'quayve' AND ketqua = 'loi'"
                        + (" AND luc = ?" if luc else " AND luc >= ?") + " ORDER BY luc DESC LIMIT 1",
-                       (luc or (datetime.now(MUIGIO_VN) - timedelta(days=7)).isoformat(timespec="seconds"),)).fetchone()
+                       (luc or muigio.gio_luu(muigio.bay() - timedelta(days=7)),)).fetchone()
     finally:
         cn.close()
     return {"luc": d[0], "chu": d[1], "chu_hien": d[1], "chu_chuong": cau_chuong(d[1])} if d else None
@@ -331,7 +331,8 @@ def _gio(luc: str) -> str:
     """"10:05"; hôm khác thì thêm ngày "10:05 23/11"."""
     if len(luc or "") < 16:
         return luc or ""
-    return luc[11:16] if luc[:10] == datetime.now(MUIGIO_VN).date().isoformat() else f"{luc[11:16]} {luc[8:10]}/{luc[5:7]}"
+    g = muigio.gio_hien(luc)   # ③ QĐ636: giờ, ngày theo múi đã chọn
+    return g.strftime("%H:%M") if g.date().isoformat() == muigio.hom_nay() else g.strftime("%H:%M %d/%m")
 
 
 def thong_tin_quayve(thumuc: Path | None = None) -> dict:

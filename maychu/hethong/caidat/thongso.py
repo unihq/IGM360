@@ -6,8 +6,8 @@ Thông số trống: không chặn lưu, phần mềm làm cách an toàn nhất
 from datetime import date, datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import aibam, ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 NHOM = ("Tài chính", "Máy chủ và bảo mật", "AI", "Báo cáo, dữ liệu")   # QĐ139 (từ điển dòng 44)
 
@@ -40,6 +40,10 @@ DANHMUC = [
      "Không gửi báo cáo định kỳ, tin báo sự kiện vẫn gửi"),
     ("nhip_lay_dulieu", 3, "Nhịp lấy dữ liệu", "danhsach", "", None, None,
      "Không tự lấy, chỉ Lấy ngay ở mục Nguồn dữ liệu"),
+    # QĐ636 (D-a, CDA PTD-20 mục 5): 01 múi giờ chung cho cả phần mềm (② ngày số liệu, ③ giờ hiện, lịch) + múi đối
+    # soát với sàn. Đổi ở thẻ Chung qua đường riêng (chỉ Chủ, mật khẩu + mã 02 lớp) – không hiện ở ngăn Thông số.
+    ("muigio", 1, "Múi giờ", "chu", "", "Asia/Ho_Chi_Minh", None, ""),   # nhãn nội bộ, không hiện ở màn nào (AN_O_THONGSO)
+    ("muigio_doisoat", 1, "Múi giờ đối soát với sàn", "chu", "", "Asia/Ho_Chi_Minh", None, ""),
 ]
 # Không sửa ở ngăn Thông số: giá xuất kho chưa cho đổi ở GĐ 1 (bản vẽ đợt 1); nhịp lấy đặt từng loại ở màn 11.
 KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulieu": "Đặt ở mục Nguồn dữ liệu",
@@ -50,17 +54,18 @@ GIAIDOAN_SAU = {"nguong_tien_ai_tuapdung"}
 THEO_TEN = {d[0]: d for d in DANHMUC}
 # QĐ278 (Z21 dòng 1): thông số gạt công tắc, đổi có hiệu lực ngay trong ngày (không qua hộp "Sửa" chọn ngày áp dụng)
 CONG_TAC = {"saoluu_drive", "tunang_congcu_ai"}
-AN_O_THONGSO = {"tunang_congcu_ai"}   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
+AN_O_THONGSO = {"tunang_congcu_ai",   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
+                "muigio", "muigio_doisoat"}   # QĐ636: đặt ở thẻ Chung
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 # QĐ390 (phương án A, CDA 16g), SOAT-KH090 (a): cờ "Đăng nhập 02 lớp" là thông số hệ thống P01, không nằm trong DANHMUC
 # (không hiện ở ngăn Thông số, không đếm vào số đã đặt). Chỉ đổi qua 02 đường riêng /api/2lop/tat, /api/2lop/bat và lệnh
 # datlai, ghi bằng 01 hàm `ghi_co_2lop`; `dat()`, `gat()` (đường sửa chung, đường gạt chung) từ chối mọi tên trong tập này.
 CO_2LOP = "dangnhap_2lop"
-CHI_DUONG_RIENG = {CO_2LOP}
+CHI_DUONG_RIENG = {CO_2LOP, "muigio", "muigio_doisoat"}   # QĐ636: múi giờ chỉ đổi qua `doi_muigio`
 
 
 def _hom_nay() -> str:
-    return datetime.now(MUIGIO_VN).date().isoformat()
+    return muigio.hom_nay()   # ② QĐ636
 
 
 def khoi_tao(thumuc: Path | None = None) -> int:
@@ -74,7 +79,7 @@ def khoi_tao(thumuc: Path | None = None) -> int:
                 continue
             cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
                        " VALUES (?, ?, ?, ?, ?, ?, 'hethong', 'Giá trị khởi tạo theo thiết kế', ?)",
-                       (maso.tao(), ten, macdinh, kieu, donvi, _hom_nay(), datetime.now(MUIGIO_VN).isoformat(timespec="seconds")))
+                       (maso.tao(), ten, macdinh, kieu, donvi, _hom_nay(), muigio.gio_luu()))
             them += 1
         cn.execute("COMMIT")
     except Exception:
@@ -105,15 +110,16 @@ def dat_moc_doc(nguoi: str = "hethong", thumuc: Path | None = None, luc: datetim
     """Bấm "Đọc hết": thêm 01 dòng P01 giá trị = lúc bấm, đóng `hieuluc_den` dòng đang dùng (thiết kế P01: không sửa
     dòng cũ). Không đổi trạng thái cảnh báo D03 (QĐ165)."""
     aibam.kiem(nguoi)
-    bay = (luc or datetime.now(MUIGIO_VN)).isoformat(timespec="seconds")
+    bay = muigio.gio_luu(luc)
+    ngay = muigio.ngay_cua(bay, thumuc)   # ② QĐ636 (CDA 5.5)
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
         cn.execute("BEGIN IMMEDIATE")
         cn.execute("UPDATE thongso SET hieuluc_den = ? WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL",
-                   (bay[:10], MOC_DOC))
+                   (ngay, MOC_DOC))
         cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
                    " VALUES (?, ?, ?, 'chu', '', ?, ?, 'Bấm Đọc hết ở chuông', ?)",
-                   (maso.tao(), MOC_DOC, bay, bay[:10], nguoi, bay))
+                   (maso.tao(), MOC_DOC, bay, ngay, nguoi, bay))
         cn.execute("COMMIT")
     except Exception:
         cn.execute("ROLLBACK")
@@ -206,6 +212,31 @@ def ghi_co_2lop(bat: bool, nguoi: str, ghichu: str, thumuc: Path | None = None) 
     return _ghi_gat(CO_2LOP, "1" if bat else "0", nguoi, ghichu, thumuc)
 
 
+def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) -> dict:
+    """QĐ636: 01 hàm duy nhất đổi múi giờ (`muigio` hoặc `muigio_doisoat`). Người gọi đã xác minh Chủ + mật khẩu + mã
+    02 lớp (`nguoidung.xac_minh_lai`) và kiểm không đang nạp / chốt kỳ. Tên múi lạ thì từ chối. Ghi 01
+    dòng P01 mới (dòng cũ đóng, giữ lịch sử – tra được múi lúc chốt kỳ), 01 dòng F04 múi cũ → múi mới. 0 dòng dữ liệu
+    viết lại (giờ lưu +07:00 không đổi)."""
+    aibam.kiem(nguoi)
+    giatri = (giatri or "").strip()
+    if ten not in (muigio.TEN, muigio.TEN_DOISOAT):
+        return {"loi": "Không có thông số này"}
+    if not muigio.kiem_ten(giatri):
+        return {"loi": CHU_MUIGIO["ten_la"]}
+    cu = doc_mot(ten, muigio.MAC_DINH, thumuc)
+    kq = _ghi_gat(ten, giatri, nguoi, "Đổi múi giờ", thumuc)
+    muigio.xoa_dem()
+    if kq.get("doi"):
+        from maychu.hethong import nhatky
+        nhatky.ghi("caidat", "doi_muigio", f"{ten}: {cu} → {giatri}", nguoi_id=nguoi if nguoi != "hethong" else None,
+                   thumuc=thumuc)
+    return kq
+
+
+# Chữ đổi múi giờ – Bổ sung QĐ652 (CDO soạn, CPO áp): hiện bằng dòng báo lỗi chung (Quychuan 5.2, role="alert")
+CHU_MUIGIO = {"ten_la": "Chưa đổi được múi giờ: múi vừa chọn không có trên máy chủ. Tải lại trang rồi chọn lại."}
+
+
 def drive_bat(thumuc: Path | None = None) -> bool:
     """QĐ277: công tắc "Sao lưu Google Drive". Chưa có dòng nào thì coi là TẮT (mặc định thiết kế)."""
     return doc_mot("saoluu_drive", "0", thumuc) == "1"
@@ -236,7 +267,7 @@ def _ghi_gat(ten: str, gt: str, nguoi: str, ghichu: str, thumuc: Path | None) ->
         d = THEO_TEN.get(ten) or (ten, 1, "", "codong", "")
         cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                   (maso.tao(), ten, gt, d[3], d[4], ngay, nguoi, ghichu, datetime.now(MUIGIO_VN).isoformat(timespec="seconds")))
+                   (maso.tao(), ten, gt, d[3], d[4], ngay, nguoi, ghichu, muigio.gio_luu()))
         cn.execute("COMMIT")
     except Exception:
         cn.execute("ROLLBACK")
@@ -278,7 +309,7 @@ def dat(ten: str, giatri: str, hieuluc_tu: str, ghichu: str = "", nguoi: str = "
         cn.execute("INSERT INTO thongso (id, ten, giatri, kieu, donvi, hieuluc_tu, nguoi_dat, ghichu, tao_luc)"
                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                    (maso.tao(), ten, giatri or None, d[3], d[4], tu, nguoi, ghichu or None,
-                    datetime.now(MUIGIO_VN).isoformat(timespec="seconds")))
+                    muigio.gio_luu()))
         cn.execute("COMMIT")
     except Exception:
         cn.execute("ROLLBACK")

@@ -13,8 +13,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.caidat import thongso
 
 log = logging.getLogger("igm360.thongbao")
@@ -48,7 +48,7 @@ THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def _so(v) -> int:
@@ -111,7 +111,7 @@ def quet_goi(thumuc: Path | None = None) -> None:
         goi = cn.execute("SELECT ma, trangthai, tyle_tuan, datlai_tuan_luc FROM nguon_ai WHERE substr(ma, 1, 4) = 'goi_'").fetchall()
     finally:
         cn.close()
-    bay = datetime.now(MUIGIO_VN)
+    bay = muigio.bay()
     tt = {}
     for ma, trangthai, _t, _d in goi:   # hỏi CLI trước, ngoài giao dịch ghi
         m = re.fullmatch(r"goi_(claude|chatgpt)_(\d\d)", ma or "")
@@ -167,8 +167,8 @@ def quet_madaihan(thumuc: Path | None = None) -> None:
     """0.7.8 (QĐ198, QĐ200, PTD-09 mục 3): mã dài hạn gói Claude hết hạn (đỏ, 01 dòng mở tới khi lấy mã mới hoặc gỡ);
     còn ≤ `madaihan.SO_NGAY_NHAC` ngày (vàng) thì MỖI NGÀY 01 dòng: khóa chống trùng gắn ngày, dòng ngày cũ đóng."""
     from maychu.hethong.mohinh import madaihan
-    bay = datetime.now(MUIGIO_VN)
-    hom_nay = bay.date().isoformat()
+    bay = muigio.bay()
+    hom_nay = muigio.hom_nay(thumuc)   # ③ "mỗi ngày 01 dòng" theo múi đã chọn
     cn = ketnoi.mo("Baomat", thumuc)
     try:
         dv = [r[0] for r in cn.execute("SELECT DISTINCT dichvu FROM kekhoa WHERE trangthai = 'dung'"
@@ -429,7 +429,7 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"{ten} {_nb('hết hạn')} hôm nay" if not gt else f"{ten} còn {_nb(f'{gt:02d} ngày')} {_nb('hết hạn')}"
     if loai == "saoluu_loi":
         luc = gio_sl.get(d["dong_nguon_id"]) or d["tao_luc"] or ""
-        if luc[:10] == datetime.now(MUIGIO_VN).date().isoformat():
+        if muigio.ngay_cua(luc) == muigio.hom_nay():   # ③ QĐ636
             return f"Sao lưu lúc {luc[11:16]} không xong"
         return f"Sao lưu không xong từ {luc[11:16]} {_nb(f'ngày {luc[8:10]}/{luc[5:7]}')}"   # S3 (K-TB3): lỗi từ hôm trước
     if loai == "ocung_vuot":

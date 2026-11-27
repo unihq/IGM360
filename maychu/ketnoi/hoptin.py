@@ -5,11 +5,10 @@ Ràng buộc không trùng (`nguon`, `ma_sukien`) nằm trong lược đồ (lư
 nguồn đã gửi lặp; đơn chỉ nạp 01 lần. Phần nhận tin thật (cổng nhận, kiểm dấu, gọi lại Pancake) làm ở GĐ 3.
 """
 import json
-from datetime import datetime
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 
 def nhan(nguon: str, ma_sukien: str, *, loai_sukien: str | None = None, ma_don: str | None = None,
@@ -26,7 +25,7 @@ def nhan(nguon: str, ma_sukien: str, *, loai_sukien: str | None = None, ma_don: 
                        " trung, trangthai, so_lan_thu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'moi', 0)"
                        " ON CONFLICT (nguon, ma_sukien) DO UPDATE SET trung = 1",
                        (ma, nguon, ketnoi_id, ma_sukien, loai_sukien, ma_don,
-                        datetime.now(MUIGIO_VN).isoformat(timespec="seconds"),
+                        muigio.gio_luu(),
                         json.dumps(noidung, ensure_ascii=False) if noidung is not None else None))
             d = cn.execute("SELECT id FROM hoptin WHERE nguon = ? AND ma_sukien = ?", (nguon, ma_sukien)).fetchone()
             cn.execute("COMMIT")

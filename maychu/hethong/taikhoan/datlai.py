@@ -7,10 +7,9 @@ sau phần mềm bắt bật lại. QĐ393 (2): mọi lần chạy (có hay khô
 """
 import getpass
 import sys
-from datetime import datetime
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, khoitao, maso, phienban, songuoi
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.taikhoan import chan, matkhau, nguoidung, phien
 
@@ -45,9 +44,9 @@ def chay(thamso=None, hoi=getpass.getpass, hoi_chu=input, thumuc=None) -> int:
                 cn.execute("ROLLBACK")
                 print("CHƯA ĐẶT LẠI: tài khoản chủ vừa bị xóa trong lúc chạy lệnh, chạy lại lệnh")
                 return 1
-            bay = datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+            bay = muigio.gio_luu()
             ma = maso.tao()
-            phienban.them(cn, "nguoidung", {"id": ma, "ma": ten, "ten": ten, "hieuluc_tu": bay[:10], "phienban": 1,
+            phienban.them(cn, "nguoidung", {"id": ma, "ma": ten, "ten": ten, "hieuluc_tu": muigio.hom_nay(), "phienban": 1,
                                             "nguoi_khai": "hethong", "tao_luc": bay, "vaitro": "chu",
                                             "nguoi_id": nguoi_id})
             u = (ma, None)

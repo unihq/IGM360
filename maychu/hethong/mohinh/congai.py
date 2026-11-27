@@ -27,13 +27,12 @@ import subprocess
 import tempfile
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 
 import httpx
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 from maychu.hethong.caidat import thongso
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.kekhoa.che import che
@@ -55,7 +54,7 @@ class HetHanMuc(Exception):
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def _cho_phep():
@@ -229,7 +228,7 @@ def quet_codex(thumuc=None) -> dict:
         _DA_QUET[str(tep)] = mt
         hm = _doc_han_muc_codex(tm)
         if hm:
-            ghi_han_muc(nid, hm, thumuc, luc=datetime.fromtimestamp(mt, MUIGIO_VN).isoformat(timespec="seconds"))
+            ghi_han_muc(nid, hm, thumuc, luc=muigio.tu_so_giay(mt))
         kq[ma] = "ghi" if hm else "khong_co"
     return kq
 
@@ -322,7 +321,7 @@ def ds_het_mo_hinh(nguon_id: str) -> list[dict]:
 
 
 def _iso(tg: float) -> str:
-    return datetime.fromtimestamp(tg, MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.tu_so_giay(tg)
 
 
 def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None, luc: str | None = None) -> None:
@@ -337,7 +336,7 @@ def ghi_han_muc(nguon_id: str, hm: dict, thumuc=None, luc: str | None = None) ->
             if ten in hm:
                 cot += [f"{c_tl} = ?", f"{c_dl} = ?"]
                 dl = hm[ten]["datlai"]
-                gt += [round(hm[ten]["pct"]), datetime.fromtimestamp(dl, MUIGIO_VN).isoformat(timespec="seconds") if dl else None]
+                gt += [round(hm[ten]["pct"]), muigio.tu_so_giay(dl) if dl else None]
         if hm.get("het"):
             cot.append("da_het_luc = 1")
         cn.execute(f"UPDATE nguon_ai SET {', '.join(cot)} WHERE id = ?", [*gt, nguon_id])
@@ -384,7 +383,7 @@ def _het_luc_dat_lai(d: dict) -> bool:
     thì chặn 60 phút từ lần đo. Y36d P3: KHÔNG xét cờ `da_het_luc` nữa: lượt bị từ chối do mốc nghỉ riêng `_HET_TK`
     quyết (đúng `resetsAt` hãng báo), để giờ đặt lại đã lưu của cửa sổ chưa đầy không đè mốc đó."""
     bay = _bay_gio()
-    moc = datetime.fromtimestamp(time.time() - 3600, MUIGIO_VN).isoformat(timespec="seconds")
+    moc = muigio.tu_so_giay(time.time() - 3600)
     for tl, dl in (("tyle_5gio", "datlai_5gio_luc"), ("tyle_tuan", "datlai_tuan_luc")):
         if (d[tl] or 0) >= 100 and (d[dl] > bay if d[dl] else (d.get("do_luc") or "") > moc):
             return True
@@ -1199,8 +1198,8 @@ def _goi_trong(cau, bo_qua, sem, viecnen_id, chi_nguon_id, loai_viec, mohinh_id,
 
 def tom_tat_thang(thumuc=None) -> dict:
     """Thẻ Khóa API màn 13 (QĐ122, bản vẽ "Tiền thật tháng 11"): tiền thật từ ngày 01 tháng này, giờ Việt Nam."""
-    bay = datetime.now(MUIGIO_VN)
-    tu = bay.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
+    bay = muigio.bay_chon(thumuc)   # ② QĐ636: tháng theo múi đã chọn; mốc đổi về giờ lưu để so chuỗi đúng
+    tu = muigio.gio_luu(bay.replace(day=1, hour=0, minute=0, second=0, microsecond=0))
     cn = ketnoi.mo("Nhatky", thumuc)
     try:
         r = cn.execute("SELECT count(*), coalesce(sum(sotien), 0) FROM nhatky_ai WHERE luc >= ?", (tu,)).fetchone()
@@ -1211,7 +1210,7 @@ def tom_tat_thang(thumuc=None) -> dict:
 
 def tom_tat_tuan(thumuc=None) -> dict:
     """Số cho màn 13, 10: tiền thật (khóa API) và quy đổi tham khảo (gói) 07 ngày, tách riêng, không cộng lẫn."""
-    tu = datetime.fromtimestamp(time.time() - 7 * 86400, MUIGIO_VN).isoformat(timespec="seconds")
+    tu = muigio.tu_so_giay(time.time() - 7 * 86400)
     cn = ketnoi.mo("Nhatky", thumuc)
     try:
         r = cn.execute("SELECT count(*), coalesce(sum(sotien), 0), sum(sotien_thamkhao), sum(ketqua = 'xong')"

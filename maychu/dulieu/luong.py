@@ -8,11 +8,10 @@
 """
 import re
 import sqlite3
-from datetime import datetime
 
+from maychu.dulieu import muigio
 from maychu.dulieu import maso
 from maychu.dulieu.phienban import giao_dich
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 # Cột số so khi nạp lại cùng người, cùng tháng.
 COT_SO = ("luong", "thuong", "khac", "tong", "sotien_nguyente", "sotien_quydoi", "tien_ma")
@@ -45,7 +44,7 @@ def ghi_thang(cn: sqlite3.Connection, dong: dict) -> str:
                 return cu[0]
             raise LoiTrung(f"C16: người này đã có lương tháng {thang} với số khác; sửa qua Sổ điều chỉnh")
         dong.setdefault("id", maso.tao())
-        dong.setdefault("tao_luc", datetime.now(MUIGIO_VN).isoformat(timespec="seconds"))
+        dong.setdefault("tao_luc", muigio.gio_luu())
         ten_cot = list(dong)
         cn.execute(f"INSERT INTO luong_nhansu ({', '.join(ten_cot)}) VALUES ({', '.join('?' for _ in ten_cot)})",
                    [dong[c] for c in ten_cot])

@@ -18,14 +18,15 @@ import json
 import os
 import shutil
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi, maso
 
 DUOI_MAHOA = ".mahoa"
 
-MUIGIO_VN = timezone(timedelta(hours=7))
+MUIGIO_VN = muigio.MUIGIO_LUU   # tên cũ giữ cho bài kiểm cũ; mã mới dùng `muigio` (QĐ636)
 GIU_SO_NGAY = 3  # giữ bản trên máy của 03 ngày gần nhất; bản lâu dài nằm ở Drive
 
 
@@ -42,7 +43,7 @@ def _mabam(duong: Path) -> str:
 
 
 def da_co_hom_nay(thumuc: Path | None = None, bay_gio: datetime | None = None) -> bool:
-    ngay = (bay_gio or datetime.now(MUIGIO_VN)).strftime("%Y-%m-%d")
+    ngay = (bay_gio or muigio.bay()).astimezone(muigio.MUIGIO_LUU).strftime("%Y-%m-%d")   # ① tên tệp theo giờ lưu
     noi = thumuc_saoluu(thumuc) / ngay
     return all((noi / f"{t}.sqlite3").exists() for t in ketnoi.CAC_FILE)
 
@@ -154,7 +155,7 @@ def chay(thumuc: Path | None = None, bay_gio: datetime | None = None, truoc_ban:
     `truoc_ban` (0.7.9 lớp 5, QĐ213): lượt chụp ngay trước khi gửi lệnh cập nhật lên bản đó, vào thư mục riêng
     (không đè bản hằng ngày, không làm `da_co_hom_nay` đúng). `bao(i, n)`: 0.8.1 (QĐ251) báo đã chụp xong tệp i/n."""
     thumuc = thumuc or ketnoi.thumuc_dulieu()
-    luc = bay_gio or datetime.now(MUIGIO_VN)
+    luc = (bay_gio or muigio.bay()).astimezone(muigio.MUIGIO_LUU)   # ① tên tệp theo giờ lưu
     goc = thumuc_saoluu(thumuc)
     noi = goc / (ten_truoc_capnhat(luc, truoc_ban) if truoc_ban else luc.strftime("%Y-%m-%d"))
     noi.mkdir(parents=True, exist_ok=True)
@@ -359,8 +360,8 @@ def don_truoc_nangcap(thumuc: Path | None = None, bay_gio: datetime | None = Non
         luc = None
     if luc is not None:
         if luc.tzinfo is None:
-            luc = luc.replace(tzinfo=MUIGIO_VN)
-        if (bay_gio or datetime.now(MUIGIO_VN)) - luc > timedelta(days=GIU_TRUOC_NANG_NGAY):
+            luc = luc.replace(tzinfo=muigio.MUIGIO_LUU)
+        if (bay_gio or muigio.bay()) - luc > timedelta(days=GIU_TRUOC_NANG_NGAY):
             xoa.append((cac[-1][1], f"quá {GIU_TRUOC_NANG_NGAY} ngày sau lần nâng"))
     ra = []
     for p, lydo in xoa:

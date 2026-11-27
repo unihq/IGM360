@@ -93,7 +93,8 @@ def _ma_the() -> str:
     """Mã chạy được trong node: icon.js, 04 hàm phụ thật của app.js, khối <TD8> và choCapNhat."""
     js = (GD / "app.js").read_text(encoding="utf-8")
     dong = js.split("\n")
-    phu = [x for x in dong if x.startswith(("const hai =", "const esc =", "const icoMau ="))]
+    phu = [x for x in dong if x.startswith(("const hai =", "const esc =", "const icoMau =",
+                                            "let MUI =", "const theoMui =", "const hien =", "const gio ="))]   # 0.10.0 QĐ636: giờ theo múi
     khoi = js[js.index("// <TD8>"):js.index("// </TD8>")]
     a = next(i for i, x in enumerate(dong) if x.startswith("function choCapNhat("))
     b = next(i for i in range(a, len(dong)) if dong[i] == "}")

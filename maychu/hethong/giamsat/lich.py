@@ -10,8 +10,8 @@ Việc nặng chạy ở luồng phụ để không chặn máy chủ web.
 """
 import asyncio
 import logging
-from datetime import datetime
 
+from maychu.dulieu import muigio
 from maychu.dulieu import saoluu
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
@@ -47,7 +47,7 @@ async def chay_mai() -> None:
     lan_tb_cuoi = None
     lan_bm_cuoi = None
     while True:
-        bay_gio = datetime.now(saoluu.MUIGIO_VN)
+        bay_gio = muigio.bay_chon()   # ③ QĐ636: giờ chạy lịch theo múi đã chọn
         try:
             moc = bay_gio.strftime("%Y-%m-%d %H")
             if moc != gio_do_cuoi:

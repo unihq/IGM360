@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi
 from maychu.hethong import capnhat
 from maychu.hethong.caidat import thongso
@@ -120,7 +121,8 @@ def dang_xuat(response: Response, p: dict = Depends(can_dang_nhap)):
 
 @router.get("/toi")
 def toi(p: dict = Depends(can_dang_nhap)):
-    return {**nguoidung.thong_tin(p["nguoidung_id"]), "phien_id": p["phien_id"], "het_luc": p["het_luc"]}
+    return {**nguoidung.thong_tin(p["nguoidung_id"]), "phien_id": p["phien_id"], "het_luc": p["het_luc"],
+            "muigio": thongso.doc_mot(muigio.TEN, muigio.MAC_DINH)}   # QĐ636: giao diện hiện giờ theo múi đã chọn
 
 
 @router.post("/phien/giahan")
@@ -245,6 +247,35 @@ def doi_may_xacnhan(body: Ma2Lop, request: Request, p: dict = Depends(can_dang_n
     if "loi" in kq:
         _loi_2lop(kq)
     return kq
+
+
+class DoiMuiGio(BaseModel):
+    ten: str = muigio.TEN
+    giatri: str = ""
+    matkhau: str = ""
+    ma: str = ""
+
+
+@router.get("/muigio")
+def xem_muigio(p: dict = Depends(can_dang_nhap)):
+    """QĐ636: múi đang dùng (② ngày số liệu, ③ giờ hiện) + múi đối soát + danh sách chọn cho thẻ Chung."""
+    return {"muigio": thongso.doc_mot(muigio.TEN, muigio.MAC_DINH), "muigio_doisoat": thongso.doc_mot(muigio.TEN_DOISOAT, muigio.MAC_DINH),
+            "danh_sach": muigio.danh_sach(), "hom_nay": muigio.hom_nay(), "ban": muigio.ly_do_ban()}
+
+
+@router.post("/muigio")
+def doi_muigio(body: DoiMuiGio, request: Request, p: dict = Depends(can_dang_nhap)):
+    """QĐ636: chỉ Chủ, nhập lại mật khẩu + mã 02 lớp; đang nạp / chốt kỳ thì từ chối; ghi P01 + F04 (thongso.doi_muigio)."""
+    ban = muigio.ly_do_ban()
+    if ban:
+        raise HTTPException(409, ban)
+    kq = nguoidung.xac_minh_lai(p["nguoidung_id"], body.matkhau, body.ma, "muigio", _ip(request))
+    if "loi" in kq:
+        _loi_dangnhap(kq)
+    kq = thongso.doi_muigio(body.ten, body.giatri, p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return {**kq, "hom_nay": muigio.hom_nay()}
 
 
 class Tat2Lop(BaseModel):
@@ -399,7 +430,7 @@ def _kiem_han(han: str | None) -> str | None:
         return None
     from datetime import date
     try:
-        return date.fromisoformat(han[:10]).isoformat()
+        return date.fromisoformat(muigio.ngay_cua(han)).isoformat()   # ③ QĐ636: ngày hết hạn theo múi đã chọn
     except ValueError:
         raise HTTPException(400, "Hạn khóa phải là ngày (năm-tháng-ngày)")
 

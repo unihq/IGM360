@@ -11,10 +11,10 @@
 """
 import contextlib
 import sqlite3
-from datetime import date, datetime
+from datetime import date
 
+from maychu.dulieu import muigio
 from maychu.dulieu import maso
-from maychu.dulieu.saoluu import MUIGIO_VN
 
 # Khóa bền thêm ngoài `ma` (không chồng lấn hiệu lực theo cột này). QĐ143: A15 tách phiên bản theo người.
 KHOA_THEM = {"nhanvien": ("nguoi_id",)}
@@ -27,7 +27,7 @@ class LoiPhienBan(ValueError):
 
 
 def _bay_gio() -> str:
-    return datetime.now(MUIGIO_VN).isoformat(timespec="seconds")
+    return muigio.gio_luu()
 
 
 def _ngay(gt, ten: str) -> str:
@@ -172,7 +172,7 @@ def tim_id(cn: sqlite3.Connection, bang: str, giatri: str, ngay=None, cot: str =
     _kiem_bang(cn, bang)
     if cot != "ma" and cot not in KHOA_THEM.get(bang, ()):
         raise LoiPhienBan(f"{bang}: {cot} không phải khóa bền")
-    n = _ngay(ngay, "ngày") if ngay else datetime.now(MUIGIO_VN).date().isoformat()
+    n = _ngay(ngay, "ngày") if ngay else muigio.hom_nay()   # ② QĐ636
     d = cn.execute(f"SELECT id FROM {bang} WHERE {cot} = ? AND COALESCE(hieuluc_tu, '') <= ?"
                    " AND (hieuluc_den IS NULL OR hieuluc_den > ?) ORDER BY phienban DESC LIMIT 1", (giatri, n, n)).fetchone()
     return d[0] if d else None
