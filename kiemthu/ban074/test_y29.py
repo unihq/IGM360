@@ -137,8 +137,8 @@ class KiemHoSoTrongOLuu(unittest.TestCase):
         # Z9c: cột Nguồn, khung đăng nhập, câu báo kết nối, đủ 02 tài khoản, hộp gỡ, dòng nguồn màn 08
         self.assertIn("(dau ? cum(tenNguon(dau)) : 'Chưa có nguồn')", js)
         self.assertIn("Đăng nhập tài khoản ' + dn.tk + '</div>", js)
-        self.assertIn("bao('Đã kết nối ' + tenNguon({goi: 'chatgpt'}) + ', tài khoản ' + tk + '.')", js)
-        self.assertIn("bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.')", js)
+        self.assertIn("bao('Đã kết nối ' + tenNguon({goi: 'chatgpt'}) + ', tài khoản ' + tk + '.', 'xong')", js)
+        self.assertIn("bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.', 'loi')", js)
         self.assertIn("ten = 'tài khoản ' + tk + ' của ' + tenNguon({goi: g});", js)
         self.assertIn("const dongNguon = n => tenNguon(n) + ' · ' + moHinhDong(n.mohinh_gannhat, n);", js)
         self.assertIn("const moHinhDong = (ma, n) => tenMh(", js)                   # QĐ178: 01 hàm rút gọn dùng chung

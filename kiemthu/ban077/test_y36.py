@@ -633,9 +633,9 @@ class KiemZ12(unittest.TestCase):
         self.assertEqual(self.js.count("Việc nền · toàn hệ thống") + self.js.count("Việc nền chung"), 0)   # tên dòng chỉ ở máy chủ (01 chỗ)
         for chu in ("const CHU_VN = 'Việc nền chưa đặt riêng và bot nền sau này dùng dòng này. Trò chuyện AI không theo.';",
                     "k === 'viecnen_chung' ? ' <button class=\"nut-ico nho\" data-ivn title=\"' + CHU_VN",
-                    "if ('ivn' in d) { ev.stopImmediatePropagation(); bao(CHU_VN); return; }",
+                    "if ('ivn' in d) { ev.stopImmediatePropagation(); bao(CHU_VN, 'thongtin'); return; }",
                     "'Trò chuyện AI chưa đặt thì dùng mặc định của nguồn ưu tiên 1; việc nền chưa đặt riêng theo dòng \"' + nbsp(LV.viecnen_chung) + '\"'",
-                    "bao('Đã đổi mô hình cho \"' + D.dsmh.loai_viec[lv] + '\": ' + ten + ' · ' + tn + '.');"):
+                    "bao('Đã đổi mô hình cho \"' + D.dsmh.loai_viec[lv] + '\": ' + ten + ' · ' + tn + '.', 'xong');"):
             self.assertIn(chu, self.js, chu)
         self.assertIn('id="md-ghichu"', self.html)
 

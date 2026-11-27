@@ -27,7 +27,7 @@ class KiemVachTrai(unittest.TestCase):
     def test_dai_va_hop_bao_giu_nghia_bang_icon(self):
         h = (GOC / "web" / "giaodien" / "index.html").read_text(encoding="utf-8").replace("\r\n", "\n")
         self.assertIn('<div class="vach do-v" data-s="k:matketnoi"><svg\n  style="flex:none;vertical-align:middle;color:var(--canh)"', h)
-        self.assertIn(".thongbao{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--khoi);border:1px solid var(--ke);border-radius:10px;", h)
+        self.assertIn(".thongbao{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--khoi);border:1px solid var(--ke);border-radius:12px;", h)
 
 
 if __name__ == "__main__":

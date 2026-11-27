@@ -291,10 +291,10 @@ class KiemY24(unittest.TestCase):
         self.assertIn("'Tiếp tục', () => vao(g, o)", js)
         self.assertIn("ICON['user-minus'] + 'Gỡ tài&nbsp;khoản</button>'", js)
         self.assertIn("xacnhan('Gỡ ' + ten + '?', 'Phần mềm ngừng dùng tài khoản này, ô ẩn khỏi màn.", js)
-        self.assertIn("bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.')", js)
+        self.assertIn("bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.', 'xong')", js)
         self.assertIn("' này đã kết&nbsp;nối ở Tài&nbsp;khoản&nbsp;' + D.trung[g] + '. Phần mềm không tạo ô&nbsp;mới.", js)
         self.assertIn("Đăng nhập tài khoản ' + dn.tk + '</div>", js)                      # QĐ177 (Z9c): bỏ đuôi tên nguồn
-        self.assertIn("bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.')", js)
+        self.assertIn("bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.', 'xong')", js)
         self.assertIn("D.trung.claude = (e.ct || {}).trung_voi", js)
         self.assertIn("'Kết nối bằng ' + CHU_MDH.toLowerCase() + ' 365&nbsp;ngày để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu", js)
         self.assertIn("if (rong && !dn.url && !mdMo.length) h += ", js)   # U5-2: đang đăng nhập lần đầu thì ẩn dòng "Chưa có tài khoản"

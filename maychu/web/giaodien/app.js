@@ -139,7 +139,20 @@ function veNhom() {
 }
 function batNhom(ten) { if (NHOM.mo.has(ten)) NHOM.mo.delete(ten); else { NHOM.mo.clear(); NHOM.mo.add(ten); } veNhom(); }   // L1 A
 // </NHOM>
-function bao(t) { const e = $('#tb-msg'); e.textContent = t; e.hidden = false; clearTimeout(bao.h); bao.h = setTimeout(() => e.hidden = true, 3200); }
+// Hộp báo nhanh – QĐ413, QĐ417 A, QĐ419 (Quychuan dòng 208), 0 vạch trái (QĐ575). Mọi chỗ gọi ghi rõ loại (HOPBAO-TAM):
+// 'loi' icon tròn circle-alert đỏ, giữ tới khi bấm ✕ "Đóng", role alert; 'xong' circle-check xanh lá, tự tắt 3,2 giây, role status;
+// 'thongtin' TẠM (QĐ648 – icon chờ anh duyệt): như 'xong' nhưng không icon. Máy tính: giữa vùng nội dung.
+function bao(t, loai) {
+  const e = $('#tb-msg'), loi = loai === 'loi';
+  e.innerHTML = (loai === 'thongtin' ? '' : icoMau(ICON[loi ? 'circle-alert' : 'circle-check'], loi ? 'var(--canh)' : 'var(--dat)', 18))
+    + '<span class="f1"></span>' + (loi ? '<button class="nut-ico tb-dong" aria-label="Đóng">' + icoMau(ICON.x, 'var(--phu)', 16) + '</button>' : '');
+  e.querySelector('span').textContent = t;
+  const d = e.querySelector('.tb-dong'); if (d) d.onclick = () => { e.hidden = true; };
+  e.setAttribute('role', loi ? 'alert' : 'status');
+  const v = S.xem !== 'mb' && $('#app .vung'), r = v && v.getBoundingClientRect();
+  e.style['left'] = r && r.width ? Math.round(r.left + r.width / 2) + 'px' : '';
+  e.hidden = false; clearTimeout(bao.h); if (!loi) bao.h = setTimeout(() => { e.hidden = true; }, 3200);
+}
 function xacnhan(tieu, chu, nut, cb, ico) { const dau = $('#h-xacnhan .hop-dau svg');
   if (dau) { if (!xacnhan.goc) xacnhan.goc = dau.outerHTML; dau.outerHTML = ico ? icoMau(ICON[ico], 'var(--xanh-chu)', 20) : xacnhan.goc; }
   $('#h-xacnhan [data-tieu]').textContent = tieu; $('#xn-chu').innerHTML = chu;
@@ -159,7 +172,7 @@ function hienKhoa(k) {
 function loiDangNhap(e, oMa) {
   if (e.status === 429) { hienKhoa(e.ct); return; }
   const con = e.ct && e.ct.con_lai;
-  if (oMa) { bao(e.message + (con != null ? ' Còn ' + hai(con) + ' lần thử.' : '')); return; }
+  if (oMa) { bao(e.message + (con != null ? ' Còn ' + hai(con) + ' lần thử.' : ''), 'loi'); return; }
   hienLoiDn(e.message, con);
 }
 async function dangNhap() {
@@ -178,14 +191,14 @@ async function dangNhap() {
 }
 async function xacNhanMa(nut) {
   const goc = nut.closest('[data-s]'), ma = ma6(goc);
-  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
+  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.', 'thongtin'); return; }
   try {
     await api('/dangnhap/ma2lop', {ma_tam: D.maTam, ma});
     S.lv = 'xong'; ve();   // 0.8.9: linh vật xong việc, không thêm thời gian chờ
-    if (nut.dataset.xacnhan === 'bat') bao('Đã bật đăng nhập 02 lớp.');
+    if (nut.dataset.xacnhan === 'bat') bao('Đã bật đăng nhập 02 lớp.', 'xong');
     xoa6(goc); $('#qr-2lop').innerHTML = ''; await vaoPhanMem();
   } catch (e) { xoa6(goc); if (e.status === 429) { hienKhoa(e.ct); return; }
-    if (/hết hạn/.test(e.message)) { S.dn = 'hethan'; ve(); bao(e.message); return; } loiDangNhap(e, true); }
+    if (/hết hạn/.test(e.message)) { S.dn = 'hethan'; ve(); bao(e.message, 'loi'); return; } loiDangNhap(e, true); }
   finally { S.lv = null; ve(); }
 }
 
@@ -352,7 +365,7 @@ function veCongTac(t, d) {
 }
 async function gatCongTac(ten) {
   const t = D.thongso.thongso.find(x => x.ten === ten), bat = t.giatri !== '1';
-  const lam = async () => { try { await api('/thongso/' + encodeURIComponent(ten) + '/gat', {bat}); } catch (e) { if (e.status) bao(e.message + '.'); } await napThongSo(); };
+  const lam = async () => { try { await api('/thongso/' + encodeURIComponent(ten) + '/gat', {bat}); } catch (e) { if (e.status) bao(e.message + '.', 'loi'); } await napThongSo(); };
   if (bat) await lam(); else xacnhan(CHU_Z21.hopTieu, cum(CHU_Z21.hopChu), CHU_Z21.hopNut, lam);   // gạt bật thì không hỏi
 }
 async function napThongSo() { D.thongso = await api('/thongso'); veThongSo(); }
@@ -378,13 +391,13 @@ async function luuSua() {
   const t = D.thongso.thongso.find(x => x.ten === D.suaK);
   const giatri = t.luachon.length ? $('#sua-chon').value : $('#sua-gt').value.trim();
   const m = $('#sua-tu').value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!m) { bao('Bạn gõ ngày áp dụng theo dạng ngày/tháng/năm, ví dụ 22/11/2026.'); return; }
+  if (!m) { bao('Bạn gõ ngày áp dụng theo dạng ngày/tháng/năm, ví dụ 22/11/2026.', 'thongtin'); return; }
   const tu = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
   try {
     await api('/thongso/' + D.suaK, {giatri, hieuluc_tu: tu, ghichu: $('#h-sua input[placeholder^="Vì sao"]').value.trim()});
-    dongHop(); bao((t.giatri ? 'Đã lưu. Giá trị mới chạy từ ' : 'Đã đặt. Chạy từ ') + ngay(tu) + (t.giatri ? ', giá trị cũ giữ trong lịch sử.' : '.'));
+    dongHop(); bao((t.giatri ? 'Đã lưu. Giá trị mới chạy từ ' : 'Đã đặt. Chạy từ ') + ngay(tu) + (t.giatri ? ', giá trị cũ giữ trong lịch sử.' : '.'), 'xong');
     await napThongSo();
-  } catch (e) { if (e.o === 'tu') { $('#sua-loi span').textContent = e.message + '.'; $('#sua-loi').hidden = false; } else bao(e.message + '.'); }
+  } catch (e) { if (e.o === 'tu') { $('#sua-loi span').textContent = e.message + '.'; $('#sua-loi').hidden = false; } else bao(e.message + '.', 'loi'); }
 }
 
 // ---- Màn 09 ngăn Tài khoản và 02 lớp
@@ -408,21 +421,21 @@ async function doiMatKhau() {
   try { const kq = await api('/matkhau', {cu, moi, nhap_lai: lai}); $$('#h-matkhau input').forEach(i => i.value = ''); dongHop();
     $('#bao-doimk-chu').textContent = 'Đã đổi mật khẩu. Đã đăng xuất ' + hai(kq.thu_hoi) + ' phiên trên các máy khác.';
     $('#bao-doimk').hidden = false; napTaiKhoan(); }
-  catch (e) { bao(e.message + '.'); }
+  catch (e) { bao(e.message + '.', 'loi'); }
 }
 async function doiMay() {
   const hop = $('#h-2lop'), ma = ma6(hop);
-  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
+  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.', 'thongtin'); return; }
   try {
     if (!D.maTamDoiMay) {
       const kq = await api('/2lop/doimay/batdau', {ma}); D.maTamDoiMay = kq.ma_tam; xoa6(hop);
       $('.hop-than .t13', hop).innerHTML = '<div class="qr-hang"><div class="qr">' + kq.qr_svg + '</div><div class="t13 phu">Mở ứng dụng xác thực trên máy mới, quét mã này, rồi nhập 06 số máy mới đang hiện.</div></div>';
       $('[data-luu2lop]', hop).textContent = 'Xác nhận máy mới';
     } else {
-      await api('/2lop/doimay/xacnhan', {ma_tam: D.maTamDoiMay, ma}); dongHop(); datLaiDoiMay(); bao('Đã đổi máy nhận mã 02 lớp.');
+      await api('/2lop/doimay/xacnhan', {ma_tam: D.maTamDoiMay, ma}); dongHop(); datLaiDoiMay(); bao('Đã đổi máy nhận mã 02 lớp.', 'xong');
     }
   } catch (e) { xoa6(hop); if (e.status === 429) { loi2Lop(hop, e); return; }   // QĐ393 (4): khóa như đăng nhập
-    if (/[.!?]$/.test(e.message)) bao(e.message); else bao(e.message + '.'); }   // QĐ398: câu từ chối có dấu chấm sẵn
+    if (/[.!?]$/.test(e.message)) bao(e.message, 'loi'); else bao(e.message + '.', 'loi'); }   // QĐ398: câu từ chối có dấu chấm sẵn
 }
 function datLaiDoiMay() { D.maTamDoiMay = ''; const hop = $('#h-2lop'); xoa6(hop);
   $('.hop-than .t13', hop).textContent = 'Nhập mã 06 số trên máy cũ để xác nhận, rồi quét mã QR mới bằng máy mới.';
@@ -491,21 +504,21 @@ function loi2Lop(l, e) {   // bản vẽ BV07: câu báo sai + câu có sẵn s�
   const con = e.status === 429 ? 0 : e.ct && e.ct.con_lai, b = $('[data-loi2lop]', l);
   const chu = cum(l.id === 'h-tat2lop' ? CHU_2LOP.saiTat : e.status === 429 ? 'Mã 02 lớp chưa đúng.' : cau(e.message))   // 429: chi tiết máy chủ là mã "khoa"
     + (con != null ? ' Còn <b>' + hai(con) + '</b>&nbsp;lần thử: sai <b>05</b>&nbsp;lần trong 15&nbsp;phút sẽ tạm khóa <b>15</b>&nbsp;phút.' : '');   // L4: số đi liền chữ sau
-  if (!b) { bao(chu.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, NB)); return; }   // SUA-090-L6: hộp Đổi máy nhận mã không có dòng báo → báo nhanh
+  if (!b) { bao(chu.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, NB), 'loi'); return; }   // SUA-090-L6: hộp Đổi máy nhận mã không có dòng báo → báo nhanh
   $('span', b).innerHTML = chu;
   b.hidden = false; $$('.o-nhap', l).forEach(x => x.classList.add('loi')); $$('.o6', l).forEach(x => x.style.borderColor = 'var(--canh)');
 }
 async function gui2Lop(tat) {   // bản vẽ BV08: đang xử lý – nút giữ màu, không mờ (quy chuẩn 5.1)
   const l = $(tat ? '#h-tat2lop' : '#h-bat2lop'), ma = ma6(l), nut = $('.hop-chan .btn-chinh', l), goc = nut.innerHTML;
-  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.'); return; }
+  if (ma.length !== 6) { bao('Bạn nhập đủ 06 số.', 'thongtin'); return; }
   const mk = tat ? $('input[type="password"]', l).value : '';
   $('[data-loi2lop]', l).hidden = true; $$('.o-nhap', l).forEach(x => x.classList.remove('loi')); $$('.o6', l).forEach(x => x.style.borderColor = '');   // L3: bỏ báo sai lần trước
   nut.disabled = true; nut.classList.add('dang'); nut.innerHTML = icoMau(ICON.loader, 'var(--chu-tren-nut)', 16) + CHU_DN.dang;   // L2: .lop .btn.dang không mờ
   $$('input, .btn-phu', l).forEach(e => e.disabled = true);
   try {
     const kq = await api(tat ? '/2lop/tat' : '/2lop/bat', tat ? {matkhau: mk, ma} : {ma});
-    dongHop(); bao((tat ? CHU_2LOP.daTat : CHU_2LOP.daBat).replace(/(\d) /g, '$1' + NB)); if (kq.doi !== false) demSo(); napTaiKhoan();
-  } catch (e) { if (e.matKetNoi) { bao(cau(e.message)); } else if (e.status === 403) { dongHop(); bao(cau(e.message)); } else { xoa6(l); loi2Lop(l, e); } }
+    dongHop(); bao((tat ? CHU_2LOP.daTat : CHU_2LOP.daBat).replace(/(\d) /g, '$1' + NB), 'xong'); if (kq.doi !== false) demSo(); napTaiKhoan();
+  } catch (e) { if (e.matKetNoi) { bao(cau(e.message), 'loi'); } else if (e.status === 403) { dongHop(); bao(cau(e.message), 'loi'); } else { xoa6(l); loi2Lop(l, e); } }
   finally { nut.disabled = false; nut.classList.remove('dang'); nut.innerHTML = goc; $$('input, .btn-phu', l).forEach(e => e.disabled = false); }
 }
 // </TAT2LOP>
@@ -553,8 +566,8 @@ function moQuayVe() {   // 39–44
   const dam = cum(CHU_CN.qvDam), chu = cum(q.chu).replace(dam, '<b>' + dam + '</b>');
   xacnhan(CHU_CN.qvTieu(q.ban), chu + '<div class="t12 phu" style="margin-top:8px">' + cum(CHU_CN.qvChung) + '</div>', CHU_CN.quayve, async () => {
     try { await api('/capnhat/quayve', {dong_y_mat: !!q.mat_tu}); }
-    catch (e) { if (e.status) bao(e.message); return; }
-    bao(CHU_CN.qvBao); S.cn = 'dangcn'; tieuDangCn(CHU_CN.qvDang + q.ban); ve(); veQuayVe(D.capnhat); const het = Date.now() + 3 * 60e3;   // N32
+    catch (e) { if (e.status) bao(e.message, 'loi'); return; }
+    bao(CHU_CN.qvBao, 'thongtin'); S.cn = 'dangcn'; tieuDangCn(CHU_CN.qvDang + q.ban); ve(); veQuayVe(D.capnhat); const het = Date.now() + 3 * 60e3;   // N32
     let roi = false;   // đã thấy máy chủ dừng
     const cho = async () => { try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error((await r.text()).replace(/<[^>]*>/g, '')); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
       if (k.phienban === q.ban) { location.reload(); return; }
@@ -663,7 +676,7 @@ function veSauLen(d) {   // trả {co, loiKiem, keoDrive}; không có lượt v�
 }
 function moCapNhat() {
   const viec = D.capnhat.so_viec_ai, o = D.capnhat.o_trong || {du: true};
-  if (!o.du) { bao(o.chu + ' ' + (o.lam || '')); return; }   // lớp 1: nút đã khóa; phòng khi bấm qua phím
+  if (!o.du) { bao(o.chu + ' ' + (o.lam || ''), 'loi'); return; }   // lớp 1: nút đã khóa; phòng khi bấm qua phím
   $('#cn-viec').innerHTML = viec ? 'Đang có <b>' + hai(viec) + '</b> việc AI chạy.' : 'Không có việc AI nào đang chạy.';
   mo('h-capnhat');
 }
@@ -671,7 +684,7 @@ async function capNhat(cheDo, van) {
   dongHop(); const cu = D.capnhat.ban_dang, moi = D.capnhat.ban_moi;
   try { const kq = await api('/capnhat', {che_do: cheDo, van_capnhat: !!van});
     if (kq.can_chon) { moHopDrive(kq.can_chon, cheDo); return; }   // lớp 5: Drive chưa kết nối → anh chọn
-    if (kq.cho) { bao('Đã hẹn: chờ việc AI đang chạy xong (tối đa 30 phút) rồi tự cập nhật.'); return; } }
+    if (kq.cho) { bao('Đã hẹn: chờ việc AI đang chạy xong (tối đa 30 phút) rồi tự cập nhật.', 'xong'); return; } }
   catch (e) { if (e.status) { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: ' + e.message + '.'; ve(); } return; }
   choCapNhat(cu, moi);
 }
@@ -858,7 +871,7 @@ function moVeCongCu(goi) {
 }
 async function gatCongCu() {
   const c = D.ca; if (!c) return;
-  try { await api('/thongso/tunang_congcu_ai/gat', {bat: !(c.bat && !c.tam_dung)}); } catch (er) { if (er.status) bao(er.message + '.'); }
+  try { await api('/thongso/tunang_congcu_ai/gat', {bat: !(c.bat && !c.tam_dung)}); } catch (er) { if (er.status) bao(er.message + '.', 'loi'); }
   await napCongCu();
 }
 const mmss = g => { g = Math.max(0, Math.floor(g || 0)); return hai(Math.floor(g / 60)) + ':' + hai(g % 60); };
@@ -979,7 +992,7 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
 }
 async function chonDrive(van) {   // nút Hủy, Vẫn cập nhật trong hộp bản sao Drive
   const k = D.cnDrive || {}; dongHop();
-  if (k.loai === 'qua_gio') { try { await api('/capnhat/tieptuc', {van}); } catch (e) { if (e.status) bao(e.message); return; }
+  if (k.loai === 'qua_gio') { try { await api('/capnhat/tieptuc', {van}); } catch (e) { if (e.status) bao(e.message, 'loi'); return; }
     if (!van) { S.cn = 'coban'; ve(); } return; }
   if (van) await capNhat(k.cheDo || 'ngay', true);
 }
@@ -1179,15 +1192,15 @@ async function mdLay(tk) {   // 0.7.8: máy chủ chạy lệnh lấy mã của 
     if (kq.han) { await mdXong(tk, kq); return; }
     if (kq.khong_ho_tro) { D.mdh[tk] = null; veMoHinh(); moMdDan(tk, kq.loi); return; }
     D.mdh[tk] = {url: kq.url, loi: '', ct: ''}; veMoHinh(); const o = $('#md-ma-web'); if (o) o.focus(); }
-  catch (e) { if (D.mdh[tk]) { D.mdh[tk] = {...D.mdh[tk], loi: e.message, ct: (e.ct || {}).chi_tiet || ''}; veMoHinh(); } else bao(e.message + '.'); }
+  catch (e) { if (D.mdh[tk]) { D.mdh[tk] = {...D.mdh[tk], loi: e.message, ct: (e.ct || {}).chi_tiet || ''}; veMoHinh(); } else bao(e.message + '.', 'loi'); }
 }
 async function mdXong(tk, kq) { D.mdh[tk] = null;
   if (kq.lay_lai && kq.trung_voi) { D.trung.claude = kq.trung_voi; D.trungTk = {...(D.trungTk || {}), claude: tk};   // QĐ223: ô A8
     D.trungChu = {...(D.trungChu || {}), claude: kq.trung_chu}; }
-  if (kq.giu_ma_cu) { bao(CHU_Z15.kiemLoiRe); await napMoHinh(); return; }   // Y38d N29: giữ mã cũ
+  if (kq.giu_ma_cu) { bao(CHU_Z15.kiemLoiRe, 'loi'); await napMoHinh(); return; }   // Y38d N29: giữ mã cũ
   bao(kq.goi_thu ? 'Đã lưu ' + CHU_MDH.toLowerCase() + ' cho tài khoản ' + tk + ', hết hạn ' + ngay(kq.han) + '.'
     : kq.het_hanmuc ? CHU_Z15.kiemHanMucRe   // QĐ222 (N43): hết hạn mức → câu A15, không hiện lời gốc của Claude
-    : 'Đã lưu ' + CHU_MDH.toLowerCase() + ' nhưng gọi thử chưa được: ' + (kq.loi_goi_thu || 'chưa rõ lý do') + '.');
+    : 'Đã lưu ' + CHU_MDH.toLowerCase() + ' nhưng gọi thử chưa được: ' + (kq.loi_goi_thu || 'chưa rõ lý do') + '.', 'xong');
   await napMoHinh(); }
 function theGoi(g, ds, nguon, uu) {
   const dn = D.dn[g] || {}, ten = GOI_NGAN[g].replace('Gói ', '');
@@ -1257,7 +1270,7 @@ async function themTk(g) {
   if (!so) { const c = ds.find(x => !x.da_noi); await vao(g, c ? c.taikhoan : oTrong(ds)); return; }
   const o = oTrong(ds);
   if (so >= 2 || !o) { const c = ds.find(x => !x.da_noi); if (c && so < 2) { await vao(g, c.taikhoan); return; }
-    bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.'); return; }
+    bao(tenNguon({goi: g}) + ' đã đủ 02 tài khoản. Gỡ 01 tài khoản rồi mới thêm.', 'loi'); return; }
   xacnhan('Thêm tài khoản ' + ten + ' khác?', 'Dùng khi bạn có 02 gói riêng, mỗi gói 01 tài khoản ' + ten + ' khác&nbsp;nhau.<br><br>Đăng nhập lại tài khoản đang kết nối thì phần mềm báo trùng, không tạo ô mới.' + canhTk(ten),
     'Tiếp tục', () => vao(g, o));
 }
@@ -1294,24 +1307,24 @@ function veMoHinh() {
 }
 async function napMoHinh() { const o = $('#ds-nguonai');   // N26: máy chủ hỏi CLI từng tài khoản, có thể mất vài giây
   if (!D.md && o && !o.innerHTML.trim()) o.innerHTML = '<div class="the t13 phu dong">' + ICON.loader + 'Đang tải nguồn AI…</div>';
-  try { D.md = await api('/mohinh'); await napDsMh(); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); } }
+  try { D.md = await api('/mohinh'); await napDsMh(); veMoHinh(); } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.', 'loi'); } }
 async function batDauDn(g, tk) {
   D.trung[g] = 0;
   try { const kq = await api('/mohinh/goi/' + g + '/batdau', {taikhoan: tk}); D.dn[g] = {tk, url: kq.url, ma: kq.ma_thietbi, loi: ''}; veMoHinh();
     if (g === 'chatgpt') hoiChatGPT(tk); else { const o = $('#ma-claude'); if (o) o.focus(); } }
-  catch (e) { bao(e.message + '.'); }
+  catch (e) { bao(e.message + '.', 'loi'); }
 }
 async function hoiChatGPT(tk) {
   const dn = D.dn.chatgpt; if (!dn || dn.tk !== tk || !dn.url) return;
   try { const kq = await api('/mohinh/goi/chatgpt/hoi', {taikhoan: tk});
-    if (kq.xong) { D.dn.chatgpt = {}; bao('Đã kết nối ' + tenNguon({goi: 'chatgpt'}) + ', tài khoản ' + tk + '.'); await napMoHinh(); return; } }
-  catch (e) { if (e.status) { D.dn.chatgpt = {}; if (e.status === 409) D.trung.chatgpt = (e.ct || {}).trung_voi; else bao(e.message + '.'); await napMoHinh(); return; } }
+    if (kq.xong) { D.dn.chatgpt = {}; bao('Đã kết nối ' + tenNguon({goi: 'chatgpt'}) + ', tài khoản ' + tk + '.', 'xong'); await napMoHinh(); return; } }
+  catch (e) { if (e.status) { D.dn.chatgpt = {}; if (e.status === 409) D.trung.chatgpt = (e.ct || {}).trung_voi; else bao(e.message + '.', 'loi'); await napMoHinh(); return; } }
   setTimeout(() => hoiChatGPT(tk), 4000);
 }
 async function danMaClaude() {
   const dn = D.dn.claude, ma = ($('#ma-claude') || {}).value || '';
-  if (!ma.trim()) { bao('Bạn dán mã trang Claude hiện ra.'); return; }
-  try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.'); await napMoHinh(); }
+  if (!ma.trim()) { bao('Bạn dán mã trang Claude hiện ra.', 'thongtin'); return; }
+  try { await api('/mohinh/goi/claude/ma', {taikhoan: dn.tk, ma}); D.dn.claude = {}; bao('Đã kết nối ' + tenNguon({goi: 'claude'}) + ', tài khoản ' + dn.tk + '.', 'xong'); await napMoHinh(); }
   catch (e) { if (e.status === 409) { D.dn.claude = {}; D.trung.claude = (e.ct || {}).trung_voi;
       D.trungChu = {...(D.trungChu || {}), claude: (e.ct || {}).chu_rieng ? (e.ct || {}).loi : ''};
       D.trungTk = {...(D.trungTk || {}), claude: (e.ct || {}).lay_lai ? dn.tk : 0}; await napMoHinh(); return; } dn.loi = e.message; veMoHinh(); }
@@ -1447,34 +1460,34 @@ document.addEventListener('click', async ev => {
   if (!b) { if (MH.noi === 'chat' && !ev.target.closest('#mh-chat')) dongMh(); return; }
   const d = b.dataset;
   if ('mhdong' in d) { dongMh(); return; }   // không chặn: nút còn mở mục Mô hình AI
-  if ('ivn' in d) { ev.stopImmediatePropagation(); bao(CHU_VN); return; }   // Z12: điện thoại bấm (i) hiện ô báo
+  if ('ivn' in d) { ev.stopImmediatePropagation(); bao(CHU_VN, 'thongtin'); return; }   // Z12: điện thoại bấm (i) hiện ô báo
   ev.stopImmediatePropagation();
   if ('mhnut' in d) { MH.noi = MH.noi === 'chat' ? null : 'chat'; MH.tim = ''; MH.mo = null; veNutMh(); if (MH.noi && await napDsMh()) veLaiMh(); return; }
   if ('mhcu' in d) { MH.cu = !MH.cu; veLaiMh(); return; }   // QĐ311 G2: mở / gập dòng "Bản cũ (n)"
   if (d.mhnhom) { MH.mo = nhomDangMo(MH.noi) === d.mhnhom ? '' : d.mhnhom; veLaiMh(); return; }
   if (d.mhchon) { const x = timMh(d.mhchon); if (!x) return; const ten = tenMh(x.m.ma, x.g.nhom, x.g), tn = tenNguon(x.g).replace(/\u00a0/g, ' ');
     if (MH.noi === 'md') { const lv = MH.dich;
-      try { await api('/mohinh/macdinh', {loai_viec: lv, khoa: x.m.khoa}); } catch (e) { bao(e.message + '.'); return; }
+      try { await api('/mohinh/macdinh', {loai_viec: lv, khoa: x.m.khoa}); } catch (e) { bao(e.message + '.', 'loi'); return; }
       MH.noi = null; MH.dich = null; MH.tim = ''; MH.mo = null; dongHop(); await napDsMh(); if (D.md) veMoHinh(); veNutMh();
-      bao('Đã đổi mô hình cho "' + D.dsmh.loai_viec[lv] + '": ' + ten + ' · ' + tn + '.'); return; }
+      bao('Đã đổi mô hình cho "' + D.dsmh.loai_viec[lv] + '": ' + ten + ' · ' + tn + '.', 'xong'); return; }
     // QĐ190: chọn ở khung chat = cuộc đang mở dùng ngay (ghim) + đổi luôn mặc định "Trò chuyện AI"
     datGhim(x.m.khoa); delete D.hong[D.htId]; dongMh();
     try { await api('/mohinh/macdinh', {loai_viec: 'trochuyen', khoa: x.m.khoa}); }
-    catch (e) { bao('Đã chọn ' + ten + ' (' + tn + ') cho cuộc trò chuyện này; chưa đổi được mặc định: ' + e.message + '.'); return; }
+    catch (e) { bao('Đã chọn ' + ten + ' (' + tn + ') cho cuộc trò chuyện này; chưa đổi được mặc định: ' + e.message + '.', 'loi'); return; }
     await napDsMh(); if (D.md) veMoHinh(); veNutMh();
-    bao('Đã chọn ' + ten + ' (' + tn + ') cho cuộc này và các cuộc mới.'); return; }
+    bao('Đã chọn ' + ten + ' (' + tn + ') cho cuộc này và các cuộc mới.', 'xong'); return; }
   if (d.mhmd) { const g = nhomMh(d.mhmd); if (!g) return; const tn = tenNguon(g).replace(/\u00a0/g, ' ');
     if (MH.noi === 'md') { const lv = MH.dich;   // S6: loại việc về "mặc định của nguồn" này
-      try { await api('/mohinh/macdinh', {loai_viec: lv, khoa: g.khoa_md}); } catch (e) { bao(e.message + '.'); return; }
+      try { await api('/mohinh/macdinh', {loai_viec: lv, khoa: g.khoa_md}); } catch (e) { bao(e.message + '.', 'loi'); return; }
       MH.noi = null; MH.dich = null; MH.tim = ''; MH.mo = null; dongHop(); await napDsMh(); if (D.md) veMoHinh(); veNutMh();
-      bao('Đã đặt "' + D.dsmh.loai_viec[lv] + '" về mặc định của nguồn ' + tn + '.'); return; }
+      bao('Đã đặt "' + D.dsmh.loai_viec[lv] + '" về mặc định của nguồn ' + tn + '.', 'xong'); return; }
     // QĐ190: khung chat chọn dòng này = bỏ ghim cuộc này + mặc định "Trò chuyện AI" về mặc định của nguồn đó
     datGhim(null); delete D.hong[D.htId]; dongMh();
     try { await api('/mohinh/macdinh', {loai_viec: 'trochuyen', khoa: g.khoa_md}); }
-    catch (e) { bao('Đã bỏ ghim cuộc trò chuyện này; chưa đổi được mặc định: ' + e.message + '.'); return; }
+    catch (e) { bao('Đã bỏ ghim cuộc trò chuyện này; chưa đổi được mặc định: ' + e.message + '.', 'loi'); return; }
     await napDsMh(); if (D.md) veMoHinh(); veNutMh();
-    bao('Đã bỏ ghim: cuộc này và các cuộc mới theo mặc định của nguồn ' + tn + '.'); return; }
-  if (d.doimd) { await napDsMh(); if (!D.dsmh) { bao('Chưa tải được danh sách mô hình, bạn thử lại.'); return; }
+    bao('Đã bỏ ghim: cuộc này và các cuộc mới theo mặc định của nguồn ' + tn + '.', 'xong'); return; }
+  if (d.doimd) { await napDsMh(); if (!D.dsmh) { bao('Chưa tải được danh sách mô hình, bạn thử lại.', 'loi'); return; }
     MH.dich = d.doimd; MH.noi = 'md'; MH.tim = ''; MH.mo = null;
     $('#mh-tieu').textContent = 'Chọn mô hình · ' + nbsp(D.dsmh.loai_viec[d.doimd]); $('#mh-than13').innerHTML = bangMhHtml('md'); mo('h-chonmh'); }
 }, true);
@@ -1504,7 +1517,7 @@ async function napTroChuyen() {
   try { D.ht = (await api('/trochuyen')).hoithoai; veDsHt();
     const md = D.md || await api('/mohinh').catch(() => null); if (md) D.md = md;
     await napDsMh(); veNutMh();   // QĐ178 (Z10): bỏ ô chọn nguồn đầu cuộc, nút chọn mô hình dưới khung nhập
-  } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
+  } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.', 'loi'); }
 }
 // <LUOT> N0 (QĐ344, QĐ352, QĐ355; CDO HINH-TC45 H1–H9; CDA T1–T4, M2, N3): lượt trả lời chạy nền + chữ chạy dần.
 // Gửi `nen: true` → máy chủ trả ngay mã lượt; trang nghe luồng sự kiện (EventSource, tự nối lại kèm Last-Event-ID).
@@ -1539,7 +1552,7 @@ function theoLuot(id, ds, gh) { boLuot(); LUOT.id = id;
     else if (e.loai === 'loi') { boLuot(); if (D.htId) moHt(D.htId); } };              // N3, M2: tải lại cuộc, không để chữ dở
   // QĐ358 N2 câu 2: luồng đóng → tự tải lại hội thoại; chỉ khi tải lại cũng lỗi mới hỏi lại luồng để lấy câu báo của máy chủ
   es.onerror = () => { if (es.readyState === 2 && LUOT.id === id) { boLuot(); if (D.htId) moHt(D.htId).catch(async () => {
-    try { await api('/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); } catch (e) { bao(e.message + '.'); } }); } }; }
+    try { await api('/trochuyen/luot/' + encodeURIComponent(id) + '/sukien'); } catch (e) { bao(e.message + '.', 'loi'); } }); } }; }
 // QĐ347 H1, QĐ352: đang chờ cập nhật – câu báo ngay dưới câu hỏi vừa gửi (khung "Cần xem", không ghi vào hội thoại,
 // vẽ lại khung chat thì mất), câu hỏi trở lại ô nhập. Chữ đúng chữ máy chủ trả (đã duyệt), không thêm dấu.
 const htmlChoCn = t => '<div class="tn-bao">' + icoMau(ICON['cloud-download'], 'var(--xem)', 16) + '<span class="f1">' + cum(t) + '</span></div>';
@@ -1565,7 +1578,7 @@ async function guiTin(chu) {
     // SUA-BT7 (CDO BT25): mọi lỗi gửi (409, mất kết nối, 500…) – vẽ lại như trước khi gửi (bỏ câu hỏi, bong bóng đang chạy),
     // câu hỏi trở lại ô nhập như H1, N5, QĐ358 N2 câu 1; chữ báo giữ nguyên
     $('#ds-tin').innerHTML = cu.map(tinHtml).join(''); o.value = nd;
-    S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.'); }
+    S.tc = cu.length ? 'co' : 'rong'; ve(); bao(e.message + '.', 'loi'); }
 }
 
 async function napTab() {
@@ -1575,7 +1588,7 @@ async function napTab() {
     else if (S.tab === 'ketkhoa') await napKetKhoa();
     else if (S.tab === 'taikhoan') await napTaiKhoan();
     else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }   // Y46: khối Công cụ AI
-  } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.'); }
+  } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.', 'loi'); }
 }
 
 // ---- Màn 09 ngăn Chung (QĐ627; chế độ màu QĐ411, QĐ562; tên miền QĐ634 – chữ QĐ650, QĐ651; múi giờ QĐ636 – chữ QĐ652, Bổ sung
@@ -1692,14 +1705,14 @@ function moXacMinh(ico, tieu, chu, nut, lam) {   // hộp hỏi mật khẩu + m
 async function nutChung(t, d) {   // trả true khi đã xử lý nút của ngăn Chung
   if (d.chedo) { CHEDO.dat(d.chedo); veChung(); return true; }
   if ('c2pa' in d) { const bat = !DCG.c2pa;
-    const lam = async () => { try { await api('/thongso/anh_ai_giu_dau_c2pa/gat', {bat}); DCG.c2pa = bat; } catch (e) { if (e.status) bao(e.message + '.'); } veChung(); };
+    const lam = async () => { try { await api('/thongso/anh_ai_giu_dau_c2pa/gat', {bat}); DCG.c2pa = bat; } catch (e) { if (e.status) bao(e.message + '.', 'loi'); } veChung(); };
     if (bat) await lam(); else xacnhan(CHU_CG.c2paHt, cum(CHU_CG.c2paHc), CHU_CG.c2paHn, lam, 'circle-alert');   // QĐ647: chỉ hỏi khi gỡ dấu
     return true; }
   if ('tmLuu' in d || 'tmBo' in d) { const bo = 'tmBo' in d, ten = bo ? '' : ($('#tm-o').value || '').trim(), C = CHU_TM;
     moXacMinh(bo ? 'globe' : 'globe', bo ? C.boHt : C.ht, cum((bo ? C.boHc : C.hc).replace('{moi}', esc(ten)).replace('{goc}', esc(DCG.tm.goc))), bo ? C.boHn : C.hn,
       async (mk, ma) => { const kq = await api('/tenmien', {ten, matkhau: mk, ma}); DCG.tm.rieng = kq.ten || null; DCG.kiem = kq.kiem; veChung(); });
     return true; }
-  if ('tmKiem' in d) { DCG.kiem = null; veChung(); try { DCG.kiem = await api('/tenmien/kiem'); } catch (e) { if (e.status) bao(e.message + '.'); } veChung(); return true; }
+  if ('tmKiem' in d) { DCG.kiem = null; veChung(); try { DCG.kiem = await api('/tenmien/kiem'); } catch (e) { if (e.status) bao(e.message + '.', 'loi'); } veChung(); return true; }
   if ('mgMo' in d) { DCG.mgMo = !DCG.mgMo; DCG.mgTim = ''; veChung(); const i = $('#mg-tim'); if (i) i.focus(); return true; }
   if (d.mgChon) { DCG.mgChon = d.mgChon; DCG.mgMo = false; veChung(); return true; }
   if ('mgLuu' in d) { const tz = DCG.mgChon, ten = tenMuiNgan(tz), C = CHU_MG, [nam, thang] = DCG.mg.hom_nay.split('-'), ky = thang + '/' + nam;   // kỳ đang mở theo ngày số liệu ② (QĐ636)
@@ -1708,7 +1721,7 @@ async function nutChung(t, d) {   // trả true khi đã xử lý nút của ng�
     return true; }
   if ('xacminh' in d) { const l = $('#h-xacminh'), goc = t.textContent; t.classList.add('dang'); t.textContent = CHU_DN.dang;
     try { await DCG.xmLam($('#xm-mk').value, ma6(l)); l.hidden = true; }
-    catch (e) { if (e.matKetNoi) bao(e.message + '.'); else loi2Lop(l, e); xoa6(l); }
+    catch (e) { if (e.matKetNoi) bao(e.message + '.', 'loi'); else loi2Lop(l, e); xoa6(l); }
     finally { t.classList.remove('dang'); t.textContent = goc; }
     return true; }
   return false;
@@ -1803,11 +1816,11 @@ function moDoiKhoa(id) {
 async function nutKetKhoa(t, d) {
   if (d.kkdoi) { dongTha(); moDoiKhoa(d.kkdoi); return true; }
   if (d.kkxoa) { dongTha(); const x = D.kk.ds.find(k => k.id === d.kkxoa); if (!x) return true;
-    xacnhan(CHU_KK.xoaT(x.ten), cum(CHU_KK.xoaC), CHU_KK.xoaN, async () => { try { await api('/kekhoa/' + encodeURIComponent(x.id) + '/xoa', {}); bao(CHU_KK.daXoa); }
-      catch (e) { if (e.status) bao(e.message + '.'); } await napKetKhoa(); }, 'trash-2'); return true; }
+    xacnhan(CHU_KK.xoaT(x.ten), cum(CHU_KK.xoaC), CHU_KK.xoaN, async () => { try { await api('/kekhoa/' + encodeURIComponent(x.id) + '/xoa', {}); bao(CHU_KK.daXoa, 'xong'); }
+      catch (e) { if (e.status) bao(e.message + '.', 'loi'); } await napKetKhoa(); }, 'trash-2'); return true; }
   if ('kkluu' in d) { const gt = $('#kk-gt').value.trim(); if (!gt) { $('#kk-gt').focus(); return true; }
-    try { await api('/kekhoa/' + encodeURIComponent(D.kkDoi) + '/doi', {giatri: gt, han: $('#kk-han').value || null}); dongHop(); bao(CHU_KK.daLuu); }
-    catch (e) { if (e.status) bao(e.message + '.'); } $('#kk-gt').value = ''; await napKetKhoa(); return true; }
+    try { await api('/kekhoa/' + encodeURIComponent(D.kkDoi) + '/doi', {giatri: gt, han: $('#kk-han').value || null}); dongHop(); bao(CHU_KK.daLuu, 'xong'); }
+    catch (e) { if (e.status) bao(e.message + '.', 'loi'); } $('#kk-gt').value = ''; await napKetKhoa(); return true; }
   if (d.kkba) { const e = $('#tha-kk') || (() => { $('#khung').insertAdjacentHTML('beforeend', '<div class="tha tha-kk" id="tha-kk" hidden role="menu"></div>'); return $('#tha-kk'); })();
     const v = e.hidden; dongTha(); e.innerHTML = '<button class="tha-muc" data-kkdoi="' + esc(d.kkba) + '">' + icoMau(ICON.replace || ICON['refresh-cw'], 'currentColor', 16) + CHU_KK.doi + '</button>'
       + '<button class="tha-muc do-chu" data-kkxoa="' + esc(d.kkba) + '">' + icoMau(ICON['trash-2'], 'var(--canh)', 16) + CHU_KK.xoa + '</button>';
@@ -1822,7 +1835,7 @@ document.addEventListener('click', async ev => {
   const d = t.dataset;
   if (!('chuong' in d) && !('tk' in d) && !('chedonut' in d) && !t.closest('.tha')) dongTha();
   if (d.set) { const [k, v] = d.set.split(':'); S[k] = v; }
-  else if (D.anToan && ((d.trang && d.trang !== '09') || (d.tab && d.tab !== 'capnhat'))) { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
+  else if (D.anToan && ((d.trang && d.trang !== '09') || (d.tab && d.tab !== 'capnhat'))) { bao(CHU_CN.chan, 'loi'); return; }   // QĐ218 dòng 37
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); $$('#app .cuon, #app .cuon-trong').forEach(c => c.scrollTop = 0); if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }   // KH-090 2.2 (a): khổ máy tính cuộn ở .cuon-trong
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (S.trang === '09' && S.tab === 'chung' && await nutChung(t, d)) { /* ngăn Chung */ }
@@ -1834,24 +1847,24 @@ document.addEventListener('click', async ev => {
   else if ('dangnhap' in d) { await dangNhap(); return; }
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
-    S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.'); }
+    S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.', 'xong'); }
   else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); D.tbHienDoc = false; if (D.tbCuoi) veChuong(D.tbCuoi); e.hidden = !v; datTha(e, t); if (v) demSo(true); }
-  else if ('tamtat' in d) { try { await api('/thongso/chuong_tamtat/gat', {bat: !D.tbTamTat}); } catch (er) { if (er.status) bao(er.message + '.'); } await demSo(); }   // QĐ551
+  else if ('tamtat' in d) { try { await api('/thongso/chuong_tamtat/gat', {bat: !D.tbTamTat}); } catch (er) { if (er.status) bao(er.message + '.', 'loi'); } await demSo(); }   // QĐ551
   else if (d.tbthe) { D.tbThe = d.tbthe; D.tbHienDoc = false; if (D.tbCuoi) veChuong(D.tbCuoi); }
   else if ('tbhien' in d) { D.tbHienDoc = true; if (D.tbCuoi) veChuong(D.tbCuoi); }
   else if ('amthanh' in d) datAm(!amBat());   // QĐ547
   else if ('chedonut' in d) { const e = $('#tha-chedo'), v = e.hidden; dongTha(); veCheDoTha(); e.hidden = !v; datTha(e, $('.vi-tri > [data-chedonut]')); }
   else if (d.cdmau) { CHEDO.dat(d.cdmau); dongTha(); veBa(); if (S.trang === '09' && S.tab === 'chung') veChung(); }   // QĐ411, QĐ566 (3), (4)
   else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); veBa(); e.hidden = !v; datTha(e, t); }
-  else if ('gat2lop' in d) { if (D.tat2lop) hop2Lop('h-bat2lop'); else if (D.anToan) bao(CHU_2LOP.antoan); else hop2Lop('h-tat2lop'); }   // QĐ390
+  else if ('gat2lop' in d) { if (D.tat2lop) hop2Lop('h-bat2lop'); else if (D.anToan) bao(CHU_2LOP.antoan, 'loi'); else hop2Lop('h-tat2lop'); }   // QĐ390
   else if ('bat2lopmo' in d) hop2Lop('h-bat2lop');   // nút "Bật lại" ở dòng cảnh báo
   else if ('tat2lop' in d) await gui2Lop(true);
   else if ('bat2lop' in d) await gui2Lop(false);
-  else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.'); } await demSo(); return; }
-  else if (d.di && D.anToan && d.di !== 'capnhat') { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
+  else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.', 'loi'); } await demSo(); return; }
+  else if (d.di && D.anToan && d.di !== 'capnhat') { bao(CHU_CN.chan, 'loi'); return; }   // QĐ218 dòng 37
   else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat' || d.di === 'chung') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }
     if (d.cuon) setTimeout(() => { const e = document.getElementById(d.cuon); if (e) e.scrollIntoView({block: 'start'}); }, 0); }
-  else if ('noilai' in d) { try { await api('/demso'); S.k = 'binhthuong'; bao('Đã nối lại máy chủ.'); } catch (e) { /* vẫn mất */ } }
+  else if ('noilai' in d) { try { await api('/demso'); S.k = 'binhthuong'; bao('Đã nối lại máy chủ.', 'xong'); } catch (e) { /* vẫn mất */ } }
   else if (d.mo) { if (d.mo === 'h-2lop') datLaiDoiMay(); mo(d.mo); }
   else if ('dong' in d) dongHop();
   else if (d.sua) { await moSua(d.sua); }
@@ -1863,9 +1876,9 @@ document.addEventListener('click', async ev => {
   else if ('luusua' in d) { await luuSua(); }
   else if ('locChua' in d) { S.tab = 'thongso'; S.nhom = 'gom'; S.cdMan = 2; napTab(); }   // QĐ583: 01 bấm sang trang gom
   else if (d.thuhoi) xacnhan('Thu hồi phiên này?', 'Máy đó phải đăng nhập lại mới dùng tiếp được.', 'Thu hồi', async () => {
-    try { await api('/phien/' + encodeURIComponent(d.thuhoi) + '/thuhoi', {}); bao('Đã thu hồi phiên.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
-  else if ('kiemtra' in d) { try { const k = await api('/capnhat/kiemtra', {}); veCapNhat(k); if (!k.loi) bao(k.co_ban_moi ? 'Có bản mới ' + k.ban_moi + '.' : 'Đã kiểm tra: chưa có bản mới.'); }
-    catch (e) { bao('Kiểm tra lại chưa được: ' + (e.status ? e.message : 'mất kết nối máy chủ') + '.'); } }   // Y17 (c)
+    try { await api('/phien/' + encodeURIComponent(d.thuhoi) + '/thuhoi', {}); bao('Đã thu hồi phiên.', 'xong'); napTaiKhoan(); } catch (e) { bao(e.message + '.', 'loi'); } });
+  else if ('kiemtra' in d) { try { const k = await api('/capnhat/kiemtra', {}); veCapNhat(k); if (!k.loi) bao(k.co_ban_moi ? 'Có bản mới ' + k.ban_moi + '.' : 'Đã kiểm tra: chưa có bản mới.', 'xong'); }
+    catch (e) { bao('Kiểm tra lại chưa được: ' + (e.status ? e.message : 'mất kết nối máy chủ') + '.', 'loi'); } }   // Y17 (c)
   else if ('capnhat' in d) moCapNhat();
   else if ('cnngay' in d) { await capNhat('ngay'); }
   else if ('quayve' in d) { moQuayVe(); }
@@ -1873,13 +1886,13 @@ document.addEventListener('click', async ev => {
   else if ('cnHuy' in d) { await chonDrive(false); return; }
   else if ('cnKetnoi' in d) { dongHop(); S.trang = '11'; ve(); return; }
   else if ('mdGt' in d) { moMdGt(); return; }
-  else if ('mdChep' in d) { try { await navigator.clipboard.writeText(CHU_Z15.lenh); bao(CHU_Z15.daChep); } catch (e) { bao(CHU_Z15.chepLoi); } return; }   // N34
+  else if ('mdChep' in d) { try { await navigator.clipboard.writeText(CHU_Z15.lenh); bao(CHU_Z15.daChep, 'xong'); } catch (e) { bao(CHU_Z15.chepLoi, 'thongtin'); } return; }   // N34
   else if ('cncho' in d) { await capNhat('cho'); }
   else if ('gd' in d) { const g = t.nextElementSibling; g.hidden = !g.hidden; }
   else if ('giu' in d) { try { const k = await api('/phien/giahan', {}); D.hetLuc = k.het_luc; S.k = 'binhthuong';
-      bao(Date.parse(k.het_luc) - Date.now() > 5 * 60e3 ? 'Đã gia hạn phiên đăng nhập.' : 'Đã đủ 30 ngày từ lần đăng nhập, bạn đăng nhập lại để dùng tiếp.'); } catch (e) { /* */ } }
+      bao(Date.parse(k.het_luc) - Date.now() > 5 * 60e3 ? 'Đã gia hạn phiên đăng nhập.' : 'Đã đủ 30 ngày từ lần đăng nhập, bạn đăng nhập lại để dùng tiếp.', 'xong'); } catch (e) { /* */ } }
   else if ('dxkhac' in d) xacnhan('Đăng xuất mọi máy khác?', 'Các máy khác phải đăng nhập lại. Máy này vẫn giữ đăng nhập.', 'Đăng xuất', async () => {
-    try { const k = await api('/phien/thuhoi_khac', {}); bao('Đã đăng xuất ' + hai(k.so) + ' phiên trên các máy khác.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
+    try { const k = await api('/phien/thuhoi_khac', {}); bao('Đã đăng xuất ' + hai(k.so) + ' phiên trên các máy khác.', 'xong'); napTaiKhoan(); } catch (e) { bao(e.message + '.', 'loi'); } });
   else if ('them' in d) mo('h-them');
   else if (d.dnGoi) { dongHop(); if (S.trang !== '13' || !D.md) { S.trang = '13'; ve(); await napMoHinh(); }
     const tk = Number(d.dnTk); if (tk) await batDauDn(d.dnGoi, tk); else await themTk(d.dnGoi); return; }
@@ -1888,7 +1901,7 @@ document.addEventListener('click', async ev => {
   else if (d.mdLay) { t.disabled = true; await mdLay(Number(d.mdLay)); t.disabled = false; return; }
   else if (d.mdDan) { moMdDan(Number(d.mdDan)); return; }
   else if (d.mdGui) { const tk = Number(d.mdGui), o = $('#md-ma-web'), ma = (o || {}).value || '';
-    if (!ma.trim()) { bao('Bạn dán mã trang Claude hiện ra.'); return; }
+    if (!ma.trim()) { bao('Bạn dán mã trang Claude hiện ra.', 'thongtin'); return; }
     t.disabled = true; if (o) o.value = '';
     const dai = lamSachMa(ma).startsWith('sk-ant-oat01-');   // N28 (b): mã dài hạn dán nhầm ô bước 2 → lưu như Dán mã
     try { await mdXong(tk, await api(dai ? '/mohinh/goi/claude/madaihan/dan' : '/mohinh/goi/claude/madaihan/ma', {taikhoan: tk, ma: dai ? lamSachMa(ma) : ma})); }
@@ -1909,14 +1922,14 @@ document.addEventListener('click', async ev => {
       + (coMd ? '<br><br>' + CHU_MDH + ' của tài khoản này bị xóa khỏi Két&nbsp;khóa; mã vẫn còn hiệu lực ở Claude tới khi bạn thu hồi trên trang của&nbsp;Claude.' : '')
       + '<br><br>Dùng lại thì kết nối lại.', 'Gỡ tài khoản', async () => {
       D.trung[g] = 0;
-      try { await api('/mohinh/goi/' + g + '/go', {taikhoan: tk}); bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.'); } catch (e) { bao(e.message + '.'); }
+      try { await api('/mohinh/goi/' + g + '/go', {taikhoan: tk}); bao('Đã gỡ ' + ten + '. Nhật ký đã ghi.', 'xong'); } catch (e) { bao(e.message + '.', 'loi'); }
       await napMoHinh(); }); }
   else if (d.dnHuy) { try { await api('/mohinh/goi/' + d.dnHuy + '/huy', {taikhoan: (D.dn[d.dnHuy] || {}).tk || 1}); } catch (e) { /* */ } D.dn[d.dnHuy] = {}; veMoHinh(); }
   else if (d.goithu) { t.disabled = true; const t0 = Date.now();
-    try { const k = await api('/mohinh/' + encodeURIComponent(d.goithu) + '/goithu', {}); bao('Gọi thử đạt: ' + (tenNguon(timNguon(d.goithu)) || k.nguon) + ' trả lời sau ' + soVN(Math.round((Date.now() - t0) / 100) / 10) + ' giây.'); }
-    catch (e) { bao('Gọi thử chưa đạt: ' + e.message + '.'); } t.disabled = false; await napMoHinh(); return; }
-  else if (d.chep) { try { await navigator.clipboard.writeText(d.chep); bao('Đã chép mã thiết bị.'); } catch (e) { bao('Bạn chép tay mã ' + d.chep + '.'); } }
-  else if (d.chepTin) { const x = (D.tin || []).find(y => y.id === d.chepTin); if (x) { try { await navigator.clipboard.writeText(x.noidung); bao('Đã chép câu trả lời.'); } catch (e) { /* */ } } }
+    try { const k = await api('/mohinh/' + encodeURIComponent(d.goithu) + '/goithu', {}); bao('Gọi thử đạt: ' + (tenNguon(timNguon(d.goithu)) || k.nguon) + ' trả lời sau ' + soVN(Math.round((Date.now() - t0) / 100) / 10) + ' giây.', 'xong'); }
+    catch (e) { bao('Gọi thử chưa đạt: ' + e.message + '.', 'loi'); } t.disabled = false; await napMoHinh(); return; }
+  else if (d.chep) { try { await navigator.clipboard.writeText(d.chep); bao('Đã chép mã thiết bị.', 'xong'); } catch (e) { bao('Bạn chép tay mã ' + d.chep + '.', 'thongtin'); } }
+  else if (d.chepTin) { const x = (D.tin || []).find(y => y.id === d.chepTin); if (x) { try { await navigator.clipboard.writeText(x.noidung); bao('Đã chép câu trả lời.', 'xong'); } catch (e) { /* */ } } }
   else if ('tcMoi' in d) { boLuot(); D.htId = null; D.ghimMoi = null; dongMh(); D.tin = []; $('#ds-tin').innerHTML = ''; $('#tc-tieude').textContent = 'Trò chuyện mới'; S.tc = 'rong'; veDsHt(); $('#tc-o').focus(); }
   else if (d.ht) { await moHt(d.ht); return; }
   else if ('tcMau' in d) { await guiTin(t.textContent); return; }
