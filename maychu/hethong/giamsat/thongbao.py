@@ -44,7 +44,7 @@ LOAI = {
     "dangnhap_2lop_tat": ("xem", "shield-alert", "taikhoan", None, "Tài khoản"),
     # QĐ634, QĐ636 "F04 + chuông": tin sự kiện (đã xảy ra, không cần xử lý) – mức tin, mở Cài đặt › Chung; "Đọc hết" chỉ đặt mốc đọc, không đóng tin (CPO TIN-TM-MG-SUA)
     "tenmien_doi": ("tin", "globe", "chung", None, "Cài đặt › Chung"),
-    "muigio_doi": ("tin", "settings", "chung", None, "Cài đặt › Chung"),   # icon TẠM (QĐ648): không dùng clock (= Chờ quyết toán)
+    "muigio_doi": ("tin", "watch", "chung", None, "Cài đặt › Chung"),   # QĐ663: icon Lucide watch
 }
 SU_KIEN = ("tenmien_doi", "muigio_doi")
 KHOA_2LOP_TAT = "dangnhap_2lop_tat"
@@ -286,14 +286,15 @@ def dong_2lop_tat(lydo: str, thumuc: Path | None = None) -> None:
         _dong(w, KHOA_2LOP_TAT, lydo)
 
 
-def bao_su_kien(loai: str, sau: str, thumuc: Path | None = None, nhom: str | None = None) -> None:
-    """QĐ634, QĐ636: 01 tin chuông khi đổi tên miền / múi giờ. Khóa `loai:giá trị mới`, hoặc `loai:nhom:giá trị mới` khi
-    có `nhom` (múi giờ: tên thông số – `muigio`, `muigio_doisoat` giữ tin riêng); trùng thì không mở thêm."""
+def bao_su_kien(loai: str, sau: str, thumuc: Path | None = None, nhom: str | None = None, truoc: str = "") -> None:
+    """QĐ634, QĐ636: 01 tin chuông khi đổi tên miền / múi giờ. Khóa `loai:giá trị mới:giá trị cũ`, hoặc
+    `loai:nhom:giá trị mới:giá trị cũ` khi có `nhom` (múi giờ: tên thông số – `muigio`, `muigio_doisoat` giữ tin riêng);
+    giá trị cũ để dòng 2 của tin ghi "cũ → mới" (QĐ662) – 0 bảng, 0 cột mới. Trùng thì không mở thêm."""
     tien_to = f"{loai}:{nhom}:" if nhom else f"{loai}:"
     with _Ghi(thumuc) as w:
         for k in _khoa_mo(w, tien_to):   # tin cũ cùng loại, cùng nhóm (giá trị trước) đóng, chỉ giữ lần đổi gần nhất
             _dong(w, k, "đổi lại")
-        _mo(w, tien_to + sau, None, None)
+        _mo(w, f"{tien_to}{sau}:{truoc or ''}", None, None)
 
 
 def quet_2lop(thumuc: Path | None = None) -> None:
@@ -487,14 +488,35 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         from maychu.hethong import capnhat
         ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")
         return f"Kiểm sau cập nhật bản {sau}: {ly}" if ly else f"Kiểm sau cập nhật bản {sau} chưa đạt"
-    if loai == "tenmien_doi":   # TẠM (QĐ648): chữ tin chuông – CPO hỏi anh
-        return f"Đã đổi tên miền riêng: {sau}" if sau else "Đã bỏ tên miền riêng"
-    if loai == "muigio_doi":   # TẠM (QĐ648); khóa muigio_doi:<tên thông số>:<giá trị>
+    if loai == "tenmien_doi":   # QĐ662 dòng 1; khóa tenmien_doi:<mới>:<cũ>
+        moi, _, cu = sau.partition(":")
+        return "Đã bỏ tên miền riêng" if not moi else "Đã đổi tên miền riêng" if cu else "Đã đặt tên miền riêng"
+    if loai == "muigio_doi":   # khóa muigio_doi:<tên thông số>:<mới>:<cũ>
         ten, _, gt_mg = sau.partition(":")
         if ten == "muigio_doisoat":   # TẠM tới 0.12.0 (0.10.0 chưa có nút đổi – CPO)
-            return f"Đã đổi múi giờ đối soát sang {gt_mg}"
-        return f"Đã đổi múi giờ sang {gt_mg}"
+            return f"Đã đổi múi giờ đối soát sang {gt_mg.partition(':')[0]}"
+        return "Đã đổi múi giờ"   # QĐ662 (1)
     return "Có cảnh báo mới"
+
+
+def _dong2(loai: str, khoa: str) -> dict:
+    """QĐ662 dòng 2 của tin sự kiện. Tên miền: chữ đủ ở máy chủ. Múi giờ: trả `mg` = [cũ, mới] + mã nước để giao diện ghi
+    tên múi theo QĐ652 ("Việt Nam – Hồ Chí Minh (UTC+7)" – tên nước tiếng Việt do trình duyệt dịch, như ngăn Chung)."""
+    if loai == "tenmien_doi":
+        from maychu.hethong.caidat import tenmien
+        moi, _, cu = khoa.split(":", 1)[1].partition(":")
+        goc = tenmien.ten_goc() or ""
+        if not moi:
+            return {"phu": f"{cu} → chỉ còn tên gốc {goc}" if cu else ""}
+        return {"phu": f"{cu} → {moi}" if cu else f"{moi} · tên gốc {goc} vẫn dùng được"}
+    if loai == "muigio_doi":
+        ten, _, gt = khoa.split(":", 1)[1].partition(":")
+        moi, _, cu = gt.partition(":")
+        if ten != "muigio_doisoat" and cu:
+            from maychu.dulieu import muigio
+            qg = muigio.quoc_gia()
+            return {"mg": [cu, moi], "qg": {k: qg[k] for k in (cu, moi) if k in qg}}
+    return {}
 
 
 def danh_sach(nguoi_id: str | None = None, thumuc: Path | None = None) -> dict:
@@ -517,7 +539,7 @@ def danh_sach(nguoi_id: str | None = None, thumuc: Path | None = None) -> dict:
         loai = khoa.split(":", 1)[0]
         muc, icon, di, cuon, noi = LOAI.get(loai, ("do", "circle-alert", "03", None, "Bảng điều hành"))
         ds.append({"id": d["id"], "loai": loai, "muc": muc, "icon": icon, "di": di, "cuon": cuon, "noi": noi,
-                   "chu": _chu(loai, khoa, d, ten_khoa, gio_sl), "luc": d["tao_luc"],
+                   "chu": _chu(loai, khoa, d, ten_khoa, gio_sl), **_dong2(loai, khoa), "luc": d["tao_luc"],
                    "moi": not moc or (d["tao_luc"] or "") > moc})
     ds.sort(key=lambda x: x["luc"] or "", reverse=True)
     ds.sort(key=lambda x: (not x["moi"], THU_TU_MUC[x["muc"]]))

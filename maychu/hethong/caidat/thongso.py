@@ -242,7 +242,7 @@ def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) ->
         nhatky.ghi("caidat", "doi_muigio", f"{ten}: {cu} → {giatri}", nguoi_id=nguoi if nguoi != "hethong" else None,
                    thumuc=thumuc)
         from maychu.hethong.giamsat import thongbao
-        thongbao.bao_su_kien("muigio_doi", giatri, thumuc, nhom=ten)   # QĐ636: F04 + chuông; khóa riêng từng thông số (CDA)
+        thongbao.bao_su_kien("muigio_doi", giatri, thumuc, nhom=ten, truoc=cu)   # QĐ636: F04 + chuông; khóa riêng từng thông số (CDA); QĐ662 cũ → mới
     return kq
 
 
@@ -265,7 +265,7 @@ def doi_tenmien(giatri: str, nguoi: str, thumuc: Path | None = None) -> dict:
         nhatky.ghi("caidat", "doi_tenmien", f"{tenmien.TEN}: {cu or '(trống)'} → {ten or '(trống)'}",
                    nguoi_id=nguoi if nguoi != "hethong" else None, thumuc=thumuc)
         from maychu.hethong.giamsat import thongbao
-        thongbao.bao_su_kien("tenmien_doi", ten, thumuc)   # QĐ634: F04 + chuông
+        thongbao.bao_su_kien("tenmien_doi", ten, thumuc, truoc=cu or "")   # QĐ634: F04 + chuông; QĐ662: cũ trống = lần đầu đặt
     return {**kq, "ten": ten}
 
 

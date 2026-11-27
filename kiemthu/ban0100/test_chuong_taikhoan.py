@@ -38,12 +38,18 @@ class KiemMayChu(unittest.TestCase):
         self.assertTrue(thongso.cong_tac_bat("chuong_tamtat", self.dl))   # tới khi tự mở lại (QĐ551) – không có hạn giờ
 
     def test_tin_doi_ten_mien_mui_gio(self):
-        thongso.doi_tenmien("igm.vidu.test", "hethong", self.dl)
+        # QĐ662 (anh "Chọn A"): tin 02 dòng, ghim nguyên văn
+        thongso.doi_tenmien("igm.vidu.test", "hethong", self.dl)   # (3) lần đầu
         ds = thongbao.danh_sach(None, self.dl)["ds"]
-        self.assertEqual([(x["loai"], x["muc"], x["di"], x["chu"]) for x in ds],
-                         [("tenmien_doi", "tin", "chung", "Đã đổi tên miền riêng: igm.vidu.test")])
-        thongso.doi_tenmien("", "hethong", self.dl)   # đổi lại: chỉ giữ lần gần nhất
-        self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã bỏ tên miền riêng"])
+        self.assertEqual([(x["loai"], x["muc"], x["di"], x["icon"], x["chu"], x["phu"]) for x in ds],
+                         [("tenmien_doi", "tin", "chung", "globe", "Đã đặt tên miền riêng",
+                           "igm.vidu.test · tên gốc goc.vidu.test vẫn dùng được")])
+        thongso.doi_tenmien("moi.vidu.test", "hethong", self.dl)   # (2) đổi – chỉ giữ lần gần nhất
+        self.assertEqual([(x["chu"], x["phu"]) for x in thongbao.danh_sach(None, self.dl)["ds"]],
+                         [("Đã đổi tên miền riêng", "igm.vidu.test → moi.vidu.test")])
+        thongso.doi_tenmien("", "hethong", self.dl)   # (4) bỏ
+        self.assertEqual([(x["chu"], x["phu"]) for x in thongbao.danh_sach(None, self.dl)["ds"]],
+                         [("Đã bỏ tên miền riêng", "moi.vidu.test → chỉ còn tên gốc goc.vidu.test")])
         self.assertFalse(hasattr(thongbao, "dong_su_kien"))   # CPO TIN-TM-MG-SUA (3): "Đọc hết" không đóng tin
 
     def test_doc_het_khong_dong_tin_su_kien(self):
@@ -51,7 +57,7 @@ class KiemMayChu(unittest.TestCase):
         src = (GOC / "maychu/web/api.py").read_text(encoding="utf-8")
         i = src.index('@router.post("/thongbao/dochet")')
         self.assertNotIn("thongbao.dong", src[i:src.index("@router", i + 10)])
-        self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã đổi tên miền riêng: igm.vidu.test"])
+        self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã đặt tên miền riêng"])
 
     def test_tin_doi_mui_gio_goi_tu_doi_muigio(self):
         from datetime import timezone
@@ -61,7 +67,7 @@ class KiemMayChu(unittest.TestCase):
             thongso.doi_muigio("muigio_doisoat", "Asia/Bangkok", "hethong", self.dl)
             thongso.doi_muigio("muigio", "Asia/Seoul", "hethong", self.dl)
             ds = thongbao.danh_sach(None, self.dl)["ds"]
-        # CPO TIN-TM-MG-SUA (2): khóa muigio_doi:<tên thông số>:<giá trị>; đổi lại chỉ đóng tin cùng tên thông số
+        # CPO TIN-TM-MG-SUA (2): khóa muigio_doi:<tên thông số>:<mới>:<cũ>; đổi lại chỉ đóng tin cùng tên thông số
         from maychu.dulieu import ketnoi
         cn = ketnoi.mo("Dulieu_Chinh", self.dl)
         try:
@@ -69,9 +75,11 @@ class KiemMayChu(unittest.TestCase):
                                                  f" AND trangthai IN {thongbao.CON_MO}"))
         finally:
             cn.close()
-        self.assertEqual(mo, ["muigio_doi:muigio:Asia/Seoul", "muigio_doi:muigio_doisoat:Asia/Bangkok"])
-        self.assertEqual(sorted(x["chu"] for x in ds), ["Đã đổi múi giờ sang Asia/Seoul", "Đã đổi múi giờ đối soát sang Asia/Bangkok"])
-        self.assertTrue(all(x["icon"] != "clock" for x in ds))   # (4) clock = Chờ quyết toán
+        self.assertEqual(mo, ["muigio_doi:muigio:Asia/Seoul:Asia/Tokyo", "muigio_doi:muigio_doisoat:Asia/Bangkok:Asia/Ho_Chi_Minh"])
+        self.assertEqual(sorted(x["chu"] for x in ds), ["Đã đổi múi giờ", "Đã đổi múi giờ đối soát sang Asia/Bangkok"])   # QĐ662 (1); đối soát TẠM tới 0.12.0
+        mg = next(x for x in ds if x["chu"] == "Đã đổi múi giờ")
+        self.assertEqual((mg["icon"], mg["mg"]), ("watch", ["Asia/Tokyo", "Asia/Seoul"]))   # QĐ663; dòng 2 giao diện ghi tên múi QĐ652
+        self.assertTrue(set(mg["qg"]) <= {"Asia/Tokyo", "Asia/Seoul"})
 
 
 class KiemGiaoDien(unittest.TestCase):
@@ -106,7 +114,9 @@ class KiemGiaoDien(unittest.TestCase):
         self.assertIn("(!tat || ds.some(x => x.moi && x.muc === 'do'))", self.js)                     # tạm tắt vẫn báo tin nghiêm trọng
         self.assertIn("const KHOA_AM = 'igm360_amthanh';", self.js)                                   # QĐ547: theo máy
         src = (GOC / "maychu/hethong/giamsat/thongbao.py").read_text(encoding="utf-8")
-        self.assertIn("# TẠM (QĐ648): chữ tin chuông", src)
+        self.assertIn('return "Đã bỏ tên miền riêng" if not moi else "Đã đổi tên miền riêng" if cu else "Đã đặt tên miền riêng"', src)   # QĐ662
+        self.assertIn("const dong2Tb = x => x.mg ? tenMuiTb(x.mg[0], x.qg) + ' → ' + tenMuiTb(x.mg[1], x.qg) : x.phu || '';", self.js)
+        self.assertIn("ICON.watch = ICON.watch || svgLucide('watch',", self.js)                                  # QĐ663
 
 
 if __name__ == "__main__":

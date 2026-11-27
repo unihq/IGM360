@@ -231,8 +231,12 @@ const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Dat
 const icoTb = x => (ICON[x.icon] || ICON['circle-alert']).replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')
   .replace(/color:[^;"]*/, 'color:' + MAU_TB[x.muc][1]);
 const dongTb = x => '<button class="tha-muc tb-dong' + (x.moi ? ' moi' : '') + '" data-di="' + esc(x.di) + '"' + (x.cuon ? ' data-cuon="' + esc(x.cuon) + '"' : '') + '><span class="tl-cham" aria-hidden="true"></span><span class="ico-tron nho '
-  + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + cum(x.chu) + '</span><span class="t12 phu">'
+  + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + cum(x.chu) + '</span>' + (dong2Tb(x) ? '<span class="t13 khoi">' + esc(dong2Tb(x)) + '</span>' : '') + '<span class="t12 phu">'
   + esc(lucTb(x.luc)) + ' · ' + esc(x.noi) + '</span></span></button>';
+// QĐ662 dòng 2 tin đổi tên miền / múi giờ: "cũ → mới"; tên múi theo QĐ652 (tên nước tiếng Việt do trình duyệt dịch từ mã nước)
+const nuocVi = cc => { try { return cc ? new Intl.DisplayNames(['vi'], {type: 'region'}).of(cc) : ''; } catch (e) { return ''; } };
+const tenMuiTb = (tz, qg) => tz === 'Asia/Ho_Chi_Minh' ? CHU_MG.vn : (nuocVi((qg || {})[tz]) ? nuocVi(qg[tz]) + ' – ' : '') + thanhPho(tz) + ' (' + lechMui(tz) + ')';
+const dong2Tb = x => x.mg ? tenMuiTb(x.mg[0], x.qg) + ' → ' + tenMuiTb(x.mg[1], x.qg) : x.phu || '';
 function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, chấm chưa đọc, "Hiện N tin đã đọc", chân bảng số bản + Có gì mới
   D.tbCuoi = d; const ds = d.thongbao || [], tat = !!d.tamtat, so = d.so_moi || 0;
   if (D.tbSoMoi !== undefined && so > D.tbSoMoi && amBat() && (!tat || ds.some(x => x.moi && x.muc === 'do'))) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng
@@ -1597,7 +1601,7 @@ const DCG = {c2pa: true, tm: null, kiem: null, mg: null, mgChon: null, mgMo: fal
 const lechMui = tz => { try { const p = new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName: 'shortOffset'}).formatToParts(new Date())
   .find(x => x.type === 'timeZoneName').value.replace('GMT', ''); return 'UTC' + (p ? p.replace('-', '\u2212') : '+0'); } catch (e) { return ''; } };
 const thanhPho = tz => tz.split('/').pop().replace(/_/g, ' ');
-const tenNuoc = tz => { const cc = DCG.mg && (DCG.mg.quoc_gia || {})[tz]; try { return cc ? new Intl.DisplayNames(['vi'], {type: 'region'}).of(cc) : ''; } catch (e) { return ''; } };
+const tenNuoc = tz => nuocVi(DCG.mg && (DCG.mg.quoc_gia || {})[tz]);
 const tenMui = tz => tz === 'Asia/Ho_Chi_Minh' ? CHU_MG.vn : (tenNuoc(tz) ? tenNuoc(tz) + ' – ' : '') + thanhPho(tz) + ' (' + lechMui(tz) + ')';
 const tenMuiNgan = tz => tz === 'Asia/Ho_Chi_Minh' ? 'Hồ Chí Minh (UTC+7)' : thanhPho(tz) + ' (' + lechMui(tz) + ')';
 const gioO = tz => { try { return new Intl.DateTimeFormat('vi-VN', {timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false}).format(new Date()); } catch (e) { return ''; } };
@@ -1711,6 +1715,8 @@ document.addEventListener('input', ev => { if (ev.target.id !== 'mg-tim') return
 
 // ---- QĐ548 B, QĐ551, QĐ553, QĐ559, chữ QĐ566: chuông · âm thanh · chế độ màu ở góc phải khung; menu tài khoản; Tạm tắt
 // icon Lucide (ISC) mới – QĐ566 (9): bell-off (nét bản DM lc_010.js), volume-x, megaphone (nét bản CDO Toi_Lop.js)
+ICON.watch = ICON.watch || svgLucide('watch', ['<circle cx="12" cy="12" r="6" />', '<polyline points="12 10 12 12 13 13" />',
+  'm16.13 7.66-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05', 'm7.88 16.36.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05']);   // Lucide (ISC) 0.468.0: tin đổi múi giờ (QĐ663)
 ICON['bell-off'] = svgLucide('bell-off', ['M10.268 21a2 2 0 0 0 3.464 0', 'M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742',
   'm2 2 20 20', 'M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05']);
 ICON['volume-x'] = svgLucide('volume-x', ['M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z',
