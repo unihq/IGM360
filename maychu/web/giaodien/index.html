@@ -843,6 +843,29 @@ body.dien-thoai .nut-gat{min-height:44px;min-width:44px;display:inline-flex;alig
 .tha-cd .tha-muc.on{color:var(--xanh-chu);font-weight:600}
 body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-the button,body.dien-thoai .tl-chan button{min-height:44px}
 /* 0.10.0 bước 7a – ngăn Két khóa (DM-03NGAN-0100 cột A): khối tổng, ghi chú, bảng 06 cột; hẹp: hàng gọn + nút ⋯ */
+/* QĐ658 ngăn Tài khoản và 02 lớp (bản DM Caidat03_01 A): ≥ 1200 px 03 khối 01 hàng, khối xếp dọc (icon · tên · nút); 1024, 390: 01 cột, nút dưới chữ */
+#app:not(.mb) .cd-than .luoi-tk{grid-template-columns:minmax(0,1fr)}
+#app:not(.mb) .cd-than .o-tk{align-items:flex-start;padding:16px}
+@media (min-width:1200px){#app:not(.mb) .cd-than .luoi-tk{grid-template-columns:repeat(3,minmax(0,1fr))}#app:not(.mb) .cd-than .o-tk{flex-direction:column;gap:12px}#app:not(.mb) .cd-than .o-tk>.f1{width:100%}}
+/* Ngăn Cập nhật (bản DM Caidat03_03, 06): QĐ659 nút "Kiểm tra lại" trong thẻ; hẹp hơn 1200 px thẻ trạng thái: vòng 72 bên trái, nút dưới chữ.
+   QĐ660 Công cụ AI: ≥ 1200 px bảng 05 cột; 1024, 390: danh sách – mỗi công cụ 01 khối, nhãn đứng trước số, nút "Về bản trước" ở đầu khối */
+@media (max-width:1199px){
+ #p09 .the.cn{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 20px;align-items:center}
+ #p09 .the.cn>.giua{grid-row:1/3;width:72px!important;height:72px!important}#p09 .the.cn>.giua>svg{width:72px;height:72px}
+ #p09 .the.cn>.cn-nut{grid-column:2;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 16px}
+ #khoi-cl .cl-hang.tieu-de{display:none}
+ #khoi-cl .cl-hang.cl5{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 16px;border:1px solid var(--ke);border-radius:10px;margin-top:8px}
+ #khoi-cl .cl-hang.cl5>b{grid-column:1;grid-row:1;font-size:14px}
+ #khoi-cl .cl-hang.cl5>.phai{grid-column:2;grid-row:1;text-align:right}
+ #khoi-cl .cl-hang.cl5>[data-l]{grid-column:1/-1;color:var(--phu)}
+ #khoi-cl .cl-hang.cl5>[data-l]::before{content:attr(data-l) " ";display:inline;font-size:13px;color:var(--phu)}
+ #khoi-cl .cl-hang.cl5>[data-l] .so{color:var(--chu);font-weight:600}
+ #khoi-cl .cl-hang.cl5>[data-l]>div{display:inline;font-size:13px}#khoi-cl .cl-hang.cl5>[data-l]>div::before{content:" · "}
+}
+/* điện thoại 390 (Caidat03_03 390): vòng 56, nút xuống hàng riêng dưới vòng */
+.mb #p09 .the.cn{padding:16px;gap:12px 16px}.mb #p09 .the.cn .t20{font-size:18px;line-height:24px}
+.mb #p09 .the.cn>.giua{grid-row:1;width:56px!important;height:56px!important}.mb #p09 .the.cn>.giua>svg{width:56px;height:56px}
+.mb #p09 .the.cn>.cn-nut{grid-column:1/-1}
 .kk-tong{display:flex;align-items:center;gap:16px;padding:16px 20px}
 .kk-ic{width:52px;height:52px;border-radius:12px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
 .kk-thanh{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;margin:8px 0 6px;background:var(--xam)}.kk-thanh i{display:block}
@@ -1730,7 +1753,7 @@ html.toi ::placeholder{color:var(--goi-y)}
   <path d="M12 12h.01" />
   <path d="M17 12h.01" />
   <path d="M7 12h.01" />
-</svg></div><div class="f1"><div class="b7">Mật khẩu</div><div class="phu t13">Đổi lần cuối <span id="mk-luc"></span></div></div><button class="btn btn-phu" data-mo="h-matkhau">Đổi mật&nbsp;khẩu</button></div>
+</svg></div><div class="f1"><div class="b7">Mật khẩu</div><div class="phu t13">Đổi lần cuối <span id="mk-luc"></span></div><button class="btn btn-phu" data-mo="h-matkhau" style="margin-top:10px">Đổi mật&nbsp;khẩu</button></div></div>
     </div>
     <div class="bao-xanh" id="bao-doimk" hidden><svg
   style="flex:none;vertical-align:middle;color:var(--dat)" class="lucide lucide-circle-check"
