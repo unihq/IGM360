@@ -42,9 +42,9 @@ LOAI = {
     "cli_mang": ("xem", "wifi-off", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ307 Z20 dòng 19: không kết nối được hãng
     # QĐ390, QĐ397 (bảng chữ màn 09 dòng 12, BV04): mức Xem, icon shield-alert, mở suốt lúc 02 lớp tắt
     "dangnhap_2lop_tat": ("xem", "shield-alert", "taikhoan", None, "Tài khoản"),
-    # QĐ634, QĐ636 "F04 + chuông": tin sự kiện (đã xảy ra, không cần xử lý) – mức tin, mở Cài đặt › Chung; đóng khi "Đọc hết" (TẠM)
+    # QĐ634, QĐ636 "F04 + chuông": tin sự kiện (đã xảy ra, không cần xử lý) – mức tin, mở Cài đặt › Chung; "Đọc hết" chỉ đặt mốc đọc, không đóng tin (CPO TIN-TM-MG-SUA)
     "tenmien_doi": ("tin", "globe", "chung", None, "Cài đặt › Chung"),
-    "muigio_doi": ("tin", "clock", "chung", None, "Cài đặt › Chung"),
+    "muigio_doi": ("tin", "settings", "chung", None, "Cài đặt › Chung"),   # icon TẠM (QĐ648): không dùng clock (= Chờ quyết toán)
 }
 SU_KIEN = ("tenmien_doi", "muigio_doi")
 KHOA_2LOP_TAT = "dangnhap_2lop_tat"
@@ -286,22 +286,14 @@ def dong_2lop_tat(lydo: str, thumuc: Path | None = None) -> None:
         _dong(w, KHOA_2LOP_TAT, lydo)
 
 
-def bao_su_kien(loai: str, sau: str, thumuc: Path | None = None) -> None:
-    """QĐ634, QĐ636: 01 tin chuông khi đổi tên miền / múi giờ (khóa `loai:giá trị mới`; trùng thì không mở thêm)."""
+def bao_su_kien(loai: str, sau: str, thumuc: Path | None = None, nhom: str | None = None) -> None:
+    """QĐ634, QĐ636: 01 tin chuông khi đổi tên miền / múi giờ. Khóa `loai:giá trị mới`, hoặc `loai:nhom:giá trị mới` khi
+    có `nhom` (múi giờ: tên thông số – `muigio`, `muigio_doisoat` giữ tin riêng); trùng thì không mở thêm."""
+    tien_to = f"{loai}:{nhom}:" if nhom else f"{loai}:"
     with _Ghi(thumuc) as w:
-        for k in _khoa_mo(w, loai):   # tin cũ cùng loại (giá trị trước) đóng, chỉ giữ lần đổi gần nhất
+        for k in _khoa_mo(w, tien_to):   # tin cũ cùng loại, cùng nhóm (giá trị trước) đóng, chỉ giữ lần đổi gần nhất
             _dong(w, k, "đổi lại")
-        _mo(w, f"{loai}:{sau}", None, None)
-
-
-def dong_su_kien(lydo: str, thumuc: Path | None = None) -> int:
-    """Đóng tin sự kiện khi bấm "Đọc hết" (TẠM – chờ CDA / CPO chốt vòng đời tin sự kiện)."""
-    n = 0
-    with _Ghi(thumuc) as w:
-        for loai in SU_KIEN:
-            for k in _khoa_mo(w, loai):
-                n += _dong(w, k, lydo)
-    return n
+        _mo(w, tien_to + sau, None, None)
 
 
 def quet_2lop(thumuc: Path | None = None) -> None:
@@ -497,8 +489,11 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         return f"Kiểm sau cập nhật bản {sau}: {ly}" if ly else f"Kiểm sau cập nhật bản {sau} chưa đạt"
     if loai == "tenmien_doi":   # TẠM (QĐ648): chữ tin chuông – CPO hỏi anh
         return f"Đã đổi tên miền riêng: {sau}" if sau else "Đã bỏ tên miền riêng"
-    if loai == "muigio_doi":   # TẠM (QĐ648)
-        return f"Đã đổi múi giờ sang {sau}"
+    if loai == "muigio_doi":   # TẠM (QĐ648); khóa muigio_doi:<tên thông số>:<giá trị>
+        ten, _, gt_mg = sau.partition(":")
+        if ten == "muigio_doisoat":   # TẠM tới 0.12.0 (0.10.0 chưa có nút đổi – CPO)
+            return f"Đã đổi múi giờ đối soát sang {gt_mg}"
+        return f"Đã đổi múi giờ sang {gt_mg}"
     return "Có cảnh báo mới"
 
 

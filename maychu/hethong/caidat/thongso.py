@@ -242,7 +242,7 @@ def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) ->
         nhatky.ghi("caidat", "doi_muigio", f"{ten}: {cu} → {giatri}", nguoi_id=nguoi if nguoi != "hethong" else None,
                    thumuc=thumuc)
         from maychu.hethong.giamsat import thongbao
-        thongbao.bao_su_kien("muigio_doi", giatri, thumuc)   # QĐ636: F04 + chuông
+        thongbao.bao_su_kien("muigio_doi", giatri, thumuc, nhom=ten)   # QĐ636: F04 + chuông; khóa riêng từng thông số (CDA)
     return kq
 
 

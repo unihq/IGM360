@@ -162,9 +162,7 @@ def dem_so(p: dict = Depends(can_dang_nhap), mo: int = 0):
 
 @router.post("/thongbao/dochet")
 def doc_het_thongbao(p: dict = Depends(can_dang_nhap)):
-    """Nút "Đọc hết": đặt mốc đọc = lúc bấm (QĐ165); không đổi trạng thái cảnh báo – trừ tin sự kiện (đổi tên miền,
-    múi giờ) đóng luôn (TẠM)."""
-    thongbao.dong_su_kien("đã đọc")
+    """Nút "Đọc hết": đặt mốc đọc = lúc bấm (QĐ165); không đổi trạng thái cảnh báo, kể cả tin sự kiện (CPO TIN-TM-MG-SUA)."""
     return {"moc_doc": thongso.dat_moc_doc(nguoi=p["nguoidung_id"])}
 
 

@@ -44,13 +44,34 @@ class KiemMayChu(unittest.TestCase):
                          [("tenmien_doi", "tin", "chung", "Đã đổi tên miền riêng: igm.vidu.test")])
         thongso.doi_tenmien("", "hethong", self.dl)   # đổi lại: chỉ giữ lần gần nhất
         self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã bỏ tên miền riêng"])
-        self.assertEqual(thongbao.dong_su_kien("đã đọc", self.dl), 1)   # "Đọc hết" đóng tin sự kiện (TẠM)
-        self.assertEqual(thongbao.danh_sach(None, self.dl)["ds"], [])
+        self.assertFalse(hasattr(thongbao, "dong_su_kien"))   # CPO TIN-TM-MG-SUA (3): "Đọc hết" không đóng tin
+
+    def test_doc_het_khong_dong_tin_su_kien(self):
+        thongso.doi_tenmien("igm.vidu.test", "hethong", self.dl)
+        src = (GOC / "maychu/web/api.py").read_text(encoding="utf-8")
+        i = src.index('@router.post("/thongbao/dochet")')
+        self.assertNotIn("thongbao.dong", src[i:src.index("@router", i + 10)])
+        self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã đổi tên miền riêng: igm.vidu.test"])
 
     def test_tin_doi_mui_gio_goi_tu_doi_muigio(self):
-        with mock.patch.object(muigio, "kiem_ten", return_value=True):
+        from datetime import timezone
+        # Windows không có bộ múi giờ (tzdata): giả múi = UTC, chỉ kiểm khóa tin
+        with mock.patch.object(muigio, "kiem_ten", return_value=True), mock.patch.object(muigio, "ZoneInfo", lambda k: timezone.utc):
             thongso.doi_muigio("muigio", "Asia/Tokyo", "hethong", self.dl)
-        self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã đổi múi giờ sang Asia/Tokyo"])
+            thongso.doi_muigio("muigio_doisoat", "Asia/Bangkok", "hethong", self.dl)
+            thongso.doi_muigio("muigio", "Asia/Seoul", "hethong", self.dl)
+            ds = thongbao.danh_sach(None, self.dl)["ds"]
+        # CPO TIN-TM-MG-SUA (2): khóa muigio_doi:<tên thông số>:<giá trị>; đổi lại chỉ đóng tin cùng tên thông số
+        from maychu.dulieu import ketnoi
+        cn = ketnoi.mo("Dulieu_Chinh", self.dl)
+        try:
+            mo = sorted(r[0] for r in cn.execute("SELECT khoa_chongtrung FROM canhbao WHERE khoa_chongtrung LIKE 'muigio_doi:%'"
+                                                 f" AND trangthai IN {thongbao.CON_MO}"))
+        finally:
+            cn.close()
+        self.assertEqual(mo, ["muigio_doi:muigio:Asia/Seoul", "muigio_doi:muigio_doisoat:Asia/Bangkok"])
+        self.assertEqual(sorted(x["chu"] for x in ds), ["Đã đổi múi giờ sang Asia/Seoul", "Đã đổi múi giờ đối soát sang Asia/Bangkok"])
+        self.assertTrue(all(x["icon"] != "clock" for x in ds))   # (4) clock = Chờ quyết toán
 
 
 class KiemGiaoDien(unittest.TestCase):
