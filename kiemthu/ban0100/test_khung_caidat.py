@@ -40,7 +40,11 @@ class KiemKhung(unittest.TestCase):
         self.assertIn("const NGAN_CD = [['chung', 'monitor-cog', 'Chung'], ['thongso', 'sliders-horizontal', 'Thông số'],", self.js)
         nhom = re.search(r"const NHOM_CD = \[([^\]]*)\]", self.js).group(1)
         self.assertEqual(tuple(re.findall(r"'([^']*)'", nhom)), thongso.NHOM)   # QĐ586: tên nhóm giao diện = máy chủ
-        self.assertIn("S.tab = 'thongso'; S.nhom = 'gom'; napTab();", self.js)   # QĐ583: 01 bấm sang trang gom
+        self.assertIn("S.tab = 'thongso'; S.nhom = 'gom'; S.cdMan = 2; napTab();", self.js)   # QĐ583: 01 bấm sang trang gom
+        self.assertIn("if (t.closest('#cd-menu')) S.cdMan = 2;", self.js)   # điện thoại: chạm ngăn → màn 2 (CaidatB_07, 08)
+        self.assertIn("else if ('cdLui' in d) S.cdMan = 1;", self.js)
+        self.assertIn(".mb #p09:not(.man2) .cd-ct{display:none}", self.h)
+        self.assertIn(".mb #p09 .cd-mm{min-height:48px}", self.h)   # Quychuan Phần 8: dòng chạm 48
         self.assertIn("'Thông số chưa đặt'", self.js)
         self.assertIn("await napThongSo();   // QĐ574, QĐ583", self.js)          # tiến độ hiện ở mọi ngăn
         for ic in ("monitor-cog", "stamp", "sun", "moon", "monitor", "circle-chevron-right"):   # QĐ653 + chế độ màu, QĐ585

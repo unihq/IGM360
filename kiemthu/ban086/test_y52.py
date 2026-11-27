@@ -72,7 +72,7 @@ class KiemThuGonNhom(unittest.TestCase):
         self.assertNotIn("Thu gọn nhóm", self.app + self.html)
 
     def test_css_chi_may_tinh_thu_ca_thanh_giu_nhu_nay(self):
-        for x in ("#app:not(.mb) .nhom-ds.gap>.muc{display:none}", "#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh-chu);border-left-color:var(--xanh-chu)}",
+        for x in ("#app:not(.mb) .nhom-ds.gap>.muc{display:none}", "#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh-chu)}",   # QĐ575: bỏ vạch trái
                   ".thu .nhom-nut{display:none!important}", ".thu .nhom-ds.gap>.muc{display:flex!important}",
                   "#app:not(.mb) .nhom-ds.rieng{margin-top:8px}"):
             self.assertIn(x, self.html)                                           # QĐ328 L4 A, QĐ329 điện thoại không áp dụng
@@ -85,10 +85,10 @@ class KiemThuGonNhom(unittest.TestCase):
         self.assertIn(".bao{margin-left:auto;background:var(--khoi);border:1px solid var(--xanh-chu);color:var(--xanh-chu);font-size:12px;", h)
         self.assertIn("#app:not(.mb) .nhom-nut .bao{margin-left:0;font-size:12px;", h)                    # L-Y52-1
         self.assertNotIn(".nhom-nut .bao{margin-left:0;font-size:11px", h)
-        self.assertIn("border-left:3px solid transparent;font-size:14px", h)                               # mục: vạch 3 px
-        self.assertIn(".muc.on{border-left-color:var(--xanh-chu);", h)
+        self.assertNotIn("border-left:3px solid transparent;font-size:14px", h)                            # QĐ575: mục bỏ vạch 3 px
+        self.assertIn(".muc.on{color:var(--xanh-chu);font-weight:600;background:var(--khoi)}", h)      # QĐ575: chỉ nền + chữ
         self.assertIn("padding:14px 14px 4px 17px;border-left:3px solid transparent;", h)                 # L-Y52-2
-        self.assertIn("#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh-chu);border-left-color:var(--xanh-chu)}", h)
+        self.assertIn('#app:not(.mb) .nhom-nut.co-trang::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--xanh-chu)', h)   # QĐ586 (a): chấm 6 px thay vạch
 
 
 class KiemThaydoi086(unittest.TestCase):

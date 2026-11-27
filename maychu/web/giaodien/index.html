@@ -124,21 +124,21 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .logo{display:flex;gap:10px;align-items:center;padding:0 18px 12px}
 .logo b{width:36px;height:36px;border-radius:9px;background:var(--xanh);color:var(--chu-tren-nut);font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
 .nhom{padding:14px 20px 4px;font-size:11px;font-weight:700;color:var(--phu);white-space:nowrap}
-.muc{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px 0 17px;border-left:3px solid transparent;font-size:14px;white-space:nowrap;width:100%;text-align:left;position:relative}
+.muc{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px 0 17px;font-size:14px;white-space:nowrap;width:100%;text-align:left;position:relative}
 .muc:hover{background:var(--khoi)}
-.muc.on{border-left-color:var(--xanh-chu);color:var(--xanh-chu);font-weight:600;background:var(--khoi)}
+.muc.on{color:var(--xanh-chu);font-weight:600;background:var(--khoi)}
 .muc.on svg{stroke:var(--xanh-chu)}
 .bao{margin-left:auto;background:var(--khoi);border:1px solid var(--xanh-chu);color:var(--xanh-chu);font-size:12px;font-weight:700;border-radius:10px;padding:0 7px;line-height:18px;font-variant-numeric:tabular-nums}
 .bao.do{border-color:var(--canh);color:var(--canh)}
 .gd-sau{margin:16px 18px 6px;padding-top:12px;border-top:1px solid var(--ke);font-size:12px;color:var(--phu);line-height:1.5}
 .thu-gon{margin-top:auto;color:var(--phu)}
 .thu nav.menu{width:68px}
-.thu .muc{padding:0;justify-content:center;border-left-width:3px}
+.thu .muc{padding:0;justify-content:center}
 .thu .muc>span:not(.bao),.thu .nhom,.thu .logo-chu,.thu .gd-sau{display:none}
 /* Y52 (QĐ321–QĐ331; Z27 · U40): thu gọn nhóm thanh trái, chỉ khổ máy tính */
 #app:not(.mb) .nhom-nut{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;cursor:pointer;text-align:left;font:inherit;font-size:11px;font-weight:700;color:var(--phu);padding:14px 14px 4px 17px;border-left:3px solid transparent;white-space:nowrap}
 #app:not(.mb) .nhom-nut:hover{color:var(--chu)}
-#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh-chu);border-left-color:var(--xanh-chu)}
+#app:not(.mb) .nhom-nut.co-trang{color:var(--xanh-chu)}
 #app:not(.mb) .nhom-nut .nhom-bao{margin-left:auto;display:flex;gap:4px;align-items:center}
 #app:not(.mb) .nhom-nut .nhom-mt{display:flex;margin-left:4px}
 #app:not(.mb) .nhom-nut .nhom-bao:empty+.nhom-mt{margin-left:auto}
@@ -787,6 +787,22 @@ body.dien-thoai .cg-seg{flex-basis:100%;margin-left:42px}body.dien-thoai .cg-sg{
 body.dien-thoai .tm-r{grid-template-columns:1fr;gap:4px}body.dien-thoai .tm-th{display:none}body.dien-thoai .tm-nl{display:inline-block}
 body.dien-thoai .tm-h{flex-wrap:wrap}body.dien-thoai .tm-h .cg-onhap,body.dien-thoai .tm-h .btn,body.dien-thoai .mg-o{flex:1 1 100%;height:44px;max-width:none}
 body.dien-thoai .mg-p{width:auto}body.dien-thoai .mg-i,body.dien-thoai .tm-x .btn-chu{min-height:44px}
+/* 0.10.0 bước 5c – máy tính: màn Cài đặt kín tới đáy, menu và khối chi tiết cùng đáy, cuộn trong khối (QĐ576, QĐ582) */
+#app:not(.mb) .cuon-trong:has(#p09:not([hidden])){display:flex;flex-direction:column}
+#app:not(.mb) #p09{flex:1;min-height:0;padding-bottom:28px}
+#app:not(.mb) #p09 .cd-cum{flex:1;min-height:420px}
+/* điện thoại (CaidatB_07, 08): màn 1 = tiến độ + menu; màn 2 = khối chi tiết, nút lùi; dòng chạm 48 (Quychuan Phần 8) */
+.cd-lui{display:none}
+.mb #p09 .cd-cum{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:4px}
+.mb #p09:not(.man2) .cd-ct{display:none}
+.mb #p09.man2 .cd-td,.mb #p09.man2 .cd-menu,.mb #p09.man2>.dau-trang{display:none}
+.mb #p09.man2 .cd-lui{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-12px;flex:none}
+.mb #p09 .cd-mm{min-height:48px}
+.mb #p09 .cd-h1{flex-wrap:wrap}.mb #p09 .cd-loc{height:44px}
+.mb #p09 .cd-than{padding:4px 12px 16px}
+body.dien-thoai .nut-gat{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+/* QĐ575: không vạch màu sát mép trái – mục đang chọn chỉ nền + chữ; QĐ586 (a): nhóm chứa trang mở = chữ xanh + chấm 6 px */
+#app:not(.mb) .nhom-nut.co-trang::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--xanh-chu);flex:none;order:-1}
 /* QĐ612 thanh cuộn kiểu C (Quychuan 5.20): mọi vùng cuộn trên máy tính; điện thoại dùng thanh của máy */
 body:not(.dien-thoai) ::-webkit-scrollbar{width:12px;height:12px}
 body:not(.dien-thoai) ::-webkit-scrollbar-track,body:not(.dien-thoai) ::-webkit-scrollbar-corner{background:transparent}
@@ -1678,7 +1694,7 @@ html.toi ::placeholder{color:var(--goi-y)}
        <div class="cd-h2"><div class="cd-thg"><i id="ts-thanh"></i></div><span id="ts-dem"></span></div>
        <p class="phu t13">Thông số chưa đặt: phần&nbsp;mềm chạy cách an toàn nhất, ghi rõ hệ quả dưới tên. Đổi một thông số: giá trị mới chạy từ ngày bạn chọn, giá trị cũ vẫn giữ để tính lại các kỳ trước.</p></div>
       <nav class="the cd-menu" id="cd-menu" aria-label="Cài đặt"></nav>
-      <section class="the cd-ct"><div class="cd-kd"><span class="cd-ic" id="cd-ic"></span><b class="cd-ten" id="cd-ten"></b><span class="cd-dem" id="cd-dem"></span></div>
+      <section class="the cd-ct"><div class="cd-kd"><button class="cd-lui" data-cd-lui aria-label="Quay lại"></button><span class="cd-ic" id="cd-ic"></span><b class="cd-ten" id="cd-ten"></b><span class="cd-dem" id="cd-dem"></span></div>
        <div class="cd-than">
      <div data-s="tab:chung" class="cot-doc" id="ngan-chung"></div>
      <div data-s="tab:thongso" class="cot-doc"><div id="ds-thongso"></div><div class="gd-dong">Thông số dạng danh sách nhiều mục (loại kênh, loại giá, nguồn tỷ giá…) không hiện ở đây, sửa ở màn dùng chúng.</div></div>

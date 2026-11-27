@@ -2,7 +2,7 @@
 // QĐ88, QĐ94; icon theo từ điển QĐ91; chặn đoán mật khẩu, phiên 30 ngày QĐ90).
 // Cách bật tắt khối theo trạng thái (data-s) giữ như bản vẽ; số liệu lấy từ máy chủ.
 'use strict';
-const S = {g: '01', dn: 'matkhau', k: 'binhthuong', trang: '03', tab: 'chung', nhom: 'Tài chính', cn: 'moinhat', xem: 'dt', thu: 0, tc: 'rong', lv: null};
+const S = {g: '01', dn: 'matkhau', k: 'binhthuong', trang: '03', tab: 'chung', nhom: 'Tài chính', cdMan: 1, cn: 'moinhat', xem: 'dt', thu: 0, tc: 'rong', lv: null};
 const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
 const D = {thongso: null, maTam: '', maTamDoiMay: '', xnCb: null, suaK: '', capnhat: null, hetLuc: null, khoaDen: 0,
   md: null, dn: {}, trung: {}, ht: [], htId: null, soLuc: ''};
@@ -67,7 +67,7 @@ function ve() {
   $$('.trang').forEach(e => e.hidden = e.id !== 'p' + S.trang);
   $$('[data-trang]').forEach(e => e.classList.toggle('on', e.dataset.trang === S.trang));
   $$('.tab').forEach(e => e.classList.toggle('on', e.dataset.tab === S.tab));
-  danhDauMenuCd();
+  danhDauMenuCd(); const p9 = $('#p09'); if (p9) p9.classList.toggle('man2', S.cdMan === 2);   // điện thoại: màn 2 = khối chi tiết
   $('#tieude-tren').innerHTML = (ICO[S.trang] || '') + '<b class="t16 nw">' + (TEN[S.trang] || '') + '</b>';
   const nutDn = $('[data-dangnhap]');   // 0.8.9 (CDA SOAT-KH-088 điểm 3): "Đang xử lý…" theo S.lv riêng; S.dn giữ 07 giá trị
   nutDn.disabled = S.dn === 'khoa' || S.dn === 'khoatk' || S.lv === 'dang';
@@ -285,6 +285,7 @@ function danhDauMenuCd() {   // ngăn đang mở: nền --xam + chữ, icon --xa
   const ten = ts ? (S.nhom === 'gom' ? 'Thông số chưa đặt' : S.nhom) : ngan[2];
   const ic = ts ? (S.nhom === 'gom' ? 'filter' : NHOM_ICO[S.nhom]) : ngan[1];
   $('#cd-ic').innerHTML = ICON[ic] ? icoMau(ICON[ic], 'var(--xanh-chu)', 18) : '';
+  const lui = $('[data-cd-lui]'); if (lui && !lui.firstChild) lui.innerHTML = icoMau(ICON['chevron-left'], 'var(--xanh-chu)', 20);
   kd.innerHTML = ten;
   const n = !ts || !D.thongso ? 0 : S.nhom === 'gom' ? NHOM_CD.reduce((a, x) => a + demChua(x), 0)
     : D.thongso.thongso.filter(t => t.nhom === S.nhom && !giaiDoanSau(t)).length;
@@ -1706,7 +1707,8 @@ document.addEventListener('click', async ev => {
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); $$('#app .cuon, #app .cuon-trong').forEach(c => c.scrollTop = 0); if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }   // KH-090 2.2 (a): khổ máy tính cuộn ở .cuon-trong
   else if ('thu' in d) S.thu = S.thu ? 0 : 1;
   else if (S.trang === '09' && S.tab === 'chung' && await nutChung(t, d)) { /* ngăn Chung */ }
-  else if (d.tab) { S.tab = d.tab; if (d.tab === 'thongso') S.nhom = d.nhom || NHOM_CD[0]; napTab(); }
+  else if (d.tab) { S.tab = d.tab; if (d.tab === 'thongso') S.nhom = d.nhom || NHOM_CD[0]; if (t.closest('#cd-menu')) S.cdMan = 2; napTab(); }
+  else if ('cdLui' in d) S.cdMan = 1;   // điện thoại: về danh sách ngăn
   else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6), QĐ404
     t.innerHTML = icoMau(ICON[hien ? 'eye' : 'eye-off'], 'var(--phu)', 18).replace('<svg', '<svg aria-hidden="true"'); t.setAttribute('aria-label', hien ? CHU_DN.an : CHU_DN.hien); }
   else if ('dangnhap' in d) { await dangNhap(); return; }
@@ -1733,7 +1735,7 @@ document.addEventListener('click', async ev => {
   else if (d.canang) moNangCongCu(d.canang);   // Z20 dòng 7
   else if (d.cave) moVeCongCu(d.cave);   // Z20 dòng 11
   else if ('luusua' in d) { await luuSua(); }
-  else if ('locChua' in d) { S.tab = 'thongso'; S.nhom = 'gom'; napTab(); }   // QĐ583: 01 bấm sang trang gom
+  else if ('locChua' in d) { S.tab = 'thongso'; S.nhom = 'gom'; S.cdMan = 2; napTab(); }   // QĐ583: 01 bấm sang trang gom
   else if (d.thuhoi) xacnhan('Thu hồi phiên này?', 'Máy đó phải đăng nhập lại mới dùng tiếp được.', 'Thu hồi', async () => {
     try { await api('/phien/' + encodeURIComponent(d.thuhoi) + '/thuhoi', {}); bao('Đã thu hồi phiên.'); napTaiKhoan(); } catch (e) { bao(e.message + '.'); } });
   else if ('kiemtra' in d) { try { const k = await api('/capnhat/kiemtra', {}); veCapNhat(k); if (!k.loi) bao(k.co_ban_moi ? 'Có bản mới ' + k.ban_moi + '.' : 'Đã kiểm tra: chưa có bản mới.'); }
