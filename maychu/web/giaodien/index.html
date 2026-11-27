@@ -803,6 +803,45 @@ body.dien-thoai .mg-p{width:auto}body.dien-thoai .mg-i,body.dien-thoai .tm-x .bt
 body.dien-thoai .nut-gat{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
 /* QĐ575: không vạch màu sát mép trái – mục đang chọn chỉ nền + chữ; QĐ586 (a): nhóm chứa trang mở = chữ xanh + chấm 6 px */
 #app:not(.mb) .nhom-nut.co-trang::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--xanh-chu);flex:none;order:-1}
+/* 0.10.0 bước 6 – QĐ548 B, QĐ553 (2): chuông · âm thanh · chế độ màu ở góc phải khung nội dung, ô 36 × 36 cách 4 px;
+   điện thoại: thanh trên chuông + tài khoản (QĐ553 (6)); bảng chuông, menu tài khoản theo bản CDO SC-TOI-0100 (Toi_Lop.js) */
+#app:not(.mb) .vung{position:relative}
+#app:not(.mb) .vung>.vi-tri{position:absolute;top:22px;right:28px;z-index:20;gap:4px}
+.nut36{width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none;color:var(--phu)}
+.nut36:hover,.nut36.mo{background:var(--xam);color:var(--chu)}
+.nut36 .so{position:absolute;top:-6px;right:-8px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;border:1px solid var(--xanh-chu);background:var(--khoi);color:var(--xanh-chu);font-size:11px;font-weight:700;line-height:16px;text-align:center}
+.nut36 .so.do{border-color:var(--canh);color:var(--canh)}
+.nut36.tat{width:auto;padding:0 10px;gap:6px;border:1px solid var(--xem);color:var(--xem);font-weight:600;font-size:13px;white-space:nowrap}
+.nut36.tat .so{position:static;margin-left:2px}
+.mb .an-dt,#app:not(.mb) .chi-dt{display:none!important}
+.mb .nut36{width:44px;height:44px}
+#app:not(.mb) .vi-tri .tha{position:fixed;right:auto;z-index:90}
+.tha-cb{width:360px;padding:0;overflow:hidden}.tha-cd{width:200px}.tha-tk{width:268px;padding:4px 0}
+.tl-dau{gap:4px;padding:12px 10px 8px 16px}.tl-dau b{font-size:15px;font-weight:600;margin-right:auto}
+.tl-nutchu{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;color:var(--chu);white-space:nowrap}
+.tl-nutchu:hover{background:var(--xam)}.tl-nutchu.x{color:var(--xanh-chu)}
+.tl-dai{margin:4px 12px 8px;border:1px solid var(--ke);border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:13px;line-height:1.45}
+.tl-dai .nd3{flex:1 1 200px}
+.tl-the{display:flex;gap:4px;padding:0 12px;border-bottom:1px solid var(--ke)}
+.tl-the button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 8px;font-size:13px;font-weight:600;color:var(--phu);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tl-the button.on{color:var(--xanh-chu);border-bottom-color:var(--xanh-chu)}
+.tl-the i{font-style:normal;min-width:20px;height:18px;padding:0 5px;border-radius:9px;background:var(--xam);color:var(--chu);font-size:11px;line-height:18px;text-align:center}
+.tha-cb .tb-ds{max-height:min(420px,60vh);overflow-y:auto;padding:4px 6px}
+.tl-cham{width:8px;height:8px;border-radius:50%;background:var(--xanh-chu);flex:none;align-self:center}
+.tb-dong:not(.moi) .tl-cham{visibility:hidden}
+.tl-hien{display:block;width:100%;text-align:left;padding:10px 10px;font-size:13px;font-weight:600;color:var(--xanh-chu)}
+.tl-chan{display:flex;align-items:center;padding:10px 16px;border-top:1px solid var(--ke);font-size:13px;color:var(--phu)}
+.tl-chan button{margin-left:auto;color:var(--xanh-chu);font-weight:600;min-height:24px}
+.tl-dautk{display:flex;gap:10px;align-items:center;padding:12px 16px}
+.tl-vach{height:1px;background:var(--ke);margin:4px 0}
+.tha-tk .tha-muc{border-radius:0;padding:0 16px;min-height:40px;color:var(--chu);text-decoration:none}
+.tl-ph{margin-left:auto;color:var(--phu);font-size:13px;display:inline-flex;align-items:center}
+.tl-cong{width:36px;height:20px;border-radius:10px;background:var(--vien);position:relative;display:inline-block}
+.tl-cong.bat{background:var(--xanh)}
+.tl-cong::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--khoi)}
+.tl-cong.bat::after{left:19px}
+.tha-cd .tha-muc.on{color:var(--xanh-chu);font-weight:600}
+body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-the button,body.dien-thoai .tl-chan button{min-height:44px}
 /* QĐ612 thanh cuộn kiểu C (Quychuan 5.20): mọi vùng cuộn trên máy tính; điện thoại dùng thanh của máy */
 body:not(.dien-thoai) ::-webkit-scrollbar{width:12px;height:12px}
 body:not(.dien-thoai) ::-webkit-scrollbar-track,body:not(.dien-thoai) ::-webkit-scrollbar-corner{background:transparent}
@@ -1211,7 +1250,7 @@ html.toi ::placeholder{color:var(--goi-y)}
 >
   <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
   <circle cx="12" cy="12" r="3" />
-</svg><span>Cài đặt</span></button><div class="gd-sau"><button class="gd-nut" data-gd><svg
+</svg><span>Cài đặt</span></button><button class="muc" data-tk title="Tài khoản"><i data-ic="user-round"></i><span>Tài khoản</span></button><div class="gd-sau"><button class="gd-nut" data-gd><svg
   style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-layers"
   xmlns="http://www.w3.org/2000/svg"
   width="16"
@@ -1275,81 +1314,21 @@ html.toi ::placeholder{color:var(--goi-y)}
 </svg></button>
     <div class="dong f1 trai" id="tieude-tren"></div>
     <div class="vi-tri">
-      <button class="nut-ico" data-chuong><svg
-  style="flex:none;vertical-align:middle;color:var(--chu)" class="lucide lucide-bell"
-  xmlns="http://www.w3.org/2000/svg"
-  width="20"
-  height="20"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M10.268 21a2 2 0 0 0 3.464 0" />
-  <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
-</svg><span class="cham" data-s="k:binhthuong matketnoi saphethan"></span></button>
-      <button class="tk" data-tk><span class="anh-dd nho" id="tk-chu"></span><span class="an-mb" id="tk-ten"></span><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-chevron-down"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="m6 9 6 6 6-6" />
-</svg></button>
-      <div class="tha" id="tha-chuong" hidden><div class="tha-dau"><b>Thông báo</b><button class="btn-chu" id="tb-dochet" data-dochet hidden><svg
-  style="flex:none;vertical-align:middle" class="lucide lucide-check"
-  xmlns="http://www.w3.org/2000/svg"
-  width="14"
-  height="14"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M20 6 9 17l-5-5" />
-</svg>Đọc hết</button><span class="t12 phu" id="tb-dadoc" hidden>Đã đọc hết</span></div><div class="tb-ds" id="chuong-ds"></div></div>
-      <div class="tha" id="tha-tk" hidden style="width:240px">
-        <button class="tha-muc" data-di="taikhoan"><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-user-round"
-  xmlns="http://www.w3.org/2000/svg"
-  width="18"
-  height="18"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <circle cx="12" cy="8" r="5" />
-  <path d="M20 21a8 8 0 0 0-16 0" />
-</svg><span>Tài khoản và 02&nbsp;lớp</span></button>
-        <button class="tha-muc" data-dangxuat><svg
-  style="flex:none;vertical-align:middle;color:var(--canh)" class="lucide lucide-log-out"
-  xmlns="http://www.w3.org/2000/svg"
-  width="18"
-  height="18"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="m16 17 5-5-5-5" />
-  <path d="M21 12H9" />
-  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-</svg><span class="do-chu">Đăng xuất</span></button>
+      <button class="nut36" data-chuong aria-label="Thông báo"></button>
+      <button class="nut36 an-dt" data-amthanh></button>
+      <button class="nut36 an-dt" data-chedonut aria-label="Chế độ màu" title="Chế độ màu"></button>
+      <button class="nut36 chi-dt" data-tk aria-label="Tài khoản"></button>
+      <div class="tha tha-cb" id="tha-chuong" hidden role="dialog" aria-label="Thông báo"></div>
+      <div class="tha tha-cd" id="tha-chedo" hidden role="menu" aria-label="Chế độ màu"></div>
+      <div class="tha tha-tk" id="tha-tk" hidden role="menu" aria-label="Tài khoản">
+       <div class="tl-dautk"><span class="anh-dd" id="tk-chu"></span><div><b id="tk-ten"></b><div class="t13 phu" id="tk-vaitro">Vai trò: Chủ</div></div></div><div class="tl-vach"></div>
+       <button class="tha-muc" data-di="taikhoan"><i data-ic="user-round"></i><span>Tài khoản và 02&nbsp;lớp</span></button>
+       <button class="tha-muc chi-dt" data-amthanh><i data-ic="volume-2"></i><span>Âm thanh</span><span class="tl-ph" id="tk-am"></span></button>
+       <button class="tha-muc chi-dt" data-chedonut><i data-ic="sun"></i><span>Chế độ màu</span><span class="tl-ph" id="tk-chedo"></span></button>
+       <button class="tha-muc" data-di="capnhat"><i data-ic="megaphone"></i><span>Có gì mới</span><span class="tl-ph" id="tk-ban"></span></button>
+       <a class="tha-muc" href="https://tech.unihq.vn/igm360" target="_blank" rel="noopener"><i data-ic="circle-help"></i><span>Trợ giúp</span><span class="tl-ph"><i data-ic="external-link" data-co="14"></i></span></a>
+       <div class="tl-vach"></div>
+       <button class="tha-muc" data-dangxuat><i data-ic="log-out"></i><span class="do-chu">Đăng xuất</span></button>
       </div>
     </div>
   </header>

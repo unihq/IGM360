@@ -82,13 +82,16 @@ function ve() {
 // 0.9.0 (QĐ387, khung ii-c2): khổ máy tính bỏ thanh trên, khối chuông + tài khoản (.vi-tri) đặt ngay dưới logo; điện thoại giữ ở thanh trên.
 function doiViTri() {
   const vt = $('.vi-tri'), lg = $('nav.menu .logo'), tt = $('.thanh-tren'); if (!vt || !lg || !tt) return;
-  if (S.xem !== 'mb' && vt.parentElement !== lg.parentElement) lg.after(vt);
+  const vg = $('#app .vung');   // QĐ548 B: máy tính – góc phải khung nội dung
+  if (S.xem !== 'mb' && vg && vt.parentElement !== vg) vg.prepend(vt);
   else if (S.xem === 'mb' && vt.parentElement !== tt) tt.append(vt);
 }
 // KH-090 2.2 (c), CDO P1: 02 bảng thả xuống mở từ cột menu nổi trên cùng (position: fixed), mép trái 08 px, ngay dưới chuông.
-function datTha(e) {
-  if (S.xem === 'mb' || e.hidden) { e.style['top'] = ''; return; }
-  const c = $('[data-chuong]').getBoundingClientRect(); e.style['top'] = Math.round(c.bottom + 8) + 'px';
+function datTha(e, nut) {   // bảng nổi: canh mép phải nút góc phải khung; menu tài khoản mở sang phải mục "Tài khoản" ở thanh trái
+  if (S.xem === 'mb' || e.hidden) { e.style['top'] = e.style['left'] = ''; return; }
+  const n = (nut || $('[data-chuong]')).getBoundingClientRect();
+  if (nut && nut.closest('nav.menu')) { e.style['left'] = Math.round(n.right + 6) + 'px'; e.style['top'] = Math.round(Math.max(8, Math.min(n['top'] - 60, innerHeight - e.offsetHeight - 8))) + 'px'; }
+  else { e.style['left'] = Math.round(Math.max(8, n.right - e.offsetWidth)) + 'px'; e.style['top'] = Math.round(n.bottom + 6) + 'px'; }
 }
 function dongTha() { $$('.tha').forEach(e => e.hidden = true); }
 function dongHop() { $$('.lop').forEach(e => e.hidden = true); }
@@ -227,17 +230,25 @@ const lucTb = iso => { if (!iso) return ''; const h = homNay(), q = new Date(Dat
   return d === h ? gio(iso) : d === q ? 'Hôm qua ' + gio(iso) : d.slice(8, 10) + '/' + d.slice(5, 7); };
 const icoTb = x => (ICON[x.icon] || ICON['circle-alert']).replace(/width="\d+"/, 'width="16"').replace(/height="\d+"/, 'height="16"')
   .replace(/color:[^;"]*/, 'color:' + MAU_TB[x.muc][1]);
-const dongTb = x => '<button class="tha-muc tb-dong" data-di="' + esc(x.di) + '"' + (x.cuon ? ' data-cuon="' + esc(x.cuon) + '"' : '') + '><span class="ico-tron nho '
+const dongTb = x => '<button class="tha-muc tb-dong' + (x.moi ? ' moi' : '') + '" data-di="' + esc(x.di) + '"' + (x.cuon ? ' data-cuon="' + esc(x.cuon) + '"' : '') + '><span class="tl-cham" aria-hidden="true"></span><span class="ico-tron nho '
   + MAU_TB[x.muc][0] + '">' + icoTb(x) + '</span><span class="f1 trai"><span class="b6 t13 khoi">' + cum(x.chu) + '</span><span class="t12 phu">'
   + esc(lucTb(x.luc)) + ' · ' + esc(x.noi) + '</span></span></button>';
-function veChuong(d) {
-  const ds = d.thongbao || [], moi = ds.filter(x => x.moi), cu = ds.filter(x => !x.moi);
-  const c = $('[data-chuong] .cham'); c.textContent = d.so_moi ? soVN(d.so_moi) : ''; c.hidden = !d.so_moi;
-  $('#tb-dochet').hidden = !moi.length; $('#tb-dadoc').hidden = !!moi.length || !ds.length;
-  $('#chuong-ds').innerHTML = !ds.length ? '<div class="tb-rong"><span class="ico-tron">' + ICON.bell.replace(/width="\d+"/, 'width="20"').replace(/height="\d+"/, 'height="20"')
-      + '</span><span class="t13 phu">Không có thông báo nào còn mở.</span></div>'
-    : (moi.length ? '<div class="tb-nhom2">Mới · ' + soVN(moi.length) + '</div>' + moi.map(dongTb).join('') : '')
-      + (cu.length ? '<div class="tb-nhom2">Đã xem, còn mở · ' + soVN(cu.length) + '</div>' + cu.map(dongTb).join('') : '');
+function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, chấm chưa đọc, "Hiện N tin đã đọc", chân bảng số bản + Có gì mới
+  D.tbCuoi = d; const ds = d.thongbao || [], tat = !!d.tamtat, so = d.so_moi || 0;
+  if (D.tbSoMoi !== undefined && so > D.tbSoMoi && amBat() && (!tat || ds.some(x => x.moi && x.muc === 'do'))) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng
+  D.tbSoMoi = so; D.tbTamTat = tat; D.tbCoDo = ds.some(x => x.moi && x.muc === 'do'); if (d.ban) D.tbBan = d.ban; veBa();
+  const e = $('#tha-chuong'); if (!e) return;
+  const the = D.tbThe || 'tb', loc = the === 'cxl' ? ds.filter(x => x.muc === 'do') : ds, moi = loc.filter(x => x.moi), cu = loc.filter(x => !x.moi);
+  e.innerHTML = '<div class="tha-dau tl-dau"><b>' + CHU_BA.thongBao + '</b><button class="tl-nutchu" data-tamtat>' + icoMau(ICON[tat ? 'bell' : 'bell-off'], 'currentColor', 16)
+      + (tat ? CHU_BA.moLai : CHU_BA.tamTat) + '</button>' + (ds.some(x => x.moi) ? '<button class="tl-nutchu x" id="tb-dochet" data-dochet>' + icoMau(ICON.check, 'currentColor', 16)
+      + CHU_BA.docHet + '</button>' : '') + '</div>'
+    + (tat ? '<div class="tl-dai" role="status">' + icoMau(ICON['bell-off'], 'var(--xem)', 18) + '<span class="nd3">' + cum(CHU_BA.daiTat) + '</span><button class="tl-nutchu x" data-tamtat>'
+      + CHU_BA.moLai + '</button></div>' : '')
+    + '<div class="tl-the" role="tablist">' + [['tb', CHU_BA.thongBao, ds.filter(x => x.moi).length], ['cxl', CHU_BA.canXl, ds.filter(x => x.moi && x.muc === 'do').length]]
+      .map(([k, t, n]) => '<button role="tab" aria-selected="' + (k === the) + '"' + (k === the ? ' class="on"' : '') + ' data-tbthe="' + k + '">' + t + (n ? ' <i>' + hai(n) + '</i>' : '') + '</button>').join('') + '</div>'
+    + '<div class="tb-ds" id="chuong-ds">' + (!loc.length ? '<div class="tb-rong"><span class="ico-tron">' + icoMau(ICON.bell, 'var(--phu)', 20) + '</span><span class="t13 phu">' + CHU_BA.rong + '</span></div>'
+      : moi.map(dongTb).join('') + (cu.length ? (D.tbHienDoc ? cu.map(dongTb).join('') : '<button class="tl-hien" data-tbhien>' + CHU_BA.hienDoc(hai(cu.length)) + '</button>') : '')) + '</div>'
+    + '<div class="tl-chan">IGM360 ' + esc(D.tbBan || '') + '<button data-di="capnhat">' + CHU_BA.coGiMoi + '</button></div>';
 }
 // Tự cập nhật số mỗi 60 giây khi phần mềm đang mở (hỏi lại máy chủ, 0 thư viện)
 setInterval(() => { if (S.g !== '01' && document.visibilityState === 'visible') lamMoi13(), demSo(); }, 60e3);   // 01 vòng 60 giây
@@ -1697,12 +1708,56 @@ async function nutChung(t, d) {   // trả true khi đã xử lý nút của ng�
 document.addEventListener('input', ev => { if (ev.target.id !== 'mg-tim') return; DCG.mgTim = ev.target.value; const ds = $('.mg-ds');
   if (ds) { const tam = document.createElement('div'); tam.innerHTML = veMgDs(); ds.replaceWith($('.mg-ds', tam)); } });
 
+// ---- QĐ548 B, QĐ551, QĐ553, QĐ559, chữ QĐ566: chuông · âm thanh · chế độ màu ở góc phải khung; menu tài khoản; Tạm tắt
+// icon Lucide (ISC) mới – QĐ566 (9): bell-off (nét bản DM lc_010.js), volume-x, megaphone (nét bản CDO Toi_Lop.js)
+ICON['bell-off'] = svgLucide('bell-off', ['M10.268 21a2 2 0 0 0 3.464 0', 'M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742',
+  'm2 2 20 20', 'M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05']);
+ICON['volume-x'] = svgLucide('volume-x', ['M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z',
+  '<line x1="22" x2="16" y1="9" y2="15" />', '<line x1="16" x2="22" y1="9" y2="15" />']);
+ICON.megaphone = svgLucide('megaphone', ['m3 11 18-5v12L3 14v-3z', 'M11.6 16.8a3 3 0 1 1-5.8-1.6']);
+const CHU_BA = {amBat: 'Đang bật âm thanh – bấm để tắt', amTat: 'Đang tắt âm thanh – bấm để bật', cheDo: 'Chế độ màu',   // QĐ566 (2), (3)
+  tamTat: 'Tạm tắt', moLai: 'Mở lại', canXl: 'Cần xử lý', thongBao: 'Thông báo', hienDoc: n => 'Hiện ' + n + ' tin đã đọc',   // QĐ566 (6)
+  daiTat: 'Đang tạm tắt thông báo. Tin nghiêm trọng (sao lưu lỗi, ổ đầy) vẫn báo.', coGiMoi: 'Có gì mới', docHet: 'Đọc hết',   // QĐ566 (7)
+  rong: 'Không có thông báo nào còn mở.'};
+const KHOA_AM = 'igm360_amthanh';   // QĐ547: âm thanh mặc định bật, nhớ theo từng máy
+const amBat = () => { try { return localStorage.getItem(KHOA_AM) !== 'tat'; } catch (e) { return true; } };
+function datAm(bat) { try { if (bat) localStorage.removeItem(KHOA_AM); else localStorage.setItem(KHOA_AM, 'tat'); } catch (e) { /* máy chặn lưu */ } veBa(); }
+function keuChuong() {   // tiếng báo tin mới: 02 nốt ngắn bằng Web Audio của trình duyệt (0 thư viện, 0 tệp âm thanh)
+  try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return; const a = D.amCtx || (D.amCtx = new C());
+    [[880, 0], [1175, .12]].forEach(([f, t]) => { const o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, a.currentTime + t); g.gain.exponentialRampToValueAtTime(.08, a.currentTime + t + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + t + .25); o.connect(g).connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + .3); });
+  } catch (e) { /* trình duyệt chặn âm thanh khi chưa bấm gì */ }
+}
+const icoChedo = () => ({sang: 'sun', toi: 'moon', hethong: 'monitor'})[window.CHEDO ? CHEDO.doc() : 'hethong'];
+const TEN_CHEDO = {sang: 'Sáng', toi: 'Tối', hethong: 'Theo hệ thống'};   // QĐ566 (4)
+function dienIco(goc) { $$('i[data-ic]', goc).forEach(i => { if (ICON[i.dataset.ic]) i.outerHTML = icoMau(ICON[i.dataset.ic], 'currentColor', +(i.dataset.co || 18)); }); }
+function veBa() {
+  const so = D.tbSoMoi || 0, tat = !!D.tbTamTat, c = $('[data-chuong]'), am = amBat();
+  if (c) { c.classList.toggle('tat', tat);
+    c.innerHTML = icoMau(ICON[tat ? 'bell-off' : 'bell'], 'currentColor', 20) + (tat ? CHU_BA.tamTat : '')
+      + (so ? '<span class="so' + (D.tbCoDo ? ' do' : '') + '">' + (so > 99 ? '99+' : soVN(so)) + '</span>' : ''); }   // QĐ553 (2): tối đa "99+"
+  const a = $('.vi-tri [data-amthanh]'); if (a) { a.innerHTML = icoMau(ICON[am ? 'volume-2' : 'volume-x'], 'currentColor', 20); a.title = am ? CHU_BA.amBat : CHU_BA.amTat; a.setAttribute('aria-label', a.title); }
+  const m = $('.vi-tri > [data-chedonut]'); if (m) m.innerHTML = icoMau(ICON[icoChedo()], 'currentColor', 20);
+  const t = $('.vi-tri > [data-tk]'); if (t && !t.firstChild) t.innerHTML = icoMau(ICON['user-round'], 'currentColor', 20);
+  const ta = $('#tk-am'); if (ta) ta.innerHTML = '<span class="tl-cong' + (am ? ' bat' : '') + '" role="switch" aria-checked="' + am + '"></span>';
+  const tc = $('#tk-chedo'); if (tc && window.CHEDO) tc.textContent = TEN_CHEDO[CHEDO.doc()];
+  const tb = $('#tk-ban'); if (tb) tb.textContent = D.tbBan || '';
+}
+function veCheDoTha() {
+  const c = window.CHEDO ? CHEDO.doc() : 'hethong';
+  $('#tha-chedo').innerHTML = [['sang', 'sun'], ['toi', 'moon'], ['hethong', 'monitor']].map(([k, ic]) => '<button class="tha-muc' + (k === c ? ' on' : '')
+    + '" role="menuitemradio" aria-checked="' + (k === c) + '" data-cdmau="' + k + '">' + icoMau(ICON[ic], 'currentColor', 18) + '<span class="f1">' + TEN_CHEDO[k] + '</span>'
+    + (k === c ? icoMau(ICON.check, 'var(--xanh-chu)', 16) : '') + '</button>').join('');
+}
+dienIco(document); veBa();
+
 // ---- Bấm
 document.addEventListener('click', async ev => {
   if (ev.target.classList && ev.target.classList.contains('lop')) { dongHop(); return; }
   const t = ev.target.closest('button'); if (!t) { if (!ev.target.closest('.tha')) dongTha(); return; }
   const d = t.dataset;
-  if (!('chuong' in d) && !('tk' in d) && !t.closest('.tha')) dongTha();
+  if (!('chuong' in d) && !('tk' in d) && !('chedonut' in d) && !t.closest('.tha')) dongTha();
   if (d.set) { const [k, v] = d.set.split(':'); S[k] = v; }
   else if (D.anToan && ((d.trang && d.trang !== '09') || (d.tab && d.tab !== 'capnhat'))) { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
   else if (d.trang) { if (S.g !== '01') { S.trang = d.trang; dongHop(); $$('#app .cuon, #app .cuon-trong').forEach(c => c.scrollTop = 0); if (d.trang === '09') napTab(); if (d.trang === '13') napMoHinh(); if (d.trang === '08') napTroChuyen(); } }   // KH-090 2.2 (a): khổ máy tính cuộn ở .cuon-trong
@@ -1716,15 +1771,21 @@ document.addEventListener('click', async ev => {
   else if ('xacnhan' in d) { await xacNhanMa(t); return; }
   else if ('dangxuat' in d) { dongHop(); try { await api('/dangxuat', {}); } catch (e) { /* vẫn ra màn đăng nhập */ }
     S.g = '01'; S.dn = 'matkhau'; bao('Đã đăng xuất. Phiên trên máy này đã được thu hồi.'); }
-  else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); e.hidden = !v; datTha(e); if (v) demSo(true); }
-  else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); e.hidden = !v; datTha(e); }
+  else if ('chuong' in d) { const e = $('#tha-chuong'), v = e.hidden; dongTha(); D.tbHienDoc = false; if (D.tbCuoi) veChuong(D.tbCuoi); e.hidden = !v; datTha(e, t); if (v) demSo(true); }
+  else if ('tamtat' in d) { try { await api('/thongso/chuong_tamtat/gat', {bat: !D.tbTamTat}); } catch (er) { if (er.status) bao(er.message + '.'); } await demSo(); }   // QĐ551
+  else if (d.tbthe) { D.tbThe = d.tbthe; D.tbHienDoc = false; if (D.tbCuoi) veChuong(D.tbCuoi); }
+  else if ('tbhien' in d) { D.tbHienDoc = true; if (D.tbCuoi) veChuong(D.tbCuoi); }
+  else if ('amthanh' in d) datAm(!amBat());   // QĐ547
+  else if ('chedonut' in d) { const e = $('#tha-chedo'), v = e.hidden; dongTha(); veCheDoTha(); e.hidden = !v; datTha(e, $('.vi-tri > [data-chedonut]')); }
+  else if (d.cdmau) { CHEDO.dat(d.cdmau); dongTha(); veBa(); if (S.trang === '09' && S.tab === 'chung') veChung(); }   // QĐ411, QĐ566 (3), (4)
+  else if ('tk' in d) { const e = $('#tha-tk'), v = e.hidden; dongTha(); veBa(); e.hidden = !v; datTha(e, t); }
   else if ('gat2lop' in d) { if (D.tat2lop) hop2Lop('h-bat2lop'); else if (D.anToan) bao(CHU_2LOP.antoan); else hop2Lop('h-tat2lop'); }   // QĐ390
   else if ('bat2lopmo' in d) hop2Lop('h-bat2lop');   // nút "Bật lại" ở dòng cảnh báo
   else if ('tat2lop' in d) await gui2Lop(true);
   else if ('bat2lop' in d) await gui2Lop(false);
   else if ('dochet' in d) { try { await api('/thongbao/dochet', {}); } catch (e) { bao(e.message + '.'); } await demSo(); return; }
   else if (d.di && D.anToan && d.di !== 'capnhat') { bao(CHU_CN.chan); return; }   // QĐ218 dòng 37
-  else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }
+  else if (d.di) { dongTha(); if (d.di === 'taikhoan' || d.di === 'ketkhoa' || d.di === 'capnhat' || d.di === 'chung') { S.trang = '09'; S.tab = d.di; napTab(); } else { S.trang = d.di; if (d.di === '09') napTab(); if (d.di === '13') napMoHinh(); }
     if (d.cuon) setTimeout(() => { const e = document.getElementById(d.cuon); if (e) e.scrollIntoView({block: 'start'}); }, 0); }
   else if ('noilai' in d) { try { await api('/demso'); S.k = 'binhthuong'; bao('Đã nối lại máy chủ.'); } catch (e) { /* vẫn mất */ } }
   else if (d.mo) { if (d.mo === 'h-2lop') datLaiDoiMay(); mo(d.mo); }

@@ -33,6 +33,8 @@ DANHMUC = [
     ("phut_ket_viec_ai", 2, "Việc AI chạy quá bao lâu thì báo kẹt", "so", "phút", "30", None, ""),
     # QĐ627 (3), QĐ649: công tắc "Giữ dấu ảnh AI" ở ngăn Chung, mặc định bật; không hiện ở ngăn Thông số (AN_O_THONGSO)
     ("anh_ai_giu_dau_c2pa", 2, "Giữ dấu ảnh AI", "codong", "", "1", {"0": "Tắt", "1": "Bật"}, ""),
+    # QĐ551, QĐ553 (4); CDA phiếu 06 mục 12: Tạm tắt thông báo tới khi tự mở lại – im mọi loại trừ mức "do"; ở bảng chuông
+    ("chuong_tamtat", 2, "Tạm tắt thông báo", "codong", "", "0", {"0": "Tắt", "1": "Bật"}, ""),
     ("tyle_bao_hanmuc_tuan", 2, "Báo khi gói AI dùng quá hạn mức tuần", "so", "%", "80", None, ""),   # QĐ165, PTD-06 mục 10
     ("nguong_tien_ai_tuapdung", 2, "Ngưỡng tự duyệt", "so", "đ", None, None,
      "GĐ 1: AI chỉ đề xuất, mọi việc chờ bạn bấm."),
@@ -58,11 +60,12 @@ KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulie
 GIAIDOAN_SAU = {"nguong_tien_ai_tuapdung"}
 THEO_TEN = {d[0]: d for d in DANHMUC}
 # QĐ278 (Z21 dòng 1): thông số gạt công tắc, đổi có hiệu lực ngay trong ngày (không qua hộp "Sửa" chọn ngày áp dụng)
-CONG_TAC = {"saoluu_drive", "tunang_congcu_ai", "anh_ai_giu_dau_c2pa"}   # + QĐ627 (3)
+CONG_TAC = {"saoluu_drive", "tunang_congcu_ai", "anh_ai_giu_dau_c2pa", "chuong_tamtat"}   # + QĐ627 (3), QĐ551
 AN_O_THONGSO = {"tunang_congcu_ai",   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
                 "muigio", "muigio_doisoat",   # QĐ636: đặt ở thẻ Chung
                 "tenmien_rieng",              # QĐ634: đặt ở thẻ Chung
-                "anh_ai_giu_dau_c2pa"}        # QĐ627 (3): đặt ở thẻ Chung
+                "anh_ai_giu_dau_c2pa",        # QĐ627 (3): đặt ở thẻ Chung
+                "chuong_tamtat"}              # QĐ551: nút ở đầu bảng chuông
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 # QĐ390 (phương án A, CDA 16g), SOAT-KH090 (a): cờ "Đăng nhập 02 lớp" là thông số hệ thống P01, không nằm trong DANHMUC
 # (không hiện ở ngăn Thông số, không đếm vào số đã đặt). Chỉ đổi qua 02 đường riêng /api/2lop/tat, /api/2lop/bat và lệnh
@@ -238,6 +241,8 @@ def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) ->
         from maychu.hethong import nhatky
         nhatky.ghi("caidat", "doi_muigio", f"{ten}: {cu} → {giatri}", nguoi_id=nguoi if nguoi != "hethong" else None,
                    thumuc=thumuc)
+        from maychu.hethong.giamsat import thongbao
+        thongbao.bao_su_kien("muigio_doi", giatri, thumuc)   # QĐ636: F04 + chuông
     return kq
 
 
@@ -259,6 +264,8 @@ def doi_tenmien(giatri: str, nguoi: str, thumuc: Path | None = None) -> dict:
         from maychu.hethong import nhatky
         nhatky.ghi("caidat", "doi_tenmien", f"{tenmien.TEN}: {cu or '(trống)'} → {ten or '(trống)'}",
                    nguoi_id=nguoi if nguoi != "hethong" else None, thumuc=thumuc)
+        from maychu.hethong.giamsat import thongbao
+        thongbao.bao_su_kien("tenmien_doi", ten, thumuc)   # QĐ634: F04 + chuông
     return {**kq, "ten": ten}
 
 

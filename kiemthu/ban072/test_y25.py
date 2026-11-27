@@ -256,11 +256,11 @@ class KiemChuong(unittest.TestCase):
     def test_giao_dien_lich_ban(self):
         js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
         html = (GOC / "maychu/web/giaodien/index.html").read_text(encoding="utf-8")
-        for c in ("'<div class=\"tb-nhom2\">Mới · '", "'<div class=\"tb-nhom2\">Đã xem, còn mở · '",
-                  "Không có thông báo nào còn mở.", "api('/thongbao/dochet', {})", "}, 60e3);",
+        for c in ("CHU_BA.hienDoc(hai(cu.length))", "data-tbthe", "rong: 'Không có thông báo nào còn mở.'",   # QĐ553 (3): 02 thẻ, tin đã đọc ẩn
+                  "id=\"tb-dochet\" data-dochet", "api('/thongbao/dochet', {})", "}, 60e3);",
                   "d === q ? 'Hôm qua ' + gio(iso)", "d.di === 'capnhat'", "esc(lucTb(x.luc)) + ' · ' + esc(x.noi)"):
             self.assertIn(c, js)
-        for c in ("<b>Thông báo</b>", 'id="tb-dochet" data-dochet', ">Đã đọc hết<", "#tha-chuong{width:380px;max-height:min(560px,75vh)",
+        for c in ('id="tha-chuong"', "#tha-chuong{width:380px;max-height:min(560px,75vh)",
                   ".mb #tha-chuong{width:auto;max-height:70vh}", ".tin-n{border-color:var(--vien-tin)}"):
             self.assertIn(c, html)
         self.assertNotIn("Cảnh báo mới", html)

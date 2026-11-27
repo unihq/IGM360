@@ -42,7 +42,11 @@ LOAI = {
     "cli_mang": ("xem", "wifi-off", "capnhat", None, "Cài đặt › Cập nhật"),   # QĐ307 Z20 dòng 19: không kết nối được hãng
     # QĐ390, QĐ397 (bảng chữ màn 09 dòng 12, BV04): mức Xem, icon shield-alert, mở suốt lúc 02 lớp tắt
     "dangnhap_2lop_tat": ("xem", "shield-alert", "taikhoan", None, "Tài khoản"),
+    # QĐ634, QĐ636 "F04 + chuông": tin sự kiện (đã xảy ra, không cần xử lý) – mức tin, mở Cài đặt › Chung; đóng khi "Đọc hết" (TẠM)
+    "tenmien_doi": ("tin", "globe", "chung", None, "Cài đặt › Chung"),
+    "muigio_doi": ("tin", "clock", "chung", None, "Cài đặt › Chung"),
 }
+SU_KIEN = ("tenmien_doi", "muigio_doi")
 KHOA_2LOP_TAT = "dangnhap_2lop_tat"
 THU_TU_MUC = {"do": 0, "xem": 1, "tin": 2}
 
@@ -282,6 +286,24 @@ def dong_2lop_tat(lydo: str, thumuc: Path | None = None) -> None:
         _dong(w, KHOA_2LOP_TAT, lydo)
 
 
+def bao_su_kien(loai: str, sau: str, thumuc: Path | None = None) -> None:
+    """QĐ634, QĐ636: 01 tin chuông khi đổi tên miền / múi giờ (khóa `loai:giá trị mới`; trùng thì không mở thêm)."""
+    with _Ghi(thumuc) as w:
+        for k in _khoa_mo(w, loai):   # tin cũ cùng loại (giá trị trước) đóng, chỉ giữ lần đổi gần nhất
+            _dong(w, k, "đổi lại")
+        _mo(w, f"{loai}:{sau}", None, None)
+
+
+def dong_su_kien(lydo: str, thumuc: Path | None = None) -> int:
+    """Đóng tin sự kiện khi bấm "Đọc hết" (TẠM – chờ CDA / CPO chốt vòng đời tin sự kiện)."""
+    n = 0
+    with _Ghi(thumuc) as w:
+        for loai in SU_KIEN:
+            for k in _khoa_mo(w, loai):
+                n += _dong(w, k, lydo)
+    return n
+
+
 def quet_2lop(thumuc: Path | None = None) -> None:
     """Giữ chuông khớp cờ: cờ tắt mà chưa có chuông thì mở, cờ bật mà còn chuông thì đóng (mỗi lượt quét 10 phút)."""
     if thongso.co_2lop_bat(thumuc):
@@ -473,6 +495,10 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
         from maychu.hethong import capnhat
         ly = next((x["kiem"]["chu"].split(" · ", 1)[-1] for x in capnhat.lich_su() if x["ban"] == sau and x.get("kiem")), "")
         return f"Kiểm sau cập nhật bản {sau}: {ly}" if ly else f"Kiểm sau cập nhật bản {sau} chưa đạt"
+    if loai == "tenmien_doi":   # TẠM (QĐ648): chữ tin chuông – CPO hỏi anh
+        return f"Đã đổi tên miền riêng: {sau}" if sau else "Đã bỏ tên miền riêng"
+    if loai == "muigio_doi":   # TẠM (QĐ648)
+        return f"Đã đổi múi giờ sang {sau}"
     return "Có cảnh báo mới"
 
 

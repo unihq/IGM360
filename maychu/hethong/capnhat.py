@@ -119,14 +119,14 @@ def kiem_tra(bat_buoc: bool = False) -> dict:
             moi, nhan_lon = _hoi_ghcr(dang)
             _NHO["ban_moi"], _NHO["luc_dat"] = moi, bay
             _NHO["loi"] = None
-        except (httpx.HTTPError, KeyError, ValueError, TypeError):
+        except (httpx.HTTPError, KeyError, ValueError, TypeError, OSError):   # OSError: tệp CA không đọc được (QA lượt 03 a)
             nhan_lon = None
             if not _NHO["luc_dat"]:
                 _NHO["loi"] = "Chưa kiểm được bản mới vì không kết nối được kho ảnh, bạn bấm Kiểm tra lại sau"
         if nhan_lon and nhan_lon != _NHO["nhan_thaydoi"]:
             try:
                 het, ma_tra = _tai_thaydoi_kq()
-            except httpx.HTTPError:
+            except (httpx.HTTPError, OSError):
                 het, ma_tra = [], 0
             if ma_tra == 200:
                 _NHO["thaydoi"] = _doc_thaydoi(dang, het)

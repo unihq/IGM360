@@ -83,7 +83,7 @@ class KiemChuoi(unittest.TestCase):
         self.assertEqual(qt["#app:not(.mb) nav.menu .tha"], "position:fixed;left:8px;right:auto;z-index:90;max-width:calc(100vw - 16px)")
         self.assertIn("display:none", qt["#app.thu:not(.mb) nav.menu>.vi-tri #tk-ten,#app.thu:not(.mb) nav.menu>.vi-tri .tk>svg"])
         self.assertIn(".mb .tha{position:fixed;left:8px;right:8px;width:auto;top:120px}", self.html)   # điện thoại giữ như nay
-        self.assertIn("datTha(e); if (v) demSo(true);", self.app)
+        self.assertIn("datTha(e, t); if (v) demSo(true);", self.app)   # QĐ548 B: canh theo nút bấm
 
     def test_a3_a4_a5_dung_lop_ve(self):                                                         # KH-090 2.9 (QĐ397)
         for d in (".o-tk .nut-gat{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}",
@@ -117,7 +117,7 @@ class KiemNode(unittest.TestCase):
         cls.ico = a[a.index("const icoMau = "):a.index("\n", a.index("const icoMau = ")) + 1]
         cls.tat = a[a.index("// <TAT2LOP>"):a.index("// </TAT2LOP>")]
         i = a.index("function doiViTri() {")
-        cls.vt = a[i:a.index("\n}\n", a.index("function datTha(e) {")) + 3]
+        cls.vt = a[i:a.index("\n}\n", a.index("function datTha(e, nut) {")) + 3]
         i = a.index("const vungCuon = ")
         cls.cuon = a[i:a.index("};\n", i) + 3]
 
@@ -219,12 +219,13 @@ const hai = n => (Number.isInteger(n) && n >= 0 && n < 10) ? '0' + n : String(n)
 const S = {xem: 'dt'};
 const nav = {ten: 'nav'}, tt = {ten: 'thanh', append(x) { x.parentElement = tt; }};
 const vt = {parentElement: tt}, lg = {parentElement: nav, after(x) { x.parentElement = nav; }};
-const nut = {getBoundingClientRect: () => ({bottom: 112})}, tha = {hidden: false, style: {}};
-const $ = q => ({'.vi-tri': vt, 'nav.menu .logo': lg, '.thanh-tren': tt, '[data-chuong]': nut})[q];
+const nut = {getBoundingClientRect: () => ({bottom: 112, right: 1400})}, tha = {hidden: false, style: {}, offsetWidth: 360};
+const vung = {ten: 'vung', prepend(x) { x.parentElement = vung; }};
+const $ = q => ({'.vi-tri': vt, 'nav.menu .logo': lg, '.thanh-tren': tt, '[data-chuong]': nut, '#app .vung': vung})[q];
 """ + self.vt
         kq = self.chay(ma + "doiViTri(); const a = vt.parentElement.ten; datTha(tha); const top = tha.style['top'];"
                        " S.xem = 'mb'; doiViTri(); const b = vt.parentElement.ten; datTha(tha);", "[a, top, b, tha.style['top']]")
-        self.assertEqual(kq, ["nav", "120px", "thanh", ""])                                         # dưới logo; ngay dưới chuông 08 px
+        self.assertEqual(kq, ["vung", "118px", "thanh", ""])   # QĐ548 B: góc phải khung nội dung; bảng ngay dưới chuông 06 px
 
     def test_vung_cuon_may_tinh_lay_cuon_trong(self):                                             # KH-090 2.2 (b)
         ma = r"""

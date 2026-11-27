@@ -152,12 +152,19 @@ def dem_so(p: dict = Depends(can_dang_nhap), mo: int = 0):
     finally:
         cn.close()
     tb = thongbao.danh_sach(p["nguoidung_id"])
-    return {"cuacho": cuacho, "thongbao": tb["ds"], "so_moi": tb["so_moi"], "ket_ai": 0}
+    try:
+        tamtat = thongso.cong_tac_bat("chuong_tamtat")   # QĐ551
+    except Exception:   # noqa: BLE001 - đọc cờ lỗi thì coi như chưa tạm tắt (vẫn báo – an toàn hơn im)
+        tamtat = False
+    return {"cuacho": cuacho, "thongbao": tb["ds"], "so_moi": tb["so_moi"], "ket_ai": 0,
+            "tamtat": tamtat, "ban": capnhat.ban_dang_chay()}   # QĐ553 (3): chân bảng có số bản
 
 
 @router.post("/thongbao/dochet")
 def doc_het_thongbao(p: dict = Depends(can_dang_nhap)):
-    """Nút "Đọc hết": đặt mốc đọc = lúc bấm (QĐ165); không đổi trạng thái cảnh báo."""
+    """Nút "Đọc hết": đặt mốc đọc = lúc bấm (QĐ165); không đổi trạng thái cảnh báo – trừ tin sự kiện (đổi tên miền,
+    múi giờ) đóng luôn (TẠM)."""
+    thongbao.dong_su_kien("đã đọc")
     return {"moc_doc": thongso.dat_moc_doc(nguoi=p["nguoidung_id"])}
 
 
