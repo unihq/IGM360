@@ -3,6 +3,9 @@
 #   gateway    cổng HTTPS: giữ cổng 80, 443; tự xin và gia hạn chứng chỉ
 #   watchtower kéo image mới khi bấm Cập nhật ngay (chỉ dịch vụ này có quyền Docker)
 # Giá trị riêng của máy (tên miền, tài khoản quản trị, mã cập nhật) nằm trong tệp .env cạnh tệp này.
+# QĐ634 (0.10.0): cổng HTTPS có 02 khối. Khối tên gốc DOMAIN_NAME (.env) luôn chạy – đường dự phòng. Khối https://
+#   cấp chứng chỉ khi có lời vào đầu tiên (On-Demand TLS) cho tên miền riêng đặt ở Cài đặt › Chung: trước khi xin,
+#   Caddy hỏi igm360 /tls-check, chỉ tên đã lưu mới được cấp. /tls-check bị chặn (404) từ đường công khai ở cả 02 khối.
 # Đăng nhập gói Claude 01 lần:  docker compose run --rm igm360 claude auth login --claudeai
 name: igm360
 
@@ -15,10 +18,28 @@ x-ghinhatky: &ghinhatky
 configs:
   caddyfile:
     content: |
+      {
+        on_demand_tls {
+          ask http://igm360:8360/tls-check
+        }
+      }
       {$$DOMAIN_NAME} {
         encode zstd gzip
         header -Server
+        respond /tls-check* 404
         reverse_proxy igm360:8360
+      }
+      https:// {
+        tls {
+          on_demand
+        }
+        encode zstd gzip
+        header -Server
+        respond /tls-check* 404
+        reverse_proxy igm360:8360
+      }
+      http:// {
+        redir https://{host}{uri}
       }
 
 services:
@@ -34,6 +55,7 @@ services:
       - noibo
     environment:
       FORWARDED_ALLOW_IPS: "172.30.36.10"   # chỉ tin địa chỉ IP do cổng HTTPS (gateway) chuyển tới
+      IGM360_TEN_GOC: ${DOMAIN_NAME:-}       # QĐ634: tên gốc luôn dùng được; có biến này = đã bật đổi tên miền
       IGM360_ADMIN_USER: ${IGM360_ADMIN_USER:-}
       IGM360_ADMIN_PASSWORD: ${IGM360_ADMIN_PASSWORD:-}
       WATCHTOWER_TOKEN: ${WATCHTOWER_TOKEN:?Thiếu WATCHTOWER_TOKEN trong tệp .env}

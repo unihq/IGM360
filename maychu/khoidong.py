@@ -11,8 +11,8 @@ import contextlib
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, Response
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from maychu.dulieu import khoitao
@@ -139,6 +139,17 @@ async def dau_bao_ve(request, call_next):
 TRANG_CHINH = (GIAODIEN / "index.html").read_text(encoding="utf-8").replace(
     'src="/tainguyen/icon.js"', f'src="/tainguyen/icon.js?v={PHIENBAN}"').replace(
     'src="/tainguyen/app.js"', f'src="/tainguyen/app.js?v={PHIENBAN}"')
+
+
+@app.get("/tls-check")
+def tls_check(request: Request, domain: str = "") -> JSONResponse:
+    """QĐ634: cổng gác Caddy On-Demand TLS. 200 chỉ khi tên = tên miền riêng đã lưu VÀ lời hỏi đi thẳng từ Caddy
+    (không có tiêu đề chuyển tiếp); còn lại 403. Đừng đổi đường này (Caddy `ask` gọi đúng đường) và đừng thêm đường
+    "bắt tất cả" trả 200: bản quay về không có đường này thì Caddy nhận 404, không cấp chứng chỉ (CDA PTD-20 mục 4 điểm 3)."""
+    from maychu.hethong.caidat import tenmien
+    if tenmien.cho_cap(domain, request.headers):
+        return JSONResponse({"ok": True})
+    return JSONResponse({"ok": False}, status_code=403)
 
 
 @app.get("/")

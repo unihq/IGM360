@@ -44,6 +44,9 @@ DANHMUC = [
     # soát với sàn. Đổi ở thẻ Chung qua đường riêng (chỉ Chủ, mật khẩu + mã 02 lớp) – không hiện ở ngăn Thông số.
     ("muigio", 1, "Múi giờ", "chu", "", "Asia/Ho_Chi_Minh", None, ""),   # nhãn nội bộ, không hiện ở màn nào (AN_O_THONGSO)
     ("muigio_doisoat", 1, "Múi giờ đối soát với sàn", "chu", "", "Asia/Ho_Chi_Minh", None, ""),
+    # QĐ634 (B): tên miền riêng, trống = chỉ tên gốc (.env). Đổi ở thẻ Chung qua đường riêng `doi_tenmien` (chỉ Chủ,
+    # mật khẩu + mã 02 lớp) – không hiện ở ngăn Thông số. Không có giá trị khởi tạo.
+    ("tenmien_rieng", 1, "Tên miền riêng", "chu", "", None, None, ""),   # nhãn nội bộ (AN_O_THONGSO)
 ]
 # Không sửa ở ngăn Thông số: giá xuất kho chưa cho đổi ở GĐ 1 (bản vẽ đợt 1); nhịp lấy đặt từng loại ở màn 11.
 KHONG_SUA = {"phuongphap_giaxuat": "Chưa cho đổi ở GĐ 1", "nhip_lay_dulieu": "Đặt ở mục Nguồn dữ liệu",
@@ -55,13 +58,15 @@ THEO_TEN = {d[0]: d for d in DANHMUC}
 # QĐ278 (Z21 dòng 1): thông số gạt công tắc, đổi có hiệu lực ngay trong ngày (không qua hộp "Sửa" chọn ngày áp dụng)
 CONG_TAC = {"saoluu_drive", "tunang_congcu_ai"}
 AN_O_THONGSO = {"tunang_congcu_ai",   # công tắc đặt ở chỗ khác theo bản vẽ (Z20: khối Công cụ AI màn Cập nhật)
-                "muigio", "muigio_doisoat"}   # QĐ636: đặt ở thẻ Chung
+                "muigio", "muigio_doisoat",   # QĐ636: đặt ở thẻ Chung
+                "tenmien_rieng"}              # QĐ634: đặt ở thẻ Chung
 GIAI_THICH = {"saoluu_drive": "Tắt khi đang phát triển. Khi dùng thật, bật và nối Drive."}   # QĐ278 Z21 dòng 1
 # QĐ390 (phương án A, CDA 16g), SOAT-KH090 (a): cờ "Đăng nhập 02 lớp" là thông số hệ thống P01, không nằm trong DANHMUC
 # (không hiện ở ngăn Thông số, không đếm vào số đã đặt). Chỉ đổi qua 02 đường riêng /api/2lop/tat, /api/2lop/bat và lệnh
 # datlai, ghi bằng 01 hàm `ghi_co_2lop`; `dat()`, `gat()` (đường sửa chung, đường gạt chung) từ chối mọi tên trong tập này.
 CO_2LOP = "dangnhap_2lop"
-CHI_DUONG_RIENG = {CO_2LOP, "muigio", "muigio_doisoat"}   # QĐ636: múi giờ chỉ đổi qua `doi_muigio`
+CHI_DUONG_RIENG = {CO_2LOP, "muigio", "muigio_doisoat",   # QĐ636: múi giờ chỉ đổi qua `doi_muigio`
+                   "tenmien_rieng"}                         # QĐ634: tên miền chỉ đổi qua `doi_tenmien`
 
 
 def _hom_nay() -> str:
@@ -231,6 +236,27 @@ def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) ->
         nhatky.ghi("caidat", "doi_muigio", f"{ten}: {cu} → {giatri}", nguoi_id=nguoi if nguoi != "hethong" else None,
                    thumuc=thumuc)
     return kq
+
+
+def doi_tenmien(giatri: str, nguoi: str, thumuc: Path | None = None) -> dict:
+    """QĐ634: 01 hàm duy nhất đổi tên miền riêng. Người gọi đã xác minh Chủ + mật khẩu + mã 02 lớp
+    (`nguoidung.xac_minh_lai`). Trống = bỏ tên riêng. Kiểm: máy chủ đã nâng cấu hình, đúng dạng, khác tên gốc
+    (`tenmien.kiem_luu`). Ghi 01 dòng P01 mới (dòng cũ đóng, giữ lịch sử) + 01 dòng F04 tên cũ → tên mới."""
+    from maychu.hethong.caidat import tenmien
+    aibam.kiem(nguoi)
+    ten = tenmien.chuan(giatri)
+    loi = tenmien.kiem_luu(ten)
+    if loi:
+        return {"loi": loi}
+    cu = tenmien.ten_rieng(thumuc)
+    if ten == cu:
+        return {"ok": True, "doi": False, "ten": ten}
+    kq = _ghi_gat(tenmien.TEN, ten, nguoi, "Bỏ tên miền riêng" if not ten else "Đổi tên miền", thumuc)
+    if kq.get("doi"):
+        from maychu.hethong import nhatky
+        nhatky.ghi("caidat", "doi_tenmien", f"{tenmien.TEN}: {cu or '(trống)'} → {ten or '(trống)'}",
+                   nguoi_id=nguoi if nguoi != "hethong" else None, thumuc=thumuc)
+    return {**kq, "ten": ten}
 
 
 # Chữ đổi múi giờ – Bổ sung QĐ652 (CDO soạn, CPO áp): hiện bằng dòng báo lỗi chung (Quychuan 5.2, role="alert")

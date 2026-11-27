@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from maychu.dulieu import muigio
 from maychu.dulieu import ketnoi
 from maychu.hethong import capnhat
-from maychu.hethong.caidat import thongso
+from maychu.hethong.caidat import tenmien, thongso
 from maychu.hethong.kekhoa import kho
 from maychu.hethong.giamsat import thongbao
 from maychu.hethong.mohinh import congai, dangnhap_goi, danhmuc_mohinh, luot, madaihan, trochuyen
@@ -276,6 +276,44 @@ def doi_muigio(body: DoiMuiGio, request: Request, p: dict = Depends(can_dang_nha
     if "loi" in kq:
         raise HTTPException(400, kq["loi"])
     return {**kq, "hom_nay": muigio.hom_nay()}
+
+
+class DoiTenMien(BaseModel):
+    ten: str = ""     # trống = bỏ tên riêng
+    matkhau: str = ""
+    ma: str = ""
+
+
+def _host(request: Request) -> str:
+    return (request.headers.get("host") or "").split(":")[0]
+
+
+@router.get("/tenmien")
+def xem_tenmien(request: Request, p: dict = Depends(can_dang_nhap)):
+    """QĐ634: tên gốc, tên riêng đã lưu, đã bật đổi tên miền chưa (nhanh, không dò mạng)."""
+    return {"bat": tenmien.da_bat(), "goc": tenmien.ten_goc(_host(request)), "rieng": tenmien.ten_rieng() or None,
+            "la_chu": p.get("vaitro") == "chu"}
+
+
+@router.get("/tenmien/kiem")
+def kiem_tenmien(request: Request, p: dict = Depends(can_dang_nhap)):
+    """QĐ634, QĐ650: bảng "Địa chỉ · DNS · HTTPS" – dò DNS (chỉ cảnh báo) và đọc hạn chứng chỉ của 02 tên."""
+    return tenmien.kiem(_host(request))
+
+
+@router.post("/tenmien")
+def doi_tenmien(body: DoiTenMien, request: Request, p: dict = Depends(can_dang_nhap)):
+    """QĐ634: chỉ Chủ, nhập lại mật khẩu + mã 02 lớp; chưa nâng cấu hình thì từ chối (409); ghi P01 + F04; lưu xong
+    kiểm luôn ("Lưu và kiểm tra", QĐ651)."""
+    if not tenmien.da_bat():
+        raise HTTPException(409, tenmien.CHU_TENMIEN["chua_bat"])
+    kq = nguoidung.xac_minh_lai(p["nguoidung_id"], body.matkhau, body.ma, "tenmien", _ip(request))
+    if "loi" in kq:
+        _loi_dangnhap(kq)
+    kq = thongso.doi_tenmien(body.ten, p["nguoidung_id"])
+    if "loi" in kq:
+        raise HTTPException(400, kq["loi"])
+    return {**kq, "kiem": tenmien.kiem(_host(request))}
 
 
 class Tat2Lop(BaseModel):
