@@ -1,6 +1,6 @@
 """Bài kiểm 0.10.0 – hộp báo nhanh (QĐ413, QĐ417 A, QĐ419 – Quychuan dòng 208; QĐ575 0 vạch trái; tin CPO HOPBAO-TAM):
 mọi lời gọi bao() ghi rõ loại 'loi' / 'xong' / 'thongtin'; lỗi có icon tròn đỏ + nút ✕ "Đóng", giữ tới khi bấm; xong icon xanh lá,
-tự tắt 3,2 giây; thông tin TẠM (không icon, chờ anh duyệt icon)."""
+tự tắt 3,2 giây; thông tin (QĐ667) icon badge-info màu Thông tin, giữ tới ✕."""
 
 import re
 import unittest
@@ -51,11 +51,14 @@ class KiemHopBao(unittest.TestCase):
     def test_hinh_theo_quychuan(self):
         i = self.js.index("function bao(t, loai) {")
         ham = self.js[i:self.js.index("\n}\n", i)]
-        for x in ("ICON[loi ? 'circle-alert' : 'circle-check'], loi ? 'var(--canh)' : 'var(--dat)'",
-                  "aria-label=\"Đóng\"", "e.setAttribute('role', loi ? 'alert' : 'status');",
-                  "if (!loi) bao.h = setTimeout(() => { e.hidden = true; }, 3200);", "loai === 'thongtin' ? ''"):
+        for x in ("giu = loai !== 'xong'", "aria-label=\"Đóng\"", "e.setAttribute('role', loi ? 'alert' : 'status');",
+                  "if (!giu) bao.h = setTimeout(() => { e.hidden = true; }, 3200);"):
             self.assertIn(x, ham, x)
-        self.assertIn("'thongtin' TẠM (QĐ648", self.js)
+        # QĐ667 (anh "Chọn B"): thông tin = badge-info màu --tin, giữ tới ✕; lỗi đỏ, xong xanh lá (Quychuan dòng 208)
+        self.assertIn("const MAU_BAO = {loi: ['circle-alert', 'var(--canh)'], xong: ['circle-check', 'var(--dat)'], thongtin: ['badge-info', 'var(--tin)']};", self.js)
+        self.assertIn("ICON['badge-info'] = ICON['badge-info'] || svgLucide('badge-info',", self.js)
+        self.assertLess(self.js.index("const svgLucide = "), self.js.index("ICON['badge-info'] = "))   # khai báo trước khi dùng
+        self.assertNotIn("TẠM (QĐ648 – icon chờ anh duyệt)", self.js)
         self.assertIn(".tb-dong{width:24px;height:24px;", self.h)
         self.assertIn(".mb .tb-dong{width:44px;height:44px;", self.h)
 

@@ -141,17 +141,18 @@ function batNhom(ten) { if (NHOM.mo.has(ten)) NHOM.mo.delete(ten); else { NHOM.m
 // </NHOM>
 // Hộp báo nhanh – QĐ413, QĐ417 A, QĐ419 (Quychuan dòng 208), 0 vạch trái (QĐ575). Mọi chỗ gọi ghi rõ loại (HOPBAO-TAM):
 // 'loi' icon tròn circle-alert đỏ, giữ tới khi bấm ✕ "Đóng", role alert; 'xong' circle-check xanh lá, tự tắt 3,2 giây, role status;
-// 'thongtin' TẠM (QĐ648 – icon chờ anh duyệt): như 'xong' nhưng không icon. Máy tính: giữa vùng nội dung.
+// 'thongtin' (QĐ667, anh "Chọn B"): icon badge-info màu Thông tin --tin (QĐ562), giữ tới ✕, role status. Máy tính: giữa vùng nội dung.
+const MAU_BAO = {loi: ['circle-alert', 'var(--canh)'], xong: ['circle-check', 'var(--dat)'], thongtin: ['badge-info', 'var(--tin)']};
 function bao(t, loai) {
-  const e = $('#tb-msg'), loi = loai === 'loi';
-  e.innerHTML = (loai === 'thongtin' ? '' : icoMau(ICON[loi ? 'circle-alert' : 'circle-check'], loi ? 'var(--canh)' : 'var(--dat)', 18))
-    + '<span class="f1"></span>' + (loi ? '<button class="nut-ico tb-dong" aria-label="Đóng">' + icoMau(ICON.x, 'var(--phu)', 16) + '</button>' : '');
+  const e = $('#tb-msg'), loi = loai === 'loi', giu = loai !== 'xong', [ic, mau] = MAU_BAO[loai] || MAU_BAO.loi;
+  e.innerHTML = icoMau(ICON[ic], mau, 18)
+    + '<span class="f1"></span>' + (giu ? '<button class="nut-ico tb-dong" aria-label="Đóng">' + icoMau(ICON.x, 'var(--phu)', 16) + '</button>' : '');
   e.querySelector('span').textContent = t;
   const d = e.querySelector('.tb-dong'); if (d) d.onclick = () => { e.hidden = true; };
   e.setAttribute('role', loi ? 'alert' : 'status');
   const v = S.xem !== 'mb' && $('#app .vung'), r = v && v.getBoundingClientRect();
   e.style['left'] = r && r.width ? Math.round(r.left + r.width / 2) + 'px' : '';
-  e.hidden = false; clearTimeout(bao.h); if (!loi) bao.h = setTimeout(() => { e.hidden = true; }, 3200);
+  e.hidden = false; clearTimeout(bao.h); if (!giu) bao.h = setTimeout(() => { e.hidden = true; }, 3200);
 }
 function xacnhan(tieu, chu, nut, cb, ico) { const dau = $('#h-xacnhan .hop-dau svg');
   if (dau) { if (!xacnhan.goc) xacnhan.goc = dau.outerHTML; dau.outerHTML = ico ? icoMau(ICON[ico], 'var(--xanh-chu)', 20) : xacnhan.goc; }
@@ -1732,6 +1733,8 @@ document.addEventListener('input', ev => { if (ev.target.id !== 'mg-tim') return
 
 // ---- QĐ548 B, QĐ551, QĐ553, QĐ559, chữ QĐ566: chuông · âm thanh · chế độ màu ở góc phải khung; menu tài khoản; Tạm tắt
 // icon Lucide (ISC) mới – QĐ566 (9): bell-off (nét bản DM lc_010.js), volume-x, megaphone (nét bản CDO Toi_Lop.js)
+ICON['badge-info'] = ICON['badge-info'] || svgLucide('badge-info', ['M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z',
+  '<line x1="12" x2="12" y1="16" y2="12" />', '<line x1="12" x2="12.01" y1="8" y2="8" />']);   // Lucide (ISC) 0.468.0: hộp báo loại thông tin (QĐ667)
 ICON.watch = ICON.watch || svgLucide('watch', ['<circle cx="12" cy="12" r="6" />', '<polyline points="12 10 12 12 13 13" />',
   'm16.13 7.66-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05', 'm7.88 16.36.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05']);   // Lucide (ISC) 0.468.0: tin đổi múi giờ (QĐ663)
 ICON['bell-off'] = svgLucide('bell-off', ['M10.268 21a2 2 0 0 0 3.464 0', 'M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742',
