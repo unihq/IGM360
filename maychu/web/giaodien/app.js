@@ -538,11 +538,11 @@ function moQuayVe() {   // 39–44
     catch (e) { if (e.status) bao(e.message); return; }
     bao(CHU_CN.qvBao); S.cn = 'dangcn'; tieuDangCn(CHU_CN.qvDang + q.ban); ve(); veQuayVe(D.capnhat); const het = Date.now() + 3 * 60e3;   // N32
     let roi = false;   // đã thấy máy chủ dừng
-    const cho = async () => { try { const k = await (await fetch('/suckhoe', {cache: 'no-store'})).json();
+    const cho = async () => { try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error(await r.text()); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
       if (k.phienban === q.ban) { location.reload(); return; }
       if (roi && k.phienban) { const s = await api('/capnhat').catch(() => ({}));   // Y38d: lên lại bằng bản mới = quay về hỏng
         if (s.quayve_loi) { tieuDangCn(cau(s.quayve_loi.chu_hien)); $('[data-s="cn:dangcn"] .phu').textContent = ''; setTimeout(() => location.reload(), 5000); return; } }
-    } catch (e) { roi = true; }
+    } catch (e) { if (e.s421) { tieuDangCn(e.message); return; } roi = true; }   // QĐ656: tên không hợp lệ → dừng chờ
       if (Date.now() < het) setTimeout(cho, 3000); };
     setTimeout(cho, 3000); }, 'rotate-ccw');
 }
@@ -940,7 +940,7 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
     datHet(t, s.dang_sao); veTienDo(t, {...D.td.o, bay: Date.now() + D.td.lech}); return true; };
   if (s0) hien(s0, {});
   const cho = async () => {
-    try { const r = await fetch('/suckhoe', {cache: 'no-store'}); const k = await r.json();
+    try { const r = await fetch('/suckhoe', {cache: 'no-store'}); if (r.status === 421) { const e = new Error(await r.text()); e.s421 = true; throw e; } const k = await r.json();   // QĐ656: 421 = tên không hợp lệ
       // QĐ258 (đổi QĐ253): bản mới chạy là tải lại ngay; kiểm 06 điểm chạy nền, kết quả hiện sau (theoKiem)
       if (k.phienban && k.phienban !== cu) { location.hash = DAU_SAU_CN; location.reload(); return; } else {   // G1: về Cập nhật
         const s = await api('/capnhat');   // lớp 5: bước bản sao đang chạy; lỗi bản sao thì dừng, không gửi lệnh
@@ -951,7 +951,8 @@ function choCapNhat(cu, moi, s0) {   // s0: kết quả /api/capnhat đã có (m
           $('[data-s="cn:dangcn"] .phu').textContent = b ? b + (s.dang_sao === 'gui' || s.dang_sao === 'tai' ? (s.sao_den || moi) : '') : CHU_CN.cho; }
         if (s.dang_sao === 'qua_gio') { D.capnhat = {...D.capnhat, ...s}; if ($('#h-cndrive') ? $('#h-cndrive').hidden : true) moHopDrive('qua_gio'); }
       }
-    } catch (e) { if (D.td) veTienDo(D.td.t, {...D.td.o, bay: Date.now() + D.td.lech}); }   // máy chủ đang thay bản: % đi theo giờ
+    } catch (e) { if (e.s421) { S.cn = 'hong'; $('#cn-lydo').textContent = e.message; ve(); return; }   // QĐ656: dừng chờ
+      if (D.td) veTienDo(D.td.t, {...D.td.o, bay: Date.now() + D.td.lech}); }   // máy chủ đang thay bản: % đi theo giờ
     if (Date.now() < het) setTimeout(cho, 5000);
     else { S.cn = 'hong'; $('#cn-lydo').textContent = 'Lý do: sau ' + hai(PHUT_CHO) + ' phút máy chủ vẫn chạy bản ' + cu
       + '. Phần mềm vẫn chạy bình thường bằng bản này.'; ve(); }   // QĐ255 điểm 1

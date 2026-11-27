@@ -43,7 +43,7 @@ CHU_TENMIEN = {
     "trung_goc": "Tên này đang là tên gốc, không cần thêm.",                                       # TẠM
     "sai_host": "IGM360 không mở ở địa chỉ này. Dùng tên miền gốc hoặc tên miền riêng đang cài.",   # TẠM (QĐ656: DM soạn A/B)
 }
-DUONG_MIEN = ("/tls-check", "/suckhoe")   # QĐ656: đường nội bộ không kiểm tên
+DUONG_MIEN = ("/tls-check",)   # có cách kiểm riêng (cho_cap); /suckhoe qua cổng HTTPS VẪN kiểm (CPO chốt QD656-SUCKHOE, CDA PTD-20 mục 6)
 
 
 def chuan(ten: str | None) -> str:
@@ -113,7 +113,8 @@ def cho_cap(ten: str | None, tieude, thumuc: Path | None = None) -> bool:
 def can_chan(duong: str, tieude, thumuc: Path | None = None) -> bool:
     """QĐ656 (bổ sung QĐ634): đã bật đổi tên miền và lời đi qua cổng HTTPS (có tiêu đề chuyển tiếp) thì tên trên thanh địa
     chỉ (Host) phải là tên gốc hoặc tên riêng đang lưu; tên khác (vd. tên vừa bỏ – Caddy còn giữ chứng chỉ) → chặn (421).
-    Không kiểm: compose cũ (chưa bật), lời đi thẳng trong mạng nội bộ (không qua cổng HTTPS), /tls-check, /suckhoe.
+    Không kiểm: compose cũ (chưa bật), lời đi thẳng trong mạng nội bộ (không qua cổng HTTPS – Docker HEALTHCHECK, chay.py),
+    /tls-check (có cách kiểm riêng). Miễn theo lời đi thẳng, không theo đường: /suckhoe qua cổng HTTPS ở tên lạ cũng 421.
     Đọc tên riêng lỗi → không chặn (tên gốc luôn vào được, không tự khóa mình)."""
     if not da_bat() or not co_chuyentiep(tieude) or duong in DUONG_MIEN:
         return False

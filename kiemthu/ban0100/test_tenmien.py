@@ -295,12 +295,26 @@ class KiemTenHost(unittest.TestCase):
     def test_khong_kiem(self):
         self.assertEqual(self.hoi("la.vidu.test", xff=False).status_code, 200)              # lời đi thẳng trong mạng nội bộ
         self.assertNotEqual(self.hoi("la.vidu.test", f"/tls-check?domain={TEN_RIENG}").status_code, 421)
-        self.assertEqual(self.hoi("la.vidu.test", "/suckhoe").status_code, 200)
+        self.assertEqual(self.c.get("http://testserver/suckhoe", headers={"Host": "la.vidu.test"}).status_code, 200)   # /suckhoe đi thẳng
         with mock.patch.dict(os.environ, {tenmien.BIEN_GOC: ""}):
             self.assertEqual(self.hoi("la.vidu.test").status_code, 200)                      # compose cũ: chưa bật
         with mock.patch.object(tenmien, "ten_rieng", side_effect=OSError("hỏng")):
             self.assertEqual(self.hoi("la.vidu.test").status_code, 200)                      # đọc lỗi: không tự khóa
             self.assertEqual(self.hoi(TEN_GOC).status_code, 200)
+
+    def test_suckhoe_mien_theo_loi_di_thang(self):
+        """CPO chốt QD656-SUCKHOE (CDA PTD-20 mục 6; QA C11b (6b)): miễn theo lời đi thẳng, không theo đường."""
+        thongso.doi_tenmien(TEN_RIENG, "hethong", self.dl)
+        self.assertEqual(self.hoi("la.vidu.test", "/suckhoe").status_code, 421)   # qua cổng HTTPS + tên lạ
+        for host in (TEN_GOC, TEN_RIENG):
+            self.assertEqual(self.hoi(host, "/suckhoe").status_code, 200, host)
+        self.assertEqual(self.hoi("la.vidu.test", "/suckhoe", xff=False).status_code, 200)   # Docker HEALTHCHECK, chay.py
+        thongso.doi_tenmien("", "hethong", self.dl)
+        self.assertEqual(self.hoi(TEN_RIENG, "/suckhoe").status_code, 421)   # tên vừa bỏ
+        js = (GOC / "maychu/web/giaodien/app.js").read_text(encoding="utf-8")
+        self.assertEqual(js.count("if (r.status === 421) { const e = new Error(await r.text()); e.s421 = true; throw e; }"), 2)   # 02 vòng chờ
+        self.assertIn("if (e.s421) { tieuDangCn(e.message); return; }", js)    # gặp 421: dừng chờ, hiện chữ
+        self.assertIn("if (e.s421) { S.cn = 'hong'; $('#cn-lydo').textContent = e.message; ve(); return; }", js)
 
     def test_chu_tam(self):
         src = (GOC / "maychu/hethong/caidat/tenmien.py").read_text(encoding="utf-8")
