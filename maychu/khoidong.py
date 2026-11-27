@@ -112,6 +112,16 @@ app.mount("/tainguyen", StaticFiles(directory=GIAODIEN), name="tainguyen")
 
 
 @app.middleware("http")
+async def kiem_ten_mien(request, call_next):
+    """QĐ656: lời qua cổng HTTPS mang tên lạ (không phải tên gốc, tên riêng đang lưu) → 421 + 01 dòng chữ."""
+    from maychu.hethong.caidat import tenmien
+    if tenmien.can_chan(request.url.path, request.headers):
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(tenmien.CHU_TENMIEN["sai_host"], status_code=421)
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def che_do_an_toan(request, call_next):
     """0.7.9 lớp 2: ở chế độ an toàn chỉ mở đăng nhập và Cài đặt › Cập nhật; đường khác trả câu báo."""
     if antoan.CHE_DO["an_toan"] and not antoan.duoc_mo(request.url.path):

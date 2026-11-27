@@ -224,7 +224,7 @@ class KiemDuongGoi(unittest.TestCase):
                       f"//tls-check?domain={TEN_RIENG}", f"/tls-check//?domain={TEN_RIENG}"):
             self.assertNotEqual(hoi(duong, **xff), 200, duong)   # đi qua đường công khai: không bao giờ 200
         self.assertEqual(hoi(f"/tls-check?domain={TEN_RIENG}", **{"X-Forwarded-For": IP_NGOAI}), 403)
-        r = self.c.get(f"http://testserver/tls-check/?domain={TEN_RIENG}", headers=xff)   # đi theo lời chuyển 307
+        r = self.c.get(f"http://testserver/tls-check/?domain={TEN_RIENG}", headers={**xff, "Host": TEN_GOC})   # đi theo lời chuyển 307
         self.assertEqual((r.status_code, len(r.history)), (403, 1))
         self.assertNotEqual(hoi(f"//tls-check?domain={TEN_RIENG}"), 200)
         antoan.CHE_DO.update(an_toan=True)
@@ -268,6 +268,45 @@ class KiemDuongGoi(unittest.TestCase):
                          "Chưa bật đổi tên miền: máy chủ cần chạy 01 lệnh nâng cấu hình. Tên gốc vẫn chạy.")   # QĐ651
 
 
+class KiemTenHost(unittest.TestCase):
+    """QĐ656 (bổ sung QĐ634): lời qua cổng HTTPS mang tên lạ → 421; tên gốc, tên riêng đang lưu → qua."""
+    setUp, tearDown = KiemDuongGoi.setUp, KiemDuongGoi.tearDown   # dùng chung máy chủ thử, không chạy lại bài của lớp kia
+
+    def hoi(self, host, duong="/", xff=True):
+        tt = {"Host": host, **({"X-Forwarded-For": IP_NGOAI, "X-Forwarded-Proto": "https"} if xff else {})}
+        return self.c.get("http://testserver" + duong, headers=tt, follow_redirects=False)
+
+    def test_ten_goc_rieng_qua_ten_la_421(self):
+        thongso.doi_tenmien(TEN_RIENG, "hethong", self.dl)
+        for host in (TEN_GOC, TEN_GOC.upper() + ".:443", TEN_RIENG, "IGM.vidu.test:443"):
+            self.assertEqual(self.hoi(host).status_code, 200, host)
+        r = self.hoi("la.vidu.test")
+        self.assertEqual((r.status_code, r.text), (421, tenmien.CHU_TENMIEN["sai_host"]))
+        self.assertEqual(self.hoi("la.vidu.test", "/api/toi").status_code, 421)   # đường gọi cũng chặn
+        self.assertEqual(self.hoi("").status_code, 421)                              # thiếu Host
+
+    def test_bo_ten_rieng_chan_ngay(self):
+        thongso.doi_tenmien(TEN_RIENG, "hethong", self.dl)
+        self.assertEqual(self.hoi(TEN_RIENG).status_code, 200)
+        thongso.doi_tenmien("", "hethong", self.dl)
+        self.assertEqual(self.hoi(TEN_RIENG).status_code, 421)   # Caddy còn giữ chứng chỉ, máy chủ vẫn chặn
+        self.assertEqual(self.hoi(TEN_GOC).status_code, 200)     # tên gốc luôn vào được
+
+    def test_khong_kiem(self):
+        self.assertEqual(self.hoi("la.vidu.test", xff=False).status_code, 200)              # lời đi thẳng trong mạng nội bộ
+        self.assertNotEqual(self.hoi("la.vidu.test", f"/tls-check?domain={TEN_RIENG}").status_code, 421)
+        self.assertEqual(self.hoi("la.vidu.test", "/suckhoe").status_code, 200)
+        with mock.patch.dict(os.environ, {tenmien.BIEN_GOC: ""}):
+            self.assertEqual(self.hoi("la.vidu.test").status_code, 200)                      # compose cũ: chưa bật
+        with mock.patch.object(tenmien, "ten_rieng", side_effect=OSError("hỏng")):
+            self.assertEqual(self.hoi("la.vidu.test").status_code, 200)                      # đọc lỗi: không tự khóa
+            self.assertEqual(self.hoi(TEN_GOC).status_code, 200)
+
+    def test_chu_tam(self):
+        src = (GOC / "maychu/hethong/caidat/tenmien.py").read_text(encoding="utf-8")
+        self.assertIn("# TẠM (QĐ656: DM soạn A/B)", src.split('"sai_host"')[1].split("\n")[0])
+
+
 class KiemCompose(unittest.TestCase):
     """Tệp compose (QĐ634): giữ khối tên gốc, thêm khối On-Demand + `ask`, chặn /tls-check* ở cả 02 khối."""
 
@@ -289,6 +328,7 @@ class KiemCompose(unittest.TestCase):
         self.assertIn("on_demand", self.khoi("https://"))
         self.assertNotIn("on_demand", self.khoi("{$$DOMAIN_NAME}"))   # tên gốc cấp chứng chỉ như cũ, không qua ask
         self.assertEqual(self.cf.count("reverse_proxy "), 2)
+        self.assertNotIn("header_up", self.cf)   # QĐ656: Caddy chuyển nguyên Host (kiểm tên ở máy chủ dựa vào đây)
         self.assertIn("http:// {\n        redir https://{host}{uri} 308\n      }", self.cf)   # cùng 308 như tên gốc (QA T11)
 
     def test_bien_ten_goc_chi_o_igm360(self):

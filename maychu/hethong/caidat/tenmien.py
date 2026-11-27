@@ -41,7 +41,9 @@ CHU_TENMIEN = {
     "chua_bat": "Chưa bật đổi tên miền: máy chủ cần chạy 01 lệnh nâng cấu hình. Tên gốc vẫn chạy.",   # QĐ651
     "sai_dang": "Tên miền chưa đúng dạng.",                                                      # TẠM
     "trung_goc": "Tên này đang là tên gốc, không cần thêm.",                                       # TẠM
+    "sai_host": "IGM360 không mở ở địa chỉ này. Dùng tên miền gốc hoặc tên miền riêng đang cài.",   # TẠM (QĐ656: DM soạn A/B)
 }
+DUONG_MIEN = ("/tls-check", "/suckhoe")   # QĐ656: đường nội bộ không kiểm tên
 
 
 def chuan(ten: str | None) -> str:
@@ -106,6 +108,22 @@ def cho_cap(ten: str | None, tieude, thumuc: Path | None = None) -> bool:
     except Exception:   # noqa: BLE001 - đọc thông số lỗi thì không cho cấp (đóng an toàn)
         return False
     return bool(rieng) and chuan(ten) == rieng
+
+
+def can_chan(duong: str, tieude, thumuc: Path | None = None) -> bool:
+    """QĐ656 (bổ sung QĐ634): đã bật đổi tên miền và lời đi qua cổng HTTPS (có tiêu đề chuyển tiếp) thì tên trên thanh địa
+    chỉ (Host) phải là tên gốc hoặc tên riêng đang lưu; tên khác (vd. tên vừa bỏ – Caddy còn giữ chứng chỉ) → chặn (421).
+    Không kiểm: compose cũ (chưa bật), lời đi thẳng trong mạng nội bộ (không qua cổng HTTPS), /tls-check, /suckhoe.
+    Đọc tên riêng lỗi → không chặn (tên gốc luôn vào được, không tự khóa mình)."""
+    if not da_bat() or not co_chuyentiep(tieude) or duong in DUONG_MIEN:
+        return False
+    host = chuan(tieude.get("host"))
+    if host == ten_goc():
+        return False
+    try:
+        return host != ten_rieng(thumuc)
+    except Exception:   # noqa: BLE001
+        return False
 
 
 # ---------------- Kiểm DNS (chỉ cảnh báo) ----------------
