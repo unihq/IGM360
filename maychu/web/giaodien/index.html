@@ -873,6 +873,10 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
    dòng "#app:not(.mb) nav.menu .muc{margin:0 8px…}" đè margin-top:auto của .thu-gon từ 0.9.0; cụm bắt đầu ở .gd-sau.
    P2 khối tiến độ cao 142 như bản vẽ (QĐ574): bỏ lề chữ 13 px, khe đầu trang 16. P3-1 vùng bấm điện thoại ≥ 44 px. */
 #app:not(.mb) nav.menu .gd-sau{margin-top:auto}
+/* QĐ556 (anh "Chọn A (13 px)", Quychuan dòng 117; QA B06, CDO 5.373): tiêu đề nhóm thanh trái 13 px 700 xám; dòng "Hiện thêm khi
+   tới giai đoạn" 13 px 600, lề 02 bên 12 px; mục menu giữ 14 px */
+.nhom,#app:not(.mb) .nhom-nut{font-size:13px}
+#app:not(.mb) nav.menu .gd-sau{margin-left:12px;margin-right:12px}#app:not(.mb) nav.menu .gd-nut{font-size:13px;font-weight:600}
 #app:not(.mb) nav.menu{padding-bottom:37px}   /* QĐ582: đáy "Thu gọn menu" = đáy cụm nội dung (khung cách đáy 08 + lề đáy trang Cài đặt 28 + viền 01) */
 #app.thu:not(.mb) nav.menu .thu-gon{margin-top:auto}
 #app:not(.mb) #p09{gap:16px}#p09 .cd-cum{margin-top:0}.mb #p09 .cd-cum{margin-top:4px}
@@ -929,22 +933,33 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
 .md-onhap input{border:0;outline:0;flex:1;min-width:0;height:100%;background:transparent;font:inherit;font-size:14px;color:var(--chu);font-variant-numeric:tabular-nums}
 .md-onhap:focus-within{border-color:var(--xanh-chu)}.md-onhap .dv{color:var(--phu);font-size:13px;margin-left:6px;flex:none}
 .md-so20{font-size:20px;line-height:36px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.md-chip{display:inline-flex;align-items:center;font-weight:600;font-size:12px;line-height:20px;padding:0 8px;border-radius:6px;border:1px solid var(--xem);color:var(--xem);background:var(--khoi);white-space:nowrap}
+.md-nhan{display:inline-flex;align-items:center;font-weight:600;font-size:12px;line-height:20px;padding:0 8px;border-radius:6px;border:1px solid var(--xem);color:var(--xem);background:var(--khoi);white-space:nowrap}
 @media (max-width:1199px){.md-o3,.md-bd2,.md-nsg{grid-template-columns:minmax(0,1fr)}}
 .mb .md-onhap{height:auto;max-width:none}.mb .md-onhap input{height:44px}.mb .md-nsh{min-height:44px}.mb .md-chon{height:44px}
+/* QĐ566 (1), QĐ408 (QA B11): chân thanh trái "IGM360 {bản} · by UNI TECH" – bấm mở trang công nghệ ở thẻ mới; số bản từ VERSION */
+.nav-ban{display:block;margin:6px 20px 0;font-size:12px;line-height:18px;color:var(--phu);text-decoration:none;white-space:nowrap}
+.nav-ban:hover{color:var(--xanh-chu);text-decoration:underline}.nav-ban:focus-visible{outline:2px solid var(--xanh-chu);outline-offset:2px;border-radius:4px}
+.thu .nav-ban,.mb .nav-ban{display:none}
+/* QA C08: bảng phiên Tài khoản hẹp hơn 1200 px – danh sách như điện thoại (bản DM Caidat03_02 …Phien_Danhsach_1024), 0 tràn ô ngày */
+@media (max-width:1199px){#app:not(.mb) #ds-phien .hang.tieu-de{display:none}
+ #app:not(.mb) #ds-phien .hang{grid-template-columns:1fr 1fr!important;gap:8px 12px;padding:14px 16px}
+ #app:not(.mb) #ds-phien .hang>[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--phu);font-weight:600}
+ #app:not(.mb) #ds-phien .hang>.rong-mb{grid-column:1/-1}#app:not(.mb) #ds-phien .hang>.phai{justify-content:flex-start}}
 .kk-tong{display:flex;align-items:center;gap:16px;padding:16px 20px}
 .kk-ic{width:52px;height:52px;border-radius:12px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
 .kk-thanh{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;margin:8px 0 6px;background:var(--xam)}.kk-thanh i{display:block}
 .kk-chu{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--phu)}.kk-chu i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
 .kk-ghi{gap:8px;align-items:flex-start;color:var(--phu)}.kk-ghi svg{margin-top:3px;flex:none}
 .kk-bang{border:1px solid var(--ke);border-radius:12px;overflow:hidden}
-.kk-h{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--ke);font-size:14px}
+.kk-h{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.9fr) 88px 112px 118px 132px;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--ke);font-size:14px}
 .kk-h.kk-dau{border-top:0;background:var(--xam);font-size:12px;font-weight:600;color:var(--phu);padding:8px 14px}
 .kk-ten{display:flex;flex-direction:column;min-width:0}.kk-ten b{overflow-wrap:anywhere}
 .kk-tt{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap}.kk-tt i{width:8px;height:8px;border-radius:50%;background:currentColor}
 .kk-tt.dat{color:var(--dat)}.kk-tt.xem{color:var(--xem)}.kk-tt.canh{color:var(--canh)}
 .kk-tac{display:flex;gap:12px;justify-content:flex-end}.kk-ba{display:none}
-@media (max-width:1199px){
+/* QA C08: dạng bảng cần khối ≥ 665 px – Hạn, Dùng lần cuối, Trạng thái, nút cột cố định (thẳng hàng với đầu bảng, 0 tràn ô ngày);
+   dưới 1280 px hàng gọn + nút ⋯ (QĐ661: 1440 bảng; 1024, 390 hàng gọn) */
+@media (max-width:1279px){
  .kk-h{grid-template-columns:minmax(0,1fr) auto auto;row-gap:2px}.kk-h.kk-dau{display:none}
  .kk-h>span:nth-child(3),.kk-h>span:nth-child(4){grid-column:1/2;font-size:12px;color:var(--phu)}
  .kk-h>span:nth-child(3)::before,.kk-h>span:nth-child(4)::before{content:attr(data-l) " "}
@@ -1402,7 +1417,7 @@ html.toi ::placeholder{color:var(--goi-y)}
   <rect width="18" height="18" x="3" y="3" rx="2" />
   <path d="M9 3v18" />
   <path d="m16 15-3-3 3-3" />
-</svg><span>Thu gọn menu</span></button></nav>
+</svg><span>Thu gọn menu</span></button><a class="nav-ban" id="nav-ban" href="https://tech.unihq.vn/igm360" target="_blank" rel="noopener noreferrer"></a></nav>
  <div class="vung">
   <header class="thanh-tren">
     <button class="nut-ico an-mb" data-thu><svg

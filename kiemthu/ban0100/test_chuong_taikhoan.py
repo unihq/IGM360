@@ -60,9 +60,11 @@ class KiemMayChu(unittest.TestCase):
         self.assertEqual([x["chu"] for x in thongbao.danh_sach(None, self.dl)["ds"]], ["Đã đặt tên miền riêng"])
 
     def test_tin_doi_mui_gio_goi_tu_doi_muigio(self):
-        from datetime import timezone
-        # Windows không có bộ múi giờ (tzdata): giả múi = UTC, chỉ kiểm khóa tin
-        with mock.patch.object(muigio, "kiem_ten", return_value=True), mock.patch.object(muigio, "ZoneInfo", lambda k: timezone.utc):
+        from datetime import timedelta, timezone
+        # Windows không có bộ múi giờ (tzdata): giả mọi múi = +07 cố định (giả UTC thì sau 00:00 giờ Việt Nam ngày lệch 01,
+        # đọc không thấy dòng P01 vừa ghi – bài hỏng theo giờ chạy), chỉ kiểm khóa tin
+        mui7 = timezone(timedelta(hours=7))
+        with mock.patch.object(muigio, "kiem_ten", return_value=True), mock.patch.object(muigio, "ZoneInfo", lambda k: mui7):
             thongso.doi_muigio("muigio", "Asia/Tokyo", "hethong", self.dl)
             thongso.doi_muigio("muigio_doisoat", "Asia/Bangkok", "hethong", self.dl)
             thongso.doi_muigio("muigio", "Asia/Seoul", "hethong", self.dl)

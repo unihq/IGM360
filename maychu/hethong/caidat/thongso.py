@@ -262,8 +262,8 @@ def doi_muigio(ten: str, giatri: str, nguoi: str, thumuc: Path | None = None) ->
     return kq
 
 
-CHU_LUON_BAO = "Tin nghiêm trọng luôn báo, không tắt được."   # TẠM (QĐ648): câu từ chối – giao diện không có nút tắt loại đỏ
-CHU_TRAN_SAI = "Mức trần là số token lớn hơn 0, hoặc để trống."   # TẠM (QĐ648)
+CHU_LUON_BAO = "Tin nghiêm trọng luôn báo, không tắt được"   # TẠM (QĐ648): câu từ chối – giao diện không có nút tắt loại đỏ
+CHU_TRAN_SAI = "Mức trần là số token lớn hơn 0, hoặc để trống"   # QA B08: giao diện tự thêm dấu chấm   # TẠM (QĐ648)
 
 
 def doc_loai_tat(thumuc: Path | None = None) -> set[str]:

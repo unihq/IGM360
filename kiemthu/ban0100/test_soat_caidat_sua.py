@@ -27,6 +27,32 @@ class KiemGiaoDien(unittest.TestCase):
         # quy tắc đè (0.9.0) đứng trước quy tắc sửa – cùng độ ưu tiên thì quy tắc sau thắng
         self.assertLess(self.h.index("#app:not(.mb) nav.menu .muc{margin:0 8px;"), self.h.index("#app:not(.mb) nav.menu .gd-sau{margin-top:auto}"))
 
+    def test_qd556_co_chu_thanh_trai(self):   # QA B06, CDO 5.373: Quychuan dòng 117
+        self.assertIn(".nhom,#app:not(.mb) .nhom-nut{font-size:13px}", self.h)
+        self.assertIn("#app:not(.mb) nav.menu .gd-sau{margin-left:12px;margin-right:12px}#app:not(.mb) nav.menu .gd-nut{font-size:13px;font-weight:600}", self.h)
+        self.assertLess(self.h.index("#app:not(.mb) .nhom-nut{display:flex"), self.h.index(".nhom,#app:not(.mb) .nhom-nut{font-size:13px}"))   # đứng sau luật cũ 11 px
+
+    def test_qa_b11_chan_thanh_trai(self):   # QĐ566 (1), QĐ408: "IGM360 {bản} · by UNI TECH", mở trang công nghệ ở thẻ mới
+        trang = "https://" + "tech." + "unihq" + ".vn/igm360"   # ghép lúc chạy: chuỗi trang công khai chỉ có ngoại lệ máy quét ở index.html
+        self.assertIn('<a class="nav-ban" id="nav-ban" href="' + trang + '" target="_blank" rel="noopener noreferrer"></a></nav>', self.h)
+        self.assertIn("nb.textContent = 'IGM360 ' + D.tbBan + ' · by UNI TECH';", self.js)   # số bản từ /api/demso (VERSION)
+        self.assertIn(".thu .nav-ban,.mb .nav-ban{display:none}", self.h)
+
+    def test_qa_c08_o_ngay_khong_tran(self):
+        self.assertIn(".kk-h{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.9fr) 88px 112px 118px 132px;", self.h)
+        self.assertIn("@media (max-width:1279px){\n .kk-h{grid-template-columns:minmax(0,1fr) auto auto;", self.h)
+        self.assertIn("#app:not(.mb) #ds-phien .hang{grid-template-columns:1fr 1fr!important;", self.h)
+
+    def test_qa_b08_mot_dau_cham(self):
+        from maychu.hethong.caidat import thongso
+        self.assertFalse(thongso.CHU_TRAN_SAI.endswith("."))   # giao diện tự thêm "." (bao(e.message + '.'))
+        self.assertFalse(thongso.CHU_LUON_BAO.endswith("."))
+
+    def test_lop_moi_khong_trung_lop_cu(self):   # bài học .tb-dong (CDO 5.372): lớp ngăn Mức dùng không dùng lại .md-chip của màn 13
+        i = self.h.index("/* Ngăn Mức dùng (DM-CAIDAT-010)")
+        self.assertNotIn(".md-chip{", self.h[i:self.h.index(".mb .md-onhap", i)])
+        self.assertIn(".md-nhan{", self.h)
+
     def test_p1_2_p2_p3_1(self):
         self.assertIn("#p09 .the.cn{display:grid;grid-template-columns:72px minmax(0,1fr);", self.h)    # cột vòng cố định, không nở
         self.assertIn(".mb #p09 .the.cn{padding:16px;gap:12px 16px;grid-template-columns:56px minmax(0,1fr)}", self.h)

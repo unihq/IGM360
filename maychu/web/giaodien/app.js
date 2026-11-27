@@ -270,6 +270,7 @@ function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, 
   D.tbCuoi = d; const ds = d.thongbao || [], tat = !!d.tamtat, so = d.so_moi || 0;
   if (canKeu(D.tbDaThay, ds, tat) && amBat()) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng mới
   D.tbDaThay = new Set(ds.map(x => x.id)); D.tbSoMoi = so; D.tbTamTat = tat; D.tbCoDo = ds.some(x => x.moi && x.muc === 'do'); if (d.ban) D.tbBan = d.ban; veBa();
+  const nb = $('#nav-ban'); if (nb && D.tbBan) nb.textContent = 'IGM360 ' + D.tbBan + ' · by UNI TECH';   // QĐ566 (1)
   const e = $('#tha-chuong'); if (!e) return;
   const the = D.tbThe || 'tb', loc = the === 'cxl' ? ds.filter(x => x.muc === 'do') : ds, moi = loc.filter(x => x.moi), cu = loc.filter(x => !x.moi);
   e.innerHTML = '<div class="tha-dau tl-dau"><b>' + CHU_BA.thongBao + '</b><button class="tl-nutchu" data-tamtat>' + icoMau(ICON[tat ? 'bell' : 'bell-off'], 'currentColor', 16)
@@ -1982,7 +1983,7 @@ function veMucDung() {
   h += '<div class="md-bd md-ns"><div class="md-tdb"><b>' + C.nganSach + '</b></div><div class="md-nsg"><div class="md-nsm"><label class="md-tml" for="md-tran">' + C.tran5 + '</label>'
     + '<div class="md-nsh"><span class="md-onhap"><input id="md-tran" inputmode="numeric" value="' + (k.tran ? soVN(k.tran) : '') + '" placeholder="' + C.viDu + '" aria-describedby="md-tran-g"><span class="dv">' + C.tok + '</span></span>'
     + '<button class="btn btn-chinh" data-mdluu>' + C.luu + '</button></div><div class="md-ph" id="md-tran-g">' + C.deTrong(k.dinh ? fTok(k.dinh) : '') + '</div></div>'
-    + '<div class="md-nsm"><span class="md-tml">' + C.hmThangTen + '</span><div class="md-nsh">' + (k.tran_tien_thang == null ? '<span class="md-chip">' + C.chuaDat + '</span>' : '<span class="md-so20">' + soVN(k.tran_tien_thang) + ' USD</span>')
+    + '<div class="md-nsm"><span class="md-tml">' + C.hmThangTen + '</span><div class="md-nsh">' + (k.tran_tien_thang == null ? '<span class="md-nhan">' + C.chuaDat + '</span>' : '<span class="md-so20">' + soVN(k.tran_tien_thang) + ' USD</span>')
     + '<button class="btn btn-phu" data-tab="thongso" data-nhom="AI">' + C.datTs + icoMau(ICON['circle-chevron-right'], 'var(--chu)', 16) + '</button></div></div></div></div>'
     + '<div class="gd-dong">' + C.chan + '</div>';
   g.innerHTML = h; ganMd(g);
