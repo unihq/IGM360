@@ -8,6 +8,7 @@ Tóm tắt: Nền dữ liệu mới cho bộ não
 Nâng dữ liệu: có
 - Nâng dữ liệu lên bản 5: thêm sổ sự việc để bộ não học; chỉ số và quy tắc kiểm đủ nhận thêm kỳ quý, năm.
 - Tạo thư mục bộ não chung, lưu lịch sử thay đổi.
+- Sửa bài kiểm: 04 bài kiểm chạy lỗi trên máy Windows do ghi tệp thử không khai bảng mã.
 
 ## 0.9.4
 Tóm tắt: Sửa lỗi nâng công cụ AI không cài được

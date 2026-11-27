@@ -55,7 +55,7 @@ for o in ({"type": "thread.started", "thread_id": "t1"}, {"type": "turn.started"
 
 def _cli(thumuc: Path, ten: str, ma: str) -> str:
     p = thumuc / ten
-    p.write_text(f"#!{sys.executable}\n" + textwrap.dedent(ma))
+    p.write_text(f"#!{sys.executable}\n" + textwrap.dedent(ma), encoding="utf-8")   # 0.10.0: khai bảng mã (Windows mặc định cp1252)
     p.chmod(p.stat().st_mode | stat.S_IEXEC)
     return str(p)
 
