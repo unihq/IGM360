@@ -303,6 +303,16 @@ class KiemTenHost(unittest.TestCase):
             self.assertEqual(self.hoi("la.vidu.test").status_code, 200)                      # đọc lỗi: không tự khóa
             self.assertEqual(self.hoi(TEN_GOC).status_code, 200)
 
+    def test_duong_lay_tu_scope_khong_tu_host(self):   # CDA phiếu 16 mục 9.43 (a): Host lạ không làm lệch đường miễn kiểm
+        thongso.doi_tenmien(TEN_RIENG, "hethong", self.dl)
+        for host in ("la.vidu.test/tls-check?x=", "la.vidu.test/tls-check#"):
+            self.assertEqual(self.hoi(host, "/api/toi").status_code, 421, host)
+        for duong in ("/TLS-CHECK", "//tls-check", "/tls-check%2F", "/api/../tls-check/x"):
+            self.assertEqual(self.hoi("la.vidu.test", duong).status_code, 421, duong)   # chỉ đúng "/tls-check" mới miễn
+        src = (Path(__file__).resolve().parents[2] / "maychu/khoidong.py").read_text(encoding="utf-8")
+        self.assertIn('tenmien.can_chan(request.scope["path"], request.headers)', src)
+        self.assertNotIn("request.url.path", src)
+
     def test_suckhoe_mien_theo_loi_di_thang(self):
         """CPO chốt QD656-SUCKHOE (CDA PTD-20 mục 6; QA C11b (6b)): miễn theo lời đi thẳng, không theo đường."""
         thongso.doi_tenmien(TEN_RIENG, "hethong", self.dl)

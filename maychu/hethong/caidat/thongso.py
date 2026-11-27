@@ -3,6 +3,7 @@
 Sửa = thêm 01 dòng mới có ngày áp dụng, đóng `hieuluc_den` của dòng đang dùng; không xóa dòng cũ.
 Thông số trống: không chặn lưu, phần mềm làm cách an toàn nhất (nhật ký mục 5.57 D câu 05).
 """
+import json
 from datetime import date, datetime
 from pathlib import Path
 
@@ -266,8 +267,14 @@ CHU_TRAN_SAI = "Mức trần là số token lớn hơn 0, hoặc để trống."
 
 
 def doc_loai_tat(thumuc: Path | None = None) -> set[str]:
-    """Các loại thông báo đang tắt (QĐ553 (5)); trống = bật hết."""
-    return {x for x in (doc_mot("chuong_loai_tat", "", thumuc) or "").split(",") if x}
+    """Các loại thông báo đang tắt (QĐ553 (5)); trống = bật hết. Kiểu `danhsach`: giá trị là mảng JSON (thiết kế P01;
+    CDA phiếu 16 mục 9.43). Giá trị chuỗi phẩy (máy thử trước da04d2e) vẫn đọc được."""
+    gt = (doc_mot("chuong_loai_tat", "", thumuc) or "").strip()
+    try:
+        ds = json.loads(gt) if gt else []
+    except ValueError:
+        ds = gt.split(",")
+    return {str(x) for x in ds if x} if isinstance(ds, list) else set()
 
 
 def dat_loai_tat(loai: str, bat: bool, nguoi: str, thumuc: Path | None = None) -> dict:
@@ -280,7 +287,7 @@ def dat_loai_tat(loai: str, bat: bool, nguoi: str, thumuc: Path | None = None) -
         return {"loi": CHU_LUON_BAO}
     ds = doc_loai_tat(thumuc)
     ds = ds - {loai} if bat else ds | {loai}
-    kq = _ghi_gat("chuong_loai_tat", ",".join(sorted(ds)), nguoi, "Bật / tắt loại thông báo", thumuc)
+    kq = _ghi_gat("chuong_loai_tat", json.dumps(sorted(ds)), nguoi, "Bật / tắt loại thông báo", thumuc)   # mảng JSON, rỗng = []
     return {**kq, "tat": sorted(ds)}
 
 

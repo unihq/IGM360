@@ -48,6 +48,17 @@ class KiemLoai(unittest.TestCase):
         self.assertNotIn("chuong_loai_tat", [x["ten"] for x in thongso.doc_het(self.dl)["thongso"]])   # không ở ngăn Thông số
         self.assertIn("loi", thongso.dat("chuong_loai_tat", "x", "2026-11-27", nguoi="hethong", thumuc=self.dl))   # đường chung từ chối
 
+    def test_luu_mang_json(self):   # CDA phiếu 16 mục 9.43: kiểu danhsach lưu mảng JSON (thiết kế P01), rỗng = []
+        import json
+        thongso.dat_loai_tat("cli_nang", False, "hethong", self.dl)
+        thongso.dat_loai_tat("banmoi", False, "hethong", self.dl)
+        self.assertEqual(json.loads(thongso.doc_mot("chuong_loai_tat", None, self.dl)), ["banmoi", "cli_nang"])
+        thongso.dat_loai_tat("banmoi", True, "hethong", self.dl)
+        thongso.dat_loai_tat("cli_nang", True, "hethong", self.dl)
+        self.assertEqual(thongso.doc_mot("chuong_loai_tat", None, self.dl), "[]")
+        with mock.patch.object(thongso, "doc_mot", return_value="drive_nen,cli_o"):   # chuỗi phẩy của máy thử cũ vẫn đọc được
+            self.assertEqual(thongso.doc_loai_tat(self.dl), {"drive_nen", "cli_o"})
+
     def test_loai_da_tat_van_trong_bang_khong_cong_so(self):
         thongbao.bao_su_kien("tenmien_doi", "igm.vidu.test", self.dl, truoc="")
         self.assertEqual(thongbao.danh_sach(None, self.dl)["so_moi"], 1)

@@ -59,8 +59,22 @@ class KiemHopBao(unittest.TestCase):
         self.assertIn("ICON['badge-info'] = ICON['badge-info'] || svgLucide('badge-info',", self.js)
         self.assertLess(self.js.index("const svgLucide = "), self.js.index("ICON['badge-info'] = "))   # khai báo trước khi dùng
         self.assertNotIn("TẠM (QĐ648 – icon chờ anh duyệt)", self.js)
-        self.assertIn(".tb-dong{width:24px;height:24px;", self.h)
-        self.assertIn(".mb .tb-dong{width:44px;height:44px;", self.h)
+        self.assertIn(".hb-dong{width:24px;height:24px;", self.h)
+        self.assertIn(".mb .hb-dong{width:44px;height:44px;", self.h)
+
+    def test_ten_lop_khong_trung_dong_tin_chuong(self):   # CDO 5.372 P1: .tb-dong là dòng tin chuông – nút ✕ hộp báo phải khác tên
+        i = self.js.index("function bao(t, loai) {")
+        ham = self.js[i:self.js.index("\n}\n", i)]
+        self.assertNotIn("tb-dong", ham)
+        self.assertIn("class=\"nut-ico hb-dong\"", ham)
+        self.assertNotIn(".tb-dong{width", self.h)
+
+    def test_vi_tri_quychuan_208(self):   # CDO 5.372 P2: cách đáy khối đang mở / thanh nút đáy 08 px
+        i = self.js.index("function viTriBao() {")
+        ham = self.js[i:self.js.index("\n}\n", i)]
+        for x in ("$('nav.tab-duoi')", "innerHeight - r['top'] + 8", "innerHeight - cd.getBoundingClientRect().bottom + 8"):
+            self.assertIn(x, ham, x)
+        self.assertIn("e.style['bottom'] = viTriBao();", self.js)
 
 
 if __name__ == "__main__":

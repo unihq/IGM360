@@ -115,7 +115,9 @@ app.mount("/tainguyen", StaticFiles(directory=GIAODIEN), name="tainguyen")
 async def kiem_ten_mien(request, call_next):
     """QĐ656: lời qua cổng HTTPS mang tên lạ (không phải tên gốc, tên riêng đang lưu) → 421 + 01 dòng chữ QĐ657 (6)."""
     from maychu.hethong.caidat import tenmien
-    if tenmien.can_chan(request.url.path, request.headers):
+    # scope["path"] (đường Starlette dùng để tìm trang), không dùng đường của request.url – url dựng lại từ tiêu đề Host nên
+    # Host lạ có thể làm đường lệch (bài học CDA phiếu 16 mục 9.43, PYSEC-2026-161)
+    if tenmien.can_chan(request.scope["path"], request.headers):
         return HTMLResponse(tenmien.trang_421(), status_code=421)
     return await call_next(request)
 
@@ -123,7 +125,7 @@ async def kiem_ten_mien(request, call_next):
 @app.middleware("http")
 async def che_do_an_toan(request, call_next):
     """0.7.9 lớp 2: ở chế độ an toàn chỉ mở đăng nhập và Cài đặt › Cập nhật; đường khác trả câu báo."""
-    if antoan.CHE_DO["an_toan"] and not antoan.duoc_mo(request.url.path):
+    if antoan.CHE_DO["an_toan"] and not antoan.duoc_mo(request.scope["path"]):   # scope, không theo Host (CDA 9.43)
         from fastapi.responses import JSONResponse
         return JSONResponse({"detail": antoan.CHU["an_toan_chan"], "an_toan": True}, status_code=503)
     return await call_next(request)
@@ -136,7 +138,7 @@ async def dau_bao_ve(request, call_next):
     res.headers["X-Frame-Options"] = "DENY"
     res.headers["X-Content-Type-Options"] = "nosniff"
     res.headers["Referrer-Policy"] = "no-referrer"
-    if request.url.path.startswith("/tainguyen/"):
+    if request.scope["path"].startswith("/tainguyen/"):
         # Y17 (b): trình duyệt luôn hỏi lại máy chủ (không đổi thì trả 304), không tự giữ app.js cũ sau khi cập nhật
         res.headers["Cache-Control"] = "no-cache"
     res.headers["Content-Security-Policy"] = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "

@@ -143,15 +143,27 @@ function batNhom(ten) { if (NHOM.mo.has(ten)) NHOM.mo.delete(ten); else { NHOM.m
 // 'loi' icon tròn circle-alert đỏ, giữ tới khi bấm ✕ "Đóng", role alert; 'xong' circle-check xanh lá, tự tắt 3,2 giây, role status;
 // 'thongtin' (QĐ667, anh "Chọn B"): icon badge-info màu Thông tin --tin (QĐ562), giữ tới ✕, role status. Máy tính: giữa vùng nội dung.
 const MAU_BAO = {loi: ['circle-alert', 'var(--canh)'], xong: ['circle-check', 'var(--dat)'], thongtin: ['badge-info', 'var(--tin)']};
+// Quychuan dòng 208 (CDO SC-TOI-0100): máy tính – mép dưới hộp cách đáy khối đang mở 08 px (khối chi tiết Cài đặt, hoặc mép
+// dưới vùng nội dung trang), không vượt đáy khối, không che dải chân; điện thoại – trên thanh nút đáy, cách 08 px (không có thì
+// cách đáy 16 px + vùng an toàn – CSS). Thay số 28 / 76 px của 0.9.x.
+function viTriBao() {
+  if (S.xem === 'mb') { const n = $('nav.tab-duoi'), r = n && n.getBoundingClientRect();
+    return r && r.height && r['top'] < innerHeight ? (innerHeight - r['top'] + 8) + 'px' : ''; }
+  const tr = $('#p' + S.trang), cd = S.trang === '09' && tr && [...tr.querySelectorAll('.cd-ct')].find(x => x.offsetParent);
+  if (cd) return (innerHeight - cd.getBoundingClientRect().bottom + 8) + 'px';
+  if (!tr || !tr.offsetParent) return '';
+  const r = tr.getBoundingClientRect(); return (innerHeight - (r.bottom - parseFloat(getComputedStyle(tr).paddingBottom || 0)) + 8) + 'px';
+}
 function bao(t, loai) {
   const e = $('#tb-msg'), loi = loai === 'loi', giu = loai !== 'xong', [ic, mau] = MAU_BAO[loai] || MAU_BAO.loi;
   e.innerHTML = icoMau(ICON[ic], mau, 18)
-    + '<span class="f1"></span>' + (giu ? '<button class="nut-ico tb-dong" aria-label="Đóng">' + icoMau(ICON.x, 'var(--phu)', 16) + '</button>' : '');
+    + '<span class="f1"></span>' + (giu ? '<button class="nut-ico hb-dong" aria-label="Đóng">' + icoMau(ICON.x, 'var(--phu)', 16) + '</button>' : '');
   e.querySelector('span').textContent = t;
-  const d = e.querySelector('.tb-dong'); if (d) d.onclick = () => { e.hidden = true; };
+  const d = e.querySelector('.hb-dong'); if (d) d.onclick = () => { e.hidden = true; };
   e.setAttribute('role', loi ? 'alert' : 'status');
   const v = S.xem !== 'mb' && $('#app .vung'), r = v && v.getBoundingClientRect();
   e.style['left'] = r && r.width ? Math.round(r.left + r.width / 2) + 'px' : '';
+  e.style['bottom'] = viTriBao();
   e.hidden = false; clearTimeout(bao.h); if (!giu) bao.h = setTimeout(() => { e.hidden = true; }, 3200);
 }
 function xacnhan(tieu, chu, nut, cb, ico) { const dau = $('#h-xacnhan .hop-dau svg');
