@@ -72,7 +72,7 @@ class KiemChu087(unittest.TestCase):
         self.assertEqual(hien.count("\u00a0"), 1)                                # SUA-NBSP: đúng 01 chỗ
         self.assertIn("nối\u00a0lại", hien)                                     # ở cụm "nối lại" (Phần 3: không tách cụm)
         self.assertFalse(cau.endswith("."))                                         # báo nổi tự thêm dấu chấm
-        self.assertEqual(js.count("bao(e.message + '.', 'loi')"), 24)                      # 18 chỗ + 03 chỗ ngăn Chung (QĐ627) + 02 chỗ ngăn Két khóa + 01 chỗ ngăn Thông báo (0.10.0) cùng hiện câu này
+        self.assertEqual(js.count("bao(e.message + '.', 'loi')"), 25)                      # 18 chỗ + 03 chỗ ngăn Chung (QĐ627) + 02 chỗ ngăn Két khóa + 01 chỗ ngăn Thông báo + 01 chỗ ngăn Mức dùng (0.10.0) cùng hiện câu này
 
     def test_khong_con_chu_cu(self):
         for tep in ("maychu/hethong/mohinh/trochuyen.py", "maychu/web/api.py"):

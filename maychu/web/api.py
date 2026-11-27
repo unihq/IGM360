@@ -213,6 +213,13 @@ def dat_loai_thong_bao(body: LoaiThongBao, p: dict = Depends(can_dang_nhap)):
     return kq
 
 
+@router.get("/mucdung")
+def muc_dung(nguon: str | None = None, p: dict = Depends(can_dang_nhap)):
+    """Ngăn Mức dùng (QĐ564 B): hạn mức gói, cửa sổ 05 giờ, đỉnh 60 ngày, token theo giờ (múi ③), giờ bận 07 ngày, tiền tháng (②)."""
+    from maychu.hethong.mohinh import mucdung
+    return mucdung.tong_hop(nguon=nguon or None)
+
+
 @router.post("/mucdung/tran")
 def dat_tran_5gio(body: Tran5Gio, p: dict = Depends(can_dang_nhap)):
     """QĐ564: mức trần cửa sổ 05 giờ (token) ở ngăn Mức dùng; trống = so với đỉnh 60 ngày. Ghi F04."""

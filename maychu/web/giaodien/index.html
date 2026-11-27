@@ -887,6 +887,51 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
 .tbl-luon{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--phu);white-space:nowrap;min-width:96px;justify-content:flex-end}
 .tbl-dai{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--ke);border-radius:12px;padding:12px 14px;margin:8px 0 4px;font-size:13px}
 .mb .tbl-h{min-height:60px}
+/* Ngăn Mức dùng (DM-CAIDAT-010): 03 ô số · biểu đồ cột B2 (Quychuan 5.13) · khối Ngân sách; màu kỳ trước --h-truoc */
+#ngan-mucdung{gap:12px}
+.md-o3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.md-os{border:1px solid var(--ke);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.md-tn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--phu)}
+.md-so{font-size:28px;line-height:34px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.md-so small{font-size:14px;font-weight:600;color:var(--phu);margin-left:4px}
+.md-so.xem{color:var(--xem)}.md-so.canh{color:var(--canh)}
+.md-ph{font-size:12px;line-height:18px;color:var(--phu)}.md-ph.xem{color:var(--xem);font-weight:600}
+.md-th{height:8px;border-radius:4px;background:var(--xam);overflow:hidden}.md-th i{display:block;height:100%;border-radius:4px;background:var(--h-chinh)}
+.md-th i.xem{background:var(--h-xem)}.md-th i.canh{background:var(--canh)}
+.md-hm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 10px;font-size:13px}
+.md-hm .ng{font-weight:600;grid-column:1/-1;margin-top:2px}.md-hm .nh{color:var(--phu);white-space:nowrap}.md-hm b{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;min-width:36px}
+.md-tag{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:6px;border:1px solid var(--xem);color:var(--xem);font-size:12px;font-weight:600;background:var(--khoi);vertical-align:middle;margin-left:6px}
+.md-bd{border:1px solid var(--ke);border-radius:12px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.md-tdb{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.md-tdb b{font-size:16px;font-weight:600}
+.md-tdb .r{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--phu)}
+.md-cg{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.md-cg i{width:10px;height:10px;border-radius:3px;display:inline-block;background:var(--h-chinh)}
+.md-cg i.cu{background:var(--h-truoc)}
+.md-vung{display:grid;grid-template-columns:68px minmax(0,1fr);gap:0 6px}
+.md-truc{position:relative;font-size:12px;color:var(--phu);text-align:right}.md-truc span{position:absolute;right:0;transform:translateY(-50%);white-space:nowrap}
+.md-cot{position:relative;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid var(--vien);cursor:crosshair;touch-action:pan-y}
+.md-cot:focus-visible{outline:2px solid var(--xanh-chu);outline-offset:4px;border-radius:2px}
+.md-cot .c{flex:1;border-radius:3px 3px 0 0;background:var(--h-truoc);min-height:1px}.md-cot .c.nay{background:var(--h-chinh)}.md-cot .c.canh{background:var(--h-canh)}
+.md-cot .c.ro{outline:2px solid var(--chu);outline-offset:-2px}
+.md-luoi{position:absolute;left:0;right:0;border-top:1px solid var(--ke);pointer-events:none}
+.md-moc{position:absolute;left:0;right:0;border-top:2px dashed var(--phu);pointer-events:none}
+.md-moc span{position:absolute;right:0;bottom:3px;font-size:12px;font-weight:600;color:var(--chu);background:var(--khoi);padding:0 4px;border-radius:4px;white-space:nowrap}
+.md-do{position:absolute;top:0;bottom:0;width:0;border-right:1px dashed var(--chu);pointer-events:none;z-index:3}
+.md-tip{position:absolute;transform:translateX(-50%);z-index:4;background:var(--khoi);border:1px solid var(--ke);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;color:var(--chu);white-space:nowrap;pointer-events:none}
+.md-trucx{display:flex;gap:3px;font-size:12px;color:var(--phu)}.md-trucx span{flex:1;text-align:center;white-space:nowrap;overflow:visible}
+.md-ghi{font-size:13px;color:var(--chu)}.md-ghi .xem{color:var(--xem);font-weight:600}
+.md-bd2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.md-chon{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 4px 0 10px;border:1px solid var(--vien);border-radius:8px;font-size:13px;white-space:nowrap;color:var(--chu)}
+.md-chon select{border:0;background:transparent;font:inherit;color:var(--chu);height:100%;max-width:160px}
+.md-chua{border:1px dashed var(--vien);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;color:var(--phu);font-size:13px;text-align:center;padding:16px}.md-chua b{color:var(--chu);font-weight:600}
+.md-nsg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px}
+.md-nsm{display:flex;flex-direction:column;gap:6px;min-width:0}.md-tml{font-size:13px;font-weight:600;color:var(--chu)}
+.md-nsh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:36px}
+.md-onhap{height:36px;border:1px solid var(--vien);border-radius:8px;padding:0 12px;display:flex;align-items:center;background:var(--khoi);flex:1 1 160px;min-width:0;max-width:260px}
+.md-onhap input{border:0;outline:0;flex:1;min-width:0;height:100%;background:transparent;font:inherit;font-size:14px;color:var(--chu);font-variant-numeric:tabular-nums}
+.md-onhap:focus-within{border-color:var(--xanh-chu)}.md-onhap .dv{color:var(--phu);font-size:13px;margin-left:6px;flex:none}
+.md-so20{font-size:20px;line-height:36px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.md-chip{display:inline-flex;align-items:center;font-weight:600;font-size:12px;line-height:20px;padding:0 8px;border-radius:6px;border:1px solid var(--xem);color:var(--xem);background:var(--khoi);white-space:nowrap}
+@media (max-width:1199px){.md-o3,.md-bd2,.md-nsg{grid-template-columns:minmax(0,1fr)}}
+.mb .md-onhap{height:auto;max-width:none}.mb .md-onhap input{height:44px}.mb .md-nsh{min-height:44px}.mb .md-chon{height:44px}
 .kk-tong{display:flex;align-items:center;gap:16px;padding:16px 20px}
 .kk-ic{width:52px;height:52px;border-radius:12px;border:1px solid var(--ke);display:flex;align-items:center;justify-content:center;flex:none}
 .kk-thanh{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;margin:8px 0 6px;background:var(--xam)}.kk-thanh i{display:block}
@@ -1956,6 +2001,7 @@ html.toi ::placeholder{color:var(--goi-y)}
       <div id="ls-capnhat"></div></div></div>
      <div data-s="tab:ketkhoa" class="cot-doc" id="ngan-ketkhoa"></div>
      <div data-s="tab:thongbao" class="cot-doc" id="ngan-thongbao"></div>
+     <div data-s="tab:mucdung" class="cot-doc" id="ngan-mucdung"></div>
        </div></section></div>
    </div>
    <div class="trang" id="p11" hidden><div class="dau-trang"><div class="ico-tron"><svg

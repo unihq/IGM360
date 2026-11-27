@@ -296,7 +296,7 @@ async function demSo(mo) {
 
 // ---- Màn 09 ngăn Thông số
 // ---- Màn 09 khung Cài đặt B (QĐ573; menu 05 ngăn đã có nội dung – Thông báo, Mức dùng thêm ở bước của chúng; icon QĐ653)
-const NGAN_CD = [['chung', 'monitor-cog', 'Chung'], ['thongso', 'sliders-horizontal', 'Thông số'], ['thongbao', 'bell', 'Thông báo'],   // QĐ573 L05, QĐ653
+const NGAN_CD = [['chung', 'monitor-cog', 'Chung'], ['thongso', 'sliders-horizontal', 'Thông số'], ['thongbao', 'bell', 'Thông báo'], ['mucdung', 'chart-no-axes-column', 'Mức dùng'],   // QĐ573 L05, QĐ653
   ['taikhoan', 'user-round', 'Tài khoản và 02\u00a0lớp'], ['capnhat', 'cloud-download', 'Cập nhật'], ['ketkhoa', 'vault', 'Két khóa']];
 const NHOM_CD = ['Tài chính', 'Máy chủ, sao lưu', 'AI', 'Báo cáo, dữ liệu'];   // QĐ586 (nhóm Bộ não ẩn ở 0.10.0 – L16)
 const demChua = n => D.thongso ? D.thongso.thongso.filter(t => t.nhom === n && !giaiDoanSau(t) && !hienGt(t)).length : 0;
@@ -1588,6 +1588,7 @@ async function napTab() {
     if (S.tab === 'chung') await napChung();
     else if (S.tab === 'ketkhoa') await napKetKhoa();
     else if (S.tab === 'thongbao') await napThongBaoCd();
+    else if (S.tab === 'mucdung') await napMucDung();
     else if (S.tab === 'taikhoan') await napTaiKhoan();
     else if (S.tab === 'capnhat') { veCapNhat(await api('/capnhat')); await napCongCu(); }   // Y46: khối Công cụ AI
   } catch (e) { if (e.status && e.status !== 401) bao(e.message + '.', 'loi'); }
@@ -1868,6 +1869,118 @@ async function nutThongBaoCd(t, d) {
   await napThongBaoCd(); await demSo(); return true;
 }
 
+// ---- Màn 09 ngăn Mức dùng (bản DM-CAIDAT-010 15.Caidat_Mucdung_Thongbao, CDO 5.368 ĐẠT; QĐ564 B, QĐ416; chữ QĐ666 dòng 01–13;
+// ô "Cửa sổ 05 giờ" không icon (CPO ICON-ACTIVITY); biểu đồ cột Quychuan 5.13 mẫu B2 – rê / chạm / phím ← → hiện số; số từ /api/mucdung;
+// "Chưa đủ lượt để so" chỉ khi đỉnh 60 ngày = 0 (CPO NGUONG-AP); không hiện "≈ … đ" tới khi có tỷ giá (CPO MUCDUNG-TRALOI)
+ICON['chart-no-axes-column'] = ICON['chart-no-axes-column'] || svgLucide('chart-no-axes-column', ['<line x1="18" x2="18" y1="20" y2="10" />',
+  '<line x1="12" x2="12" y1="20" y2="4" />', '<line x1="6" x2="6" y1="20" y2="14" />']);   // Lucide (ISC) 0.468.0: ngăn Mức dùng (QĐ653)
+const CHU_MDG = {hmGoi: 'Hạn mức gói', phien: 'Phiên 05 giờ', tuan: 'Tuần', do: (a, b) => 'Đo lúc ' + a + (b ? ' · đặt lại 05 giờ lúc ' + b : ''),
+  cs: 'Cửa sổ 05 giờ', tok: 'token', dinhP: (p, d, k) => p + '% đỉnh 60 ngày (' + d + (k ? ', ' + k : '') + ')', chuaTran: 'Chưa đặt mức trần 05 giờ',
+  tranP: (p, t) => p + '% mức trần 05 giờ ' + t, chiPhi: m => 'Chi phí AI tháng ' + m, tamTinh: 'Tạm tính',
+  chiTiet: (a, b) => '= phí kỳ khai báo các gói ' + a + ' USD + khóa API ' + b + ' USD',
+  hmThang: x => 'Hạn mức chi tháng: ' + (x == null ? 'Chưa đặt' : soVN(x) + ' USD'), bd1: 'Cửa sổ 05 giờ · 24 giờ qua', bd2: 'Token mỗi giờ', bd3: 'Giờ bận · 07 ngày',
+  nay: 'Giờ này', truoc: 'Giờ trước', ban3: '03 giờ bận nhất', dinh: 'Đỉnh 60 ngày', tran: 'Mức trần', nguon: 'Nguồn: ', tatCa: 'Tất cả',
+  ghi1Dinh: p => 'Giờ này bằng <b>' + p + '%</b> đỉnh 60 ngày', ghi1Tran: p => 'Giờ này <b>' + p + '%</b> mức trần',
+  doi: 'nên dời việc nền sang giờ vắng', caoNhat: (v, h) => ' · cao nhất 24 giờ qua <b>' + v + '</b> lúc ' + h,
+  ghi2: (t, v, h) => '24 giờ qua: <b>' + t + '</b> token · cao nhất <b>' + v + '</b> lúc ' + h, ghi3: (b, v) => 'Bận nhất <b>' + b + '</b> · vắng nhất ' + v,
+  tip1: (h, v) => h + ' · ' + v + ' token trong 05 giờ', tip2: (h, v) => h + ' · ' + v + ' token', tip3: (h, v) => h + ' · trung bình ' + v + ' token',
+  chua: 'Chưa đủ lượt để so', coLuot: n => 'Có ' + hai(n) + ' lượt AI trong 24 giờ qua', coLuotNgan: n => 'có ' + hai(n) + ' lượt',
+  nganSach: 'Ngân sách', tran5: 'Mức trần 05 giờ', viDu: 'Ví dụ: 500.000', deTrong: d => 'Để trống: so với đỉnh 60 ngày' + (d ? ' (' + d + ' token)' : ''),
+  luu: 'Lưu', hmThangTen: 'Hạn mức chi tháng', chuaDat: 'Chưa đặt', datTs: 'Đặt ở Thông số', daLuu: 'Đã lưu mức trần 05 giờ.',
+  chan: 'Token đếm từ lượt AI chạy qua IGM360; % hạn mức gói lấy từ hãng.'};   // daLuu: TẠM (QĐ648) – câu báo xong sau khi bấm Lưu
+const fTok = v => !v ? '0' : v >= 1e6 ? soVN(Math.round(v / 1e5) / 10) + ' triệu' : v >= 1000 ? soVN(Math.round(v / 1000)) + ' nghìn' : soVN(v);
+const fUsd = v => { const x = Math.round((v || 0) / 1e4) / 100; return x ? soVN(x) : '0'; };   // phần triệu USD → USD, tối đa 02 số lẻ
+const mucMd = t => t >= .9 ? 'canh' : t >= .7 ? 'xem' : '';
+const tronMd = v => { if (v <= 0) return 1; const m = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v * 1.1 / m) * m; };
+const BD_MD = {};
+function cotMd(k, vals, o) {   // biểu đồ cột B2: cả vùng là 01 ô nhận rê / chạm, 01 điểm Tab, phím ← →
+  const mx = o.max, H = o.h, n = vals.length; BD_MD[k] = {vals, mx, tip: o.tip};
+  return '<div class="md-vung"><div class="md-truc" style="height:' + H + 'px">' + [1, .5, 0].map(f => '<span style="top:' + ((1 - f) * 100) + '%">' + (f ? fTok(Math.round(mx * f)) : '0') + '</span>').join('') + '</div>'
+    + '<div class="md-cot" style="height:' + H + 'px" data-mdcot="' + k + '" role="slider" tabindex="0" aria-label="' + esc(o.ten) + '" aria-valuemin="0" aria-valuemax="' + (n - 1)
+    + '" aria-valuenow="' + (n - 1) + '" aria-valuetext="' + esc(o.tip(n - 1)) + '">' + [.5, 1].map(f => '<div class="md-luoi" style="bottom:' + (f * 100) + '%"></div>').join('')
+    + (o.moc ? '<div class="md-moc" style="bottom:' + Math.min(100, o.moc / mx * 100) + '%"><span>' + o.mocTen + ' ' + fTok(o.moc) + '</span></div>' : '')
+    + vals.map((v, i) => '<div class="c' + (o.cls ? o.cls(v, i) : '') + '" style="height:' + Math.max(.5, v / mx * 100) + '%"></div>').join('')
+    + '<div class="md-do" hidden></div><div class="md-tip" hidden></div></div><div></div>'
+    + '<div class="md-trucx">' + o.nhan.map((x, i) => '<span>' + (i % 6 === 0 || i === n - 1 ? hai(x) + 'h' : '') + '</span>').join('') + '</div></div>';
+}
+function roMd(el, i, an) {
+  const c = BD_MD[el.dataset.mdcot], n = c.vals.length; i = Math.max(0, Math.min(n - 1, i)); el.dataset.i = i;
+  el.querySelectorAll('.c').forEach((x, j) => x.classList.toggle('ro', !an && j === i));
+  const d = el.querySelector('.md-do'), tp = el.querySelector('.md-tip'); d.hidden = tp.hidden = !!an; if (an) return;
+  d.style['left'] = tp.style['left'] = ((i + .5) / n * 100) + '%'; tp.style['bottom'] = 'calc(' + Math.min(100, c.vals[i] / c.mx * 100) + '% + 10px)'; tp.style.marginLeft = '0';
+  tp.textContent = c.tip(i); el.setAttribute('aria-valuenow', i); el.setAttribute('aria-valuetext', c.tip(i));
+  const b = el.getBoundingClientRect(), r = tp.getBoundingClientRect();
+  if (r.left < b.left) tp.style.marginLeft = (b.left - r.left) + 'px'; else if (r.right > b.right) tp.style.marginLeft = (b.right - r.right) + 'px';
+}
+function ganMd(g) {
+  g.querySelectorAll('[data-mdcot]').forEach(el => {
+    const n = () => BD_MD[el.dataset.mdcot].vals.length, ix = e => { const b = el.getBoundingClientRect(); return Math.floor((e.clientX - b.left) / b.width * n()); };
+    el.addEventListener('pointermove', e => roMd(el, ix(e))); el.addEventListener('pointerdown', e => roMd(el, ix(e)));
+    el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && document.activeElement !== el) roMd(el, 0, 1); });
+    el.addEventListener('focus', () => roMd(el, +(el.dataset.i ?? n() - 1))); el.addEventListener('blur', () => roMd(el, 0, 1));
+    el.addEventListener('keydown', e => { const i = +(el.dataset.i ?? n() - 1), k = {ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: n() - 1}[e.key];
+      if (k !== undefined) { roMd(el, k); e.preventDefault(); } });
+  });
+  const ch = g.querySelector('[data-mdnguon]'); if (ch) ch.onchange = () => { D.mdNguon = ch.value || null; napMucDung(); };
+}
+async function napMucDung() { D.md2 = await api('/mucdung' + (D.mdNguon ? '?nguon=' + encodeURIComponent(D.mdNguon) : '')); veMucDung(); }
+function veMucDung() {
+  const g = $('#ngan-mucdung'); if (!g || !D.md2) return; const k = D.md2, C = CHU_MDG, du = k.du, h2 = i => hai(k.gio[i]) + 'h';
+  const moc = k.tran || k.dinh, tl = moc ? k.cua_so / moc : 0, lop = k.tran ? mucMd(tl) : '';
+  const thanh = (p, ten) => '<span class="nh">' + ten + '</span><div class="md-th"><i class="' + mucMd((p || 0) / 100) + '" style="width:' + Math.min(100, p || 0) + '%"></i></div><b>' + (p == null ? '–' : p + '%') + '</b>';
+  let h = '<div class="md-o3"><div class="md-os"><div class="md-tn">' + icoMau(ICON.hourglass, 'var(--phu)', 16) + C.hmGoi + '</div>'
+    + (k.goi.length ? k.goi.map(x => '<div class="md-hm"><span class="ng">' + esc(x.ten || x.ma) + '</span>' + thanh(x.tyle_5gio, C.phien) + thanh(x.tyle_tuan, C.tuan)
+      + (x.do_luc ? '<span class="nh" style="grid-column:1/-1">' + C.do(gio(x.do_luc), x.datlai_5gio_luc ? gio(x.datlai_5gio_luc) : '') + '</span>' : '') + '</div>').join('') : '<div class="md-ph">–</div>')
+    + '</div><div class="md-os"><div class="md-tn">' + C.cs + '</div>';
+  if (!du) h += '<div class="md-so">–</div><div class="md-ph">' + C.chua + ' · ' + C.coLuotNgan(k.luot_24h) + '</div>';
+  else {
+    const kh = k.dinh_tu && k.dinh_den ? gio(k.dinh_tu).split(':')[0] + 'h–' + gio(k.dinh_den).split(':')[0] + 'h ' + ngay(k.dinh_tu).slice(0, 5) : '';
+    h += '<div class="md-so ' + lop + '">' + fTok(k.cua_so) + '<small>' + C.tok + '</small></div><div class="md-th"><i class="' + lop + '" style="width:' + Math.min(100, tl * 100).toFixed(1) + '%"></i></div>'
+      + (k.tran ? '<div class="md-ph' + (lop ? ' xem' : '') + '">' + C.tranP(Math.round(tl * 100), fTok(k.tran)) + '</div>'
+        : '<div class="md-ph">' + C.dinhP(Math.round(tl * 100), fTok(k.dinh), kh) + '</div><div class="md-ph">' + C.chuaTran + '</div>');
+  }
+  h += '</div><div class="md-os"><div class="md-tn">' + icoMau(ICON['circle-dollar-sign'] || ICON.wallet || ICON['receipt'] || '', 'var(--phu)', 16) + C.chiPhi(k.thang) + '</div>'
+    + '<div class="md-so">' + fUsd(k.tien_thang) + ' USD<span class="md-tag">' + C.tamTinh + '</span></div><div class="md-ph">' + C.chiTiet(fUsd(k.phi_goi), fUsd(k.tien_api)) + '</div>'
+    + '<div class="md-ph">' + C.hmThang(k.tran_tien_thang) + '</div></div></div>';
+  // biểu đồ 1: cửa sổ 05 giờ tại mỗi giờ
+  const csMax = Math.max(...k.cs_gio), csI = k.cs_gio.indexOf(csMax);
+  h += '<div class="md-bd"><div class="md-tdb"><b>' + C.bd1 + '</b>' + (du ? '<span class="r"><span class="md-cg"><i></i>' + C.nay + '</span><span class="md-cg"><i class="cu"></i>' + C.truoc + '</span></span>' : '') + '</div>'
+    + (!du ? '<div class="md-chua" style="height:150px"><b>' + C.chua + '</b>' + C.coLuot(k.luot_24h) + '</div>'
+      : cotMd('cs', k.cs_gio, {max: tronMd(Math.max(csMax, moc)), h: 140, ten: C.bd1, moc, mocTen: k.tran ? C.tran : C.dinh, nhan: k.gio,
+        tip: i => C.tip1(h2(i), fTok(k.cs_gio[i])), cls: (v, i) => i === 23 ? (k.tran && tl >= .9 ? ' canh' : ' nay') : ''})
+        + '<div class="md-ghi">' + (k.tran ? C.ghi1Tran(Math.round(tl * 100)) + (tl >= .7 ? ' · <span class="xem">' + C.doi + '</span>' : '') : C.ghi1Dinh(Math.round(tl * 100)))
+        + C.caoNhat(fTok(csMax), h2(csI)) + '</div>') + '</div>';
+  // biểu đồ 2 + 3: token mỗi giờ (lọc nguồn) · giờ bận 07 ngày
+  const tMax = Math.max(...k.tok_gio), tI = k.tok_gio.indexOf(tMax), tong = k.tok_gio.reduce((a, b) => a + b, 0);
+  const tenNg = k.nguon ? ((k.nguon_co.find(x => x.id === k.nguon) || {}).ten || k.nguon) : C.tatCa;
+  h += '<div class="md-bd2"><div class="md-bd"><div class="md-tdb"><b>' + C.bd2 + '</b><span class="r"><label class="md-chon">' + C.nguon + '<select data-mdnguon aria-label="' + C.nguon.trim() + '">'
+    + '<option value="">' + C.tatCa + '</option>' + k.nguon_co.map(x => '<option value="' + esc(x.id) + '"' + (x.id === k.nguon ? ' selected' : '') + '>' + esc(x.ten) + '</option>').join('')
+    + '</select></label></span></div>' + (!du ? '<div class="md-chua" style="height:110px"><b>' + C.chua + '</b>' + C.coLuot(k.luot_24h) + '</div>'
+      : cotMd('tok', k.tok_gio, {max: tronMd(tMax), h: 100, ten: C.bd2 + ' · ' + tenNg, nhan: k.gio, tip: i => C.tip2(h2(i), fTok(k.tok_gio[i])), cls: (v, i) => i === 23 ? ' nay' : ''})
+        + '<div class="md-ghi">' + C.ghi2(fTok(tong), fTok(tMax), h2(tI)) + '</div>') + '</div>';
+  const top = [...k.ban.keys()].sort((a, b) => k.ban[b] - k.ban[a]).slice(0, 3), mn = Math.min(...k.ban);
+  let ds = [], cur = [];
+  k.ban.forEach((v, i) => { if (v === mn) cur.push(i); else { if (cur.length > ds.length) ds = cur; cur = []; } }); if (cur.length > ds.length) ds = cur;
+  const vang = ds.length > 1 ? hai(ds[0]) + 'h–' + hai(ds[ds.length - 1]) + 'h' : ds.length ? hai(ds[0]) + 'h' : '';
+  h += '<div class="md-bd"><div class="md-tdb"><b>' + C.bd3 + '</b>' + (du ? '<span class="r"><span class="md-cg"><i></i>' + C.ban3 + '</span></span>' : '') + '</div>'
+    + (!du ? '<div class="md-chua" style="height:110px"><b>' + C.chua + '</b>' + C.coLuot(k.luot_24h) + '</div>'
+      : cotMd('ban', k.ban, {max: tronMd(Math.max(...k.ban)), h: 100, ten: C.bd3, nhan: k.ban.map((_, i) => i), tip: i => C.tip3(hai(i) + 'h', fTok(k.ban[i])), cls: (v, i) => top.includes(i) ? ' nay' : ''})
+        + '<div class="md-ghi">' + C.ghi3(top.map(i => hai(i) + 'h').join(', '), vang) + '</div>') + '</div></div>';
+  // khối Ngân sách: mức trần 05 giờ sửa ở đây; hạn mức chi tháng chỉ hiện số + nút sang Thông số (CDA 13.3 (1))
+  h += '<div class="md-bd md-ns"><div class="md-tdb"><b>' + C.nganSach + '</b></div><div class="md-nsg"><div class="md-nsm"><label class="md-tml" for="md-tran">' + C.tran5 + '</label>'
+    + '<div class="md-nsh"><span class="md-onhap"><input id="md-tran" inputmode="numeric" value="' + (k.tran ? soVN(k.tran) : '') + '" placeholder="' + C.viDu + '" aria-describedby="md-tran-g"><span class="dv">' + C.tok + '</span></span>'
+    + '<button class="btn btn-chinh" data-mdluu>' + C.luu + '</button></div><div class="md-ph" id="md-tran-g">' + C.deTrong(k.dinh ? fTok(k.dinh) : '') + '</div></div>'
+    + '<div class="md-nsm"><span class="md-tml">' + C.hmThangTen + '</span><div class="md-nsh">' + (k.tran_tien_thang == null ? '<span class="md-chip">' + C.chuaDat + '</span>' : '<span class="md-so20">' + soVN(k.tran_tien_thang) + ' USD</span>')
+    + '<button class="btn btn-phu" data-tab="thongso" data-nhom="AI">' + C.datTs + icoMau(ICON['circle-chevron-right'], 'var(--chu)', 16) + '</button></div></div></div></div>'
+    + '<div class="gd-dong">' + C.chan + '</div>';
+  g.innerHTML = h; ganMd(g);
+}
+async function nutMucDung(t, d) {
+  if (!('mdluu' in d)) return false;
+  try { await api('/mucdung/tran', {tran: $('#md-tran').value.trim()}); bao(CHU_MDG.daLuu, 'xong'); } catch (e) { if (e.status) bao(e.message + '.', 'loi'); }
+  await napMucDung(); return true;
+}
+
 // ---- Bấm
 document.addEventListener('click', async ev => {
   if (ev.target.classList && ev.target.classList.contains('lop')) { dongHop(); return; }
@@ -1881,6 +1994,7 @@ document.addEventListener('click', async ev => {
   else if (S.trang === '09' && S.tab === 'chung' && await nutChung(t, d)) { /* ngăn Chung */ }
   else if (await nutKetKhoa(t, d)) { /* ngăn Két khóa */ }
   else if (await nutThongBaoCd(t, d)) { /* ngăn Thông báo */ }
+  else if (await nutMucDung(t, d)) { /* ngăn Mức dùng */ }
   else if (d.tab) { S.tab = d.tab; if (d.tab === 'thongso') S.nhom = d.nhom || NHOM_CD[0]; if (t.closest('#cd-menu')) S.cdMan = 2; napTab(); }
   else if ('cdLui' in d) S.cdMan = 1;   // điện thoại: về danh sách ngăn
   else if ('mat' in d) { const i = $('#mk'), hien = i.type === 'password'; i.type = hien ? 'text' : 'password';   // QĐ369 (6), QĐ404
