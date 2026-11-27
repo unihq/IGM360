@@ -44,8 +44,8 @@ CHU = {
     # CDA Y49b N1, QĐ296 (Z24 dòng 1b): không có dòng F04 ghi ngày xóa
     "qv_het_han_khong_ngay": "Không tìm thấy ngày xóa dữ liệu bản sao.",
     # QUAYVE-CAIMOI-A (QĐ284, QĐ287; CDA 9.42): dữ liệu ở lược đồ mới hơn bản trước, không có bản chụp trước khi nâng.
-    # TẠM (QĐ648): DM soạn A/B cùng khuôn câu qv_het_han, CDO soát, CPO trình anh
-    "qv_luocdo_moi": "Không quay về được: dữ liệu tạo ở bản lược đồ mới, bản trước không đọc được.",
+    # QĐ655 (anh "Duyệt câu A"): dòng tự mất ở lần cập nhật đầu (qv_giu / qv_mat / qv_het_han)
+    "qv_luocdo_moi": "Không quay về được bản trước. Lý do: phần mềm cài mới trên máy chủ này, chưa có dữ liệu của bản trước.",
     "qv_khong_co": "Ảnh này chưa có bản trước để quay về",                   # ngoài bảng: nút không hiện khi không có bản trước
     "qv_mat": "Bản đang dùng đã nâng dữ liệu khi cập nhật. Quay về thì dữ liệu trả về lúc {luc} (trước khi cập nhật); "
               "việc nhập sau lúc đó không giữ được.",                                                             # 40

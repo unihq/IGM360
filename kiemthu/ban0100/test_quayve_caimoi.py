@@ -87,10 +87,18 @@ class KiemQuayVe(Nen):
         self.assertEqual((r.status_code, r.json()["detail"]), (400, antoan.CHU["qv_luocdo_moi"]))
         self.assertNotIn("chay_ban_truoc", antoan.doc(self.dl))
 
-    def test_chu_tam_dung_khuon(self):
-        self.assertTrue(antoan.CHU["qv_luocdo_moi"].endswith("."))
-        src = (Path(antoan.__file__)).read_text(encoding="utf-8")
-        self.assertIn("# TẠM (QĐ648)", src.split('"qv_luocdo_moi"')[0][-300:])   # chữ chờ DM soạn, CPO trình anh
+    def test_chu_qd655(self):
+        self.assertEqual(antoan.CHU["qv_luocdo_moi"],
+                         "Không quay về được bản trước. Lý do: phần mềm cài mới trên máy chủ này, chưa có dữ liệu của bản trước.")
+        self.assertNotIn("TẠM", (Path(antoan.__file__)).read_text(encoding="utf-8").split('"qv_luocdo_moi"')[0][-300:])
+
+    def test_dong_tu_mat_o_lan_cap_nhat_dau(self):
+        """QĐ655: lên bản sau cùng lược đồ (bản trước = bản cài mới) → dòng khóa mất, hiện qv_giu."""
+        (self.g / "ban_truoc" / "VERSION").write_text("0.10.0\n", encoding="utf-8")
+        self.ma_cu(f"PHIENBAN_LUOCDO = {khoitao.PHIENBAN_LUOCDO}\n")
+        with mock.patch.object(capnhat, "ban_dang_chay", return_value="0.10.1"):
+            q = antoan.thong_tin_quayve(self.dl)
+        self.assertEqual((q.get("khoa"), q["ban"], q["chu"]), (None, "0.10.0", antoan.CHU["qv_giu"]))
 
 
 if __name__ == "__main__":
