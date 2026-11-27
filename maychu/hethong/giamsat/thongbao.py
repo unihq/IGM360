@@ -499,6 +499,21 @@ def _chu(loai: str, khoa: str, d: dict, ten_khoa: dict, gio_sl: dict) -> str:
     return "Có cảnh báo mới"
 
 
+_ULID_MS = 10   # 10 ký tự đầu mã ULID = mili giây lúc tạo (maso.tao) – không phải ngày
+_DA_GHI_HONG: set[str] = set()   # khóa hỏng đã ghi nhật ký máy (01 lần / khóa, chuông hỏi lại mỗi 60 giây)
+
+
+def _moi(d: dict, moc: str | None, moc_ma: str | None) -> bool:
+    """Tin mới = tạo sau lần bấm "Đọc hết". Giờ lưu tới giây; cùng giây thì so mili giây trong mã ULID (10 ký tự đầu) –
+    tin tạo cùng mili giây tính là mới (thà báo lại còn hơn mất tin) – QA lượt 04 (b)."""
+    if not moc:
+        return True
+    luc = d["tao_luc"] or ""
+    if luc[:19] != moc[:19] or not moc_ma or len(moc_ma) != 26 or len(d["id"] or "") != 26:
+        return luc > moc
+    return d["id"][:_ULID_MS] >= moc_ma[:_ULID_MS]
+
+
 def _dong2(loai: str, khoa: str) -> dict:
     """QĐ662 dòng 2 của tin sự kiện. Tên miền: chữ đủ ở máy chủ. Múi giờ: trả `mg` = [cũ, mới] + mã nước để giao diện ghi
     tên múi theo QĐ652 ("Việt Nam – Hồ Chí Minh (UTC+7)" – tên nước tiếng Việt do trình duyệt dịch, như ngăn Chung)."""
@@ -522,7 +537,7 @@ def _dong2(loai: str, khoa: str) -> dict:
 def danh_sach(nguoi_id: str | None = None, thumuc: Path | None = None) -> dict:
     """Ngăn Thông báo (Z7b): dòng D03 còn mở qua `loc_quyen`; nhóm Mới (sau mốc đọc) rồi Đã xem, còn mở; trong nhóm
     đỏ → vàng → xanh rồi mới trước. Số trên chuông = số dòng Mới."""
-    moc = thongso.doc_moc_doc(thumuc)
+    moc, moc_ma = thongso.doc_moc(thumuc)
     cot = ("id", "khoa_chongtrung", "nguong", "giatri", "bang_nguon", "dong_nguon_id", "tao_luc")
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
@@ -538,9 +553,15 @@ def danh_sach(nguoi_id: str | None = None, thumuc: Path | None = None) -> dict:
         khoa = d["khoa_chongtrung"] or ""
         loai = khoa.split(":", 1)[0]
         muc, icon, di, cuon, noi = LOAI.get(loai, ("do", "circle-alert", "03", None, "Bảng điều hành"))
+        try:   # QA lượt 04 (a): 01 dòng sai định dạng khóa không làm hỏng cả chuông – bỏ qua dòng đó, ghi nhật ký máy
+            chu, d2 = _chu(loai, khoa, d, ten_khoa, gio_sl), _dong2(loai, khoa)
+        except Exception:
+            if khoa not in _DA_GHI_HONG:
+                _DA_GHI_HONG.add(khoa)
+                log.warning("Bỏ qua tin chuông sai định dạng khóa: %s", khoa, exc_info=True)
+            continue
         ds.append({"id": d["id"], "loai": loai, "muc": muc, "icon": icon, "di": di, "cuon": cuon, "noi": noi,
-                   "chu": _chu(loai, khoa, d, ten_khoa, gio_sl), **_dong2(loai, khoa), "luc": d["tao_luc"],
-                   "moi": not moc or (d["tao_luc"] or "") > moc})
+                   "chu": chu, **d2, "luc": d["tao_luc"], "moi": _moi(d, moc, moc_ma)})
     ds.sort(key=lambda x: x["luc"] or "", reverse=True)
     ds.sort(key=lambda x: (not x["moi"], THU_TU_MUC[x["muc"]]))
     return {"ds": ds, "so_moi": sum(1 for x in ds if x["moi"]), "moc_doc": moc}

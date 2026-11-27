@@ -111,7 +111,7 @@ class KiemGiaoDien(unittest.TestCase):
         for c in (">Âm thanh<", ">Chế độ màu<", ">Có gì mới<", ">Trợ giúp<", ">Đăng xuất<", "Vai trò: Chủ"):
             self.assertIn(c, self.h, c)
         self.assertIn("api('/thongso/chuong_tamtat/gat', {bat: !D.tbTamTat})", self.js)               # QĐ551
-        self.assertIn("(!tat || ds.some(x => x.moi && x.muc === 'do'))", self.js)                     # tạm tắt vẫn báo tin nghiêm trọng
+        self.assertIn("(!tat || x.muc === 'do')", self.js)                                              # tạm tắt vẫn báo tin nghiêm trọng (mới xuất hiện – CDA 14.1)
         self.assertIn("const KHOA_AM = 'igm360_amthanh';", self.js)                                   # QĐ547: theo máy
         src = (GOC / "maychu/hethong/giamsat/thongbao.py").read_text(encoding="utf-8")
         self.assertIn('return "Đã bỏ tên miền riêng" if not moi else "Đã đổi tên miền riêng" if cu else "Đã đặt tên miền riêng"', src)   # QĐ662

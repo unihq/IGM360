@@ -806,7 +806,9 @@ class KiemGiaoDienKhoi(unittest.TestCase):
         moi = {"ban": "2.1.341", "ra_luc": "2026-11-22T13:38:00Z", "uoc_chu": "185 MB"}   # 20:38 ngày 22/11 giờ Việt Nam
         da_kiem, chua_kiem = self.ve(self.khoi(self.goi(hang=moi)), self.khoi(self.goi(hang=moi), kiem_ngay="2026-11-23"))
         self.assertIn("Claude · Code có bản 2.1.341 (ra lúc 20:38 ngày 22/11). Tự nâng lúc 03:00 ngày mai.", da_kiem)
-        self.assertIn("Claude · Code có bản 2.1.341 (ra lúc 20:38 ngày 22/11). Tự nâng lúc 03:00 hôm nay.", chua_kiem)
+        # 0.10.0 SOAT-CAIDAT P3-3 (CDO 5.361, CPO giao – bản sửa lỗi): 14:30 đã qua 03:00 → lượt tới là 03:00 ngày mai (lịch kiểm bù
+        # ngay ở vòng kế tiếp nên trạng thái "chưa kiểm hôm nay" sau 03:00 chỉ thoáng qua); trước đây ghi "03:00 hôm nay" (giờ đã qua)
+        self.assertIn("Claude · Code có bản 2.1.341 (ra lúc 20:38 ngày 22/11). Tự nâng lúc 03:00 ngày mai.", chua_kiem)
         self.assertIn("Muốn có ngay thì bấm Nâng công cụ AI.", da_kiem)
         self.assertNotIn("Tự nâng khi bản ra đủ 24 giờ", da_kiem)
 

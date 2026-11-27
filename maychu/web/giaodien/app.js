@@ -237,10 +237,13 @@ const dongTb = x => '<button class="tha-muc tb-dong' + (x.moi ? ' moi' : '') + '
 const nuocVi = cc => { try { return cc ? new Intl.DisplayNames(['vi'], {type: 'region'}).of(cc) : ''; } catch (e) { return ''; } };
 const tenMuiTb = (tz, qg) => tz === 'Asia/Ho_Chi_Minh' ? CHU_MG.vn : (nuocVi((qg || {})[tz]) ? nuocVi(qg[tz]) + ' – ' : '') + thanhPho(tz) + ' (' + lechMui(tz) + ')';
 const dong2Tb = x => x.mg ? tenMuiTb(x.mg[0], x.qg) + ' → ' + tenMuiTb(x.mg[1], x.qg) : x.phu || '';
+// QĐ551, QĐ553 (4) – CDA phiếu 06 mục 14.1: kêu khi có tin MỚI XUẤT HIỆN (mã chưa thấy ở lần tải trước), không theo "số tăng";
+// đang Tạm tắt chỉ kêu khi tin mới xuất hiện là tin đỏ (nghiêm trọng). Lần tải đầu: chưa có tập mã → không kêu.
+const canKeu = (daThay, ds, tat) => !!daThay && ds.some(x => x.moi && !daThay.has(x.id) && (!tat || x.muc === 'do'));
 function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, chấm chưa đọc, "Hiện N tin đã đọc", chân bảng số bản + Có gì mới
   D.tbCuoi = d; const ds = d.thongbao || [], tat = !!d.tamtat, so = d.so_moi || 0;
-  if (D.tbSoMoi !== undefined && so > D.tbSoMoi && amBat() && (!tat || ds.some(x => x.moi && x.muc === 'do'))) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng
-  D.tbSoMoi = so; D.tbTamTat = tat; D.tbCoDo = ds.some(x => x.moi && x.muc === 'do'); if (d.ban) D.tbBan = d.ban; veBa();
+  if (canKeu(D.tbDaThay, ds, tat) && amBat()) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng mới
+  D.tbDaThay = new Set(ds.map(x => x.id)); D.tbSoMoi = so; D.tbTamTat = tat; D.tbCoDo = ds.some(x => x.moi && x.muc === 'do'); if (d.ban) D.tbBan = d.ban; veBa();
   const e = $('#tha-chuong'); if (!e) return;
   const the = D.tbThe || 'tb', loc = the === 'cxl' ? ds.filter(x => x.muc === 'do') : ds, moi = loc.filter(x => x.moi), cu = loc.filter(x => !x.moi);
   e.innerHTML = '<div class="tha-dau tl-dau"><b>' + CHU_BA.thongBao + '</b><button class="tl-nutchu" data-tamtat>' + icoMau(ICON[tat ? 'bell' : 'bell-off'], 'currentColor', 16)
@@ -766,7 +769,7 @@ const caCum = s => cum(s).replace(/(ngày|hôm) (mai|nay)|kiểm thử( đạt)?
 const caKiemToi = (t, gk) => {   // lượt kiểm 03:00 kế tiếp sau lúc t (ms)
   const v = caVn(t), lech = Date.parse(v + 'Z') - Math.floor(Date.parse(t) / 1000) * 1000, moc = Date.parse(v.slice(0, 10) + 'T' + hai(gk) + ':00:00Z') - lech;   // giờ kiểm theo múi đã chọn
   return Date.parse(t) < moc ? moc : moc + 864e5; };
-const caKiemTiep = (c, bay) => hai(c.gio_kiem ?? 3) + ':00 ' + (c.kiem_ngay === caVn(bay).slice(0, 10) ? CA.ngayMai : CA.homNay);   // dòng 5
+const caKiemTiep = (c, bay) => { const gk = c.gio_kiem ?? 3, v = caVn(bay); return hai(gk) + ':00 ' + (c.kiem_ngay === v.slice(0, 10) || +v.slice(11, 13) >= gk ? CA.ngayMai : CA.homNay); };   // dòng 5; đã qua giờ kiểm hôm nay thì lượt tới là ngày mai (SOAT-CAIDAT P3-3)
 const caHomNay = (t, bay) => !!t && caVn(t).slice(0, 10) === caVn(bay).slice(0, 10);
 function caMoi(x) {   // bản mới của hãng còn nâng được (chưa hỏng, chưa về tay)
   const h = x.hang; return !!(h && h.ban && caCao(h.ban, x.ban) && !(x.hong || []).includes(h.ban)) ? h : null;
@@ -794,7 +797,7 @@ function htmlCongCu(c, bay) {
       else o3 = '<span class="so" style="color:' + CA.mau.xanh + '">' + esc(hg.ban) + '</span>' + (hg.ra_luc && caHomNay(hg.ra_luc, bay) ? '<div class="t12 phu">' + cum(CA.raLuc(caLuc(hg.ra_luc, bay))) + '</div>' : '');
     }
     const coVe = !x.trong_goi && !dn && !c.tam_dung;   // QĐ308 điểm 10: bị chặn thì khóa + câu rê chuột (không ẩn)
-    h += '<div class="cl-hang cl5"><b>' + esc(x.ten) + '</b><span data-l="' + CA.cot[1] + '"><span class="so">' + caCum(x.trong_goi ? CA.oGoi(x.ban || '') : x.ban) + '</span>'
+    h += '<div class="cl-hang cl5"><b>' + esc(x.ten) + '</b><span data-l="' + CA.cot[1] + '"><span class="so">' + caCum(x.trong_goi ? (x.ban ? CA.oGoi(x.ban) : '–') : x.ban) + '</span>'
       + (x.truoc || x.truoc_goi ? '<div class="t12 phu">' + caCum(CA.truoc(x.truoc || caBan(x.ban_goi, true))) + '</div>' : '')
       + '</span><span data-l="' + CA.cot[2] + '">' + o3 + '</span>'
       + '<span data-l="' + CA.cot[3] + '">' + (gan ? ngay(caVn(gan)) + ' ' + caVn(gan).slice(11, 16) : CA.chuaNang) + '</span><span class="phai">'

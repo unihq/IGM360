@@ -108,13 +108,19 @@ MOC_DOC = "moc_doc_chuong"
 
 def doc_moc_doc(thumuc: Path | None = None) -> str | None:
     """Thời điểm bấm "Đọc hết" gần nhất (giờ Việt Nam), chưa bấm lần nào thì None."""
+    return doc_moc(thumuc)[0]
+
+
+def doc_moc(thumuc: Path | None = None) -> tuple[str | None, str | None]:
+    """(lúc bấm "Đọc hết", mã dòng P01 của lần bấm). Mã dòng là ULID – 10 ký tự đầu là mili giây lúc ghi: dùng phân xử tin
+    tạo cùng giây với lúc bấm (QA lượt 04 (b); 0 lược đồ)."""
     cn = ketnoi.mo("Dulieu_Chinh", thumuc)
     try:
-        d = cn.execute("SELECT giatri FROM thongso WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL"
+        d = cn.execute("SELECT giatri, id FROM thongso WHERE ten = ? AND congty_id IS NULL AND hieuluc_den IS NULL"
                        " ORDER BY tao_luc DESC, rowid DESC LIMIT 1", (MOC_DOC,)).fetchone()
     finally:
         cn.close()
-    return d[0] if d and d[0] else None
+    return (d[0], d[1]) if d and d[0] else (None, None)
 
 
 def dat_moc_doc(nguoi: str = "hethong", thumuc: Path | None = None, luc: datetime | None = None) -> str:

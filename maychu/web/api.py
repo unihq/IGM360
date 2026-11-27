@@ -493,8 +493,17 @@ def xem_kekhoa(p: dict = Depends(can_dang_nhap)):
     return {"ds": ds, "dem": dem, "tong": len(ds), "songay_baotruoc": n}
 
 
+# QĐ287, QĐ608 (CDA phiếu 06 mục 14.2, CPO PT-LUOT04-AP): "Thêm khóa" chung chặn ở máy chủ tới bản có kết nối dùng két
+# (0.12.0). Khi mở lại: kho.NOIBO phải gồm mọi tên dịch vụ của đường riêng (Drive google_oauth_ungdung + mã làm mới,
+# tiền tố madaihan, khóa nguồn AI) – kho.tim lấy khóa mới nhất theo tên nên Thêm trùng tên sẽ thay khóa đường riêng.
+THEM_KHOA_MO = False
+CHU_THEM_KHOA_CHAN = "Chưa thêm khóa được ở bản này"   # TẠM (QĐ648)
+
+
 @router.post("/kekhoa")
 def them_khoa(body: KhoaMoi, p: dict = Depends(can_dang_nhap)):
+    if not THEM_KHOA_MO:
+        raise HTTPException(400, CHU_THEM_KHOA_CHAN)
     if not body.giatri.strip() or not body.dichvu.strip() or body.dichvu in kho.NOIBO:
         raise HTTPException(400, "Thiếu tên dịch vụ hoặc giá trị khóa")
     ma = kho.cat(body.dichvu.strip(), body.giatri.strip(), han=_kiem_han(body.han), nguoi_nhap=p["nguoidung_id"])

@@ -245,12 +245,14 @@ class KiemDuongGoi(unittest.TestCase):
     def test_ket_khoa_qua_duong_goi(self):
         self.assertEqual(self.c.get("/api/kekhoa").json()["tong"], 0)                 # khóa 02 lớp không hiện
         self.assertEqual(self.c.post("/api/kekhoa", json={"dichvu": "groq", "giatri": "x"}).status_code, 403)   # thiếu dấu trang
+        # 0.10.0 (QĐ287, QĐ608; CPO PT-LUOT04-AP): "Thêm khóa" chung chặn ở máy chủ tới 0.12.0 – khóa có sẵn cất thẳng vào két
         r = self.c.post("/api/kekhoa", json={"dichvu": "groq", "giatri": "gsk-bimat-12345678", "han": "2099-01-01"}, headers=self.h)
-        ma = r.json()["id"]
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(self.c.get("/api/kekhoa").json()["tong"], 0)
+        ma = kho.cat("groq", "gsk-bimat-12345678", han="2099-01-01")
         kq = self.c.get("/api/kekhoa").json()
         self.assertEqual((kq["tong"], kq["ds"][0]["kytu_cuoi"], kq["songay_baotruoc"]), (1, "5678", 5))
         self.assertNotIn("bimat", self.c.get("/api/kekhoa").text)
-        self.assertEqual(self.c.post("/api/kekhoa", json={"dichvu": "groq", "giatri": "x", "han": "sai"}, headers=self.h).status_code, 400)
         self.assertEqual(self.c.post(f"/api/kekhoa/{ma}/doi", json={"giatri": "gsk-moi-87654321"}, headers=self.h).status_code, 200)
         self.assertEqual(self.c.get("/api/kekhoa").json()["ds"][0]["tinhtrang"], "khong_han")
         self.assertEqual(self.c.post(f"/api/kekhoa/{ma}/xoa", headers=self.h).json()["so_nguon_ngung"], 0)
