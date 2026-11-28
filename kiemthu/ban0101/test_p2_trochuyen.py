@@ -53,6 +53,11 @@ class KiemChuoi(unittest.TestCase):
         self.assertTrue(i < h.index('<div class="tc-nhap">', i) < h.index('<div class="tc-duoi">', i))
         self.assertIn("flex:none", self.luat(".tc-day"))
 
+    def test_o_go_che_do_toi(self):   # CPO QĐ687 kèm (CDO đo bd069da: Tối ô gõ nền rgb(59,59,59) trên khối rgb(31,33,37))
+        t = self.luat(".tc-nhap input")
+        for x in ("background:transparent", "color:var(--chu)"):
+            self.assertIn(x, t)
+
     def test_pd08_o_nhap_dien_thoai(self):   # QĐ677 + CDO: nền --khoi, kẻ trên --ke, đệm 8 / 4, trên thanh tab dưới
         t = self.luat(".mb #p08 .tc-day")
         for x in ("position:sticky", "bottom:var(--cao-tab,0px)", "background:var(--khoi)", "border-top:1px solid var(--ke)", "padding:8px 0 4px"):
@@ -61,7 +66,7 @@ class KiemChuoi(unittest.TestCase):
 
     def test_pd09_o_tim_cung_hang_tro_chuyen_ai(self):   # QĐ678 (2): 74–114, cao 40
         t = self.luat("#app:not(.mb) #p08 #tc-tim")
-        for x in ("height:40px", "margin:9px 12px 6px", "flex:none"):
+        for x in ("height:40px", "margin:9px 12px 6px", "flex:none", "width:auto"):   # width:auto: không tràn mép cột (CPO P2-COT)
             self.assertIn(x, t)
 
 

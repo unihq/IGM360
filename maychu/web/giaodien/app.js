@@ -79,6 +79,7 @@ function ve() {
   datDauMan();   // 0.10.1 (QĐ671 (4)): đầu màn ngoài vùng cuộn
   if (S.xem === 'mb') { const t = $('nav.tab-duoi'); if (t) document.documentElement.style.setProperty('--cao-tab', t.offsetHeight + 'px'); }   // 0.10.1 PD08 (QĐ677): ô nhập bám trên thanh tab
   doiViTri();   // 0.10.1: cụm chuông · âm thanh · chế độ màu cuối hàng đầu màn
+  if (S.trang === '08') veCot();   // 0.10.1 PD10, PD11: độ rộng / thu gọn cột hội thoại đã nhớ
   veNhom();   // Y52: thu gọn nhóm thanh trái
 }
 // 0.9.0 (QĐ387, khung ii-c2): khổ máy tính bỏ thanh trên, khối chuông + tài khoản (.vi-tri) đặt ngay dưới logo; điện thoại giữ ở thanh trên.
@@ -791,6 +792,7 @@ ICON['circle-chevron-right'] = svgLucide('circle-chevron-right', ['<circle cx="1
 ICON['circle-pause'] = ICON['circle-pause'] || svgLucide('circle-pause', ['<circle cx="12" cy="12" r="10" />',
   '<line x1="10" x2="10" y1="15" y2="9" />', '<line x1="14" x2="14" y1="15" y2="9" />']);
 ICON['circle-arrow-up'] = ICON['circle-arrow-up'] || svgLucide('circle-arrow-up', ['<circle cx="12" cy="12" r="10" />', 'm16 12-4-4-4 4', 'M12 16V8']);
+ICON['panel-left-open'] = ICON['panel-left-open'] || svgLucide('panel-left-open', ['<rect width="18" height="18" x="3" y="3" rx="2" />', 'M9 3v18', 'm14 9 3 3-3 3']);   // Lucide 0.468.0 (ISC): mở cột hội thoại (QĐ427, QĐ678)
 const caVn = t => theoMui(t);   // QĐ636: giờ theo múi đã chọn (tên cũ giữ, dùng trong khối Công cụ AI)
 const caSo = b => String(b || '0.0.0').split('.').map(x => parseInt(x, 10) || 0);
 const caCao = (a, b) => { const x = caSo(a), y = caSo(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
@@ -1803,7 +1805,38 @@ function veCheDoTha() {
     + '" role="menuitemradio" aria-checked="' + (k === c) + '" data-cdmau="' + k + '">' + icoMau(ICON[ic], 'currentColor', 18) + '<span class="f1">' + TEN_CHEDO[k] + '</span>'
     + (k === c ? icoMau(ICON.check, 'var(--xanh-chu)', 16) : '') + '</button>').join('');
 }
-dienIco(document); veBa();
+// <COTHT> 0.10.1 P3 – kéo độ rộng, thu gọn cột hội thoại (QĐ426, QĐ427, QĐ672; Quychuan dòng 418; phiếu PD10, PD11; CDA SOAT-PD0101:
+// khóa trình duyệt kiểu igm360_<tên>, giá trị hỏng / rỗng về mặc định). Trạng thái đặt trên #p08, không trên #app (ve() ghi đè lớp #app – G09).
+const CHU_COT = {thu: 'Thu gọn cột', mo: 'Mở lại cột',   // QĐ686 (anh "C nhé"): nút panel-left-close / panel-left-open ở dải 56 px
+  keo: 'Kéo đổi độ rộng danh sách',   // đã duyệt QĐ455 (bảng chữ TK-CHAT dòng 19)
+  tim: 'Tìm hội thoại cũ'};   // QĐ687 (anh "A. 03 nút"): nút tìm ở dải – mở lại cột + con trỏ vào ô tìm
+const KHOA_COT = 'igm360_tc_cot', KHOA_THU = 'igm360_tc_thu', COT_MD = 260, COT_MIN = 240, COT_MAX = 420, KHE_COT = 8, KHUNG_MIN = 480;
+const tranCot = khung => Math.max(COT_MIN, Math.min(COT_MAX, khung - KHE_COT - KHUNG_MIN));
+const kepCot = (w, khung) => { const t = tranCot(khung), s = w === null || w === undefined ? '' : String(w).trim(), n = Number(s);
+  return s === '' || !Number.isFinite(n) ? Math.min(COT_MD, t) : Math.round(Math.max(COT_MIN, Math.min(t, n))); };
+const docCot = () => { try { return localStorage.getItem(KHOA_COT); } catch (e) { return null; } };
+const luuCot = w => { try { localStorage.setItem(KHOA_COT, String(w)); } catch (e) { /* máy chặn lưu: lần sau dùng mặc định */ } };
+const docThu = () => { try { return localStorage.getItem(KHOA_THU) === '1'; } catch (e) { return false; } };   // giá trị lạ: coi là mở
+function datThu(thu, p) { try { localStorage.setItem(KHOA_THU, thu ? '1' : '0'); } catch (e) { /* máy chặn lưu */ } if (p) p.classList.toggle('thu-cot', thu); }
+function veCot(w) {   // áp độ rộng (đã kẹp) + trạng thái thu gọn lên #p08; điện thoại không áp
+  const p = $('#p08'), tc = p && p.querySelector('.tc'); if (!tc || S.xem === 'mb') return null;
+  const k = kepCot(w === undefined ? docCot() : w, tc.clientWidth); p.style.setProperty('--tc-cot', k + 'px');
+  const v = p.querySelector('.tc-vach'); if (v) { v.setAttribute('aria-valuenow', k); v.setAttribute('aria-valuemax', tranCot(tc.clientWidth)); }
+  p.classList.toggle('thu-cot', docThu()); return k; }
+function ganChuCot() {
+  [['[data-tc-thu]', CHU_COT.thu], ['[data-tc-mo]', CHU_COT.mo], ['[data-tc-timdai]', CHU_COT.tim], ['#p08 .tc-vach', CHU_COT.keo]].forEach(([q, c]) => {
+    const e = $(q); if (e) { e.setAttribute('aria-label', c); e.setAttribute('title', c); } }); }
+let keoCot = null;
+document.addEventListener('pointerdown', ev => { const v = ev.target.closest && ev.target.closest('#p08 .tc-vach'); if (!v || S.xem === 'mb') return;
+  keoCot = {x: ev.clientX, w: $('#p08 .tc-trai').getBoundingClientRect().width, v}; v.classList.add('keo'); v.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+document.addEventListener('pointermove', ev => { if (keoCot) veCot(keoCot.w + ev.clientX - keoCot.x); });
+document.addEventListener('pointerup', ev => { if (!keoCot) return; const w = veCot(keoCot.w + ev.clientX - keoCot.x); keoCot.v.classList.remove('keo'); keoCot = null; if (w) luuCot(w); });
+document.addEventListener('dblclick', ev => { if (!(ev.target.closest && ev.target.closest('#p08 .tc-vach'))) return; const w = veCot(COT_MD); if (w) luuCot(w); });
+document.addEventListener('keydown', ev => { if (!(ev.target.closest && ev.target.closest('#p08 .tc-vach')) || !/^Arrow(Left|Right)$/.test(ev.key)) return;
+  ev.preventDefault(); const w = veCot($('#p08 .tc-trai').getBoundingClientRect().width + (ev.key === 'ArrowLeft' ? -16 : 16)); if (w) luuCot(w); });
+window.addEventListener('resize', () => { if (S.trang === '08') veCot(); });
+// </COTHT>
+dienIco(document); veBa(); ganChuCot();
 
 // ---- Màn 09 ngăn Két khóa (bản DM-03NGAN-0100; QĐ661: 1440 bảng, 1024 và 390 hàng gọn + nút ⋯ mở Đổi / Xóa; chữ bản GĐ 1 màn 09, QĐ297)
 ICON.ellipsis = ICON.ellipsis || svgLucide('ellipsis', ['<circle cx="12" cy="12" r="1" />', '<circle cx="19" cy="12" r="1" />', '<circle cx="5" cy="12" r="1" />']);   // Lucide (ISC): nút ⋯
@@ -2111,6 +2144,9 @@ document.addEventListener('click', async ev => {
     catch (e) { bao('Gọi thử chưa đạt: ' + cau(e.message), 'loi'); } t.disabled = false; await napMoHinh(); return; }
   else if (d.chep) { try { await navigator.clipboard.writeText(d.chep); bao('Đã chép mã thiết bị.', 'xong'); } catch (e) { bao('Bạn chép tay mã ' + d.chep + '.', 'thongtin'); } }
   else if (d.chepTin) { const x = (D.tin || []).find(y => y.id === d.chepTin); if (x) { try { await navigator.clipboard.writeText(x.noidung); bao('Đã chép câu trả lời.', 'xong'); } catch (e) { /* */ } } }
+  else if ('tcThu' in d) datThu(true, $('#p08'));   // 0.10.1 PD11 (QĐ427): thu cột hội thoại thành dải 56 px
+  else if ('tcMo' in d) { datThu(false, $('#p08')); veCot(); }
+  else if ('tcTimdai' in d) { datThu(false, $('#p08')); veCot(); const i = $('#tc-tim input'); if (i) i.focus(); }   // CDO F7: mở cột + con trỏ vào ô tìm
   else if ('tcMoi' in d) { boLuot(); D.htId = null; D.ghimMoi = null; dongMh(); D.tin = []; $('#ds-tin').innerHTML = ''; $('#tc-tieude').textContent = 'Trò chuyện mới'; S.tc = 'rong'; veDsHt(); $('#tc-o').focus(); }
   else if (d.ht) { await moHt(d.ht); return; }
   else if ('tcMau' in d) { await guiTin(t.textContent); return; }
