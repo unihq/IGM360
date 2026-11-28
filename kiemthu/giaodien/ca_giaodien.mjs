@@ -163,7 +163,7 @@ const DO_M10 = `(async () => { ${CONG_CU} const ngu = ms => new Promise(r => set
     ds_cuon: [ds.clientHeight, ds.scrollHeight, ds.scrollTop], thanh_cuon_px: ds.offsetWidth - ds.clientWidth, hang_truoc: truoc.hang, hang_sau: R(hang),
     trang_troi: ct.scrollTop !== truoc.ct || document.scrollingElement.scrollTop !== truoc.trang}; })()`;
 
-// M07 (PD10, PD11): cột hội thoại – toạ độ tính theo bố cục chốt: thẻ cột trái mép trái 248, vạch kéo ở [248 + cột, +8], tâm +4;
+// M07 (PD10, PD11): cột hội thoại – tọa độ tính theo bố cục chốt: thẻ cột trái mép trái 248, vạch kéo ở [248 + cột, +8], tâm +4;
 // nút thu (cuối hàng đầu cột) tâm x = 248 + 260 − 1 − 10 − 18 = 479, y = 37; nút "Hiện lịch sử" ở dải tâm x = 248 + 28 = 276, y = 37
 const DAT_LAI = `(async () => { try { localStorage.removeItem('igm360_tc_cot'); localStorage.removeItem('igm360_tc_thu'); } catch (e) {}
   window.dispatchEvent(new Event('resize')); await new Promise(r => setTimeout(r, 300)); })()`;

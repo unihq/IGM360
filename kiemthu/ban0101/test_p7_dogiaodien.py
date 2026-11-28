@@ -51,7 +51,11 @@ class KiemLuong(unittest.TestCase):
         self.assertEqual(r.returncode, 0, "tugop.yml đã đổi so với 0.10.0")
 
     def test_pd28_kich_ban_khong_lo_may(self):   # K3, K4: dò bằng mẫu chung, không ghi tên người dùng thật
-        mau = [r"[A-Za-z]:\\\\", r"9\. AI", r"[A-Za-z]:\\\\Users\\\\[^\\\\]+", r"[A-Z0-9]{1,6}~1", r"\.edge_an", r"msedge\.exe", r"(?<![A-Za-z0-9])[A-Z2-7]{16,}(?![A-Za-z0-9])"]
+        mau = [r"[A-Za-z]:\\", r"[A-Za-z]:/Users/", r"[A-Za-z]:\\Users\\[^\\]+", r"9\. AI", r"[A-Z0-9]{1,6}~1",
+               r"\.edge_an", r"msedge\.exe", r"(?<![A-Za-z0-9])[A-Z2-7]{16,}(?![A-Za-z0-9])"]   # CDA P7-SOAT-K1K8: bắt cả 01 gạch ngược, gạch xuôi
+        bat = lambda t: any(re.search(m, t) for m in mau)   # bài tự chứng minh bắt đủ 04 dạng đường dẫn máy
+        for t in ("C:" + chr(92) + "Users" + chr(92) + "abc", "D:" + chr(92) + "Tam", "C:/Users/abc", "C:" + chr(92) * 2 + "Users"):
+            self.assertTrue(bat(t), t)
         tep = sorted(p for p in GDO.iterdir() if p.is_file())
         self.assertEqual({p.name for p in tep}, {"chay_do.mjs", "ca_giaodien.mjs", "maythu_ci.py"})
         for p in tep + [LUONG]:

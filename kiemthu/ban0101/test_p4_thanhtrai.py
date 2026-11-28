@@ -89,7 +89,7 @@ class KiemChuoi(unittest.TestCase):
 
     def test_pd26_khoi_giua_cuon_rieng(self):
         g = self.luat("#app:not(.mb) nav.menu .menu-giua")
-        for x in ("flex:1", "min-height:0", "overflow-y:auto"):
+        for x in ("flex:1", "min-height:min(120px,20vh)", "overflow-y:auto"):   # QA C01: khối giữa không co về 0 ở màn 1024×600
             self.assertIn(x, g)
         self.assertNotIn("#app:not(.mb) nav.menu{overflow-y:auto}", self.html)
         self.assertIn("nav.querySelectorAll('.nhom')", self.js)
@@ -103,8 +103,17 @@ class KiemChuoi(unittest.TestCase):
         m = self.luat("#app:not(.mb) #p09.co-chan .cd-menu::after")
         for x in ("height:51px", "margin-top:auto", "border-top:1px solid var(--ke)"):
             self.assertIn(x, m)
-        self.assertIn("display:none", self.luat("#app:not(.mb) #p09.co-chan .cd-than .gd-dong"))
+        self.assertIn("display:none", self.luat("#app:not(.mb) #p09.co-chan .cd-than .gd-dong.o-chan"))   # QA C05: chỉ dòng đưa xuống dải
+        self.assertEqual(self.luat("#app:not(.mb) #p09.co-chan .cd-than .gd-dong"), "")
         self.assertIn("display:none", self.luat(".cd-chan"))
+
+    def test_qa_c01_hien_them_man_thap(self):   # QA C01: danh sách "Hiện thêm" ngoài khối giữa – màn thấp tự co, cuộn riêng
+        g = self.luat("#app:not(.mb) nav.menu .gd-sau")
+        for x in ("flex:0 1 auto", "min-height:0", "flex-direction:column"):
+            self.assertIn(x, g)
+        d = self.luat("#app:not(.mb) nav.menu .gd-ds")
+        for x in ("min-height:0", "overflow-y:auto"):
+            self.assertIn(x, d)
 
 
 @unittest.skipUnless(shutil.which("node"), "máy không có node")
@@ -136,14 +145,15 @@ class KiemNode(unittest.TestCase):
     def test_pd27_chon_dong_ghi_chu(self):
         a = self.a
         ham = a[a.index("function datChanCd() {"):a.index("\n}\n", a.index("function datChanCd() {")) + 3]
-        ma = ("const g = (t, an) => ({innerHTML: t, closest: q => an ? {} : null});"
+        ma = ("const g = (t, an) => { const o = {innerHTML: t, lop: new Set(), closest: q => an ? {} : null}; o.classList = {add: c => o.lop.add(c), remove: c => o.lop.delete(c)}; return o; };"
               "let lop = null; const p9 = {classList: {toggle: (c, b) => { lop = [c, b]; }}}; const d = {innerHTML: ''};"
               "let DS = []; const S = {xem: 'dt', trang: '09'};"
-              "const $ = q => ({'#p09': p9, '#cd-chan': d})[q]; const $$ = q => DS;\n" + ham)
-        kq = self.chay(ma, "[(DS = [g('A', true), g('B', false)], datChanCd(), [d.innerHTML, lop]),"
-                           " (DS = [g('A', true)], datChanCd(), [d.innerHTML, lop]),"
-                           " (DS = [g('C', false)], S.xem = 'mb', datChanCd(), [d.innerHTML, lop])]")
-        self.assertEqual(kq, [["B", ["co-chan", True]], ["", ["co-chan", False]], ["", ["co-chan", False]]])
+              "const $ = q => ({'#p09': p9, '#cd-chan': d})[q]; const $$ = q => q.includes('.o-chan') ? DS.filter(x => x.lop.has('o-chan')) : DS;"
+              "const an = () => DS.map(x => x.lop.has('o-chan'));\n" + ham)
+        kq = self.chay(ma, "[(DS = [g('A', false), g('B', false)], datChanCd(), [d.innerHTML, lop, an()]),"   # 02 dòng: chỉ dòng cuối xuống dải (QA C05)
+                           " (DS = [g('A', true)], datChanCd(), [d.innerHTML, lop, an()]),"
+                           " (DS = [g('C', false)], S.xem = 'mb', datChanCd(), [d.innerHTML, lop, an()])]")
+        self.assertEqual(kq, [["B", ["co-chan", True], [False, True]], ["", ["co-chan", False], [False]], ["", ["co-chan", False], [False]]])
 
 
 if __name__ == "__main__":

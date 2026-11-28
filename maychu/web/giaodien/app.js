@@ -1854,6 +1854,7 @@ window.addEventListener('resize', () => { if (S.trang === '08') veCot(); });
 function datChanCd() {
   const p = $('#p09'), d = $('#cd-chan'); if (!p || !d) return;
   const g = S.xem !== 'mb' && S.trang === '09' ? [...$$('#p09 .cd-than .gd-dong')].filter(x => !x.closest('[hidden]')).pop() : null;
+  $$('#p09 .cd-than .gd-dong.o-chan').forEach(x => { if (x !== g) x.classList.remove('o-chan'); }); if (g) g.classList.add('o-chan');   // QA C05: chỉ ẩn dòng đưa xuống dải
   d.innerHTML = g ? g.innerHTML : ''; p.classList.toggle('co-chan', !!g);
 }
 { const t = $('#p09 .cd-than'); if (t) new MutationObserver(datChanCd).observe(t, {childList: true, subtree: true, attributes: true, attributeFilter: ['hidden']}); }

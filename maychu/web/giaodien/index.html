@@ -1064,7 +1064,9 @@ body.dien-thoai #app.mb{overflow:visible}
 #app:not(.mb) nav.menu .nhom-ds.rieng::after{content:"";position:absolute;left:18px;right:18px;bottom:0;border-top:1px solid var(--ke)}
 #app.thu:not(.mb) nav.menu .nhom-ds.rieng{margin-top:19px}
 #app.thu:not(.mb) nav.menu .nhom-ds.rieng::after{left:12px;right:12px}
-#app:not(.mb) nav.menu .menu-giua{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+#app:not(.mb) nav.menu .menu-giua{flex:1;min-height:min(120px,20vh);overflow-y:auto;overflow-x:hidden}   /* QA C01: màn 1024×600 mở cả HỆ THỐNG và "Hiện thêm" – khối giữa còn tối thiểu 03 dòng, không co về 0 */
+#app:not(.mb) nav.menu .gd-sau{flex:0 1 auto;min-height:0;display:flex;flex-direction:column}   /* QA C01: màn thấp – danh sách "Hiện thêm" tự co, cuộn riêng; HỆ THỐNG, chân không bị cắt */
+#app:not(.mb) nav.menu .gd-ds{min-height:0;overflow-y:auto}
 #app:not(.mb) .nhom-nut .nhom-ic{flex:none}
 #app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]{margin-top:auto;position:relative;padding-top:8px}
 #app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]::before{content:"";position:absolute;left:12px;right:12px;top:0;border-top:1px solid var(--ke)}
@@ -1081,7 +1083,7 @@ body.dien-thoai #app.mb{overflow:visible}
    chân khối (.gd-dong cuối ngăn) thì dải 52 (51 + viền 01) ở đáy 02 khối: khối chi tiết chứa dòng ghi chú, khối menu dải trống */
 .cd-chan{display:none}
 #app:not(.mb) #p09.co-chan .cd-chan{display:flex;align-items:center;flex:none;box-sizing:border-box;height:51px;border-top:1px solid var(--ke);padding:0 20px;font-size:12px;color:var(--phu)}
-#app:not(.mb) #p09.co-chan .cd-than .gd-dong{display:none}
+#app:not(.mb) #p09.co-chan .cd-than .gd-dong.o-chan{display:none}   /* QA C05: chỉ ẩn đúng dòng đã đưa xuống dải */
 #app:not(.mb) #p09.co-chan .cd-menu::after{content:"";flex:none;box-sizing:border-box;height:51px;margin-top:auto;border-top:1px solid var(--ke)}
 /* 0.10.1 P5 – 03 thẻ nguồn AI màn Mô hình AI (QĐ680, QĐ682; VE0101_12, CDO CUOI-b): 03 thẻ luôn 01 hàng rộng bằng nhau (lưới 03 cột giữ);
    mỗi thẻ là lưới con 03 hàng (đầu thẻ · thân · hàng nút / dòng Chi phí) dùng chung dòng lưới → cao bằng nhau, nút chính cùng đường,
@@ -1092,7 +1094,7 @@ body.dien-thoai #app.mb{overflow:visible}
 .than-goi{display:flex;flex-direction:column;gap:12px;min-width:0}
 #p13 .o-goi>.chan-goi{align-self:start}
 #p13 .o-goi>.kv{align-self:end}
-@container (max-width:392px){   /* thẻ 430 = thân 392 (đệm 18 × 2 + viền 1 × 2) */
+@container (width < 392px){   /* thẻ hẹp hơn 430 (CDO) = thân hẹp hơn 392 (đệm 18 × 2 + viền 1 × 2); thẻ đúng 430 giữ 01 hàng (QA C06) */
  #p13 .tk-dong{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;row-gap:4px;align-items:center}
  #p13 .tk-dong>.f1{display:contents}
  #p13 .tk-dong>.anh-dd{grid-column:1;grid-row:1}

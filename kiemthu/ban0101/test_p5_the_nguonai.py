@@ -53,7 +53,8 @@ class KiemChuoi(unittest.TestCase):
     def test_pd20_the_hep(self):
         self.assertIn("container-type:inline-size", self.luat("#p13 .than-goi"))   # không đặt ở thẻ: mất lưới con (đo 1280: grid-template-rows none)
         self.assertNotIn("container-type", self.luat("#p13 .goi3>.the.o-goi"))
-        k = self.html[self.html.index("@container (max-width:392px){"):]   # thẻ 430 = thân 392
+        self.assertNotIn("@container (max-width:392px)", self.html)   # QA C06: thẻ đúng 430 (thân 392) giữ 01 hàng
+        k = self.html[self.html.index("@container (width < 392px){"):]   # thẻ hẹp hơn 430 = thân hẹp hơn 392
         k = k[:k.index("}\n}") + 3] if "}\n}" in k else k[:2000]
         for x in ("#p13 .tk-dong{display:grid;grid-template-columns:28px minmax(0,1fr)", "#p13 .tk-dong>.f1{display:contents}",
                   "#p13 .tk-dong>.nhan,#p13 .tk-dong>.ttag{grid-column:1/-1;justify-self:start"):
@@ -89,6 +90,38 @@ class KiemNode(unittest.TestCase):
                            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout), [[["dong", "than-goi", "dong chan-goi"], 0]] * 2)
+
+    def test_qa_c06_03_con_moi_trang_thai(self):   # QA C06: đủ 03 con ở mọi trạng thái thẻ (lưới con 03 dòng không lệch)
+        a = (GD / "app.js").read_text(encoding="utf-8").replace("\r\n", "\n")
+        goi = doan_ham(a, "function theGoi(g, ds, nguon, uu) {")
+        khoi = "s => '<div class=\"k\">' + s + '</div>'"
+        ma = ("let D; const GOI_NGAN = {claude: 'Gói Claude', chatgpt: 'Gói ChatGPT'}; const GOI_TEN = {claude: 'Claude · Code', chatgpt: 'ChatGPT · Codex'};"
+              "const CHU_MDH = 'Mã dài hạn'; const ICON = new Proxy({}, {get: () => '<svg></svg>'}); const esc = s => String(s); const logoGoi = g => '<i></i>';"
+              "const oTrong = ds => 1; const tieuHetMh = () => ''; const tenTk = x => 'Tài khoản ' + x.taikhoan; const dnLuc = () => 'lúc 1'; const gio = s => s; const luc = s => s;"
+              "const K = " + khoi + "; const theMd = () => K('md'); const coBaoLayLai = () => true; const baoLayLai = () => K('lay'); const thanhHm = () => K('hm');"
+              "const theMdHet = () => K('het'); const theMdKetNoi = () => K('mdh'); const giuTienTo = s => s; const cum = s => s; const cau = s => s; const canhTk = () => K('canh');\n" + goi)
+        dem = ("(h => { let d = 0; const con = []; const re = /<(\\/?)div\\b([^>]*)>/g; let m; while ((m = re.exec(h))) { if (m[1]) d--; else {"
+               " if (d === 1) con.push((m[2].match(/class=\"([^\"]*)\"/) || [])[1] || ''); d++; } } return [con, d]; })")
+        moi = "() => ({dn: {}, mdh: {}, trung: {}, trungTk: {}, trungChu: {}})"
+        noi = "[{taikhoan: 1, da_noi: true, ma: 'c1', mota_goi: 'Max'}]"
+        ng = "[{ma: 'c1', id: 'n1', trangthai: 'dung', tyle_5gio: 10, tyle_tuan: 20, do_luc: 'x'}, {ma: 'c2', id: 'n2', trangthai: 'dung'}]"
+        ca = [   # tên ca, chuẩn bị D, lời gọi
+            ("chua_co", "", "theGoi('claude', [], [], 1)"),
+            ("da_ket_noi", "", "theGoi('claude', " + noi + ", " + ng + ", 1)"),
+            ("dang_ket_noi_md", "D.mdh = {1: {buoc: 1}};", "theGoi('claude', [], [], 1)"),
+            ("dang_nhap_chatgpt", "D.dn = {chatgpt: {url: 'https://a.b', tk: 1, ma: 'AB'}};", "theGoi('chatgpt', [], [], 2)"),
+            ("loi_dang_nhap_claude", "D.dn = {claude: {url: 'https://a.b', tk: 2, loi: 'Sai mã'}};", "theGoi('claude', " + noi + ", " + ng + ", 1)"),
+            ("loi_chatgpt", "D.dn = {chatgpt: {url: 'https://a.b', tk: 1, ma: 'AB', loi: 'Hết giờ'}};", "theGoi('chatgpt', [], [], 2)"),
+            ("hai_tai_khoan", "", "theGoi('chatgpt', [{taikhoan: 1, da_noi: true, ma: 'c1'}, {taikhoan: 2, da_noi: true, ma: 'c2'}], " + ng + ", 2)"),
+            ("trung", "D.trung = {chatgpt: 1}; D.trungChu = {chatgpt: 'Trùng'};", "theGoi('chatgpt', " + noi + ", " + ng + ", 2)"),
+            ("ma_het_han", "", "theGoi('claude', [{taikhoan: 1, ma: 'c1', ma_daihan: {het: true}}], [], 1)"),
+        ]
+        goi_ca = ", ".join("(D = (" + moi + ")(), " + (c[1].rstrip(";").replace(";", ",") if c[1] else "0") + ", " + dem + "(" + c[2] + "))" for c in ca)
+        r = subprocess.run(["node", "-e", ma + "\nconsole.log(JSON.stringify([" + goi_ca + "]));"], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        kq = json.loads(r.stdout)
+        for (ten, _, _), x in zip(ca, kq):
+            self.assertEqual(x, [["dong", "than-goi", "dong chan-goi"], 0], ten)
 
 
 if __name__ == "__main__":
