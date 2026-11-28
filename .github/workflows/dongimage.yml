@@ -48,6 +48,26 @@ jobs:
           echo "::${khoa}::"
           exit "$ma"
 
+  # 0.10.1 P7 (QĐ683): đo giao diện như người dùng bằng trình duyệt có sẵn của máy GitHub – máy thử trong thư mục tạm, tài khoản
+  # thử, mật khẩu và khóa 02 lớp tạo lúc chạy. Việc riêng: chỉ quyền đọc mã, 0 khóa bí mật, 0 gói; không tải ảnh lên, chỉ ghi bảng
+  # số đo vào tóm tắt lượt chạy (CDA K1–K8, CPO chốt K2, K8 cách B). continue-on-error: chỉ báo, chưa chặn – bỏ dòng này sau 05 lần
+  # chạy ổn định; khi đó việc này đỏ thì cả luồng đỏ, tugop.yml không tự gộp. Việc dongimage vẫn chỉ cần kiemthu.
+  dogiaodien:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cài thư viện đã khai
+        run: pip install -r requirements.txt
+      - name: Đo giao diện
+        run: python kiemthu/giaodien/maythu_ci.py
+
   dongimage:
     needs: kiemthu
     # Nhánh riêng chỉ chạy bài kiểm, không đóng image. (Y43 đã đo lớp bằng nhãn thu-<sha> trên nhánh capnhat-nhanh, xong
