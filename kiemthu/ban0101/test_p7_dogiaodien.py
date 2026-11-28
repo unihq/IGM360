@@ -92,6 +92,11 @@ class KiemCham(unittest.TestCase):   # ngưỡng chấm của kịch bản – c
         k = lambda vt: {"vt": vt, "ngoai_px": 0, "day_khoi": 784, "mep_tab": 784}
         self.assertEqual(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [k(0), k(0.5), k(1)]}}), [])   # khít 0 px: đạt
         self.assertIn(("M03", {"BAI": "M03", "KHO": "390", "CHEDO": "toi"}), self.m.LUOT)   # đo cả chế độ Tối (vạch nền chỉ thấy ở Tối)
+        nhan = [self.m.nhan_luot(b, v) for b, v in self.m.LUOT]   # CPO NHAN-M03: mỗi lượt 01 nhãn riêng ở bảng + chú thích
+        self.assertEqual(len(nhan), len(set(nhan)), nhan)
+        self.assertIn("M03 Tối", nhan)
+        ds = self.m.chu_thich([("M03", 3, 3, []), ("M03 Tối", 1, 0, ["M03_p08 390x844 toi: lệch"])], [("M03 Tối", {"gt": {"kq": "toi"}})])
+        self.assertTrue(ds[0].startswith("::error title=Do giao dien M03 Tối::") and '"toi"' in ds[0], ds[0])
         self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": []}}))   # 390 không thấy thanh tab: không đạt
 
     def test_pd28_chu_thich_cong_khai(self):   # CPO DOC-KQ-CONGKHAI: số đo ca đỏ đọc được qua API, không cần đăng nhập

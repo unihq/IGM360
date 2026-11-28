@@ -171,6 +171,10 @@ def _thoat(t):   # lệnh chú thích của máy GitHub: %, xuống dòng phải
     return str(t).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
+def nhan_luot(bai, bien):   # CDA DOC-M03-0PX-KQ, CPO NHAN-M03: 02 lượt cùng bài (Sáng / Tối) phải phân biệt ở bảng + chú thích
+    return bai + (" Tối" if bien.get("CHEDO") == "toi" else "")
+
+
 def chu_thich(dong_bang, ca_do):
     """Dòng chú thích lượt chạy (đọc được qua API kho công khai, không cần đăng nhập – DOC-KQ-CONGKHAI).
     Tiêu đề "Do giao dien" – KHÁC "Ket qua bai kiem" (tugop.yml đếm theo tiêu đề đó, CDA K2). Mỗi bài đỏ 01 ::error
@@ -223,19 +227,20 @@ def main():
         phien = next(c.value for c in kho if c.name == "igm360_phien")
         che(phien)
         for bai, bien in LUOT:
-            thu_muc = ra / bai
+            nhan = nhan_luot(bai, bien)
+            thu_muc = ra / (bai + ("_toi" if nhan != bai else ""))
             env = dict(os.environ, CONG=CONG, PHIEN=phien, TRINHDUYET=TRINHDUYET, KHONG_ANH="1", **bien)
             r = subprocess.run([NODE, str(DAY / "chay_do.mjs"), str(DAY / "ca_giaodien.mjs"), str(thu_muc)], env=env, capture_output=True, text=True,
                                encoding="utf-8", timeout=1800)
             tep = thu_muc / "ketqua.json"
             if r.returncode != 0 or not tep.exists():
-                dong_bang.append((bai, 0, 0, ["bộ đo không chạy xong: " + (r.stderr or "")[-200:].replace("\n", " ")]))
+                dong_bang.append((nhan, 0, 0, ["bộ đo không chạy xong: " + (r.stderr or "")[-200:].replace("\n", " ")]))
                 loi_tong += 1
                 continue
             ca = json.loads(tep.read_text(encoding="utf-8"))
             loi = [f"{d['ten']} {d['kho']} {d['chedo']}: {x}" for d in ca for x in cham(bai, d)]
-            ca_do += [(bai, d) for d in ca if cham(bai, d)]
-            dong_bang.append((bai, len(ca), len(ca) - len({x.split(':')[0] for x in loi}), loi))
+            ca_do += [(nhan, d) for d in ca if cham(bai, d)]
+            dong_bang.append((nhan, len(ca), len(ca) - len({x.split(':')[0] for x in loi}), loi))
             loi_tong += bool(loi)
     finally:
         mc.terminate()
