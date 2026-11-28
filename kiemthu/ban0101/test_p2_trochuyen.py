@@ -64,6 +64,13 @@ class KiemChuoi(unittest.TestCase):
             self.assertIn(x, t)
         self.assertIn("document.documentElement.style.setProperty('--cao-tab'", self.js)
 
+    def test_pd08_cuoi_cuoc_khong_ho(self):   # CDO SOAT-GD-0101 (02): đệm đáy #app 64 ≠ thanh tab 59,5 → hở 4,5 px, ô nhập nhảy khi cuộn
+        self.assertIn("padding-bottom:var(--cao-tab)", self.luat(".dien-thoai #app.mb"))
+        self.assertNotIn("64px", self.luat(".dien-thoai #app.mb"))
+        self.assertIn("--cao-tab:64px", self.html[self.html.index(":root{"):self.html.index("}", self.html.index(":root{"))])   # trước khi đo: khớp đệm cũ
+        self.assertIn("setProperty('--cao-tab', t.getBoundingClientRect().height + 'px')", self.js)   # cao thật 59,5 – không làm tròn
+        self.assertNotIn("t.offsetHeight + 'px'", self.js)
+
     def test_pd09_o_tim_cung_hang_tro_chuyen_ai(self):   # QĐ678 (2): 74–114, cao 40
         t = self.luat("#app:not(.mb) #p08 #tc-tim")
         for x in ("height:40px", "margin:9px 12px 6px", "flex:none", "width:auto"):   # width:auto: không tràn mép cột (CPO P2-COT)

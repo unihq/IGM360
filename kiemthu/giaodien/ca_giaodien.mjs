@@ -89,7 +89,8 @@ const DO_M03 = `(async () => { ${CONG_CU} const ngu = ms => new Promise(r => set
   for (const vt of [0, 0.5, 1]) { vung.forEach(v => v.scrollTop = (v.scrollHeight - v.clientHeight) * vt); window.scrollTo(0, (document.scrollingElement.scrollHeight - innerHeight) * vt); await ngu(300);
     const a = n.getBoundingClientRect(), b = d.getBoundingClientRect(); const tab = [...document.querySelectorAll('nav.tab-duoi')].find(vis);
     const day = tab ? tab.getBoundingClientRect()['top'] : innerHeight;   // (iv) QA: 390 đáy ô nhập không được thấp hơn mép trên thanh tab
-    kq.push({vt, nhap: R(n), duoi: R(d), day_khung: Math.round(day), ngoai_px: Math.round(Math.max(0, -a['top'], a.bottom - day, -b['top'], b.bottom - day))}); }
+    const kd = document.querySelector('#p08 .tc-day');   // SOAT-GD-0101 (02): đáy khối nhập = mép trên thanh tab, không đổi khi cuộn
+    kq.push({vt, nhap: R(n), duoi: R(d), day_khung: Math.round(day), day_khoi: kd ? Math.round(kd.getBoundingClientRect().bottom * 2) / 2 : null, mep_tab: tab ? Math.round(day * 2) / 2 : null, ngoai_px: Math.round(Math.max(0, -a['top'], a.bottom - day, -b['top'], b.bottom - day))}); }
   return {vung_cuon: vung.map(v => (v.className || v.tagName).toString().slice(0, 24) + ' ' + v.clientHeight + '/' + v.scrollHeight).slice(0, 3), kq}; })()`;
 
 // M06: hộp bao (trái, trên, rộng, cao) + tâm dọc các khối cùng hàng giữa các cột (VE0101_13), mô tả đầu màn 01 dòng
@@ -202,7 +203,8 @@ const DO_M11 = `(async () => { ${CONG_CU} const ngu = ms => new Promise(r => set
     he_thong: H('nav.menu [data-nhom-nut="HỆ THỐNG"]') || H('nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]'), gd: H('nav.menu .gd-sau'), chan: H('nav.menu .chan-menu'),
     ban_so: (nav.querySelector('#nav-ban-so') || {}).textContent, ban_thu_hien: vis(nav.querySelector('#nav-ban-thu')) ? nav.querySelector('#nav-ban-thu').textContent : null,
     ban_tg_hien: vis(nav.querySelector('.ban-tg')), nut: H('nav.menu .chan-menu [data-thu]'), nut_nhan: nt ? nt.getAttribute('aria-label') : null,
-    giua: mg ? [mg.clientHeight, mg.scrollHeight, getComputedStyle(mg).overflowY] : null, chu_thu_gon_hien: /Thu gọn menu/.test(nav.querySelector('.chan-menu').innerText)});
+    giua: mg ? [mg.clientHeight, mg.scrollHeight, getComputedStyle(mg).overflowY] : null, chu_thu_gon_hien: /Thu gọn menu/.test(nav.querySelector('.chan-menu').innerText),
+    chu_cat: [...nav.querySelectorAll('*')].filter(e => vis(e) && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !e.closest('svg')).filter(e => { const r = e.getBoundingClientRect(), n = nav.getBoundingClientRect(), s = getComputedStyle(e); return r.right > n.right + 0.5 || r.left < n.left - 0.5 || (e.scrollWidth > e.clientWidth + 1 && s.textOverflow !== 'ellipsis'); }).map(ten).slice(0, 5)});   // LOI-THU-GDSAU: chữ bị cắt / tràn thanh trái
   const kq = {mo: tt()};
   const gdn = nav.querySelector('[data-gd]'); if (gdn) { gdn.click(); await ngu(300); kq.hien_them = tt(); gdn.click(); await ngu(300); }
   if (mg && innerHeight <= 768) { nav.querySelectorAll('.nhom-nut').forEach(b => { if (b.getAttribute('aria-expanded') === 'false' && b.dataset.nhomNut !== 'HỆ THỐNG') b.click(); });

@@ -68,6 +68,10 @@ def cham(bai, d):
         for x in g.get("kq") or []:
             if x.get("ngoai_px"):
                 kq.append(f"ô nhập ngoài khung {x['ngoai_px']} px (vị trí {x['vt']})")
+        ds = [x for x in g.get("kq") or [] if x.get("mep_tab") is not None]   # 390: SOAT-GD-0101 (02) – hở 4,5 px, nhảy khi cuộn (4c73aa0)
+        if dt and (len(ds) != 3 or any(x.get("day_khoi") is None or abs(x["day_khoi"] - x["mep_tab"]) > 0.5 for x in ds)
+                   or max(x["day_khoi"] for x in ds) - min(x["day_khoi"] for x in ds) > 0.5):
+            kq.append(f"đáy khối nhập ≠ mép trên thanh tab / đổi khi cuộn: {[(x.get('vt'), x.get('day_khoi'), x.get('mep_tab')) for x in ds]}")
     elif bai == "M05":
         if g.get("so_vuot"):
             kq.append(f"vượt mép {g['so_vuot']}: {g['vuot'][:2]}")
@@ -139,6 +143,10 @@ def cham(bai, d):
             kq.append("HỆ THỐNG trôi khi mở Hiện thêm")
         if thu.get("nav_rong") != 68 or not (thu.get("ghim") and gan(thu["ghim"]["hop"][1], 74)):
             kq.append(f"thu gọn: rộng {thu.get('nav_rong')}, ghim {thu.get('ghim')}")
+        if thu.get("gd") or thu.get("chu_cat"):   # LOI-THU-GDSAU (4c73aa0): thu gọn còn lộ ô Hiện thêm, chữ bị cắt
+            kq.append(f"thu gọn: ô Hiện thêm {thu.get('gd')}, chữ cắt {thu.get('chu_cat')}")
+        if mo.get("chu_cat"):
+            kq.append(f"chữ cắt / tràn thanh trái: {mo.get('chu_cat')}")
     elif bai == "M12":
         if d["ten"] == "M12_thongbao":
             if not g.get("co_chan") or not g.get("cd_chan") or not g.get("chan_trai") or not gan(g["cd_chan"][1], g["chan_trai"][1]):

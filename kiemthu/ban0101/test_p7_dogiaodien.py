@@ -82,6 +82,14 @@ class KiemCham(unittest.TestCase):   # ngưỡng chấm của kịch bản – c
         self.assertTrue(c("M05", {"ten": "M05_p08", "kho": "1440x900", "chedo": "sang", "gt": {"so_vuot": 1, "vuot": [["#tc-tim", ".tc-trai", 11]], "so_cat_khong_cham": 0, "nhom": []}}))
         self.assertTrue(c("M08", {"ten": "M08_p13", "kho": "1280x800", "chedo": "sang", "gt": {"top": [123] * 3, "cao": [308] * 3, "rong": [307] * 3,
                                                                                               "nut_chinh": [[325, 365], [357, 397], None], "hang_nut": [], "chi_phi": [], "ten": [], "mo_ta": []}}))
+        mo = {"logo": {"tam": 37}, "ghim": {"hop": [0, 74, 0, 40]}, "chan": {"hop": [0, 797, 0, 52]}, "chu_thu_gon_hien": False, "chu_cat": []}
+        thu = {"nav_rong": 68, "ghim": {"hop": [0, 74, 0, 40]}, "gd": {"hop": [12, 640, 44, 30]}, "chu_cat": ["button.gd-nut:Hiện"]}
+        self.assertTrue(c("M11", {"ten": "M11_thanh", "kho": "1440x900", "chedo": "sang", "gt": {"mo": mo, "thu": thu}}))   # LOI-THU-GDSAU 4c73aa0
+        self.assertEqual(c("M11", {"ten": "M11_thanh", "kho": "1440x900", "chedo": "sang", "gt": {"mo": mo, "thu": dict(thu, gd=None, chu_cat=[])}}), [])
+        o = lambda vt, k: {"vt": vt, "ngoai_px": 0, "day_khoi": k, "mep_tab": 784.5}
+        self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [o(0, 784.5), o(0.5, 784.5), o(1, 780)]}}))   # SOAT-GD-0101 (02)
+        self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [o(0, 784), o(0.5, 784), o(1, 784)]}}) == [])   # lệch 0,5: đạt
+        self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": []}}))   # 390 không thấy thanh tab: không đạt
 
     def test_pd28_cham_dat(self):
         c = self.m.cham

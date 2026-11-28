@@ -18,6 +18,52 @@ GD = Path(__file__).resolve().parents[2] / "maychu" / "web" / "giaodien"
 NHOM_A = {"QUẢN TRỊ TMĐT": "shopping-bag", "NĂNG LỰC": "cpu", "KẾT NỐI": "link", "HỆ THỐNG": "settings-2"}   # QĐ674 bộ A
 
 
+def do_manh(chon):
+    """Độ mạnh bộ chọn CSS (id, lớp / thuộc tính / lớp giả, thẻ / phần tử giả); :not(x) tính theo x."""
+    c = re.sub(r":not\(([^)]*)\)", r" \1", chon)
+    c = re.sub(r"\[[^\]]*\]", " .a", c)
+    id_ = len(re.findall(r"#[\w-]+", c))
+    lop = len(re.findall(r"\.[\w-]+", c)) + len(re.findall(r"(?<!:):[\w-]+", c))
+    the = len(re.findall(r"::[\w-]+", c)) + len(re.findall(r"(?:^|[\s>+~])([a-z][\w-]*)", c))
+    return (id_, lop, the)
+
+
+def luat_le(qt):
+    """[(thứ tự, 01 bộ chọn, thân)] – tách danh sách bộ chọn có dấu phẩy."""
+    return [(i, x.strip(), b) for i, (s, b) in enumerate(qt) for x in s.split(",") if x.strip()]
+
+
+class KiemLuatAnThuGon(unittest.TestCase):   # CDO LOI-THU-GDSAU: chặn loại lỗi "luật mới mạnh hơn luật ẩn cũ"
+    def test_luat_an_thu_gon_khong_bi_de(self):
+        """Mỗi lớp bị ẩn khi thanh trái thu gọn (`.thu … .X{display:none}`): mọi luật máy tính đặt display khác none cho .X
+        phải có 01 luật ẩn thu gọn mạnh hơn (hoặc bằng mà đứng sau)."""
+        html = (GD / "index.html").read_text(encoding="utf-8").replace("\r\n", "\n")
+        ds = luat_le(quy_tac(html))
+        an = {}
+        for i, c, b in ds:
+            if re.search(r"\.thu\b", c) and re.search(r"display:none", b):
+                cuoi = re.sub(r":not\([^)]*\)|::?[\w-]+", "", re.split(r"[\s>+~]+", c)[-1])
+                for lop in re.findall(r"\.([\w-]+)", cuoi):
+                    an.setdefault(lop, []).append((do_manh(c), i, "!important" in b))
+        self.assertIn("gd-sau", an)
+        loi = []
+        for i, c, b in ds:
+            m = re.search(r"display:\s*([\w-]+)", b)
+            if not m or m.group(1) == "none" or re.search(r"\.thu\b|\.mb\b|dien-thoai", re.sub(r":not\([^)]*\)", "", c)):   # luật điện thoại bỏ qua; :not(.mb) là luật máy tính
+                continue
+            cuoi = re.sub(r":not\([^)]*\)|::?[\w-]+", "", re.split(r"[\s>+~]+", c)[-1])
+            for lop in re.findall(r"\.([\w-]+)", cuoi):
+                if lop in an and not any(((dm, j) > (do_manh(c), i) or (qt and "!important" not in b)) and (qt or "!important" not in b)
+                                         for dm, j, qt in an[lop]):
+                    loi.append(f"{c}{{{b.strip()}}} đè .thu .{lop}")
+        self.assertEqual(loi, [])
+
+    def test_do_manh_dung(self):   # bài tự chứng minh: luật C01 mạnh hơn luật ẩn cũ dòng 136
+        self.assertGreater(do_manh("#app:not(.mb) nav.menu .gd-sau"), do_manh(".thu .gd-sau"))
+        self.assertGreater(do_manh("#app.thu:not(.mb) nav.menu .gd-sau"), do_manh("#app:not(.mb) nav.menu .gd-sau"))
+        self.assertEqual(do_manh("#app:not(.mb) nav.menu .gd-sau"), (1, 3, 1))
+
+
 class KiemChuoi(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

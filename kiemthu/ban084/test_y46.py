@@ -1003,7 +1003,7 @@ class KiemLogoChatgptQd319(unittest.TestCase):
         ra = subprocess.run(["node", "-e", chay], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(ra.returncode, 0, ra.stderr)
         gpt, cl, khoa = json.loads(ra.stdout)
-        self.assertTrue(gpt.startswith('<span class="logo-n"><svg style="flex:none;margin:-7px" width="32" height="32" viewBox="0 0 716 716"'), gpt[:120])
+        self.assertTrue(gpt.startswith('<span class="logo-n" data-hang="ChatGPT"><svg style="flex:none;margin:-7px" width="32" height="32" viewBox="0 0 716 716"'), gpt[:120])   # QĐ688 (PD29): ô mang data-hang để chế độ Tối tô trắng
         self.assertTrue(cl.startswith('<span class="logo-n"><svg width="18" height="18" viewBox="0 0 24 24"'), cl[:120])   # Claude không đổi
         self.assertEqual(gpt, khoa)                                               # nhận theo hãng cũng như theo gói
         self.assertIn('fill="black"', gpt)                                        # không đổi màu

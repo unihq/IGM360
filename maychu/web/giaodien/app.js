@@ -77,7 +77,7 @@ function ve() {
     nutDn.classList.toggle('dang', S.lv === 'dang'); }
   if (S.g === '01') dongTacLv();   // 0.8.9: linh vật màn 01
   datDauMan();   // 0.10.1 (QĐ671 (4)): đầu màn ngoài vùng cuộn
-  if (S.xem === 'mb') { const t = $('nav.tab-duoi'); if (t) document.documentElement.style.setProperty('--cao-tab', t.offsetHeight + 'px'); }   // 0.10.1 PD08 (QĐ677): ô nhập bám trên thanh tab
+  if (S.xem === 'mb') { const t = $('nav.tab-duoi'); if (t) document.documentElement.style.setProperty('--cao-tab', t.getBoundingClientRect().height + 'px'); }   // 0.10.1 PD08 (QĐ677): ô nhập bám trên thanh tab; cao thật, không làm tròn (SOAT-GD-0101 (02))
   doiViTri();   // 0.10.1: cụm chuông · âm thanh · chế độ màu cuối hàng đầu màn
   if (S.trang === '08') veCot();   // 0.10.1 PD10, PD11: độ rộng / thu gọn cột hội thoại đã nhớ
   const nt = $('.chan-menu [data-thu]'); if (nt) { const c = S.thu ? 'Mở rộng menu' : 'Thu gọn menu'; nt.setAttribute('aria-label', c); nt.title = c; }   // QĐ676, chữ đã duyệt
@@ -1098,7 +1098,7 @@ const tieuTraLoi = x => { const p = [], mh = mhThucDung(x), dp = x.du_phong;
   return p.join(' · '); };
 const logoGoi = g => g === 'claude'
   ? '<span class="logo-o" data-hang="Claude" title="Claude" style="width:40px;height:40px">' + ICON.logo_claude + '</span>'
-  : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI, giữ đen
+  : '<span class="logo-o" data-hang="ChatGPT" title="ChatGPT" style="width:40px;height:40px">' + ICON.logo_chatgpt + '</span>';   // QĐ92: logo gốc OpenAI – Sáng đen, Tối trắng bằng CSS (QĐ688, PD29)
 const usd = v => Number(v || 0).toFixed(2).replace('.', ',') + '&nbsp;USD';
 // Tiền đủ 02 cột (QĐ50, QĐ122): USD kèm đồng Việt tham khảo; chưa có tỷ giá (trước ngày 18) thì ghi rõ.
 const vnd = (v, tg) => tg ? '≈&nbsp;' + soVN(Math.round(Number(v || 0) * tg / 1000) * 1000) + '&nbsp;đ tham&nbsp;khảo' : 'chưa có tỷ&nbsp;giá';
@@ -1425,7 +1425,7 @@ function chuGhimHong(x) { const g = x.ghim_hong || x.md_hong, a = x.ghim_hong &&
 const logoNhom = g => { const cl = g.goi === 'claude' || g.hang === 'anthropic', gpt = !cl && (g.goi === 'chatgpt' || g.hang === 'openai');
   const l = cl ? ICON.logo_claude : gpt ? ICON.logo_chatgpt : icoMau(ICON['key-round'], 'var(--phu)', 16), co = gpt ? 32 : 18;   // QĐ319: 32 px
   const s = l.replace(/width="\d+"/, 'width="' + co + '"').replace(/height="\d+"/, 'height="' + co + '"');
-  return '<span class="logo-n">' + (gpt ? s.replace('<svg ', '<svg style="flex:none;margin:-7px" ') : s) + '</span>'; };   // lề âm 07 px
+  return '<span class="logo-n"' + (gpt ? ' data-hang="ChatGPT"' : '') + '>' + (gpt ? s.replace('<svg ', '<svg style="flex:none;margin:-7px" ') : s) + '</span>'; };   // lề âm 07 px; PD29: data-hang để Tối tô trắng
 function nutMh() { const c = dangChonChat(); if (!c.g) return '<span class="t12 phu">Chưa có nguồn AI đã kết nối</span>';
   const ten = c.m ? tenMh(c.m.ma, c.g.nhom, c.g) : 'Mặc định', hong = c.ghim && D.hong[D.htId];
   const tieu = hong && hong.nghi ? chuNghi(hong.nghi, timNguon(hong.nghi.nguon_id)) + ' · tạm dùng ' + (timNguon(hong.nguon_id) ? tenLoai(timNguon(hong.nguon_id)).replace(/ /g, ' ') : 'mô hình')
