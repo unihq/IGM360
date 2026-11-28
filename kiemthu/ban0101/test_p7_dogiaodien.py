@@ -35,7 +35,8 @@ class KiemLuong(unittest.TestCase):
         for x in ("secrets.", "docker login", "docker/login-action", "upload-artifact", "Ket qua bai kiem", "::notice"):
             self.assertNotIn(x, v, x)
         self.assertIn("python kiemthu/giaodien/maythu_ci.py", v)
-        self.assertIn("continue-on-error: true", v)   # QĐ683: chỉ báo tới khi 05 lần chạy ổn định
+        self.assertNotIn("continue-on-error", v)   # QĐ683 + PD28 (DEM-05-LUOT): đã đủ 05 lượt liên tiếp đạt → việc đo đỏ thì luồng đỏ, chặn tự gộp
+        self.assertNotIn("continue-on-error", self.yml)   # cả luồng: không việc nào được bỏ qua lỗi
         self.assertIn("permissions: {}", self.yml)     # mức luồng giữ 0 quyền
 
     def test_pd28_viec_dong_anh_khong_doi(self):   # CPO: dongimage chỉ needs: kiemthu (chặn đóng ảnh chưa có QĐ)

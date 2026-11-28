@@ -50,13 +50,12 @@ jobs:
 
   # 0.10.1 P7 (QĐ683): đo giao diện như người dùng bằng trình duyệt có sẵn của máy GitHub – máy thử trong thư mục tạm, tài khoản
   # thử, mật khẩu và khóa 02 lớp tạo lúc chạy. Việc riêng: chỉ quyền đọc mã, 0 khóa bí mật, 0 gói; không tải ảnh lên, chỉ ghi bảng
-  # số đo vào tóm tắt lượt chạy (CDA K1–K8, CPO chốt K2, K8 cách B). continue-on-error: chỉ báo, chưa chặn – bỏ dòng này sau 05 lần
-  # chạy ổn định; khi đó việc này đỏ thì cả luồng đỏ, tugop.yml không tự gộp. Việc dongimage vẫn chỉ cần kiemthu.
+  # số đo vào tóm tắt lượt chạy (CDA K1–K8, CPO chốt K2, K8 cách B). Đã bỏ cờ chỉ báo (bỏ qua lỗi) sau 05 lượt liên tiếp đạt
+  # (PD28, DEM-05-LUOT): việc này đỏ thì cả luồng đỏ, tugop.yml không tự gộp. Việc dongimage vẫn chỉ cần kiemthu.
   dogiaodien:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    continue-on-error: true
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
