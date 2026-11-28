@@ -90,7 +90,7 @@ const DO_M03 = `(async () => { ${CONG_CU} const ngu = ms => new Promise(r => set
     const a = n.getBoundingClientRect(), b = d.getBoundingClientRect(); const tab = [...document.querySelectorAll('nav.tab-duoi')].find(vis);
     const day = tab ? tab.getBoundingClientRect()['top'] : innerHeight;   // (iv) QA: 390 đáy ô nhập không được thấp hơn mép trên thanh tab
     const kd = document.querySelector('#p08 .tc-day');   // SOAT-GD-0101 (02): đáy khối nhập = mép trên thanh tab, không đổi khi cuộn
-    kq.push({vt, nhap: R(n), duoi: R(d), day_khung: Math.round(day), day_khoi: kd ? Math.round(kd.getBoundingClientRect().bottom * 2) / 2 : null, mep_tab: tab ? Math.round(day * 2) / 2 : null, ngoai_px: Math.round(Math.max(0, -a['top'], a.bottom - day, -b['top'], b.bottom - day))}); }
+    kq.push({vt, nhap: R(n), duoi: R(d), day_khung: Math.round(day), day_khoi: kd ? Math.round(kd.getBoundingClientRect().bottom * 100) / 100 : null, mep_tab: tab ? Math.round(day * 100) / 100 : null, ngoai_px: Math.round(Math.max(0, -a['top'], a.bottom - day, -b['top'], b.bottom - day))}); }
   return {vung_cuon: vung.map(v => (v.className || v.tagName).toString().slice(0, 24) + ' ' + v.clientHeight + '/' + v.scrollHeight).slice(0, 3), kq}; })()`;
 
 // M06: hộp bao (trái, trên, rộng, cao) + tâm dọc các khối cùng hàng giữa các cột (VE0101_13), mô tả đầu màn 01 dòng

@@ -88,8 +88,42 @@ class KiemCham(unittest.TestCase):   # ngưỡng chấm của kịch bản – c
         self.assertEqual(c("M11", {"ten": "M11_thanh", "kho": "1440x900", "chedo": "sang", "gt": {"mo": mo, "thu": dict(thu, gd=None, chu_cat=[])}}), [])
         o = lambda vt, k: {"vt": vt, "ngoai_px": 0, "day_khoi": k, "mep_tab": 784.5}
         self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [o(0, 784.5), o(0.5, 784.5), o(1, 780)]}}))   # SOAT-GD-0101 (02)
-        self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [o(0, 784), o(0.5, 784), o(1, 784)]}}) == [])   # lệch 0,5: đạt
+        self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [o(0, 784.5), o(0.5, 784.5), o(1, 784)]}}))   # L02-05PX: 167af8b lệch 0,5 → không đạt
+        k = lambda vt: {"vt": vt, "ngoai_px": 0, "day_khoi": 784, "mep_tab": 784}
+        self.assertEqual(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": [k(0), k(0.5), k(1)]}}), [])   # khít 0 px: đạt
+        self.assertIn(("M03", {"BAI": "M03", "KHO": "390", "CHEDO": "toi"}), self.m.LUOT)   # đo cả chế độ Tối (vạch nền chỉ thấy ở Tối)
         self.assertTrue(c("M03", {"ten": "M03_p08", "kho": "390x844", "chedo": "toi", "gt": {"kq": []}}))   # 390 không thấy thanh tab: không đạt
+
+    def test_pd28_chu_thich_cong_khai(self):   # CPO DOC-KQ-CONGKHAI: số đo ca đỏ đọc được qua API, không cần đăng nhập
+        bang = [("M01", 26, 24, ["M01_p13 1440x900 sang: đè 3: [['cụm', 'Thêm nguồn AI']]", "M01_p03 1024x768 sang: che 1: []"]),
+                ("M03", 3, 3, [])] + [(f"X{i}", 1, 0, ["lỗi 100%\nxuống dòng"]) for i in range(12)]
+        do = [("M01", {"ten": "M01_p13", "gt": {"so_de": 3, "de": [["cụm", "Thêm nguồn AI"]]}})]
+        ds = self.m.chu_thich(bang, do)
+        self.assertEqual(len(ds), 10)                                            # 09 lỗi + 01 tổng kết (máy GitHub nhận ≤ 10 lỗi mỗi bước)
+        self.assertTrue(all(x.startswith(("::error title=Do giao dien", "::notice title=Do giao dien::")) for x in ds))
+        self.assertTrue(ds[-1].startswith("::notice"))
+        self.assertNotIn("Ket qua bai kiem", "\n".join(ds))                     # K2: tugop.yml đếm theo tiêu đề đó
+        self.assertTrue(all("\n" not in x and "\r" not in x for x in ds))        # mỗi chú thích 01 dòng lệnh
+        self.assertIn("%0ASố đo ca đỏ đầu: {\"so_de\": 3", ds[0])
+        self.assertIn("100%25", ds[1])
+        self.assertNotIn("M03", "".join(ds[:-1]))                              # bài đạt không thành lỗi
+        self.assertEqual(self.m.chu_thich([("M01", 26, 26, [])], []), ["::notice title=Do giao dien::26/26 ca đạt; M01 26/26"])
+
+    def test_pd28_che_gia_tri_bi_mat(self):   # CDA DOC-CHUTHICH-KQ: mật khẩu thử, khóa 02 lớp, cookie phiên đăng ký che trước khi in
+        import contextlib
+        import io
+        import os
+        from unittest import mock
+        for bien, ra in (({"GITHUB_ACTIONS": "true"}, "::add-mask::abc123\n"), ({"GITHUB_ACTIONS": ""}, "")):
+            with mock.patch.dict(os.environ, bien), contextlib.redirect_stdout(io.StringIO()) as o:
+                self.m.che("abc123")
+                self.m.che("")
+            self.assertEqual(o.getvalue(), ra)
+        nd = (GDO / "maythu_ci.py").read_text(encoding="utf-8")
+        i = nd.index("def main():")
+        for x in ("che(mk)", "che(khoa)", "che(phien)"):
+            self.assertIn(x, nd[i:])
+        self.assertLess(nd.index("che(mk)"), nd.index("IGM360_ADMIN_PASSWORD=mk"))   # che trước khi dùng
 
     def test_pd28_cham_dat(self):
         c = self.m.cham

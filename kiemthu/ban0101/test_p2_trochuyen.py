@@ -70,6 +70,9 @@ class KiemChuoi(unittest.TestCase):
         self.assertIn("--cao-tab:64px", self.html[self.html.index(":root{"):self.html.index("}", self.html.index(":root{"))])   # trước khi đo: khớp đệm cũ
         self.assertIn("setProperty('--cao-tab', t.getBoundingClientRect().height + 'px')", self.js)   # cao thật 59,5 – không làm tròn
         self.assertNotIn("t.offsetHeight + 'px'", self.js)
+        t = self.luat(".mb .tab-duoi")   # L02-05PX: thanh tab cao số nguyên → chiều cao trang không làm tròn, khít 0 px
+        for x in ("height:60px", "box-sizing:border-box"):
+            self.assertIn(x, t)
 
     def test_pd09_o_tim_cung_hang_tro_chuyen_ai(self):   # QĐ678 (2): 74–114, cao 40
         t = self.luat("#app:not(.mb) #p08 #tc-tim")

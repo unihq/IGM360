@@ -33,6 +33,7 @@ LUOT = [
     ("M01", {"BAI": "M01", "KHO": "1440,390"}),
     ("M02", {"BAI": "M02", "KHO": "1440,390"}),
     ("M03", {"BAI": "M03", "KHO": "1440,1024,390"}),
+    ("M03", {"BAI": "M03", "KHO": "390", "CHEDO": "toi"}),   # L02-05PX: vạch 01 px chỉ thấy ở Tối
     ("M05", {"BAI": "M05,M05D", "KHO": "1440,1024"}),
     ("M06", {"BAI": "M06", "KHO": "1440", "MAN": "03,08,09"}),
     ("M07", {"BAI": "M07", "KHO": "1440,1024,390"}),
@@ -69,8 +70,8 @@ def cham(bai, d):
             if x.get("ngoai_px"):
                 kq.append(f"ô nhập ngoài khung {x['ngoai_px']} px (vị trí {x['vt']})")
         ds = [x for x in g.get("kq") or [] if x.get("mep_tab") is not None]   # 390: SOAT-GD-0101 (02) – hở 4,5 px, nhảy khi cuộn (4c73aa0)
-        if dt and (len(ds) != 3 or any(x.get("day_khoi") is None or abs(x["day_khoi"] - x["mep_tab"]) > 0.5 for x in ds)
-                   or max(x["day_khoi"] for x in ds) - min(x["day_khoi"] for x in ds) > 0.5):
+        if dt and (len(ds) != 3 or any(x.get("day_khoi") is None or x["day_khoi"] != x["mep_tab"] for x in ds)   # L02-05PX: khít 0 px
+                   or len({x["day_khoi"] for x in ds}) != 1):
             kq.append(f"đáy khối nhập ≠ mép trên thanh tab / đổi khi cuộn: {[(x.get('vt'), x.get('day_khoi'), x.get('mep_tab')) for x in ds]}")
     elif bai == "M05":
         if g.get("so_vuot"):
@@ -166,16 +167,41 @@ def gui(mo, duong, du_lieu):
         return json.loads(t.read().decode())
 
 
+def _thoat(t):   # lệnh chú thích của máy GitHub: %, xuống dòng phải mã hóa
+    return str(t).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def chu_thich(dong_bang, ca_do):
+    """Dòng chú thích lượt chạy (đọc được qua API kho công khai, không cần đăng nhập – DOC-KQ-CONGKHAI).
+    Tiêu đề "Do giao dien" – KHÁC "Ket qua bai kiem" (tugop.yml đếm theo tiêu đề đó, CDA K2). Mỗi bài đỏ 01 ::error
+    (tối đa 09, máy GitHub nhận tối đa 10 chú thích lỗi mỗi bước) kèm số đo ca đỏ đầu tiên; 01 ::notice tổng kết."""
+    dong = []
+    for bai, so, dat, loi in [x for x in dong_bang if x[3]][:9]:
+        d = next((x for b, x in ca_do if b == bai), None)
+        so_do = json.dumps(d.get("gt"), ensure_ascii=False)[:1500] if d else ""
+        dong.append(f"::error title=Do giao dien {bai}::{_thoat(f'{dat}/{so} ca đạt; ' + '; '.join(loi[:3]) + (chr(10) + 'Số đo ca đỏ đầu: ' + so_do if so_do else ''))}")
+    tong = sum(x[1] for x in dong_bang)
+    dat = sum(x[2] for x in dong_bang)
+    dong.append(f"::notice title=Do giao dien::{_thoat(f'{dat}/{tong} ca đạt; ' + ', '.join(f'{b} {d}/{n}' for b, n, d, _ in dong_bang))}")
+    return dong
+
+
+def che(gt):   # CDA DOC-CHUTHICH-KQ (đề nghị phụ): đăng ký che giá trị bí mật TRƯỚC mọi lần in – máy GitHub tự thay bằng ***
+    if gt and os.environ.get("GITHUB_ACTIONS") == "true":
+        print("::add-mask::" + str(gt), flush=True)
+
+
 def main():
     tam = Path(tempfile.mkdtemp(prefix="maythu-do-"))
     dl, ra = tam / "dulieu", tam / "ketqua"
     dl.mkdir()
     ten, mk = "chu_thu", secrets.token_urlsafe(18)   # tài khoản thử, mật khẩu ngẫu nhiên mỗi lượt
+    che(mk)
     moi = dict(os.environ, IGM360_THUMUC_DULIEU=str(dl), IGM360_LICH="tat", IGM360_COOKIE_SECURE="0",
                IGM360_ADMIN_USER=ten, IGM360_ADMIN_PASSWORD=mk)
     mc = subprocess.Popen([sys.executable, "-m", "uvicorn", "maychu.khoidong:app", "--host", "127.0.0.1", "--port", CONG], cwd=GOC, env=moi,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    dong_bang, loi_tong = [], 0
+    dong_bang, loi_tong, ca_do = [], 0, []
     try:
         for _ in range(240):
             try:
@@ -190,10 +216,12 @@ def main():
         b1 = gui(mo, "/dangnhap", {"ten": ten, "matkhau": mk})
         if b1.get("buoc") in ("bat2lop", "ma2lop"):
             khoa = b1.get("khoa")
+            che(khoa)
             if not khoa:
                 raise SystemExit("đăng nhập đòi mã 02 lớp nhưng không có khóa vừa tạo")
             gui(mo, "/dangnhap/ma2lop", {"ma_tam": b1["ma_tam"], "ma": totp.ma_cua_buoc(khoa, totp.buoc())})
         phien = next(c.value for c in kho if c.name == "igm360_phien")
+        che(phien)
         for bai, bien in LUOT:
             thu_muc = ra / bai
             env = dict(os.environ, CONG=CONG, PHIEN=phien, TRINHDUYET=TRINHDUYET, KHONG_ANH="1", **bien)
@@ -206,6 +234,7 @@ def main():
                 continue
             ca = json.loads(tep.read_text(encoding="utf-8"))
             loi = [f"{d['ten']} {d['kho']} {d['chedo']}: {x}" for d in ca for x in cham(bai, d)]
+            ca_do += [(bai, d) for d in ca if cham(bai, d)]
             dong_bang.append((bai, len(ca), len(ca) - len({x.split(':')[0] for x in loi}), loi))
             loi_tong += bool(loi)
     finally:
@@ -222,6 +251,8 @@ def main():
     bang.append("**KẾT LUẬN: " + ("ĐẠT" if not loi_tong else f"CHƯA ĐẠT – {loi_tong} bài có lỗi") + "**")
     noi = "\n".join(bang) + "\n"
     print(noi)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(chr(10).join(chu_thich(dong_bang, ca_do)))
     tom = os.environ.get("GITHUB_STEP_SUMMARY")
     if tom:
         with open(tom, "a", encoding="utf-8") as f:

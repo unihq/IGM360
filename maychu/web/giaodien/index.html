@@ -173,7 +173,7 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .mb .tha{position:fixed;left:8px;right:8px;width:auto;top:120px}
 .mb .vach{padding:10px 14px;flex-wrap:wrap}
 .mb .trang{padding:16px 14px 24px}
-.mb .tab-duoi{display:flex;position:sticky;bottom:0;background:var(--khoi);border-top:1px solid var(--ke);z-index:40}
+.mb .tab-duoi{display:flex;position:sticky;bottom:0;background:var(--khoi);border-top:1px solid var(--ke);z-index:40;height:60px;box-sizing:border-box}
 .tab-duoi button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;font-size:11px;font-weight:600;color:var(--phu);position:relative}
 .tab-duoi button.on{color:var(--xanh-chu)}.tab-duoi button.on svg{stroke:var(--xanh-chu)}
 .tab-duoi .bao{position:absolute;top:4px;left:calc(50% + 6px);margin:0;padding:0 5px;line-height:15px;font-size:10px}
@@ -1038,7 +1038,8 @@ body.dien-thoai #app.mb{overflow:visible}
 #app:not(.mb) #p08 .tc-dau{flex:none;height:56px;padding:0 16px 0 24px;gap:16px}
 #app:not(.mb) #p08 .tc-than{flex:1;min-height:0;overflow-y:auto;max-width:none;margin:0;padding:24px max(24px,calc((100% - 860px)/2))}
 .tc-day{display:flex;flex-direction:column;flex:none}
-/* SOAT-GD-0101 (02): đệm đáy #app = đúng cao thanh tab (--cao-tab đo thật) – ở cuối cuộc và khi cuộn, đáy khối nhập cùng 01 chỗ (QĐ677) */
+/* SOAT-GD-0101 (02): đệm đáy #app = đúng cao thanh tab (--cao-tab đo thật) – ở cuối cuộc và khi cuộn, đáy khối nhập cùng 01 chỗ (QĐ677).
+   SOAT-GD-0101b (L02-05PX): thanh tab cố định cao 60 (nội dung 59,5) – số nguyên, chiều cao trang không bị làm tròn, khít 0 px */
 .mb #p08 .tc-day{position:sticky;bottom:var(--cao-tab,0px);z-index:30;background:var(--khoi);border-top:1px solid var(--ke);padding:8px 0 4px}
 /* 0.10.1 P3 – cột hội thoại kéo độ rộng, thu gọn (QĐ426, QĐ427, QĐ672; Quychuan dòng 418; VE0101_11, _13): độ rộng --tc-cot đặt trên #p08
    (240 / 260 / 420, chừa khung chat ≥ 480); vạch kéo 2 px bo 1 giữa khe 08, rê / kéo / chọn phím hiện màu chính; thu gọn: dải 56 px còn
