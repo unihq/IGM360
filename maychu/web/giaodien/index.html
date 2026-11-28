@@ -131,7 +131,6 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .bao{margin-left:auto;background:var(--khoi);border:1px solid var(--xanh-chu);color:var(--xanh-chu);font-size:12px;font-weight:700;border-radius:10px;padding:0 7px;line-height:18px;font-variant-numeric:tabular-nums}
 .bao.do{border-color:var(--canh);color:var(--canh)}
 .gd-sau{margin:16px 18px 6px;padding-top:12px;border-top:1px solid var(--ke);font-size:12px;color:var(--phu);line-height:1.5}
-.thu-gon{margin-top:auto;color:var(--phu)}
 .thu nav.menu{width:68px}
 .thu .muc{padding:0;justify-content:center}
 .thu .muc>span:not(.bao),.thu .nhom,.thu .logo-chu,.thu .gd-sau{display:none}
@@ -683,7 +682,7 @@ body:not(.dien-thoai) #san{padding:0}
 #app:not(.mb){max-width:none;width:100vw;height:100vh;border:0}
 #app:not(.mb) .cuon{height:100%;overflow:hidden}
 #app:not(.mb) .kh{height:100%;min-height:0}
-#app:not(.mb) nav.menu{overflow-y:auto}
+#app:not(.mb) nav.menu{overflow:hidden}   /* 0.10.1 PD26: cuộn ở khối giữa .menu-giua */
 #app:not(.mb) .vung{height:calc(100% - 16px);min-height:0}
 #app:not(.mb) .cuon-trong{flex:1;min-height:0;overflow-y:auto}
 #app:not(.mb) #p08 .tc{min-height:0}
@@ -790,7 +789,7 @@ body.dien-thoai .tm-h{flex-wrap:wrap}body.dien-thoai .tm-h .cg-onhap,body.dien-t
 body.dien-thoai .mg-p{width:auto}body.dien-thoai .mg-i,body.dien-thoai .tm-x .btn-chu{min-height:44px}
 /* 0.10.0 bước 5c – máy tính: màn Cài đặt kín tới đáy, menu và khối chi tiết cùng đáy, cuộn trong khối (QĐ576, QĐ582) */
 #app:not(.mb) .cuon-trong:has(#p09:not([hidden])){display:flex;flex-direction:column}
-#app:not(.mb) #p09{flex:1;min-height:0;padding-bottom:28px}
+#app:not(.mb) #p09{flex:1;min-height:0;padding-bottom:42px}   /* QĐ684 (anh "B. Trái 28, đáy 42") */
 #app:not(.mb) #p09 .cd-cum{flex:1;min-height:420px}
 /* điện thoại (CaidatB_07, 08): màn 1 = tiến độ + menu; màn 2 = khối chi tiết, nút lùi; dòng chạm 48 (Quychuan Phần 8) */
 .cd-lui{display:none}
@@ -877,8 +876,8 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
    tới giai đoạn" 13 px 600, lề 02 bên 12 px; mục menu giữ 14 px */
 .nhom,#app:not(.mb) .nhom-nut{font-size:13px}
 #app:not(.mb) nav.menu .gd-sau{margin-left:12px;margin-right:12px}#app:not(.mb) nav.menu .gd-nut{font-size:13px;font-weight:600}
-#app:not(.mb) nav.menu{padding-bottom:37px}   /* QĐ582: đáy "Thu gọn menu" = đáy cụm nội dung (khung cách đáy 08 + lề đáy trang Cài đặt 28 + viền 01) */
-#app.thu:not(.mb) nav.menu .thu-gon{margin-top:auto}
+#app:not(.mb) nav.menu{padding-bottom:51px}   /* 0.10.1 (VE0101_13, QĐ684): đáy chân thanh trái = đáy ô nhập = đáy cụm Cài đặt = đáy cửa sổ − 51 (khung cách đáy 08 + viền 01 + lề đáy 42) */
+
 #app:not(.mb) #p09{gap:16px}#p09 .cd-cum{margin-top:0}.mb #p09 .cd-cum{margin-top:4px}
 #p09 .cd-td>.phu{margin:0}
 .mb #p09 :is(.btn,.btn-chu,.cg-onhap,.o-nhap,.mg-o){min-height:44px}.mb #p09 input:not([type=checkbox]){min-height:42px}
@@ -937,8 +936,8 @@ body.dien-thoai .tha-tk .tha-muc,body.dien-thoai .tl-nutchu,body.dien-thoai .tl-
 @media (max-width:1199px){.md-o3,.md-bd2,.md-nsg{grid-template-columns:minmax(0,1fr)}}
 .mb .md-onhap{height:auto;max-width:none}.mb .md-onhap input{height:44px}.mb .md-nsh{min-height:44px}.mb .md-chon{height:44px}
 /* QĐ566 (1), QĐ408 (QA B11): chân thanh trái "IGM360 {bản} · by UNI TECH" – bấm mở trang công nghệ ở thẻ mới; số bản từ VERSION */
-.nav-ban{display:block;margin:6px 20px 0;font-size:12px;line-height:18px;color:var(--phu);text-decoration:none;white-space:nowrap}
-.nav-ban:hover{color:var(--xanh-chu);text-decoration:underline}.nav-ban:focus-visible{outline:2px solid var(--xanh-chu);outline-offset:2px;border-radius:4px}
+.nav-ban{display:flex;flex-direction:column;justify-content:center;min-width:0;text-decoration:none;line-height:16px;white-space:nowrap}   /* 0.10.1: 02 dòng (QĐ671 (1)) */
+.nav-ban:hover .ban-tg{text-decoration:underline}.nav-ban:focus-visible{outline:2px solid var(--xanh-chu);outline-offset:2px;border-radius:4px}
 .thu .nav-ban,.mb .nav-ban{display:none}
 /* QA C08: bảng phiên Tài khoản hẹp hơn 1200 px – danh sách như điện thoại (bản DM Caidat03_02 …Phien_Danhsach_1024), 0 tràn ô ngày */
 @media (max-width:1199px){#app:not(.mb) #ds-phien .hang.tieu-de{display:none}
@@ -1054,6 +1053,36 @@ body.dien-thoai #app.mb{overflow:visible}
 #app:not(.mb) #p08.thu-cot .tc-trai>:not(.tc-dai){display:none}
 #app:not(.mb) #p08.thu-cot .tc-dai{display:flex;flex-direction:column;align-items:center;gap:6px}
 #app:not(.mb) #p08.thu-cot .tc-vach{display:none}
+/* 0.10.1 P4 – thanh trái mới (QĐ671 (1)(2)(3)(6), QĐ674–QĐ676, QĐ678; VE0101_11, _13; CDO PD15–PD17, F5): logo 12–62 → "Trò chuyện AI" ghim
+   74–114 (vạch ngăn dưới) → khối giữa 03 nhóm cuộn riêng → "Hiện thêm khi tới giai đoạn" → HỆ THỐNG → chân 52 (02 dòng số bản + nút panel-left).
+   Thu gọn 68 px: đệm trên 19, biểu tượng 19–55, chân "0.10.1" trên nút. Icon nhóm bộ A 16 px cùng màu chữ (QĐ674). */
+#app:not(.mb) nav.menu{padding-top:12px}
+#app.thu:not(.mb) nav.menu{padding-top:19px}
+#app:not(.mb) nav.menu .logo{flex:none;height:50px;padding-bottom:0}
+#app.thu:not(.mb) nav.menu .logo{height:36px}
+#app:not(.mb) nav.menu .nhom-ds.rieng{flex:none;margin-top:12px;position:relative;padding-bottom:8px}
+#app:not(.mb) nav.menu .nhom-ds.rieng::after{content:"";position:absolute;left:18px;right:18px;bottom:0;border-top:1px solid var(--ke)}
+#app.thu:not(.mb) nav.menu .nhom-ds.rieng{margin-top:19px}
+#app.thu:not(.mb) nav.menu .nhom-ds.rieng::after{left:12px;right:12px}
+#app:not(.mb) nav.menu .menu-giua{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+#app:not(.mb) .nhom-nut .nhom-ic{flex:none}
+#app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]{margin-top:auto;position:relative;padding-top:8px}
+#app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]::before{content:"";position:absolute;left:12px;right:12px;top:0;border-top:1px solid var(--ke)}
+.chan-menu{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;box-sizing:border-box;height:52px;margin:8px 12px 0 18px;border-top:1px solid var(--ke)}
+.ban-so{font-size:12px;font-weight:600;color:var(--chu)}
+.ban-tg{font-size:11px;color:var(--xanh-chu)}
+.ban-thu{display:none}
+.nut-thu{flex:none;width:32px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--ke);border-radius:8px;background:transparent;color:var(--phu);cursor:pointer}
+.nut-thu:hover{color:var(--chu);background:var(--xam)}
+.thu .chan-menu{flex-direction:column;justify-content:center;gap:4px;margin:8px 10px 0}
+.thu .ban-thu{display:block;font-size:11px;line-height:14px;color:var(--phu);text-align:center}
+.mb .chan-menu{display:none}
+/* 0.10.1 PD27 – màn Cài đặt (QĐ684; QĐ579 + bổ sung; bản vẽ F10): đệm dưới 42 → đáy cụm = đáy chân thanh trái; ngăn có dòng ghi chú
+   chân khối (.gd-dong cuối ngăn) thì dải 52 (51 + viền 01) ở đáy 02 khối: khối chi tiết chứa dòng ghi chú, khối menu dải trống */
+.cd-chan{display:none}
+#app:not(.mb) #p09.co-chan .cd-chan{display:flex;align-items:center;flex:none;box-sizing:border-box;height:51px;border-top:1px solid var(--ke);padding:0 20px;font-size:12px;color:var(--phu)}
+#app:not(.mb) #p09.co-chan .cd-than .gd-dong{display:none}
+#app:not(.mb) #p09.co-chan .cd-menu::after{content:"";flex:none;box-sizing:border-box;height:51px;margin-top:auto;border-top:1px solid var(--ke)}
 .tc-dai-dau{flex:none;width:100%;height:56px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--ke);margin-bottom:6px}
 </style><link rel="icon" href="/tainguyen/logo/favicon.ico"><link rel="apple-touch-icon" href="/tainguyen/logo/igm360_180.png"><link rel="stylesheet" href="/tainguyen/dangnhap3d.css"></head><body>
 <!-- 0.9.0 (QĐ375): lớp phông nền Mẫu 1, chép nguyên của DM; aria-hidden, không nhận bấm, không chữ -->
@@ -1231,7 +1260,25 @@ body.dien-thoai #app.mb{overflow:visible}
 
   </div></div></div>
 </section><section id="khung" class="kh" hidden>
- <nav class="menu"><div class="logo"><img class="logo-bt" src="/tainguyen/logo/igm360_bieutuong.svg" alt="IGM360" width="36" height="36"><div class="logo-chu"><img class="logo-ngang" src="/tainguyen/logo/igm360_ngang.svg" alt="IGM360" height="28"><div class="t12 phu nw">Quản trị vận hành 360</div></div></div><div class="nhom">QUẢN TRỊ TMĐT</div><button class="muc" data-trang="03" title="Bảng điều hành"><svg
+ <nav class="menu"><div class="logo"><img class="logo-bt" src="/tainguyen/logo/igm360_bieutuong.svg" alt="IGM360" width="36" height="36"><div class="logo-chu"><img class="logo-ngang" src="/tainguyen/logo/igm360_ngang.svg" alt="IGM360" height="28"><div class="t12 phu nw">Quản trị vận hành 360</div></div></div><div class="nhom">TRÒ CHUYỆN</div><button class="muc" data-trang="08" title="Trò chuyện AI"><svg
+  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-bot-message-square"
+  xmlns="http://www.w3.org/2000/svg"
+  width="18"
+  height="18"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 6V2H8" />
+  <path d="M15 11v2" />
+  <path d="M2 12h2" />
+  <path d="M20 12h2" />
+  <path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+  <path d="M9 11v2" />
+</svg><span>Trò chuyện AI</span></button><div class="menu-giua"><div class="nhom">QUẢN TRỊ TMĐT</div><button class="muc" data-trang="03" title="Bảng điều hành"><svg
   style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-layout-dashboard"
   xmlns="http://www.w3.org/2000/svg"
   width="18"
@@ -1293,25 +1340,7 @@ body.dien-thoai #app.mb{overflow:visible}
   <path d="M17 4h2" />
   <path d="M20 15.2V21a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
   <circle cx="17" cy="10" r="2" />
-</svg><span>Bộ mã chung</span></button><button class="muc" data-trang="07" title="Tỷ giá"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;vertical-align:middle;color:var(--phu)"><circle cx="7.5" cy="7.5" r="5"/><circle cx="16.5" cy="16.5" r="5"/><path d="M14 3.5h2.5a3 3 0 0 1 3 3V9"/><path d="M17.5 7.5 19.5 9.5 21.5 7.5"/><path d="M10 20.5H7.5a3 3 0 0 1-3-3V15"/><path d="M6.5 16.5 4.5 14.5 2.5 16.5"/><text x="7.5" y="10.3" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="UNI,sans-serif">$</text><text x="16.5" y="19.3" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="UNI,sans-serif">₫</text></svg><span>Tỷ giá</span></button><div class="nhom">TRÒ CHUYỆN</div><button class="muc" data-trang="08" title="Trò chuyện AI"><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-bot-message-square"
-  xmlns="http://www.w3.org/2000/svg"
-  width="18"
-  height="18"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12 6V2H8" />
-  <path d="M15 11v2" />
-  <path d="M2 12h2" />
-  <path d="M20 12h2" />
-  <path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
-  <path d="M9 11v2" />
-</svg><span>Trò chuyện AI</span></button><div class="nhom">NĂNG LỰC</div><button class="muc" data-trang="10" title="Giám sát AI"><svg
+</svg><span>Bộ mã chung</span></button><button class="muc" data-trang="07" title="Tỷ giá"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;vertical-align:middle;color:var(--phu)"><circle cx="7.5" cy="7.5" r="5"/><circle cx="16.5" cy="16.5" r="5"/><path d="M14 3.5h2.5a3 3 0 0 1 3 3V9"/><path d="M17.5 7.5 19.5 9.5 21.5 7.5"/><path d="M10 20.5H7.5a3 3 0 0 1-3-3V15"/><path d="M6.5 16.5 4.5 14.5 2.5 16.5"/><text x="7.5" y="10.3" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="UNI,sans-serif">$</text><text x="16.5" y="19.3" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="UNI,sans-serif">₫</text></svg><span>Tỷ giá</span></button><div class="nhom">NĂNG LỰC</div><button class="muc" data-trang="10" title="Giám sát AI"><svg
   style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-gauge"
   xmlns="http://www.w3.org/2000/svg"
   width="18"
@@ -1381,7 +1410,35 @@ body.dien-thoai #app.mb{overflow:visible}
 >
   <path d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
   <path d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1" />
-</svg><span>Kênh nhắn</span></button><div class="nhom">HỆ THỐNG</div><button class="muc" data-trang="13" title="Mô hình AI"><svg
+</svg><span>Kênh nhắn</span></button></div><div class="gd-sau"><button class="gd-nut" data-gd><svg
+  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-layers"
+  xmlns="http://www.w3.org/2000/svg"
+  width="16"
+  height="16"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
+  <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+  <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
+</svg><span class="nw">Hiện thêm khi tới giai đoạn</span><svg
+  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-chevron-down"
+  xmlns="http://www.w3.org/2000/svg"
+  width="14"
+  height="14"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="m6 9 6 6 6-6" />
+</svg></button><div class="gd-ds" hidden><div class="t12 phu">15&nbsp;mục, mở dần theo giai đoạn</div><div><b>GĐ 2</b><span class="nw">Nhiệm vụ</span> · <span class="nw">Webhook</span> · <span class="nw">Quy trình</span> · <span class="nw">Theo dõi trang</span> · <span class="nw">Hộp kết quả</span> · <span class="nw">Kỹ năng</span> · <span class="nw">Terminal</span> · <span class="nw">Phiên đăng&nbsp;nhập</span> · <span class="nw">Link chia sẻ</span> · <span class="nw">09&nbsp;module quản trị</span></div><div><b>GĐ 4</b><span class="nw">Cộng sự</span> · <span class="nw">Team</span> · <span class="nw">Chatbot</span> · <span class="nw">Tự học</span> · <span class="nw">Tự cải tiến</span></div></div></div><div class="nhom">HỆ THỐNG</div><button class="muc" data-trang="13" title="Mô hình AI"><svg
   style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-brain-circuit"
   xmlns="http://www.w3.org/2000/svg"
   width="18"
@@ -1420,50 +1477,7 @@ body.dien-thoai #app.mb{overflow:visible}
 >
   <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
   <circle cx="12" cy="12" r="3" />
-</svg><span>Cài đặt</span></button><button class="muc" data-tk title="Tài khoản"><i data-ic="user-round"></i><span>Tài khoản</span></button><div class="gd-sau"><button class="gd-nut" data-gd><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-layers"
-  xmlns="http://www.w3.org/2000/svg"
-  width="16"
-  height="16"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
-  <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
-  <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
-</svg><span class="nw">Hiện thêm khi tới giai đoạn</span><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-chevron-down"
-  xmlns="http://www.w3.org/2000/svg"
-  width="14"
-  height="14"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="m6 9 6 6 6-6" />
-</svg></button><div class="gd-ds" hidden><div class="t12 phu">15&nbsp;mục, mở dần theo giai đoạn</div><div><b>GĐ 2</b><span class="nw">Nhiệm vụ</span> · <span class="nw">Webhook</span> · <span class="nw">Quy trình</span> · <span class="nw">Theo dõi trang</span> · <span class="nw">Hộp kết quả</span> · <span class="nw">Kỹ năng</span> · <span class="nw">Terminal</span> · <span class="nw">Phiên đăng&nbsp;nhập</span> · <span class="nw">Link chia sẻ</span> · <span class="nw">09&nbsp;module quản trị</span></div><div><b>GĐ 4</b><span class="nw">Cộng sự</span> · <span class="nw">Team</span> · <span class="nw">Chatbot</span> · <span class="nw">Tự học</span> · <span class="nw">Tự cải tiến</span></div></div></div><button class="muc thu-gon" data-thu><svg
-  style="flex:none;vertical-align:middle;color:var(--phu)" class="lucide lucide-panel-left-close"
-  xmlns="http://www.w3.org/2000/svg"
-  width="18"
-  height="18"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <rect width="18" height="18" x="3" y="3" rx="2" />
-  <path d="M9 3v18" />
-  <path d="m16 15-3-3 3-3" />
-</svg><span>Thu gọn menu</span></button><a class="nav-ban" id="nav-ban" href="https://tech.unihq.vn/igm360" target="_blank" rel="noopener noreferrer"></a></nav>
+</svg><span>Cài đặt</span></button><button class="muc" data-tk title="Tài khoản"><i data-ic="user-round"></i><span>Tài khoản</span></button><div class="chan-menu"><a class="nav-ban" id="nav-ban" href="https://tech.unihq.vn/igm360" target="_blank" rel="noopener noreferrer"><span class="ban-so" id="nav-ban-so"></span><span class="ban-tg">by UNI TECH</span></a><span class="ban-thu" id="nav-ban-thu"></span><button class="nut-thu" data-thu><i data-ic="panel-left" data-co="16"></i></button></div></nav>
  <div class="vung">
   <header class="thanh-tren">
     <button class="nut-ico an-mb" data-thu><svg
@@ -2064,7 +2078,7 @@ body.dien-thoai #app.mb{overflow:visible}
      <div data-s="tab:ketkhoa" class="cot-doc" id="ngan-ketkhoa"></div>
      <div data-s="tab:thongbao" class="cot-doc" id="ngan-thongbao"></div>
      <div data-s="tab:mucdung" class="cot-doc" id="ngan-mucdung"></div>
-       </div></section></div>
+       </div><div class="cd-chan" id="cd-chan"></div></section></div>
    </div>
    <div class="trang" id="p11" hidden><div class="dau-trang"><div class="ico-tron"><svg
   style="flex:none;vertical-align:middle;color:var(--xanh-chu)" class="lucide lucide-database"

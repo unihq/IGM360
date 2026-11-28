@@ -80,6 +80,8 @@ function ve() {
   if (S.xem === 'mb') { const t = $('nav.tab-duoi'); if (t) document.documentElement.style.setProperty('--cao-tab', t.offsetHeight + 'px'); }   // 0.10.1 PD08 (QĐ677): ô nhập bám trên thanh tab
   doiViTri();   // 0.10.1: cụm chuông · âm thanh · chế độ màu cuối hàng đầu màn
   if (S.trang === '08') veCot();   // 0.10.1 PD10, PD11: độ rộng / thu gọn cột hội thoại đã nhớ
+  const nt = $('.chan-menu [data-thu]'); if (nt) { const c = S.thu ? 'Mở rộng menu' : 'Thu gọn menu'; nt.setAttribute('aria-label', c); nt.title = c; }   // QĐ676, chữ đã duyệt
+  datChanCd();   // 0.10.1 PD27: dải chân màn Cài đặt
   veNhom();   // Y52: thu gọn nhóm thanh trái
 }
 // 0.9.0 (QĐ387, khung ii-c2): khổ máy tính bỏ thanh trên, khối chuông + tài khoản (.vi-tri) đặt ngay dưới logo; điện thoại giữ ở thanh trên.
@@ -120,14 +122,18 @@ const NHOM = {ds: [], mo: new Set(), trangCu: null};
 const tinhNhom = (ds, mo, cur) => ds.map(g => { const rieng = g.so === 1, m = rieng || mo.has(g.ten);
   return {ten: g.ten, rieng, mo: m, coTrang: !m && g.ten === cur, bao: m ? [] : g.bao}; });
 const nhomCua = tr => NHOM.ds.find(g => g.ds.querySelector('[data-trang="' + tr + '"]'));
+// 0.10.1 PD13 (QĐ674 bộ A): icon 16 px trước tên 04 nhóm, nét theo màu chữ tên nhóm (currentColor); nhóm 01 mục (Trò chuyện AI ghim) không icon
+const NHOM_IC = {'QUẢN TRỊ TMĐT': 'shopping-bag', 'NĂNG LỰC': 'cpu', 'KẾT NỐI': 'link', 'HỆ THỐNG': 'settings-2'};
+const icoNhom = ten => NHOM_IC[ten] && ICON[NHOM_IC[ten]] ? ICON[NHOM_IC[ten]].replace(/color:[^;"]*/, 'color:currentColor').replace(/width="\d+"/, 'width="16"')
+  .replace(/height="\d+"/, 'height="16"').replace('class="lucide', 'class="nhom-ic lucide') : '';
 function dungNhom() {   // gom mục của mỗi tiêu đề vào 01 khối, tiêu đề thành nút (01 lần)
   const nav = $('nav.menu'); if (!nav || NHOM.ds.length) return;
-  [...nav.querySelectorAll(':scope > .nhom')].forEach(h => {
-    const ten = h.textContent.trim(), ds = document.createElement('div'); ds.className = 'nhom-ds';
+  [...nav.querySelectorAll('.nhom')].forEach(h => {   // 0.10.1 PD26: 03 nhóm nằm trong khối giữa .menu-giua
+    const ten = h.textContent.trim(), ds = document.createElement('div'); ds.className = 'nhom-ds'; ds.dataset.nhom = ten;
     let n = h.nextElementSibling;
-    while (n && n.classList.contains('muc') && !n.classList.contains('thu-gon')) { const x = n.nextElementSibling; ds.appendChild(n); n = x; }
+    while (n && n.classList.contains('muc')) { const x = n.nextElementSibling; ds.appendChild(n); n = x; }
     const b = document.createElement('button'); b.type = 'button'; b.className = 'nhom nhom-nut'; b.dataset.nhomNut = ten;
-    b.innerHTML = '<span class="nhom-ten">' + esc(ten) + '</span><span class="nhom-bao"></span><span class="nhom-mt"></span>';
+    b.innerHTML = icoNhom(ten) + '<span class="nhom-ten">' + esc(ten) + '</span><span class="nhom-bao"></span><span class="nhom-mt"></span>';
     h.replaceWith(b); b.after(ds); NHOM.ds.push({ten, b, ds});
   });
   const c = nhomCua(S.trang); NHOM.mo = new Set(c ? [c.ten] : []); NHOM.trangCu = S.trang;
@@ -283,7 +289,7 @@ function veChuong(d) {   // QĐ553 (3): 02 thẻ Thông báo · Cần xử lý, 
   D.tbCuoi = d; const ds = d.thongbao || [], tat = !!d.tamtat, so = d.so_moi || 0;
   if (canKeu(D.tbDaThay, ds, tat) && amBat()) keuChuong();   // QĐ551: tạm tắt vẫn kêu tin nghiêm trọng mới
   D.tbDaThay = new Set(ds.map(x => x.id)); D.tbSoMoi = so; D.tbTamTat = tat; D.tbCoDo = ds.some(x => x.moi && x.muc === 'do'); if (d.ban) D.tbBan = d.ban; veBa();
-  const nb = $('#nav-ban'); if (nb && D.tbBan) nb.textContent = 'IGM360 ' + D.tbBan + ' · by UNI TECH';   // QĐ566 (1)
+  if (D.tbBan && $('#nav-ban-so')) { $('#nav-ban-so').textContent = 'IGM360 ' + D.tbBan; $('#nav-ban-thu').textContent = D.tbBan; }   // QĐ566 (1), QĐ671 (1): 02 dòng; thu gọn chỉ số bản (QĐ676)
   const e = $('#tha-chuong'); if (!e) return;
   const the = D.tbThe || 'tb', loc = the === 'cxl' ? ds.filter(x => x.muc === 'do') : ds, moi = loc.filter(x => x.moi), cu = loc.filter(x => !x.moi);
   e.innerHTML = '<div class="tha-dau tl-dau"><b>' + CHU_BA.thongBao + '</b><button class="tl-nutchu" data-tamtat>' + icoMau(ICON[tat ? 'bell' : 'bell-off'], 'currentColor', 16)
@@ -793,6 +799,13 @@ ICON['circle-pause'] = ICON['circle-pause'] || svgLucide('circle-pause', ['<circ
   '<line x1="10" x2="10" y1="15" y2="9" />', '<line x1="14" x2="14" y1="15" y2="9" />']);
 ICON['circle-arrow-up'] = ICON['circle-arrow-up'] || svgLucide('circle-arrow-up', ['<circle cx="12" cy="12" r="10" />', 'm16 12-4-4-4 4', 'M12 16V8']);
 ICON['panel-left-open'] = ICON['panel-left-open'] || svgLucide('panel-left-open', ['<rect width="18" height="18" x="3" y="3" rx="2" />', 'M9 3v18', 'm14 9 3 3-3 3']);   // Lucide 0.468.0 (ISC): mở cột hội thoại (QĐ427, QĐ678)
+// 0.10.1 P4 (QĐ674 bộ A, QĐ678 (1)): icon 04 nhóm thanh trái + nút thu gọn thanh trái – Lucide 0.468.0 (ISC), cùng bản icon đang dùng (CDO F1)
+ICON['shopping-bag'] = ICON['shopping-bag'] || svgLucide('shopping-bag', ['M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z', 'M3 6h18', 'M16 10a4 4 0 0 1-8 0']);
+ICON['cpu'] = ICON['cpu'] || svgLucide('cpu', ['<rect width="16" height="16" x="4" y="4" rx="2" />', '<rect width="6" height="6" x="9" y="9" rx="1" />',
+  'M15 2v2', 'M15 20v2', 'M2 15h2', 'M2 9h2', 'M20 15h2', 'M20 9h2', 'M9 2v2', 'M9 20v2']);
+ICON['link'] = ICON['link'] || svgLucide('link', ['M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71', 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71']);
+ICON['settings-2'] = ICON['settings-2'] || svgLucide('settings-2', ['M20 7h-9', 'M14 17H5', '<circle cx="17" cy="17" r="3" />', '<circle cx="7" cy="7" r="3" />']);
+ICON['panel-left'] = ICON['panel-left'] || svgLucide('panel-left', ['<rect width="18" height="18" x="3" y="3" rx="2" />', 'M9 3v18']);
 const caVn = t => theoMui(t);   // QĐ636: giờ theo múi đã chọn (tên cũ giữ, dùng trong khối Công cụ AI)
 const caSo = b => String(b || '0.0.0').split('.').map(x => parseInt(x, 10) || 0);
 const caCao = (a, b) => { const x = caSo(a), y = caSo(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
@@ -1836,6 +1849,14 @@ document.addEventListener('keydown', ev => { if (!(ev.target.closest && ev.targe
   ev.preventDefault(); const w = veCot($('#p08 .tc-trai').getBoundingClientRect().width + (ev.key === 'ArrowLeft' ? -16 : 16)); if (w) luuCot(w); });
 window.addEventListener('resize', () => { if (S.trang === '08') veCot(); });
 // </COTHT>
+// 0.10.1 PD27 (QĐ684; QĐ579 + bổ sung; bản vẽ F10): máy tính – dòng ghi chú chân khối (dòng giai đoạn .gd-dong cuối ngăn) lên dải 52 ở đáy
+// khối chi tiết, khối menu dải trống (CSS); ngăn không có ghi chú (Chung, Cập nhật, Két khóa) không dải. Điện thoại giữ như cũ.
+function datChanCd() {
+  const p = $('#p09'), d = $('#cd-chan'); if (!p || !d) return;
+  const g = S.xem !== 'mb' && S.trang === '09' ? [...$$('#p09 .cd-than .gd-dong')].filter(x => !x.closest('[hidden]')).pop() : null;
+  d.innerHTML = g ? g.innerHTML : ''; p.classList.toggle('co-chan', !!g);
+}
+{ const t = $('#p09 .cd-than'); if (t) new MutationObserver(datChanCd).observe(t, {childList: true, subtree: true, attributes: true, attributeFilter: ['hidden']}); }
 dienIco(document); veBa(); ganChuCot();
 
 // ---- Màn 09 ngăn Két khóa (bản DM-03NGAN-0100; QĐ661: 1440 bảng, 1024 và 390 hàng gọn + nút ⋯ mở Đổi / Xóa; chữ bản GĐ 1 màn 09, QĐ297)

@@ -91,7 +91,7 @@ class KiemGiaoDien(unittest.TestCase):
 
     def test_thu_tu_nhom_he_thong_qd559(self):
         i = self.h.index('<div class="nhom">HỆ THỐNG</div>')
-        doan = self.h[i:self.h.index('<div class="gd-sau">', i)]
+        doan = self.h[i:self.h.index('<div class="chan-menu">', i)]   # QĐ675 (0.10.1): "Hiện thêm…" nằm trên HỆ THỐNG – cắt tới chân thanh trái
         self.assertEqual(re.findall(r'title="([^"]+)"', doan), ["Mô hình AI", "Cài đặt", "Tài khoản"])   # QĐ559
         self.assertIn('data-tk title="Tài khoản"', doan)                                              # QĐ553: chữ "Tài khoản"
 

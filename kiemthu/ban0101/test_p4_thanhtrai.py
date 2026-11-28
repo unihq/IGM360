@@ -1,0 +1,150 @@
+"""Bài kiểm 0.10.1 phần P4 – thanh trái mới (QĐ671 (1)(2)(3)(6), QĐ674–QĐ676, QĐ678, QĐ684; phiếu PD12–PD17, PD26, PD27).
+
+Thứ tự: logo → "Trò chuyện AI" ghim → khối giữa (QUẢN TRỊ TMĐT · NĂNG LỰC · KẾT NỐI, cuộn riêng) → "Hiện thêm khi tới giai đoạn"
+→ HỆ THỐNG → chân (02 dòng "IGM360 {bản}" / "by UNI TECH" + nút panel-left). Icon nhóm bộ A 16 px cùng màu chữ. Thu gọn 68 px:
+chân "0.10.1" trên nút. Lưới hàng: logo 12–62, mục ghim 74–114, chân 52 cách đáy 51 (VE0101_13). Màn Cài đặt QĐ684: đệm dưới 42,
+dải chân 52 chỉ ở ngăn có dòng ghi chú chân khối (.gd-dong).
+"""
+import json
+import re
+import shutil
+import subprocess
+import unittest
+from pathlib import Path
+
+from kiemthu.ban0101.test_baihoc_0100 import quy_tac
+
+GD = Path(__file__).resolve().parents[2] / "maychu" / "web" / "giaodien"
+NHOM_A = {"QUẢN TRỊ TMĐT": "shopping-bag", "NĂNG LỰC": "cpu", "KẾT NỐI": "link", "HỆ THỐNG": "settings-2"}   # QĐ674 bộ A
+
+
+class KiemChuoi(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = (GD / "index.html").read_text(encoding="utf-8").replace("\r\n", "\n")
+        cls.js = (GD / "app.js").read_text(encoding="utf-8").replace("\r\n", "\n")
+        cls.qt = quy_tac(cls.html)
+        cls.nav = cls.html[cls.html.index('<nav class="menu">'):cls.html.index("</nav>", cls.html.index('<nav class="menu">')) + 6]
+
+    def luat(self, chon):
+        return " ".join(b for s, b in self.qt if s == chon)
+
+    def test_pd12_thu_tu_thanh_trai(self):   # QĐ671 (6) ghim Trò chuyện AI; QĐ675 Hiện thêm trên HỆ THỐNG; PD26 khối giữa
+        n = self.nav
+        moc = ['<div class="logo">', '<div class="nhom">TRÒ CHUYỆN</div>', 'data-trang="08"', '<div class="menu-giua">',
+               '<div class="nhom">QUẢN TRỊ TMĐT</div>', '<div class="nhom">NĂNG LỰC</div>', '<div class="nhom">KẾT NỐI</div>',
+               '<div class="gd-sau">', '<div class="nhom">HỆ THỐNG</div>', '<div class="chan-menu">']
+        vt = [n.index(x) for x in moc]
+        self.assertEqual(vt, sorted(vt), "thứ tự thanh trái")
+        self.assertTrue(n.index('<div class="nhom">HỆ THỐNG</div>') > n.index("</div>", n.index('<div class="menu-giua">')))   # HỆ THỐNG ngoài khối giữa
+
+    def test_pd13_icon_nhom(self):
+        self.assertIn("const NHOM_IC = " + json.dumps(NHOM_A, ensure_ascii=False).replace('"', "'").replace("': '", "': '"), self.js)
+        for ten in list(NHOM_A.values()) + ["panel-left"]:
+            self.assertIn("ICON['" + ten + "'] = ICON['" + ten + "'] || svgLucide('" + ten + "'", self.js)
+        self.assertIn("icoNhom(ten) + '<span class=\"nhom-ten\">'", self.js)
+        self.assertNotIn("color", self.luat("#app:not(.mb) .nhom-nut .nhom-ic"))   # cùng màu chữ tên nhóm: không đặt màu riêng (QA S03)
+
+    def test_pd14_he_thong_ghim_day(self):
+        self.assertIn("margin-top:auto", self.luat('#app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]'))
+        self.assertIn("border-top:1px solid var(--ke)", self.luat('#app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]::before'))
+        self.assertIn("ds.dataset.nhom = ten;", self.js)
+
+    def test_pd15_chan_menu(self):   # QĐ671 (1), QĐ547, QĐ678 (1); CDO PD15; QA S14
+        trang = "https://" + "tech." + "unihq" + ".vn/igm360"   # ghép lúc chạy: chuỗi trang công khai chỉ có ngoại lệ máy quét ở index.html
+        self.assertIn('<div class="chan-menu"><a class="nav-ban" id="nav-ban" href="' + trang + '" target="_blank" rel="noopener noreferrer">'
+                      '<span class="ban-so" id="nav-ban-so"></span><span class="ban-tg">by UNI TECH</span></a><span class="ban-thu" id="nav-ban-thu"></span>'
+                      '<button class="nut-thu" data-thu><i data-ic="panel-left" data-co="16"></i></button></div></nav>', self.html)
+        chan = self.nav[self.nav.index('<div class="chan-menu">'):]
+        self.assertNotIn("Thu gọn menu", re.sub(r"<[^>]+>", "", chan))   # chữ không hiện trên chân (QA SOAT-PD0101b; chỉ ở title / aria)
+        self.assertNotIn('class="muc thu-gon"', self.html)
+        self.assertIn("const nt = $('.chan-menu [data-thu]'); if (nt) { const c = S.thu ? 'Mở rộng menu' : 'Thu gọn menu';", self.js)
+        self.assertIn("$('#nav-ban-so').textContent = 'IGM360 ' + D.tbBan; $('#nav-ban-thu').textContent = D.tbBan;", self.js)
+        c = self.luat(".chan-menu")
+        for x in ("height:52px", "border-top:1px solid var(--ke)", "margin:8px 12px 0 18px", "flex:none"):
+            self.assertIn(x, c)
+        for chon, x in ((".ban-so", "font-size:12px;font-weight:600;color:var(--chu)"), (".ban-tg", "font-size:11px;color:var(--xanh-chu)"),
+                        (".nut-thu", "width:32px;height:28px"), (".nut-thu", "border:1px solid var(--ke);border-radius:8px"), (".nut-thu", "color:var(--phu)")):
+            self.assertIn(x, self.luat(chon), chon)
+        self.assertIn("padding-bottom:51px", self.luat("#app:not(.mb) nav.menu"))
+        p08 = self.html[self.html.index('<div class="trang" id="p08"'):self.html.index('<div class="trang" id="p13"')]
+        for x in ("panel-left-close", "panel-left-open"):   # QĐ678 (1): 02 icon này chỉ ở cột hội thoại
+            self.assertEqual(self.html.count(x), p08.count(x), x)
+
+    def test_pd16_chan_thu_gon(self):   # QĐ676 B + CDO: chân 52, "0.10.1" 11 px trên nút, không "by UNI TECH"
+        self.assertIn("flex-direction:column", self.luat(".thu .chan-menu"))
+        self.assertIn("display:block;font-size:11px", self.luat(".thu .ban-thu"))
+        self.assertIn("display:none", self.luat(".ban-thu"))
+        self.assertIn("display:none", self.luat(".thu .nav-ban,.mb .nav-ban"))
+
+    def test_pd17_luoi_hang(self):   # VE0101_13 + CDO PD17
+        self.assertIn("padding-top:12px", self.luat("#app:not(.mb) nav.menu"))
+        self.assertIn("padding-top:19px", self.luat("#app.thu:not(.mb) nav.menu"))
+        lg = self.luat("#app:not(.mb) nav.menu .logo")
+        for x in ("height:50px", "padding-bottom:0"):
+            self.assertIn(x, lg)
+        self.assertIn("height:36px", self.luat("#app.thu:not(.mb) nav.menu .logo"))
+        self.assertIn("margin-top:12px", self.luat("#app:not(.mb) nav.menu .nhom-ds.rieng"))
+        self.assertIn("margin-top:19px", self.luat("#app.thu:not(.mb) nav.menu .nhom-ds.rieng"))
+
+    def test_pd26_khoi_giua_cuon_rieng(self):
+        g = self.luat("#app:not(.mb) nav.menu .menu-giua")
+        for x in ("flex:1", "min-height:0", "overflow-y:auto"):
+            self.assertIn(x, g)
+        self.assertNotIn("#app:not(.mb) nav.menu{overflow-y:auto}", self.html)
+        self.assertIn("nav.querySelectorAll('.nhom')", self.js)
+
+    def test_pd27_day_caidat(self):   # QĐ684: đáy 42, trái / phải 28; dải 52 chỉ ở ngăn có .gd-dong
+        self.assertIn("padding-bottom:42px", self.luat("#app:not(.mb) #p09"))
+        self.assertIn('<div class="cd-chan" id="cd-chan"></div></section>', self.html)
+        d = self.luat("#app:not(.mb) #p09.co-chan .cd-chan")
+        for x in ("display:flex", "height:51px", "border-top:1px solid var(--ke)", "padding:0 20px", "font-size:12px", "color:var(--phu)", "flex:none"):
+            self.assertIn(x, d)
+        m = self.luat("#app:not(.mb) #p09.co-chan .cd-menu::after")
+        for x in ("height:51px", "margin-top:auto", "border-top:1px solid var(--ke)"):
+            self.assertIn(x, m)
+        self.assertIn("display:none", self.luat("#app:not(.mb) #p09.co-chan .cd-than .gd-dong"))
+        self.assertIn("display:none", self.luat(".cd-chan"))
+
+
+@unittest.skipUnless(shutil.which("node"), "máy không có node")
+class KiemNode(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.a = (GD / "app.js").read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    def chay(self, ma, cau):
+        r = subprocess.run(["node", "-e", ma + "\nconsole.log(JSON.stringify(" + cau + "));"], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    def test_pd13_icon_16_cung_mau(self):
+        a = self.a
+        ma = ("const ICON = {}; " + a[a.index("const svgLucide = "):a.index(";\n", a.index("const svgLucide = ")) + 2]
+              + a[a.index("ICON['shopping-bag'] = "):a.index("\n", a.index("ICON['panel-left'] = ")) + 1]
+              + a[a.index("const NHOM_IC = "):a.index(";\n", a.index("const icoNhom = ")) + 2])
+        kq = self.chay(ma, "Object.keys(NHOM_IC).map(t => icoNhom(t)).concat([icoNhom('TRÒ CHUYỆN')])")
+        for t, h in zip(NHOM_A.values(), kq):
+            self.assertIn("lucide-" + t, h)
+            self.assertIn('width="16"', h)
+            self.assertIn('height="16"', h)
+            self.assertIn('stroke="currentColor"', h)
+            self.assertIn("color:currentColor", h)
+            self.assertIn('class="nhom-ic', h)
+        self.assertEqual(kq[-1], "")   # nhóm 01 mục (Trò chuyện AI ghim) không icon nhóm
+
+    def test_pd27_chon_dong_ghi_chu(self):
+        a = self.a
+        ham = a[a.index("function datChanCd() {"):a.index("\n}\n", a.index("function datChanCd() {")) + 3]
+        ma = ("const g = (t, an) => ({innerHTML: t, closest: q => an ? {} : null});"
+              "let lop = null; const p9 = {classList: {toggle: (c, b) => { lop = [c, b]; }}}; const d = {innerHTML: ''};"
+              "let DS = []; const S = {xem: 'dt', trang: '09'};"
+              "const $ = q => ({'#p09': p9, '#cd-chan': d})[q]; const $$ = q => DS;\n" + ham)
+        kq = self.chay(ma, "[(DS = [g('A', true), g('B', false)], datChanCd(), [d.innerHTML, lop]),"
+                           " (DS = [g('A', true)], datChanCd(), [d.innerHTML, lop]),"
+                           " (DS = [g('C', false)], S.xem = 'mb', datChanCd(), [d.innerHTML, lop])]")
+        self.assertEqual(kq, [["B", ["co-chan", True]], ["", ["co-chan", False]], ["", ["co-chan", False]]])
+
+
+if __name__ == "__main__":
+    unittest.main()

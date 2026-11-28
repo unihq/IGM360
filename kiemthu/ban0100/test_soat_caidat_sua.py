@@ -23,7 +23,7 @@ class KiemGiaoDien(unittest.TestCase):
 
     def test_p1_1_cum_cuoi_thanh_trai_dinh_day(self):
         self.assertIn("#app:not(.mb) nav.menu .gd-sau{margin-top:auto}", self.h)
-        self.assertIn("#app.thu:not(.mb) nav.menu .thu-gon{margin-top:auto}", self.h)   # thu gọn: .gd-sau ẩn
+        self.assertIn('#app.thu:not(.mb) nav.menu .nhom-ds[data-nhom="HỆ THỐNG"]{margin-top:auto', self.h)   # thu gọn: .gd-sau ẩn – QĐ671 (1)(2) (0.10.1): bỏ nút "Thu gọn menu", HỆ THỐNG ghim đáy
         # quy tắc đè (0.9.0) đứng trước quy tắc sửa – cùng độ ưu tiên thì quy tắc sau thắng
         self.assertLess(self.h.index("#app:not(.mb) nav.menu .muc{margin:0 8px;"), self.h.index("#app:not(.mb) nav.menu .gd-sau{margin-top:auto}"))
 
@@ -34,8 +34,8 @@ class KiemGiaoDien(unittest.TestCase):
 
     def test_qa_b11_chan_thanh_trai(self):   # QĐ566 (1), QĐ408: "IGM360 {bản} · by UNI TECH", mở trang công nghệ ở thẻ mới
         trang = "https://" + "tech." + "unihq" + ".vn/igm360"   # ghép lúc chạy: chuỗi trang công khai chỉ có ngoại lệ máy quét ở index.html
-        self.assertIn('<a class="nav-ban" id="nav-ban" href="' + trang + '" target="_blank" rel="noopener noreferrer"></a></nav>', self.h)
-        self.assertIn("nb.textContent = 'IGM360 ' + D.tbBan + ' · by UNI TECH';", self.js)   # số bản từ /api/demso (VERSION)
+        self.assertIn('<a class="nav-ban" id="nav-ban" href="' + trang + '" target="_blank" rel="noopener noreferrer"><span class="ban-so" id="nav-ban-so"></span><span class="ban-tg">by UNI TECH</span></a>', self.h)   # QĐ671 (1) (0.10.1): 02 dòng
+        self.assertIn("$('#nav-ban-so').textContent = 'IGM360 ' + D.tbBan;", self.js)   # số bản từ /api/demso (VERSION); QĐ671 (1): dòng 2 "by UNI TECH"
         self.assertIn(".thu .nav-ban,.mb .nav-ban{display:none}", self.h)
 
     def test_qa_c08_o_ngay_khong_tran(self):
