@@ -40,7 +40,7 @@ class KiemGiaoDienLuot(unittest.TestCase):
         cls.app = (GD / "app.js").read_text(encoding="utf-8")
         cls.html = (GD / "index.html").read_text(encoding="utf-8")
         a = cls.app
-        cls.chu = a[a.index("const esc = "):a.index("const cau = ")]
+        cls.chu = a[a.index("const esc = "):a.index("const cau = ")] + a[a.index("const cau = "):a.index("\n", a.index("const cau = ")) + 1]   # 0.10.1 PD25: báo lỗi qua cau()
         cls.luot = a[a.index("// <LUOT>"):a.index("// </LUOT>")]
         cls.tin = a[a.index("function tinHtml(x) {"):a.index("function veTin(ds, giu)")]
 
