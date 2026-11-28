@@ -3,6 +3,20 @@
 Mỗi bản 01 mục, viết bằng lời thường. Phần mềm đọc tệp này để hiện "Có bản mới" ở Cài đặt, ngăn Cập nhật.
 Dòng "Tóm tắt:" ngắn (dưới 50 chữ cái) hiện ở bảng lịch sử cập nhật; các dòng "- " hiện ở khối có gì mới.
 
+## 0.10.1
+Tóm tắt: Đầu màn đứng yên, thanh trái mới
+Nâng dữ liệu: không
+- Mọi màn trên máy tính: đầu màn (tên màn, mô tả, nút chính) đứng yên, chỉ phần nội dung cuộn; chuông, âm thanh, chế độ màu nằm cuối hàng đầu màn, không còn che nút.
+- Trên điện thoại: thanh trên và thanh dưới đứng yên khi cuộn.
+- Thanh trái: "Trò chuyện AI" ghim trên cùng; tên 04 nhóm có biểu tượng; nhóm HỆ THỐNG luôn ở đáy; các nhóm giữa cuộn riêng khi màn thấp.
+- Chân thanh trái ghi số bản và "by UNI TECH"; nút thu gọn chỉ còn biểu tượng; khi thu gọn vẫn thấy số bản.
+- Trò chuyện AI: hàng đầu, danh sách cuộc trò chuyện và vùng tin cuộn riêng; ô nhập và chọn mô hình luôn ở đáy, không phải cuộn tới cuối mới thấy.
+- Kéo mép cột danh sách để đổi độ rộng, bấm đúp để về mặc định; nút "Thu gọn cột" thu danh sách thành dải hẹp có 03 nút: "Mở lại cột", "Trò chuyện mới", "Tìm hội thoại cũ"; phần mềm nhớ lựa chọn.
+- Mô hình AI: 03 thẻ Claude, ChatGPT, Khóa API luôn cùng 01 hàng, cao bằng nhau, không vỡ chữ ở màn hẹp; thẻ ChatGPT dùng chung chữ "Kết nối" như Claude.
+- Chế độ Tối: logo ChatGPT màu trắng cho rõ (chế độ Sáng giữ màu đen).
+- Cài đặt: các khối cùng đáy với thanh trái; dòng ghi chú cuối ngăn nằm ở dải chân riêng.
+- Sửa lỗi: ô "Tìm hội thoại cũ" không còn tràn ra ngoài cột; chế độ Tối ô gõ tin không còn nền xám; câu báo lỗi không còn 02 dấu chấm; thanh trái thu gọn không lộ chữ; trên điện thoại ô nhập sát thanh dưới.
+
 ## 0.10.0
 Tóm tắt: Cài đặt mới, tên miền riêng, chế độ tối
 Nâng dữ liệu: có
