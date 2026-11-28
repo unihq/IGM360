@@ -362,7 +362,7 @@ nav.menu{width:248px;flex:none;background:var(--xam);border-right:1px solid var(
 .nut-tron.dung{background:var(--khoi);border:1px solid var(--vien)}
 
 /* 13 model */
-.goi3{align-items:start}
+.goi3{align-items:stretch}   /* 0.10.1 PD21 (QĐ682): 03 thẻ nguồn AI cao bằng nhau */
 .o-goi{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
 .tk-dong{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--ke);border-radius:10px}
 .anh-dd.mini{width:28px;height:28px;font-size:12px}
@@ -1083,6 +1083,23 @@ body.dien-thoai #app.mb{overflow:visible}
 #app:not(.mb) #p09.co-chan .cd-chan{display:flex;align-items:center;flex:none;box-sizing:border-box;height:51px;border-top:1px solid var(--ke);padding:0 20px;font-size:12px;color:var(--phu)}
 #app:not(.mb) #p09.co-chan .cd-than .gd-dong{display:none}
 #app:not(.mb) #p09.co-chan .cd-menu::after{content:"";flex:none;box-sizing:border-box;height:51px;margin-top:auto;border-top:1px solid var(--ke)}
+/* 0.10.1 P5 – 03 thẻ nguồn AI màn Mô hình AI (QĐ680, QĐ682; VE0101_12, CDO CUOI-b): 03 thẻ luôn 01 hàng rộng bằng nhau (lưới 03 cột giữ);
+   mỗi thẻ là lưới con 03 hàng (đầu thẻ · thân · hàng nút / dòng Chi phí) dùng chung dòng lưới → cao bằng nhau, nút chính cùng đường,
+   dòng Chi phí Khóa API cùng đáy hàng nút; thẻ hẹp hơn 430 px dòng tài khoản xếp [vòng số | tên] / mô tả / nhãn (không vỡ chữ từng từ) */
+#app:not(.mb) #p13 .goi3{row-gap:12px}
+#p13 .goi3>.the.o-goi{display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:12px}
+#p13 .than-goi{container-type:inline-size}   /* đặt ở thân, không ở thẻ: thẻ có container-type thì mất lưới con (ngăn bố cục) */
+.than-goi{display:flex;flex-direction:column;gap:12px;min-width:0}
+#p13 .o-goi>.chan-goi{align-self:start}
+#p13 .o-goi>.kv{align-self:end}
+@container (max-width:392px){   /* thẻ 430 = thân 392 (đệm 18 × 2 + viền 1 × 2) */
+ #p13 .tk-dong{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;row-gap:4px;align-items:center}
+ #p13 .tk-dong>.f1{display:contents}
+ #p13 .tk-dong>.anh-dd{grid-column:1;grid-row:1}
+ #p13 .tk-dong>.f1>b{grid-column:2;grid-row:1}
+ #p13 .tk-dong>.f1>:not(b){grid-column:1/-1}
+ #p13 .tk-dong>.nhan,#p13 .tk-dong>.ttag{grid-column:1/-1;justify-self:start;margin-top:2px}
+}
 .tc-dai-dau{flex:none;width:100%;height:56px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--ke);margin-bottom:6px}
 </style><link rel="icon" href="/tainguyen/logo/favicon.ico"><link rel="apple-touch-icon" href="/tainguyen/logo/igm360_180.png"><link rel="stylesheet" href="/tainguyen/dangnhap3d.css"></head><body>
 <!-- 0.9.0 (QĐ375): lớp phông nền Mẫu 1, chép nguyên của DM; aria-hidden, không nhận bấm, không chữ -->

@@ -1249,11 +1249,11 @@ function theGoi(g, ds, nguon, uu) {
   // QĐ164 (Z6-TK): mới cài hoặc đã gỡ hết thì thẻ hiện 01 dòng "Chưa có tài khoản" (N10)
   const rong = !ds.length || (ds.length === 1 && !ds[0].da_noi && !ds[0].khong_ro && !coDong(ds[0]));
   let h = '<div class="the o-goi"><div class="dong">' + logoGoi(g) + '<div class="f1"><div class="t16 b7">' + esc(GOI_TEN[g]) + '</div><div class="t12 phu">Phí cố định tháng'
-    + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>';
+    + (uu ? ' · <span class="nw">ưu&nbsp;tiên&nbsp;' + uu + '</span>' : '') + '</div></div></div>' + '<div class="than-goi">';   // 0.10.1 PD21: lưới con – 03 con
   const mdMo = g === 'claude' ? Object.keys(D.mdh).filter(k => D.mdh[k]).map(Number) : [];   // hộp Đang kết nối đang mở
   if (rong && !dn.url && !mdMo.length) h += '<div class="tk-dong"><span class="anh-dd mini xam">1</span><div class="f1"><b>Chưa có tài&nbsp;khoản</b><div class="t12 phu">'
-    + (g === 'claude' ? 'Kết nối bằng ' + CHU_MDH.toLowerCase() + ' 365&nbsp;ngày để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu : 'Đăng nhập để dùng làm nguồn dự&nbsp;phòng') + '</div></div>'
-    + (g === 'claude' ? '<span class="nhan n-xem"><i></i>Chưa kết nối</span>' : '<span class="nhan n-xem"><i></i>Chưa đăng nhập</span>') + '</div>';   // N21
+    + (g === 'claude' ? 'Kết nối bằng ' + CHU_MDH.toLowerCase() + ' 365&nbsp;ngày để dùng làm nguồn ưu&nbsp;tiên&nbsp;' + uu : 'Kết nối bằng tài khoản gói ChatGPT để dùng làm nguồn dự&nbsp;phòng') + '</div></div>'
+    + '<span class="nhan n-xem"><i></i>Chưa kết nối</span>' + '</div>';   // N21
   else ds.forEach(x => { const n = nguon.find(y => y.ma === x.ma) || {};
     if (g === 'claude' && mdMo.includes(x.taikhoan) && !x.da_noi && !x.ma_daihan) return;   // hộp Đang kết nối thay ô (Z13)
     const go = (x.da_noi || coDong(x) || x.ma_daihan) && !(dn.url && dn.tk === x.taikhoan);
@@ -1261,10 +1261,10 @@ function theGoi(g, ds, nguon, uu) {
     const mdHet = g === 'claude' && x.ma_daihan && x.ma_daihan.het, cl = g === 'claude';
     h += '<div class="tk-dong"' + tieuHetMh(n, x.taikhoan) + '><span class="anh-dd mini' + (x.da_noi || mdHet ? '' : ' xam') + '">' + x.taikhoan + '</span><div class="f1"><b>' + tenTk(x) + '</b>'
       + (x.da_noi && x.mota_goi ? '<div class="t12 phu">' + esc(x.mota_goi) + '</div>' : '')
-      + (cl && x.ma_daihan ? '' : '<div class="t12 phu">' + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</div>')
+      + (cl && x.ma_daihan ? '' : '<div class="t12 phu">' + (x.da_noi ? dnLuc(x) : x.khong_ro ? 'Chưa kiểm được trạng thái' : 'Chưa kết nối') + '</div>')
       + (cl ? '' : nutGo) + '</div>'
       + (mdHet ? '<span class="nhan n-canh"><i></i>Mã hết hạn</span>' : x.da_noi ? '<span class="nhan n-dat"><i></i>Đã kết nối</span>'
-        : '<span class="nhan n-xem"><i></i>' + (cl ? 'Chưa kết nối' : 'Chưa đăng nhập') + '</span>') + '</div>'
+        : '<span class="nhan n-xem"><i></i>Chưa kết nối</span>') + '</div>'
       + (cl ? '<div class="md-khoi">' + theMd(x, nutGo) + '</div>' : '')   // 0.7.8 (Z13, N11b): hàng riêng rộng hết thẻ; "Gỡ tài khoản" xóa cả mã
       + (cl && coBaoLayLai(g, x.taikhoan) ? baoLayLai(D.trungChu[g], x.taikhoan) : '');   // Y38f L3: A8
     if (x.da_noi) h += '<div class="cot-doc g8">' + thanhHm('Cửa sổ 05 giờ', n.tyle_5gio, n.ma + '|5') + thanhHm('Tuần này', n.tyle_tuan, n.ma + '|t')
@@ -1290,9 +1290,9 @@ function theGoi(g, ds, nguon, uu) {
   }
   const chua = rong ? {taikhoan: ds.length ? ds[0].taikhoan : oTrong(ds)} : ds.find(x => !x.da_noi && !x.ma_daihan);
   const them = !rong && ds.length < 2 && ds.filter(x => x.da_noi).length === 1;   // Z6-TK: có 01 tài khoản thì hiện, đủ 02 thì ẩn
-  h += '<div class="dong chan-goi">' + (chua && !dn.url && g === 'claude' && !mdMo.includes(chua.taikhoan)   // N21 (Z13 trạng thái 1)
+  h += '</div><div class="dong chan-goi">' + (chua && !dn.url && g === 'claude' && !mdMo.includes(chua.taikhoan)   // N21 (Z13 trạng thái 1)
       ? '<button class="btn btn-chinh" data-md-lay="' + chua.taikhoan + '">' + ICON['log-in'] + 'Kết nối Claude</button><button class="btn btn-phu" data-md-dan="' + chua.taikhoan + '">' + ICON['key-round'] + 'Dán mã</button>'
-      : chua && !dn.url && g !== 'claude' ? '<button class="btn btn-chinh" data-dn-goi="' + g + '" data-dn-tk="' + chua.taikhoan + '">' + ICON['log-in'] + 'Đăng nhập</button>' : '')
+      : chua && !dn.url && g !== 'claude' ? '<button class="btn btn-chinh" data-dn-goi="' + g + '" data-dn-tk="' + chua.taikhoan + '">' + ICON['log-in'] + 'Kết nối ChatGPT</button>' : '')
     + (them && !dn.url ? '<button class="btn btn-phu" data-them-goi="' + g + '">' + ICON['user-plus'] + 'Thêm tài khoản ' + ten + ' khác</button>' : '')
     + (coTk ? ds.filter(x => x.da_noi).map(x => { const n = nguon.find(y => y.ma === x.ma); return n ? '<button class="btn btn-phu" data-goithu="' + esc(n.id) + '">Gọi thử' + (ds.length > 1 ? ' tài khoản ' + x.taikhoan : '') + '</button>' : ''; }).join('') : '')
     + '</div></div>';
@@ -1324,11 +1324,11 @@ function veMoHinh() {
   d.nguon.filter(n => n.loai !== 'khoa_api' && n.trangthai === 'dung').forEach(n => { ++k; if (n.goi && !(n.goi in uu)) uu[n.goi] = k; });
   ['claude', 'chatgpt'].forEach(g => { if (!(g in uu)) uu[g] = ++k; });
   $('#ds-nguonai').innerHTML = theGoi('claude', d.goi.claude, d.nguon, uu.claude) + theGoi('chatgpt', d.goi.chatgpt, d.nguon, uu.chatgpt)
-    + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khóa API</div><div class="t12 phu">Phí theo lượt</div></div></div>'
+    + '<div class="the o-goi"><div class="dong"><div class="ico-tron">' + ICON['key-round'] + '</div><div class="f1"><div class="t16 b7">Khóa API</div><div class="t12 phu">Phí theo lượt</div></div></div><div class="than-goi">'
     + (khoa.length ? khoa.map((n, i) => '<div class="tk-dong"><span class="anh-dd mini">K</span><div class="f1"><b>' + esc(tenNguon(n)) + '</b><div class="t12 phu">Cất ở mục&nbsp;Két&nbsp;khóa</div><div class="t12 phu">Ưu&nbsp;tiên&nbsp;' + (k + i + 1) + '</div></div>'
         + (n.tran_tien_thang ? '<span class="nhan n-dat"><i></i>Đang dùng</span>' : '<span class="ttag xem">Chưa đặt hạn mức</span>') + '</div>').join('')
       : '<div class="t13 phu">Chưa có khóa API. Chưa có khóa thì phần mềm chỉ dùng gói.</div><div class="t12 xem-chu">Thêm khóa ở mục Két khóa (có ở bản sau).</div>')
-    + '<div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
+    + '</div><div class="kv"><span>Chi phí AI tháng&nbsp;' + d.thang.thang + '</span><span class="trai-so"><b class="so">' + usd(d.thang.tien_that_usd)
       + '</b><span class="so-tk">' + vnd(d.thang.tien_that_usd, d.ty_gia_usd) + '</span></span></div>'
     + '</div>';
   requestAnimationFrame(() => document.querySelectorAll('#ds-nguonai .tdf[data-w]').forEach(e => { e.style.width = e.dataset.w + '%'; }));   // Z12: trượt tới số mới
