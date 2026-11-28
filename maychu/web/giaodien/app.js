@@ -76,15 +76,26 @@ function ve() {
     else nutDn.innerHTML = D.nutDn;
     nutDn.classList.toggle('dang', S.lv === 'dang'); }
   if (S.g === '01') dongTacLv();   // 0.8.9: linh vật màn 01
-  doiViTri();   // 0.9.0 (QĐ387): chuông + tài khoản dưới logo ở khổ máy tính
+  datDauMan();   // 0.10.1 (QĐ671 (4)): đầu màn ngoài vùng cuộn
+  doiViTri();   // 0.10.1: cụm chuông · âm thanh · chế độ màu cuối hàng đầu màn
   veNhom();   // Y52: thu gọn nhóm thanh trái
 }
 // 0.9.0 (QĐ387, khung ii-c2): khổ máy tính bỏ thanh trên, khối chuông + tài khoản (.vi-tri) đặt ngay dưới logo; điện thoại giữ ở thanh trên.
 function doiViTri() {
   const vt = $('.vi-tri'), lg = $('nav.menu .logo'), tt = $('.thanh-tren'); if (!vt || !lg || !tt) return;
-  const vg = $('#app .vung');   // QĐ548 B: máy tính – góc phải khung nội dung
-  if (S.xem !== 'mb' && vg && vt.parentElement !== vg) vg.prepend(vt);
-  else if (S.xem === 'mb' && vt.parentElement !== tt) tt.append(vt);
+  // 0.10.1 (QĐ671 (4), PD03): máy tính – cuối hàng đầu màn (#dau-man); màn 08 – cuối hàng tên cuộc (.tc-dau). Hết nổi góc phải (L14 a)
+  const dich = S.xem === 'mb' ? tt : S.trang === '08' ? $('#p08 .tc-dau') : $('#dau-man');
+  if (dich && (vt.parentElement !== dich || dich.children[dich.children.length - 1] !== vt)) dich.append(vt);
+}
+// 0.10.1 P1 (QĐ671 (4), QĐ682, QĐ677; PD01): máy tính – đầu màn của trang đang mở ở ô #dau-man ngoài vùng cuộn, chỉ thân trang cuộn;
+// màn 08 dùng hàng tên cuộc của khung chat (ô ẩn); điện thoại – mọi đầu màn về đầu trang của mình (cuộn theo nội dung).
+function datDauMan() {
+  const o = $('#dau-man'); if (!o) return;
+  const dang = S.xem !== 'mb' && S.trang !== '08' ? $('#p' + S.trang) : null;
+  [...o.children].forEach(d => { if (d.classList.contains('dau-trang') && (!dang || d.dataset.cua !== dang.id)) { const p = $('#' + d.dataset.cua); if (p) p.prepend(d); } });
+  const d = dang && dang.querySelector(':scope > .dau-trang');
+  if (d) { d.dataset.cua = dang.id; o.prepend(d); }
+  o.hidden = !o.querySelector('.dau-trang');
 }
 // KH-090 2.2 (c), CDO P1: 02 bảng thả xuống mở từ cột menu nổi trên cùng (position: fixed), mép trái 08 px, ngay dưới chuông.
 function datTha(e, nut) {   // bảng nổi: canh mép phải nút góc phải khung; menu tài khoản mở sang phải mục "Tài khoản" ở thanh trái

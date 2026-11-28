@@ -98,11 +98,11 @@ class KiemGiaoDien(unittest.TestCase):
     def test_ba_nut_goc_phai_va_dien_thoai(self):
         for x in ("data-chuong", 'class="nut36 an-dt" data-amthanh', 'class="nut36 an-dt" data-chedonut', 'class="nut36 chi-dt" data-tk'):
             self.assertIn(x, self.h, x)
-        self.assertIn("#app:not(.mb) .vung>.vi-tri{position:absolute;top:22px;right:28px;z-index:20;gap:4px}", self.h)   # QĐ548 B
+        self.assertIn("#app:not(.mb) .vi-tri{flex:none;gap:4px}", self.h)   # QĐ671 (4) thay QĐ548 B (0.10.1): cuối hàng đầu màn, cách 4 px
         self.assertIn(".nut36{width:36px;height:36px;", self.h)                                        # QĐ553 (2): 36 × 36, cách 4
         self.assertIn(".mb .an-dt,#app:not(.mb) .chi-dt{display:none!important}", self.h)            # QĐ553 (6)
         self.assertIn("(so > 99 ? '99+' : soVN(so))", self.js)                                         # QĐ553 (2)
-        self.assertIn("if (S.xem !== 'mb' && vg && vt.parentElement !== vg) vg.prepend(vt);", self.js)
+        self.assertIn("const dich = S.xem === 'mb' ? tt : S.trang === '08' ? $('#p08 .tc-dau') : $('#dau-man');", self.js)   # QĐ671 (4) (0.10.1): cụm cuối hàng đầu màn
 
     def test_chu_qd566(self):
         for c in ("amBat: 'Đang bật âm thanh – bấm để tắt', amTat: 'Đang tắt âm thanh – bấm để bật', cheDo: 'Chế độ màu'",

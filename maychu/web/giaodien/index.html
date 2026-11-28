@@ -807,7 +807,7 @@ body.dien-thoai .nut-gat{min-height:44px;min-width:44px;display:inline-flex;alig
 /* 0.10.0 bước 6 – QĐ548 B, QĐ553 (2): chuông · âm thanh · chế độ màu ở góc phải khung nội dung, ô 36 × 36 cách 4 px;
    điện thoại: thanh trên chuông + tài khoản (QĐ553 (6)); bảng chuông, menu tài khoản theo bản CDO SC-TOI-0100 (Toi_Lop.js) */
 #app:not(.mb) .vung{position:relative}
-#app:not(.mb) .vung>.vi-tri{position:absolute;top:22px;right:28px;z-index:20;gap:4px}
+#app:not(.mb) .vi-tri{flex:none;gap:4px}   /* 0.10.1 (QĐ671 (4)): hết nổi góc phải – nằm cuối hàng đầu màn, có chỗ riêng (L14 a) */
 .nut36{width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none;color:var(--phu)}
 .nut36:hover,.nut36.mo{background:var(--xam);color:var(--chu)}
 .nut36 .so{position:absolute;top:-6px;right:-8px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;border:1px solid var(--xanh-chu);background:var(--khoi);color:var(--xanh-chu);font-size:11px;font-weight:700;line-height:16px;text-align:center}
@@ -1009,6 +1009,19 @@ html.toi #s01 .nen>*{display:none}
 @media (orientation:portrait){html.toi .pn1,html.toi #s01 .nen{background-image:url(/tainguyen/phongnen_toi_doc.jpg)}}
 html.toi .btn-chinh:hover{background:var(--xanh-re)}
 html.toi ::placeholder{color:var(--goi-y)}
+/* 0.10.1 P1 – khóa đầu màn (QĐ671 (4), QĐ682 "giữ 56 px"; bản vẽ chốt VE0101_11, _13): máy tính – đầu màn của trang đang mở
+   nằm ở ô #dau-man ngoài vùng cuộn (datDauMan), cao 56, mô tả 01 dòng cắt "…", icon tròn 36; cụm 03 nút cuối hàng, cách nút chính 24.
+   Điện thoại (QĐ677): đầu màn cuộn theo nội dung; thanh trên đứng yên, nền đặc (gốc lỗi: #app overflow:hidden làm sticky không bám) */
+#app:not(.mb) .dau-man{display:flex;align-items:center;gap:24px;flex:none;box-sizing:border-box;height:56px;padding:0 28px;border-bottom:1px solid var(--ke)}
+#app:not(.mb) .dau-man[hidden]{display:none}
+#app:not(.mb) .dau-man>.dau-trang{flex:1;min-width:0}
+#app:not(.mb) .dau-man .dau-trang .f1{min-width:0}
+#app:not(.mb) .dau-man .dau-trang .phu{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app:not(.mb) .dau-man .ico-tron{width:36px;height:36px}
+#app:not(.mb) .cuon-trong>.trang{padding-top:20px}
+.dau-man{display:none}
+body.dien-thoai #app.mb{overflow:visible}
+#app.mb .thanh-tren{background:var(--khoi)!important;border-bottom:1px solid var(--ke)}
 </style><link rel="icon" href="/tainguyen/logo/favicon.ico"><link rel="apple-touch-icon" href="/tainguyen/logo/igm360_180.png"><link rel="stylesheet" href="/tainguyen/dangnhap3d.css"></head><body>
 <!-- 0.9.0 (QĐ375): lớp phông nền Mẫu 1, chép nguyên của DM; aria-hidden, không nhận bấm, không chữ -->
 <div class="pn pn1" aria-hidden="true"><i class="pn-dom a"></i><i class="pn-dom b"></i><i class="pn-dom c"></i>
@@ -1456,6 +1469,7 @@ html.toi ::placeholder{color:var(--goi-y)}
       </div>
     </div>
   </header>
+  <div class="dau-man" id="dau-man"></div>
   <div class="vach do-v" data-s="k:matketnoi"><svg
   style="flex:none;vertical-align:middle;color:var(--canh)" class="lucide lucide-wifi-off"
   xmlns="http://www.w3.org/2000/svg"

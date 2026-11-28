@@ -221,11 +221,12 @@ const nav = {ten: 'nav'}, tt = {ten: 'thanh', append(x) { x.parentElement = tt; 
 const vt = {parentElement: tt}, lg = {parentElement: nav, after(x) { x.parentElement = nav; }};
 const nut = {getBoundingClientRect: () => ({bottom: 112, right: 1400})}, tha = {hidden: false, style: {}, offsetWidth: 360};
 const vung = {ten: 'vung', prepend(x) { x.parentElement = vung; }};
-const $ = q => ({'.vi-tri': vt, 'nav.menu .logo': lg, '.thanh-tren': tt, '[data-chuong]': nut, '#app .vung': vung})[q];
+const dm = {ten: 'dau-man', children: [], append(x) { x.parentElement = dm; dm.children = [x]; }};   // 0.10.1 (QĐ671 (4)): ô đầu màn
+const $ = q => ({'.vi-tri': vt, 'nav.menu .logo': lg, '.thanh-tren': tt, '[data-chuong]': nut, '#app .vung': vung, '#dau-man': dm})[q];
 """ + self.vt
         kq = self.chay(ma + "doiViTri(); const a = vt.parentElement.ten; datTha(tha); const top = tha.style['top'];"
                        " S.xem = 'mb'; doiViTri(); const b = vt.parentElement.ten; datTha(tha);", "[a, top, b, tha.style['top']]")
-        self.assertEqual(kq, ["vung", "118px", "thanh", ""])   # QĐ548 B: góc phải khung nội dung; bảng ngay dưới chuông 06 px
+        self.assertEqual(kq, ["dau-man", "118px", "thanh", ""])   # QĐ671 (4) thay QĐ548 B: cuối hàng đầu màn (0.10.1); bảng ngay dưới chuông 06 px
 
     def test_vung_cuon_may_tinh_lay_cuon_trong(self):                                             # KH-090 2.2 (b)
         ma = r"""
