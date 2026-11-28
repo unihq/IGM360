@@ -77,6 +77,7 @@ function ve() {
     nutDn.classList.toggle('dang', S.lv === 'dang'); }
   if (S.g === '01') dongTacLv();   // 0.8.9: linh vật màn 01
   datDauMan();   // 0.10.1 (QĐ671 (4)): đầu màn ngoài vùng cuộn
+  if (S.xem === 'mb') { const t = $('nav.tab-duoi'); if (t) document.documentElement.style.setProperty('--cao-tab', t.offsetHeight + 'px'); }   // 0.10.1 PD08 (QĐ677): ô nhập bám trên thanh tab
   doiViTri();   // 0.10.1: cụm chuông · âm thanh · chế độ màu cuối hàng đầu màn
   veNhom();   // Y52: thu gọn nhóm thanh trái
 }
